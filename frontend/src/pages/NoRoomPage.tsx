@@ -1,0 +1,79 @@
+import React, { useMemo, useState } from 'react'
+import { useAuth } from '@auth/AuthProvider'
+import { createRoom, isConflict, isForbidden, joinRoom } from '@api/endpoints'
+
+const TOKEN_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ0123456789' // no I, O, L
+
+export const NoRoomPage: React.FC = () => {
+  const { apiKey } = useAuth()
+  const [roomId, setRoomId] = useState('')
+  const [token, setToken] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  const tokenValid = useMemo(() => token.length === 5 && [...token].every((c) => TOKEN_ALPHABET.includes(c)), [token])
+
+  const onCreate = async () => {
+    setError(null)
+    setLoading(true)
+    try {
+      await createRoom(apiKey!)
+      window.location.reload()
+    } catch (e: any) {
+      setError(e?.message || 'Failed to create room')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const onJoin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError(null)
+    setLoading(true)
+    try {
+      await joinRoom(apiKey!, roomId.trim(), token.trim().toUpperCase())
+      window.location.reload()
+    } catch (e: any) {
+      if (isForbidden(e)) setError('Invalid code for this room.')
+      else if (isConflict(e)) setError('Join not allowed: the room may be full.')
+      else setError(e?.message || 'Failed to join room')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="container">
+      <div className="panel">
+        <div className="title">You are not in a room yet</div>
+        <div className="spacer" />
+        <div className="row" style={{ alignItems: 'flex-start' }}>
+          <div className="col" style={{ flex: 1 }}>
+            <div className="title">Create a new room</div>
+            <button className="button" onClick={onCreate} disabled={loading}>Create solo room</button>
+            <div className="muted">You will be the only member until someone joins.</div>
+          </div>
+          <form className="col" style={{ flex: 1 }} onSubmit={onJoin}>
+            <div className="title">Join an existing room</div>
+            <input className="input" placeholder="Room ID" value={roomId} onChange={(e) => setRoomId(e.target.value)} />
+            <input
+              className="input"
+              placeholder="5-char code (no I/O/L)"
+              value={token}
+              onChange={(e) => setToken(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+              maxLength={5}
+            />
+            <button className="button" disabled={!roomId || !tokenValid || loading}>Join room</button>
+          </form>
+        </div>
+        {error && (
+          <>
+            <div className="spacer" />
+            <div className="error">{error}</div>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+

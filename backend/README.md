@@ -41,6 +41,32 @@ Run server:
 go run ./backend/cmd/gracie-server
 ```
 
+## Docker (One Command)
+
+Using Docker Compose to start DynamoDB Local, the API, and the Frontend together:
+
+```
+docker compose up --build
+```
+
+Details:
+- `dynamodb` exposes `8000` on host and persists data under `./.dynamodb`.
+- `api` builds the Go binary, runs a small entrypoint that provisions tables via `setup-ddb`, then starts the server on `8080`.
+- Environment is wired for local defaults inside the compose file (`DDB_ENDPOINT=http://dynamodb:8000`, `USERS_TABLE=Users`, `ROOMS_TABLE=Rooms`).
+- `frontend` builds the React app and serves it via Nginx on `http://localhost:3000`. Nginx proxies `/api/*` to the `api` container, so no CORS is required.
+
+Stop everything:
+
+```
+docker compose down
+```
+
+Rebuild after code changes:
+
+```
+docker compose build api frontend && docker compose up api frontend
+```
+
 ## Auth
 
 Uses API key issued at signup. Send header `Authorization: Bearer <api_key>` on all endpoints except `POST /users`.
@@ -61,4 +87,3 @@ Uses API key issued at signup. Send header `Authorization: Bearer <api_key>` on 
 
 - After deletion, users are left without a room (must call `POST /rooms` to create a new solo room).
 - API keys are stored as bcrypt hashes, and a deterministic SHA-256 lookup (`api_key_lookup`) is used via GSI to find the user.
-

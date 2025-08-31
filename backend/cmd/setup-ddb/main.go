@@ -13,6 +13,7 @@ import (
 )
 
 const apiKeyLookupIndex = "api_key_lookup_index"
+const usernameIndex = "username_index"
 
 func main() {
     ctx := context.Background()
@@ -54,15 +55,13 @@ func ensureUsersTable(ctx context.Context, db *dynamodb.Client, table string) er
         AttributeDefinitions: []types.AttributeDefinition{
             {AttributeName: strPtr("user_id"), AttributeType: types.ScalarAttributeTypeS},
             {AttributeName: strPtr("api_key_lookup"), AttributeType: types.ScalarAttributeTypeS},
+            {AttributeName: strPtr("username"), AttributeType: types.ScalarAttributeTypeS},
         },
         KeySchema: []types.KeySchemaElement{{AttributeName: strPtr("user_id"), KeyType: types.KeyTypeHash}},
         BillingMode: types.BillingModePayPerRequest,
         GlobalSecondaryIndexes: []types.GlobalSecondaryIndex{
-            {
-                IndexName: strPtr(apiKeyLookupIndex),
-                KeySchema: []types.KeySchemaElement{{AttributeName: strPtr("api_key_lookup"), KeyType: types.KeyTypeHash}},
-                Projection: &types.Projection{ProjectionType: types.ProjectionTypeAll},
-            },
+            {IndexName: strPtr(apiKeyLookupIndex), KeySchema: []types.KeySchemaElement{{AttributeName: strPtr("api_key_lookup"), KeyType: types.KeyTypeHash}}, Projection: &types.Projection{ProjectionType: types.ProjectionTypeAll}},
+            {IndexName: strPtr(usernameIndex), KeySchema: []types.KeySchemaElement{{AttributeName: strPtr("username"), KeyType: types.KeyTypeHash}}, Projection: &types.Projection{ProjectionType: types.ProjectionTypeAll}},
         },
     })
     if err != nil {
@@ -81,28 +80,47 @@ func ensureUsersGSI(ctx context.Context, db *dynamodb.Client, table string) erro
     if err != nil {
         return err
     }
-    for _, g := range out.Table.GlobalSecondaryIndexes {
-        if g.IndexName != nil && *g.IndexName == apiKeyLookupIndex {
-            return nil
+    hasLookup := false
+    hasUsername := false
+    attrs := map[string]bool{}
+    for _, ad := range out.Table.AttributeDefinitions {
+        if ad.AttributeName != nil {
+            attrs[*ad.AttributeName] = true
         }
     }
-    log.Printf("adding GSI %s to %s...", apiKeyLookupIndex, table)
-    _, err = db.UpdateTable(ctx, &dynamodb.UpdateTableInput{
-        TableName: &table,
-        GlobalSecondaryIndexUpdates: []types.GlobalSecondaryIndexUpdate{
-            {Create: &types.CreateGlobalSecondaryIndexAction{
-                IndexName: strPtr(apiKeyLookupIndex),
-                KeySchema: []types.KeySchemaElement{{AttributeName: strPtr("api_key_lookup"), KeyType: types.KeyTypeHash}},
-                Projection: &types.Projection{ProjectionType: types.ProjectionTypeAll},
-            }},
-        },
-    })
-    if err != nil {
-        return err
+    for _, g := range out.Table.GlobalSecondaryIndexes {
+        if g.IndexName != nil && *g.IndexName == apiKeyLookupIndex { hasLookup = true }
+        if g.IndexName != nil && *g.IndexName == usernameIndex { hasUsername = true }
     }
-    // Wait until GSI becomes active (best-effort; DDB Local is usually immediate)
+    if hasLookup && hasUsername { return nil }
+    log.Printf("adding missing GSIs to %s...", table)
+    updates := []types.GlobalSecondaryIndexUpdate{}
+    if !hasLookup {
+        updates = append(updates, types.GlobalSecondaryIndexUpdate{Create: &types.CreateGlobalSecondaryIndexAction{
+            IndexName: strPtr(apiKeyLookupIndex),
+            KeySchema: []types.KeySchemaElement{{AttributeName: strPtr("api_key_lookup"), KeyType: types.KeyTypeHash}},
+            Projection: &types.Projection{ProjectionType: types.ProjectionTypeAll},
+        }})
+    }
+    if !hasUsername {
+        updates = append(updates, types.GlobalSecondaryIndexUpdate{Create: &types.CreateGlobalSecondaryIndexAction{
+            IndexName: strPtr(usernameIndex),
+            KeySchema: []types.KeySchemaElement{{AttributeName: strPtr("username"), KeyType: types.KeyTypeHash}},
+            Projection: &types.Projection{ProjectionType: types.ProjectionTypeAll},
+        }})
+    }
+    // Ensure AttributeDefinitions include any new attributes used by the GSIs
+    addDefs := []types.AttributeDefinition{}
+    if !attrs["api_key_lookup"] && !hasLookup {
+        addDefs = append(addDefs, types.AttributeDefinition{AttributeName: strPtr("api_key_lookup"), AttributeType: types.ScalarAttributeTypeS})
+    }
+    if !attrs["username"] && !hasUsername {
+        addDefs = append(addDefs, types.AttributeDefinition{AttributeName: strPtr("username"), AttributeType: types.ScalarAttributeTypeS})
+    }
+    _, err = db.UpdateTable(ctx, &dynamodb.UpdateTableInput{TableName: &table, AttributeDefinitions: addDefs, GlobalSecondaryIndexUpdates: updates})
+    if err != nil { return err }
     time.Sleep(2 * time.Second)
-    log.Printf("added GSI %s", apiKeyLookupIndex)
+    log.Printf("added missing GSIs")
     return nil
 }
 

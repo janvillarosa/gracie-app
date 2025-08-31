@@ -1,0 +1,58 @@
+services:
+  dynamodb:
+    image: amazon/dynamodb-local:latest
+    container_name: gracie-ddb
+    command: ["-jar", "DynamoDBLocal.jar", "-sharedDb"]
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./.dynamodb:/home/dynamodblocal/data
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: gracie-api
+    depends_on:
+      - dynamodb
+    environment:
+      DDB_ENDPOINT: http://dynamodb:8000
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: local
+      AWS_SECRET_ACCESS_KEY: local
+      USERS_TABLE: Users
+      ROOMS_TABLE: Rooms
+      PORT: 8080
+      SETUP_RETRIES: 30
+      ENC_KEY_FILE: /app/secrets/enc.key
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./.secrets:/app/secrets
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: gracie-frontend
+    depends_on:
+      - api
+    ports:
+      - "3000:80"
+    restart: unless-stopped
+
+  # Optional: frontend dev server (uncomment to use)
+  # frontend:
+  #   build:
+  #     context: ./frontend
+  #     dockerfile: Dockerfile
+  #   container_name: gracie-frontend
+  #   environment:
+  #     VITE_API_BASE_URL: http://localhost:8080
+  #   ports:
+  #     - "5173:5173"
+  #   depends_on:
+  #     - api
+    

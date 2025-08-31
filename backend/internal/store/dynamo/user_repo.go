@@ -13,6 +13,7 @@ import (
 )
 
 const apiKeyLookupIndex = "api_key_lookup_index"
+const usernameIndex = "username_index"
 
 type UserRepo struct {
     c *Client
@@ -76,6 +77,57 @@ func (r *UserRepo) GetByAPIKeyLookup(ctx context.Context, lookup string) (*model
     return &u, nil
 }
 
+func (r *UserRepo) GetByUsername(ctx context.Context, username string) (*models.User, error) {
+    out, err := r.c.DB.Query(ctx, &dynamodb.QueryInput{
+        TableName:              &r.c.Tables.Users,
+        IndexName:              strPtr(usernameIndex),
+        KeyConditionExpression: strPtr("username = :u"),
+        ExpressionAttributeValues: map[string]types.AttributeValue{
+            ":u": &types.AttributeValueMemberS{Value: username},
+        },
+        Limit: int32Ptr(1),
+    })
+    if err != nil {
+        return nil, err
+    }
+    if out.Count == 0 || len(out.Items) == 0 {
+        return nil, derr.ErrNotFound
+    }
+    var u models.User
+    if err := attributevalue.UnmarshalMap(out.Items[0], &u); err != nil {
+        return nil, err
+    }
+    return &u, nil
+}
+
+func (r *UserRepo) SetAPIKey(ctx context.Context, userID string, hash, lookup string, updatedAt time.Time) error {
+    _, err := r.c.DB.UpdateItem(ctx, &dynamodb.UpdateItemInput{
+        TableName:        &r.c.Tables.Users,
+        Key:              map[string]types.AttributeValue{"user_id": &types.AttributeValueMemberS{Value: userID}},
+        UpdateExpression: strPtr("SET api_key_hash = :h, api_key_lookup = :l, updated_at = :ua"),
+        ExpressionAttributeValues: map[string]types.AttributeValue{
+            ":h":  &types.AttributeValueMemberS{Value: hash},
+            ":l":  &types.AttributeValueMemberS{Value: lookup},
+            ":ua": &types.AttributeValueMemberS{Value: updatedAt.UTC().Format(time.RFC3339)},
+        },
+        ReturnValues: types.ReturnValueNone,
+    })
+    return err
+}
+
+func (r *UserRepo) SetPasswordEnc(ctx context.Context, userID string, enc string, updatedAt time.Time) error {
+    _, err := r.c.DB.UpdateItem(ctx, &dynamodb.UpdateItemInput{
+        TableName:        &r.c.Tables.Users,
+        Key:              map[string]types.AttributeValue{"user_id": &types.AttributeValueMemberS{Value: userID}},
+        UpdateExpression: strPtr("SET password_enc = :p, updated_at = :ua"),
+        ExpressionAttributeValues: map[string]types.AttributeValue{
+            ":p":  &types.AttributeValueMemberS{Value: enc},
+            ":ua": &types.AttributeValueMemberS{Value: updatedAt.UTC().Format(time.RFC3339)},
+        },
+    })
+    return err
+}
+
 func (r *UserRepo) UpdateName(ctx context.Context, userID string, name string, updatedAt time.Time) error {
     _, err := r.c.DB.UpdateItem(ctx, &dynamodb.UpdateItemInput{
         TableName:        &r.c.Tables.Users,
@@ -124,4 +176,3 @@ func (r *UserRepo) ClearRoomID(ctx context.Context, userID string, updatedAt tim
 
 func strPtr(s string) *string { return &s }
 func int32Ptr(n int32) *int32 { return &n }
-

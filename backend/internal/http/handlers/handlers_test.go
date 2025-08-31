@@ -24,10 +24,13 @@ func TestHTTPFlow(t *testing.T) {
     roomsRepo := dynamo.NewRoomRepo(client)
     userSvc := services.NewUserService(client, usersRepo)
     roomSvc := services.NewRoomService(client, usersRepo, roomsRepo)
+    authSvc, err := services.NewAuthService(client, usersRepo, "/tmp/gracie-test-enc.key")
+    if err != nil { t.Fatalf("auth svc: %v", err) }
 
+    ah := handlers.NewAuthHandler(authSvc)
     uh := handlers.NewUserHandler(userSvc)
     rh := handlers.NewRoomHandler(roomSvc)
-    r := router.NewRouter(usersRepo, uh, rh)
+    r := router.NewRouter(usersRepo, ah, uh, rh)
 
     srv := httptest.NewServer(r)
     defer srv.Close()

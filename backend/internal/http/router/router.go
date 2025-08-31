@@ -10,13 +10,15 @@ import (
     "github.com/janvillarosa/gracie-app/backend/internal/store/dynamo"
 )
 
-func NewRouter(usersRepo *dynamo.UserRepo, userHandler *handlers.UserHandler, roomHandler *handlers.RoomHandler) http.Handler {
+func NewRouter(usersRepo *dynamo.UserRepo, authHandler *handlers.AuthHandler, userHandler *handlers.UserHandler, roomHandler *handlers.RoomHandler) http.Handler {
     r := chi.NewRouter()
     r.Use(middleware.RequestID)
     r.Use(middleware.Logger)
     r.Use(middleware.Recoverer)
 
     // Public endpoints
+    r.Post("/auth/register", authHandler.Register)
+    r.Post("/auth/login", authHandler.Login)
     r.Post("/users", userHandler.CreateUser)
 
     // Authenticated endpoints
@@ -36,4 +38,3 @@ func NewRouter(usersRepo *dynamo.UserRepo, userHandler *handlers.UserHandler, ro
 
     return r
 }
-

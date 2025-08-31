@@ -11,6 +11,7 @@ type Config struct {
     DDBEndpoint string
     UsersTable  string
     RoomsTable  string
+    EncKeyFile  string
 }
 
 func getEnv(key, def string) string {
@@ -27,6 +28,7 @@ func Load() (*Config, error) {
         DDBEndpoint: getEnv("DDB_ENDPOINT", "http://localhost:8000"),
         UsersTable:  getEnv("USERS_TABLE", "Users"),
         RoomsTable:  getEnv("ROOMS_TABLE", "Rooms"),
+        EncKeyFile:  getEnv("ENC_KEY_FILE", "/app/secrets/enc.key"),
     }
 
     if cfg.UsersTable == "" || cfg.RoomsTable == "" {
@@ -34,4 +36,3 @@ func Load() (*Config, error) {
     }
     return cfg, nil
 }
-

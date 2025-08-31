@@ -17,6 +17,7 @@ import (
 )
 
 const apiKeyLookupIndex = "api_key_lookup_index"
+const usernameIndex = "username_index"
 
 // SetupDynamoOrSkip creates ephemeral Users/Rooms tables for tests.
 // It returns a configured dynamo client and a cleanup function to drop tables.
@@ -76,14 +77,14 @@ func ensureUsersTable(ctx context.Context, db *dynamodb.Client, table string) er
         AttributeDefinitions: []types.AttributeDefinition{
             {AttributeName: strPtr("user_id"), AttributeType: types.ScalarAttributeTypeS},
             {AttributeName: strPtr("api_key_lookup"), AttributeType: types.ScalarAttributeTypeS},
+            {AttributeName: strPtr("username"), AttributeType: types.ScalarAttributeTypeS},
         },
         KeySchema:  []types.KeySchemaElement{{AttributeName: strPtr("user_id"), KeyType: types.KeyTypeHash}},
         BillingMode: types.BillingModePayPerRequest,
-        GlobalSecondaryIndexes: []types.GlobalSecondaryIndex{{
-            IndexName: strPtr(apiKeyLookupIndex),
-            KeySchema: []types.KeySchemaElement{{AttributeName: strPtr("api_key_lookup"), KeyType: types.KeyTypeHash}},
-            Projection: &types.Projection{ProjectionType: types.ProjectionTypeAll},
-        }},
+        GlobalSecondaryIndexes: []types.GlobalSecondaryIndex{
+            {IndexName: strPtr(apiKeyLookupIndex), KeySchema: []types.KeySchemaElement{{AttributeName: strPtr("api_key_lookup"), KeyType: types.KeyTypeHash}}, Projection: &types.Projection{ProjectionType: types.ProjectionTypeAll}},
+            {IndexName: strPtr(usernameIndex), KeySchema: []types.KeySchemaElement{{AttributeName: strPtr("username"), KeyType: types.KeyTypeHash}}, Projection: &types.Projection{ProjectionType: types.ProjectionTypeAll}},
+        },
     })
     if err != nil {
         return err
@@ -98,21 +99,42 @@ func ensureUsersGSI(ctx context.Context, db *dynamodb.Client, table string) erro
     if err != nil {
         return err
     }
-    for _, g := range out.Table.GlobalSecondaryIndexes {
-        if g.IndexName != nil && *g.IndexName == apiKeyLookupIndex {
-            return nil
+    hasLookup := false
+    hasUsername := false
+    attrs := map[string]bool{}
+    for _, ad := range out.Table.AttributeDefinitions {
+        if ad.AttributeName != nil {
+            attrs[*ad.AttributeName] = true
         }
     }
-    _, err = db.UpdateTable(ctx, &dynamodb.UpdateTableInput{
-        TableName: &table,
-        GlobalSecondaryIndexUpdates: []types.GlobalSecondaryIndexUpdate{
-            {Create: &types.CreateGlobalSecondaryIndexAction{
-                IndexName: strPtr(apiKeyLookupIndex),
-                KeySchema: []types.KeySchemaElement{{AttributeName: strPtr("api_key_lookup"), KeyType: types.KeyTypeHash}},
-                Projection: &types.Projection{ProjectionType: types.ProjectionTypeAll},
-            }},
-        },
-    })
+    for _, g := range out.Table.GlobalSecondaryIndexes {
+        if g.IndexName != nil && *g.IndexName == apiKeyLookupIndex { hasLookup = true }
+        if g.IndexName != nil && *g.IndexName == usernameIndex { hasUsername = true }
+    }
+    if hasLookup && hasUsername { return nil }
+    ups := []types.GlobalSecondaryIndexUpdate{}
+    if !hasLookup {
+        ups = append(ups, types.GlobalSecondaryIndexUpdate{Create: &types.CreateGlobalSecondaryIndexAction{
+            IndexName: strPtr(apiKeyLookupIndex),
+            KeySchema: []types.KeySchemaElement{{AttributeName: strPtr("api_key_lookup"), KeyType: types.KeyTypeHash}},
+            Projection: &types.Projection{ProjectionType: types.ProjectionTypeAll},
+        }})
+    }
+    if !hasUsername {
+        ups = append(ups, types.GlobalSecondaryIndexUpdate{Create: &types.CreateGlobalSecondaryIndexAction{
+            IndexName: strPtr(usernameIndex),
+            KeySchema: []types.KeySchemaElement{{AttributeName: strPtr("username"), KeyType: types.KeyTypeHash}},
+            Projection: &types.Projection{ProjectionType: types.ProjectionTypeAll},
+        }})
+    }
+    addDefs := []types.AttributeDefinition{}
+    if !attrs["api_key_lookup"] && !hasLookup {
+        addDefs = append(addDefs, types.AttributeDefinition{AttributeName: strPtr("api_key_lookup"), AttributeType: types.ScalarAttributeTypeS})
+    }
+    if !attrs["username"] && !hasUsername {
+        addDefs = append(addDefs, types.AttributeDefinition{AttributeName: strPtr("username"), AttributeType: types.ScalarAttributeTypeS})
+    }
+    _, err = db.UpdateTable(ctx, &dynamodb.UpdateTableInput{TableName: &table, AttributeDefinitions: addDefs, GlobalSecondaryIndexUpdates: ups})
     return err
 }
 

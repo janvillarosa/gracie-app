@@ -33,11 +33,14 @@ func main() {
 
     userSvc := services.NewUserService(ddb, usersRepo)
     roomSvc := services.NewRoomService(ddb, usersRepo, roomsRepo)
+    authSvc, err := services.NewAuthService(ddb, usersRepo, cfg.EncKeyFile)
+    if err != nil { log.Fatalf("auth service: %v", err) }
 
     userHandler := handlers.NewUserHandler(userSvc)
+    authHandler := handlers.NewAuthHandler(authSvc)
     roomHandler := handlers.NewRoomHandler(roomSvc)
 
-    r := router.NewRouter(usersRepo, userHandler, roomHandler)
+    r := router.NewRouter(usersRepo, authHandler, userHandler, roomHandler)
 
     srv := &http.Server{
         Addr:         ":" + cfg.Port,
