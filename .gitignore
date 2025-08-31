@@ -1,0 +1,59 @@
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+log/
+
+# Go build artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Project binaries / build dirs
+bin/
+build/
+dist/
+out/
+tmp/
+
+# Go test and profiling outputs
+cover.out
+coverage.out
+coverage/
+*.coverprofile
+*.cover
+*.prof
+*.pprof
+profile.out
+cpu.pprof
+mem.pprof
+heap.pprof
+
+# Go compile/cache (when redirected locally)
+.gocache/
+
+# Environment and local config
+.env
+.env.*
+.envrc
+.direnv/
+
+# Editor/IDE
+.vscode/
+.idea/
+*.iml
+*.code-workspace
+*.swp
+*.swo
+
+# DynamoDB Local (if using shared-db mode locally)
+.dynamodb/
+dynamodb_local_*
+shared-local-instance.db

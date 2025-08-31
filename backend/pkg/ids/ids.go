@@ -24,3 +24,16 @@ func NewToken() string {
     return base64.RawURLEncoding.EncodeToString(b)
 }
 
+// NewShareToken5 returns a 5-character, unambiguous alphanumeric code.
+// Alphabet excludes the confusing letters I, O, and L.
+func NewShareToken5() string {
+    const alphabet = "ABCDEFGHJKMNPQRSTUVWXYZ0123456789" // no I, O, L
+    const n = 5
+    out := make([]byte, n)
+    rb := make([]byte, n)
+    _, _ = rand.Read(rb)
+    for i := 0; i < n; i++ {
+        out[i] = alphabet[int(rb[i])%len(alphabet)]
+    }
+    return string(out)
+}

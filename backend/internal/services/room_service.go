@@ -67,7 +67,7 @@ func (s *RoomService) RotateShareToken(ctx context.Context, user *models.User) (
     if user.RoomID == nil || *user.RoomID == "" {
         return "", derr.ErrNotFound
     }
-    token := ids.NewToken()
+    token := ids.NewShareToken5()
     if err := s.rooms.SetShareToken(ctx, *user.RoomID, user.UserID, token, time.Now().UTC()); err != nil {
         return "", err
     }
