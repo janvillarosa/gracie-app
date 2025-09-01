@@ -10,7 +10,7 @@ import (
     "github.com/janvillarosa/gracie-app/backend/internal/store/dynamo"
 )
 
-func NewRouter(usersRepo *dynamo.UserRepo, authHandler *handlers.AuthHandler, userHandler *handlers.UserHandler, roomHandler *handlers.RoomHandler) http.Handler {
+func NewRouter(usersRepo *dynamo.UserRepo, authHandler *handlers.AuthHandler, userHandler *handlers.UserHandler, roomHandler *handlers.RoomHandler, listHandler *handlers.ListHandler) http.Handler {
     r := chi.NewRouter()
     r.Use(middleware.RequestID)
     r.Use(middleware.Logger)
@@ -36,6 +36,16 @@ func NewRouter(usersRepo *dynamo.UserRepo, authHandler *handlers.AuthHandler, us
         ar.Put("/rooms/settings", roomHandler.UpdateSettings)
         ar.Post("/rooms/deletion/vote", roomHandler.VoteDeletion)
         ar.Post("/rooms/deletion/cancel", roomHandler.CancelDeletion)
+
+        // Lists
+        ar.Post("/rooms/{room_id}/lists", listHandler.CreateList)
+        ar.Get("/rooms/{room_id}/lists", listHandler.ListLists)
+        ar.Post("/rooms/{room_id}/lists/{list_id}/deletion/vote", listHandler.VoteListDeletion)
+        ar.Post("/rooms/{room_id}/lists/{list_id}/deletion/cancel", listHandler.CancelListDeletionVote)
+        ar.Post("/rooms/{room_id}/lists/{list_id}/items", listHandler.CreateItem)
+        ar.Get("/rooms/{room_id}/lists/{list_id}/items", listHandler.ListItems)
+        ar.Patch("/rooms/{room_id}/lists/{list_id}/items/{item_id}", listHandler.UpdateItem)
+        ar.Delete("/rooms/{room_id}/lists/{list_id}/items/{item_id}", listHandler.DeleteItem)
     })
 
     return r

@@ -23,6 +23,8 @@ services:
       AWS_SECRET_ACCESS_KEY: local
       USERS_TABLE: Users
       ROOMS_TABLE: Rooms
+      LISTS_TABLE: Lists
+      LIST_ITEMS_TABLE: ListItems
       PORT: 8080
       SETUP_RETRIES: 30
       ENC_KEY_FILE: /app/secrets/enc.key

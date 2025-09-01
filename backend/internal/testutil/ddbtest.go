@@ -66,6 +66,45 @@ func SetupDynamoOrSkip(t *testing.T) (db *dynamodb.Client, usersTable, roomsTabl
     return client, usersTable, roomsTable, cleanup
 }
 
+// SetupDynamoWithListsOrSkip creates ephemeral Users/Rooms/Lists/ListItems tables for tests.
+func SetupDynamoWithListsOrSkip(t *testing.T) (db *dynamodb.Client, usersTable, roomsTable, listsTable, listItemsTable string, cleanup func()) {
+    t.Helper()
+    endpoint := getenv("DDB_ENDPOINT", "http://localhost:8000")
+    region := getenv("AWS_REGION", "us-east-1")
+    suffix := randHex(6)
+    usersTable = "Users_test_" + suffix
+    roomsTable = "Rooms_test_" + suffix
+    listsTable = "Lists_test_" + suffix
+    listItemsTable = "ListItems_test_" + suffix
+
+    ctx := context.Background()
+    cfg, err := awsconfig.LoadDefaultConfig(ctx,
+        awsconfig.WithRegion(region),
+        awsconfig.WithCredentialsProvider(credentials.NewStaticCredentialsProvider("local", "local", "")),
+        awsconfig.WithEndpointResolverWithOptions(aws.EndpointResolverWithOptionsFunc(
+            func(service, region string, options ...interface{}) (aws.Endpoint, error) {
+                return aws.Endpoint{URL: endpoint, HostnameImmutable: true, PartitionID: "aws"}, nil
+            },
+        )))
+    if err != nil { t.Skipf("config: %v", err) }
+    client := dynamodb.NewFromConfig(cfg)
+    if _, err := client.ListTables(ctx, &dynamodb.ListTablesInput{Limit: int32Ptr(1)}); err != nil {
+        t.Skipf("skipping: cannot reach DynamoDB at %s: %v", endpoint, err)
+    }
+    if err := ensureUsersTable(ctx, client, usersTable); err != nil { t.Skipf("cannot create users table: %v", err) }
+    if err := ensureRoomsTable(ctx, client, roomsTable); err != nil { t.Skipf("cannot create rooms table: %v", err) }
+    if err := ensureListsTable(ctx, client, listsTable); err != nil { t.Skipf("cannot create lists table: %v", err) }
+    if err := ensureListItemsTable(ctx, client, listItemsTable); err != nil { t.Skipf("cannot create list items table: %v", err) }
+
+    cleanup = func() {
+        _, _ = client.DeleteTable(ctx, &dynamodb.DeleteTableInput{TableName: &usersTable})
+        _, _ = client.DeleteTable(ctx, &dynamodb.DeleteTableInput{TableName: &roomsTable})
+        _, _ = client.DeleteTable(ctx, &dynamodb.DeleteTableInput{TableName: &listsTable})
+        _, _ = client.DeleteTable(ctx, &dynamodb.DeleteTableInput{TableName: &listItemsTable})
+    }
+    return client, usersTable, roomsTable, listsTable, listItemsTable, cleanup
+}
+
 func ensureUsersTable(ctx context.Context, db *dynamodb.Client, table string) error {
     if _, err := db.DescribeTable(ctx, &dynamodb.DescribeTableInput{TableName: &table}); err == nil {
         return ensureUsersGSI(ctx, db, table)
@@ -172,6 +211,70 @@ func ensureRoomsTable(ctx context.Context, db *dynamodb.Client, table string) er
     if err != nil {
         return err
     }
+    waiter := dynamodb.NewTableExistsWaiter(db)
+    return waiter.Wait(ctx, &dynamodb.DescribeTableInput{TableName: &table}, 20*time.Second)
+}
+
+// New helpers to provision Lists/ListItems tables
+func ensureListsTable(ctx context.Context, db *dynamodb.Client, table string) error {
+    roomIndex := "room_id_index"
+    if _, err := db.DescribeTable(ctx, &dynamodb.DescribeTableInput{TableName: &table}); err == nil {
+        // ensure GSI exists
+        out, _ := db.DescribeTable(ctx, &dynamodb.DescribeTableInput{TableName: &table})
+        has := false
+        if out != nil && out.Table.GlobalSecondaryIndexes != nil {
+            for _, g := range out.Table.GlobalSecondaryIndexes {
+                if g.IndexName != nil && *g.IndexName == roomIndex { has = true }
+            }
+        }
+        if !has {
+            _, _ = db.UpdateTable(ctx, &dynamodb.UpdateTableInput{
+                TableName:            &table,
+                AttributeDefinitions: []types.AttributeDefinition{{AttributeName: strPtr("room_id"), AttributeType: types.ScalarAttributeTypeS}},
+                GlobalSecondaryIndexUpdates: []types.GlobalSecondaryIndexUpdate{{Create: &types.CreateGlobalSecondaryIndexAction{IndexName: strPtr(roomIndex), KeySchema: []types.KeySchemaElement{{AttributeName: strPtr("room_id"), KeyType: types.KeyTypeHash}}, Projection: &types.Projection{ProjectionType: types.ProjectionTypeAll}}}},
+            })
+        }
+        return nil
+    } else if !isNotFound(err) { return err }
+    _, err := db.CreateTable(ctx, &dynamodb.CreateTableInput{
+        TableName: &table,
+        AttributeDefinitions: []types.AttributeDefinition{{AttributeName: strPtr("list_id"), AttributeType: types.ScalarAttributeTypeS}, {AttributeName: strPtr("room_id"), AttributeType: types.ScalarAttributeTypeS}},
+        KeySchema:  []types.KeySchemaElement{{AttributeName: strPtr("list_id"), KeyType: types.KeyTypeHash}},
+        BillingMode: types.BillingModePayPerRequest,
+        GlobalSecondaryIndexes: []types.GlobalSecondaryIndex{{IndexName: strPtr(roomIndex), KeySchema: []types.KeySchemaElement{{AttributeName: strPtr("room_id"), KeyType: types.KeyTypeHash}}, Projection: &types.Projection{ProjectionType: types.ProjectionTypeAll}}},
+    })
+    if err != nil { return err }
+    waiter := dynamodb.NewTableExistsWaiter(db)
+    return waiter.Wait(ctx, &dynamodb.DescribeTableInput{TableName: &table}, 20*time.Second)
+}
+
+func ensureListItemsTable(ctx context.Context, db *dynamodb.Client, table string) error {
+    listIndex := "list_id_index"
+    if _, err := db.DescribeTable(ctx, &dynamodb.DescribeTableInput{TableName: &table}); err == nil {
+        out, _ := db.DescribeTable(ctx, &dynamodb.DescribeTableInput{TableName: &table})
+        has := false
+        if out != nil && out.Table.GlobalSecondaryIndexes != nil {
+            for _, g := range out.Table.GlobalSecondaryIndexes {
+                if g.IndexName != nil && *g.IndexName == listIndex { has = true }
+            }
+        }
+        if !has {
+            _, _ = db.UpdateTable(ctx, &dynamodb.UpdateTableInput{
+                TableName:            &table,
+                AttributeDefinitions: []types.AttributeDefinition{{AttributeName: strPtr("list_id"), AttributeType: types.ScalarAttributeTypeS}},
+                GlobalSecondaryIndexUpdates: []types.GlobalSecondaryIndexUpdate{{Create: &types.CreateGlobalSecondaryIndexAction{IndexName: strPtr(listIndex), KeySchema: []types.KeySchemaElement{{AttributeName: strPtr("list_id"), KeyType: types.KeyTypeHash}}, Projection: &types.Projection{ProjectionType: types.ProjectionTypeAll}}}},
+            })
+        }
+        return nil
+    } else if !isNotFound(err) { return err }
+    _, err := db.CreateTable(ctx, &dynamodb.CreateTableInput{
+        TableName: &table,
+        AttributeDefinitions: []types.AttributeDefinition{{AttributeName: strPtr("item_id"), AttributeType: types.ScalarAttributeTypeS}, {AttributeName: strPtr("list_id"), AttributeType: types.ScalarAttributeTypeS}},
+        KeySchema:  []types.KeySchemaElement{{AttributeName: strPtr("item_id"), KeyType: types.KeyTypeHash}},
+        BillingMode: types.BillingModePayPerRequest,
+        GlobalSecondaryIndexes: []types.GlobalSecondaryIndex{{IndexName: strPtr(listIndex), KeySchema: []types.KeySchemaElement{{AttributeName: strPtr("list_id"), KeyType: types.KeyTypeHash}}, Projection: &types.Projection{ProjectionType: types.ProjectionTypeAll}}},
+    })
+    if err != nil { return err }
     waiter := dynamodb.NewTableExistsWaiter(db)
     return waiter.Wait(ctx, &dynamodb.DescribeTableInput{TableName: &table}, 20*time.Second)
 }

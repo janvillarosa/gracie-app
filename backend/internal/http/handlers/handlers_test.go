@@ -15,21 +15,23 @@ import (
 )
 
 func TestHTTPFlow(t *testing.T) {
-    db, usersTable, roomsTable, cleanup := testutil.SetupDynamoOrSkip(t)
+    db, usersTable, roomsTable, listsTable, listItemsTable, cleanup := testutil.SetupDynamoWithListsOrSkip(t)
     defer cleanup()
-    client := &dynamo.Client{DB: db, Tables: dynamo.Tables{Users: usersTable, Rooms: roomsTable}}
+    client := &dynamo.Client{DB: db, Tables: dynamo.Tables{Users: usersTable, Rooms: roomsTable, Lists: listsTable, ListItems: listItemsTable}}
 
     usersRepo := dynamo.NewUserRepo(client)
     roomsRepo := dynamo.NewRoomRepo(client)
     userSvc := services.NewUserService(client, usersRepo)
     roomSvc := services.NewRoomService(client, usersRepo, roomsRepo)
+    listSvc := services.NewListService(client, usersRepo, roomsRepo, dynamo.NewListRepo(client), dynamo.NewListItemRepo(client))
     authSvc, err := services.NewAuthService(client, usersRepo, "/tmp/gracie-test-enc.key", 720)
     if err != nil { t.Fatalf("auth svc: %v", err) }
 
     ah := handlers.NewAuthHandler(authSvc)
     uh := handlers.NewUserHandler(userSvc)
     rh := handlers.NewRoomHandler(roomSvc, usersRepo)
-    r := router.NewRouter(usersRepo, ah, uh, rh)
+    lh := handlers.NewListHandler(listSvc)
+    r := router.NewRouter(usersRepo, ah, uh, rh, lh)
 
     srv := httptest.NewServer(r)
     defer srv.Close()

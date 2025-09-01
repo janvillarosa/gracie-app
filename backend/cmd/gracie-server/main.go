@@ -23,24 +23,29 @@ func main() {
     }
 
     ctx := context.Background()
-    ddb, err := dynamo.New(ctx, cfg.AWSRegion, cfg.DDBEndpoint, dynamo.Tables{Users: cfg.UsersTable, Rooms: cfg.RoomsTable})
+    ddb, err := dynamo.New(ctx, cfg.AWSRegion, cfg.DDBEndpoint, dynamo.Tables{Users: cfg.UsersTable, Rooms: cfg.RoomsTable, Lists: cfg.ListsTable, ListItems: cfg.ListItemsTable})
     if err != nil {
         log.Fatalf("dynamo client: %v", err)
     }
 
     usersRepo := dynamo.NewUserRepo(ddb)
     roomsRepo := dynamo.NewRoomRepo(ddb)
+    listsRepo := dynamo.NewListRepo(ddb)
+    itemsRepo := dynamo.NewListItemRepo(ddb)
 
     userSvc := services.NewUserService(ddb, usersRepo)
     roomSvc := services.NewRoomService(ddb, usersRepo, roomsRepo)
+    roomSvc.UseListRepos(listsRepo, itemsRepo)
+    listSvc := services.NewListService(ddb, usersRepo, roomsRepo, listsRepo, itemsRepo)
     authSvc, err := services.NewAuthService(ddb, usersRepo, cfg.EncKeyFile, cfg.APIKeyTTLHours)
     if err != nil { log.Fatalf("auth service: %v", err) }
 
     userHandler := handlers.NewUserHandler(userSvc)
     authHandler := handlers.NewAuthHandler(authSvc)
     roomHandler := handlers.NewRoomHandler(roomSvc, usersRepo)
+    listHandler := handlers.NewListHandler(listSvc)
 
-    r := router.NewRouter(usersRepo, authHandler, userHandler, roomHandler)
+    r := router.NewRouter(usersRepo, authHandler, userHandler, roomHandler, listHandler)
 
     srv := &http.Server{
         Addr:         ":" + cfg.Port,

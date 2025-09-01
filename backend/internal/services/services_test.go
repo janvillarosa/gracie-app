@@ -11,11 +11,15 @@ import (
 )
 
 func setupSvc(t *testing.T) (*UserService, *RoomService, func()) {
-    db, usersTable, roomsTable, cleanup := testutil.SetupDynamoOrSkip(t)
-    client := &dynamo.Client{DB: db, Tables: dynamo.Tables{Users: usersTable, Rooms: roomsTable}}
+    db, usersTable, roomsTable, listsTable, listItemsTable, cleanup := testutil.SetupDynamoWithListsOrSkip(t)
+    client := &dynamo.Client{DB: db, Tables: dynamo.Tables{Users: usersTable, Rooms: roomsTable, Lists: listsTable, ListItems: listItemsTable}}
     users := dynamo.NewUserRepo(client)
     rooms := dynamo.NewRoomRepo(client)
-    return NewUserService(client, users), NewRoomService(client, users, rooms), cleanup
+    lists := dynamo.NewListRepo(client)
+    items := dynamo.NewListItemRepo(client)
+    rs := NewRoomService(client, users, rooms)
+    rs.UseListRepos(lists, items)
+    return NewUserService(client, users), rs, cleanup
 }
 
 func TestUserSignupAndSoloRoom(t *testing.T) {

@@ -5,7 +5,7 @@ import "time"
 type User struct {
     UserID      string     `dynamodbav:"user_id" json:"user_id"`
     Name        string     `dynamodbav:"name" json:"name"`
-    Username    string     `dynamodbav:"username" json:"username,omitempty"`
+    Username    string     `dynamodbav:"username,omitempty" json:"username,omitempty"`
     PasswordEnc string     `dynamodbav:"password_enc" json:"-"`
     APIKeyHash  string     `dynamodbav:"api_key_hash,omitempty" json:"-"`
     APIKeyLookup string    `dynamodbav:"api_key_lookup,omitempty" json:"-"`

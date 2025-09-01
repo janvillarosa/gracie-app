@@ -13,6 +13,8 @@ export AWS_ACCESS_KEY_ID=local
 export AWS_SECRET_ACCESS_KEY=local
 export USERS_TABLE=Users
 export ROOMS_TABLE=Rooms
+export LISTS_TABLE=Lists
+export LIST_ITEMS_TABLE=ListItems
 export PORT=8080
 ```
 
@@ -94,6 +96,16 @@ Rooms
 - GSI:
   - `share_token_index` on `share_token`
 
+Lists
+- PK: `list_id`
+- GSI:
+  - `room_id_index` on `room_id`
+
+ListItems
+- PK: `item_id`
+- GSI:
+  - `list_id_index` on `list_id`
+
 Notes
 - When adding GSIs to existing local tables, `setup-ddb` ensures `AttributeDefinitions` are included to satisfy DynamoDB Local; otherwise it errors with “No Attribute Schema Defined”.
 - Model tags use `omitempty` to avoid invalid empty string/null writes on attributes (e.g., `room_id`, `share_token`, `description`).
@@ -113,6 +125,18 @@ Uses API key issued at signup. Send header `Authorization: Bearer <api_key>` on 
 - POST `/rooms/{room_id}/join`: body `{ token }` → join as second member. If joiner has a solo room, it is deleted atomically. Errors: `403` (bad token), `409` (room full, or joiner already in 2-person room).
 - POST `/rooms/deletion/vote`: record vote; when both members have voted, deletes room and clears both users’ `room_id`. Response `{ deleted: true|false }`.
 - POST `/rooms/deletion/cancel`: cancels caller’s vote.
+
+Lists (per Room)
+- POST `/rooms/{room_id}/lists`: `{ name, description? }` → create a list.
+- GET `/rooms/{room_id}/lists`: list all non-deleted lists for the room.
+- POST `/rooms/{room_id}/lists/{list_id}/deletion/vote`: record caller’s vote; when both room members vote, soft-deletes the list. `{ deleted: true|false }`.
+- POST `/rooms/{room_id}/lists/{list_id}/deletion/cancel`: cancel caller’s vote.
+
+List Items
+- POST `/rooms/{room_id}/lists/{list_id}/items`: `{ description }` → add item.
+- GET `/rooms/{room_id}/lists/{list_id}/items?include_completed=false`: list items. Defaults to hiding completed items.
+- PATCH `/rooms/{room_id}/lists/{list_id}/items/{item_id}`: `{ description?, completed? }` → edit description and/or toggle completion.
+- DELETE `/rooms/{room_id}/lists/{list_id}/items/{item_id}`: delete item (any member). Deletion differs from completion.
 
 ## Notes
 

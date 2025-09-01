@@ -12,6 +12,8 @@ import (
 type Tables struct {
     Users string
     Rooms string
+    Lists string
+    ListItems string
 }
 
 type Client struct {

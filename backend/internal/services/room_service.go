@@ -17,11 +17,17 @@ type RoomService struct {
     ddb   *dynamo.Client
     users *dynamo.UserRepo
     rooms *dynamo.RoomRepo
+    // Optional repositories for cascading cleanup on deletion
+    lists *dynamo.ListRepo
+    items *dynamo.ListItemRepo
 }
 
 func NewRoomService(ddb *dynamo.Client, users *dynamo.UserRepo, rooms *dynamo.RoomRepo) *RoomService {
     return &RoomService{ddb: ddb, users: users, rooms: rooms}
 }
+
+// UseListRepos injects optional list repositories used for cleanup when a room is deleted.
+func (s *RoomService) UseListRepos(lists *dynamo.ListRepo, items *dynamo.ListItemRepo) { s.lists, s.items = lists, items }
 
 func (s *RoomService) GetMyRoom(ctx context.Context, user *models.User) (*models.Room, error) {
     if user.RoomID == nil || *user.RoomID == "" {
@@ -201,6 +207,8 @@ func (s *RoomService) VoteDeletion(ctx context.Context, voter *models.User) (del
             if err != nil {
                 return false, err
             }
+            // Best-effort cleanup of lists and items for the deleted room
+            go s.cleanupRoomResources(context.Background(), rm.RoomID)
             return true, nil
         }
     }
@@ -256,4 +264,23 @@ func (s *RoomService) UpdateRoomSettings(ctx context.Context, user *models.User,
         ExpressionAttributeValues: eav,
     })
     return err
+}
+
+// cleanupRoomResources deletes all lists and their items for a room after the room is deleted.
+func (s *RoomService) cleanupRoomResources(ctx context.Context, roomID string) {
+    if s.lists == nil || s.items == nil { return }
+    // List all lists for the room (including soft-deleted)
+    lists, err := s.lists.ListByRoomRaw(ctx, roomID)
+    if err != nil { return }
+    for _, l := range lists {
+        // Fetch and delete items under the list
+        items, err := s.items.ListByList(ctx, l.ListID)
+        if err == nil {
+            for _, it := range items {
+                _ = s.items.Delete(ctx, it.ItemID)
+            }
+        }
+        // Delete the list itself
+        _ = s.lists.Delete(ctx, l.ListID)
+    }
 }
