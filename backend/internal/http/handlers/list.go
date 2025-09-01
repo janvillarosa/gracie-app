@@ -68,6 +68,29 @@ func (h *ListHandler) CancelListDeletionVote(w http.ResponseWriter, r *http.Requ
     w.WriteHeader(http.StatusNoContent)
 }
 
+type updateListReq struct {
+    Name        *string `json:"name"`
+    Description *string `json:"description"`
+}
+
+func (h *ListHandler) UpdateList(w http.ResponseWriter, r *http.Request) {
+    u, ok := api.UserFrom(r.Context())
+    if !ok { api.WriteJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"}); return }
+    roomID := chi.URLParam(r, "room_id")
+    listID := chi.URLParam(r, "list_id")
+    var req updateListReq
+    if err := api.DecodeJSON(r, &req); err != nil {
+        api.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request"}); return
+    }
+    if req.Name == nil && req.Description == nil {
+        w.WriteHeader(http.StatusNoContent)
+        return
+    }
+    l, err := h.Lists.UpdateList(r.Context(), u, roomID, listID, req.Name, req.Description)
+    if err != nil { api.WriteJSON(w, statusFromErr(err), map[string]string{"error": err.Error()}); return }
+    api.WriteJSON(w, http.StatusOK, l)
+}
+
 // Items endpoints
 type createItemReq struct {
     Description string `json:"description"`
@@ -151,4 +174,3 @@ func statusFromErr(err error) int {
         return http.StatusBadRequest
     }
 }
-

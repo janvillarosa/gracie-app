@@ -1,9 +1,10 @@
 import React, { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@auth/AuthProvider'
-import { rotateShare, voteDeletion, cancelDeletion, updateRoomSettings } from '@api/endpoints'
-import { useQueryClient } from '@tanstack/react-query'
+import { rotateShare, voteDeletion, cancelDeletion, updateRoomSettings, getMyRoom } from '@api/endpoints'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Card, Typography, Space, Button, Input, Modal, Alert, Form, Grid } from 'antd'
+import { ArrowLeftOutlined, SaveOutlined, ShareAltOutlined, DeleteOutlined, CloseCircleOutlined, ReloadOutlined, CheckOutlined } from '@ant-design/icons'
 
 const NAME_RE = /^[A-Za-z0-9 ]+$/
 
@@ -11,6 +12,7 @@ export const RoomSettings: React.FC = () => {
   const { apiKey } = useAuth()
   const navigate = useNavigate()
   const qc = useQueryClient()
+  const roomQuery = useQuery({ queryKey: ['my-room'], queryFn: () => getMyRoom(apiKey!) })
   const [displayName, setDisplayName] = useState('')
   const [description, setDescription] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -70,6 +72,7 @@ export const RoomSettings: React.FC = () => {
       } else {
         setSuccess('Deletion vote recorded')
       }
+      qc.invalidateQueries({ queryKey: ['my-room'] })
     } catch (e: any) {
       setError(e?.message || 'Failed to vote deletion')
     }
@@ -81,6 +84,7 @@ export const RoomSettings: React.FC = () => {
     try {
       await cancelDeletion(apiKey!)
       setSuccess('Deletion vote canceled')
+      qc.invalidateQueries({ queryKey: ['my-room'] })
     } catch (e: any) {
       setError(e?.message || 'Failed to cancel vote')
     }
@@ -94,13 +98,13 @@ export const RoomSettings: React.FC = () => {
             <Space direction="vertical" style={{ width: '100%' }} size="small">
               <Typography.Title level={3} style={{ margin: 0 }}>House Settings</Typography.Title>
               <Space wrap>
-                <Button onClick={() => navigate('/app')}>Back</Button>
+                <Button onClick={() => navigate('/app')} icon={<ArrowLeftOutlined />}>Back</Button>
               </Space>
             </Space>
           ) : (
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Typography.Title level={3} style={{ margin: 0 }}>House Settings</Typography.Title>
-              <Button onClick={() => navigate('/app')}>Back</Button>
+              <Button onClick={() => navigate('/app')} icon={<ArrowLeftOutlined />}>Back</Button>
             </div>
           )}
           <Form layout="vertical" onSubmitCapture={onSave}>
@@ -114,12 +118,15 @@ export const RoomSettings: React.FC = () => {
             <Form.Item label="Description">
               <Input.TextArea rows={4} value={description} onChange={(e) => setDescription(e.target.value)} />
             </Form.Item>
-            <Button type="primary" htmlType="submit" disabled={saving || (!displayName && !description) || !nameValid}>Save</Button>
+            <Button type="primary" htmlType="submit" disabled={saving || (!displayName && !description) || !nameValid} icon={<SaveOutlined />}>Save</Button>
           </Form>
           <Space wrap>
-            <Button type="primary" onClick={onShare}>Get share code</Button>
-            <Button danger onClick={onVoteDelete}>Vote to delete house</Button>
-            <Button onClick={onCancelVote}>Cancel vote</Button>
+            <Button type="primary" onClick={onShare} icon={<ShareAltOutlined />}>Get share code</Button>
+            {roomQuery.data?.my_deletion_vote ? (
+              <Button onClick={onCancelVote} icon={<CloseCircleOutlined />}>Cancel vote</Button>
+            ) : (
+              <Button danger onClick={onVoteDelete} icon={<DeleteOutlined />}>Vote to delete house</Button>
+            )}
           </Space>
           <Modal
             title="Share House"
@@ -127,8 +134,8 @@ export const RoomSettings: React.FC = () => {
             onCancel={() => setShareOpen(false)}
             footer={
               <Space>
-                <Button type="primary" onClick={onShare}>Get new code</Button>
-                <Button onClick={() => setShareOpen(false)}>Done</Button>
+                <Button type="primary" onClick={onShare} icon={<ReloadOutlined />}>Get new code</Button>
+                <Button onClick={() => setShareOpen(false)} icon={<CheckOutlined />}>Done</Button>
               </Space>
             }
           >

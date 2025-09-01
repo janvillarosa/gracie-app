@@ -106,6 +106,47 @@ func (r *ListRepo) RemoveDeletionVote(ctx context.Context, listID, userID string
     return err
 }
 
+func (r *ListRepo) UpdateName(ctx context.Context, listID string, name string, updatedAt time.Time) error {
+    _, err := r.c.DB.UpdateItem(ctx, &dynamodb.UpdateItemInput{
+        TableName:        &r.c.Tables.Lists,
+        Key:              map[string]types.AttributeValue{"list_id": &types.AttributeValueMemberS{Value: listID}},
+        UpdateExpression: strPtr("SET #n = :nv, updated_at = :ua"),
+        ExpressionAttributeNames: map[string]string{"#n": "name"},
+        ExpressionAttributeValues: map[string]types.AttributeValue{
+            ":nv": &types.AttributeValueMemberS{Value: name},
+            ":ua": &types.AttributeValueMemberS{Value: updatedAt.UTC().Format(time.RFC3339)},
+        },
+        ConditionExpression: strPtr("attribute_exists(list_id) AND attribute_not_exists(is_deleted)"),
+    })
+    return err
+}
+
+func (r *ListRepo) UpdateDescription(ctx context.Context, listID string, description string, updatedAt time.Time) error {
+    if description == "" {
+        _, err := r.c.DB.UpdateItem(ctx, &dynamodb.UpdateItemInput{
+            TableName:        &r.c.Tables.Lists,
+            Key:              map[string]types.AttributeValue{"list_id": &types.AttributeValueMemberS{Value: listID}},
+            UpdateExpression: strPtr("REMOVE description SET updated_at = :ua"),
+            ExpressionAttributeValues: map[string]types.AttributeValue{
+                ":ua": &types.AttributeValueMemberS{Value: updatedAt.UTC().Format(time.RFC3339)},
+            },
+            ConditionExpression: strPtr("attribute_exists(list_id) AND attribute_not_exists(is_deleted)"),
+        })
+        return err
+    }
+    _, err := r.c.DB.UpdateItem(ctx, &dynamodb.UpdateItemInput{
+        TableName:        &r.c.Tables.Lists,
+        Key:              map[string]types.AttributeValue{"list_id": &types.AttributeValueMemberS{Value: listID}},
+        UpdateExpression: strPtr("SET description = :dv, updated_at = :ua"),
+        ExpressionAttributeValues: map[string]types.AttributeValue{
+            ":dv": &types.AttributeValueMemberS{Value: description},
+            ":ua": &types.AttributeValueMemberS{Value: updatedAt.UTC().Format(time.RFC3339)},
+        },
+        ConditionExpression: strPtr("attribute_exists(list_id) AND attribute_not_exists(is_deleted)"),
+    })
+    return err
+}
+
 // FinalizeDeleteIfBothVoted sets is_deleted=true when both member votes exist.
 // Pass the two userIDs who are members of the room.
 func (r *ListRepo) FinalizeDeleteIfBothVoted(ctx context.Context, listID, uid1, uid2 string, ts time.Time) (bool, error) {

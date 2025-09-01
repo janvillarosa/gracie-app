@@ -39,12 +39,17 @@ func (h *RoomHandler) GetMyRoom(w http.ResponseWriter, r *http.Request) {
             members = append(members, m.Name)
         }
     }
+    myVote := false
+    if rm.DeletionVotes != nil {
+        if _, ok := rm.DeletionVotes[u.UserID]; ok { myVote = true }
+    }
     view := map[string]any{
         "display_name": rm.DisplayName,
         "description":  rm.Description,
         "members":      members,
         "created_at":   rm.CreatedAt,
         "updated_at":   rm.UpdatedAt,
+        "my_deletion_vote": myVote,
     }
     api.WriteJSON(w, http.StatusOK, view)
 }

@@ -5,6 +5,7 @@ import { getMe, getMyRoom, isNotFound } from '@api/endpoints'
 import { RoomPage } from './RoomPage'
 import { NoRoomPage } from './NoRoomPage'
 import { Card, Alert, Spin, Button, Space } from 'antd'
+import { LoginOutlined } from '@ant-design/icons'
 
 export const Dashboard: React.FC = () => {
   const { apiKey, setApiKey } = useAuth()
@@ -34,7 +35,7 @@ export const Dashboard: React.FC = () => {
           <Alert type="error" message="Session expired. Please log in again." showIcon />
           <div className="spacer" />
           <Space>
-            <Button type="primary" onClick={() => setApiKey(null)}>Go to login</Button>
+            <Button type="primary" onClick={() => setApiKey(null)} icon={<LoginOutlined />}>Go to login</Button>
           </Space>
         </Card>
       </div>

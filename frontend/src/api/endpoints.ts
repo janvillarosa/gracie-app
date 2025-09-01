@@ -79,6 +79,15 @@ export async function createList(apiKey: string, roomId: string, params: { name:
   return apiFetch<List>(`/rooms/${roomId}/lists`, { method: 'POST', apiKey, body: JSON.stringify(params) })
 }
 
+export async function updateList(
+  apiKey: string,
+  roomId: string,
+  listId: string,
+  params: { name?: string; description?: string }
+): Promise<List> {
+  return apiFetch<List>(`/rooms/${roomId}/lists/${listId}`, { method: 'PATCH', apiKey, body: JSON.stringify(params) })
+}
+
 export async function voteListDeletion(apiKey: string, roomId: string, listId: string): Promise<{ deleted: boolean }> {
   return apiFetch<{ deleted: boolean }>(`/rooms/${roomId}/lists/${listId}/deletion/vote`, { method: 'POST', apiKey })
 }

@@ -2,11 +2,11 @@ import React, { useMemo, useState } from 'react'
 import type { RoomView, List } from '@api/types'
 import { useAuth } from '@auth/AuthProvider'
 import { useNavigate, Link } from 'react-router-dom'
-import { createList, getLists, rotateShare, voteListDeletion, cancelListDeletion } from '@api/endpoints'
+import { createList, getLists, rotateShare, voteListDeletion, cancelListDeletion, updateList } from '@api/endpoints'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useLiveQueryOpts } from '@lib/liveQuery'
 import { Card, Typography, Space, Button, Modal, Input, List as AntList, Alert, Grid, Dropdown } from 'antd'
-import { MoreOutlined, RightOutlined } from '@ant-design/icons'
+import { MoreOutlined, RightOutlined, ShareAltOutlined, PlusOutlined, ReloadOutlined, CheckOutlined, SaveOutlined, CloseOutlined } from '@ant-design/icons'
 import type { MenuProps } from 'antd'
 
 export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string }> = ({ room, roomId, userId }) => {
@@ -18,6 +18,12 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
   const [creating, setCreating] = useState(false)
   const [newName, setNewName] = useState('')
   const [newDesc, setNewDesc] = useState('')
+  const [createOpen, setCreateOpen] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [editTarget, setEditTarget] = useState<List | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editDesc, setEditDesc] = useState('')
   const qc = useQueryClient()
   const screens = Grid.useBreakpoint()
   const isMobile = !screens.md
@@ -49,10 +55,33 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
       await createList(apiKey!, roomId, { name: newName.trim(), description: newDesc.trim() || undefined })
       setNewName('')
       setNewDesc('')
+      setCreateOpen(false)
       await qc.invalidateQueries({ queryKey: ['lists', roomId] })
     } catch (e: any) {
       setError(e?.message || 'Failed to create list')
     } finally { setCreating(false) }
+  }
+
+  const onOpenEdit = (l: List) => {
+    setEditTarget(l)
+    setEditName(l.name)
+    setEditDesc(l.description || '')
+    setEditOpen(true)
+  }
+
+  const onSaveEdit = async () => {
+    if (!editTarget) return
+    if (!editName.trim()) { setError('List name is required'); return }
+    setEditing(true)
+    setError(null)
+    try {
+      await updateList(apiKey!, roomId, editTarget.list_id, { name: editName.trim(), description: editDesc.trim() || undefined })
+      setEditOpen(false)
+      setEditTarget(null)
+      await qc.invalidateQueries({ queryKey: ['lists', roomId] })
+    } catch (e: any) {
+      setError(e?.message || 'Failed to update list')
+    } finally { setEditing(false) }
   }
 
   const onVoteList = async (l: List) => {
@@ -88,7 +117,7 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
               <Space direction="vertical" style={{ width: '100%' }} size="small">
                 <Typography.Title level={3} style={{ margin: 0 }}>{room.display_name || 'House'}</Typography.Title>
                 <Space wrap>
-                  <Button type="primary" onClick={onShare}>Share Code</Button>
+                  <Button type="primary" onClick={onShare} icon={<ShareAltOutlined />}>Share Code</Button>
                   <Dropdown menu={{ items: menu, onClick: onMenuClick }} trigger={['click']}>
                     <Button icon={<MoreOutlined />} aria-label="More actions" />
                   </Dropdown>
@@ -98,7 +127,7 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Typography.Title level={3} style={{ margin: 0 }}>{room.display_name || 'House'}</Typography.Title>
                 <Space>
-                  <Button type="primary" onClick={onShare}>Share Code</Button>
+                  <Button type="primary" onClick={onShare} icon={<ShareAltOutlined />}>Share Code</Button>
                   <Dropdown menu={{ items: menu, onClick: onMenuClick }} trigger={['click']}>
                     <Button icon={<MoreOutlined />} aria-label="More actions" />
                   </Dropdown>
@@ -118,8 +147,8 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
             onCancel={() => setShareOpen(false)}
             footer={
               <Space>
-                <Button type="primary" onClick={onShare}>Get new code</Button>
-                <Button onClick={() => setShareOpen(false)}>Done</Button>
+                <Button type="primary" onClick={onShare} icon={<ReloadOutlined />}>Get new code</Button>
+                <Button onClick={() => setShareOpen(false)} icon={<CheckOutlined />}>Done</Button>
               </Space>
             }
           >
@@ -139,41 +168,12 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
 
           <div>
             <Typography.Title level={4} style={{ marginTop: 0 }}>Lists</Typography.Title>
-            {isMobile ? (
-              <Space direction="vertical" style={{ width: '100%' }}>
-                <Input
-                  placeholder="New list name"
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                />
-                <Input
-                  placeholder="Description (optional)"
-                  value={newDesc}
-                  onChange={(e) => setNewDesc(e.target.value)}
-                />
-                <Button type="primary" disabled={creating || !newName.trim()} onClick={onCreateList}>Create</Button>
-              </Space>
-            ) : (
-              <Space.Compact style={{ width: '100%' }}>
-                <Input
-                  placeholder="New list name"
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                />
-                <Input
-                  placeholder="Description (optional)"
-                  value={newDesc}
-                  onChange={(e) => setNewDesc(e.target.value)}
-                />
-                <Button type="primary" disabled={creating || !newName.trim()} onClick={onCreateList}>Create</Button>
-              </Space.Compact>
-            )}
           </div>
 
           {listsQuery.isLoading ? (
             <div>Loading lists…</div>
           ) : lists.length === 0 ? (
-            <Typography.Text type="secondary">No lists yet. Create the first one above.</Typography.Text>
+            <Typography.Text type="secondary">No lists yet. Add one below.</Typography.Text>
           ) : (
             <AntList
               itemLayout={isMobile ? 'vertical' : 'horizontal'}
@@ -202,16 +202,96 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
                         </div>
                       )}
                     </div>
-                    <RightOutlined style={{ color: 'var(--color-primary)' }} />
+                    <Space>
+                      <span onClick={(e) => e.stopPropagation()}>
+                        <Dropdown
+                          trigger={["click"]}
+                          menu={{
+                            items: [
+                              { key: 'edit', label: 'Edit details' },
+                              ...(l.deletion_votes && l.deletion_votes[userId]
+                                ? [{ key: 'cancel', label: 'Cancel delete vote' }]
+                                : [{ key: 'vote', label: 'Vote to delete' }]),
+                            ],
+                            onClick: ({ key }) => {
+                              if (key === 'edit') onOpenEdit(l)
+                              if (key === 'vote') onVoteList(l)
+                              if (key === 'cancel') onCancelVoteList(l)
+                            },
+                          }}
+                        >
+                          <Button icon={<MoreOutlined />} aria-label="List actions" />
+                        </Dropdown>
+                      </span>
+                      <RightOutlined style={{ color: 'var(--color-primary)' }} />
+                    </Space>
                   </div>
                 </AntList.Item>
               )}
             />
           )}
 
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <Button type="primary" onClick={() => setCreateOpen(true)} icon={<PlusOutlined />}>Add List</Button>
+          </div>
+
           {error && <Alert type="error" message={error} showIcon />}
         </Space>
       </Card>
+
+      {/* Create List Modal */}
+      <Modal
+        title="Add List"
+        open={createOpen}
+        onCancel={() => setCreateOpen(false)}
+        footer={
+          <Space>
+            <Button onClick={() => setCreateOpen(false)} icon={<CloseOutlined />}>Cancel</Button>
+            <Button type="primary" disabled={creating || !newName.trim()} onClick={onCreateList} icon={<PlusOutlined />}>Create</Button>
+          </Space>
+        }
+      >
+        <Space direction="vertical" style={{ width: '100%' }}>
+          <Input
+            placeholder="List name"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            autoFocus
+          />
+          <Input
+            placeholder="Description (optional)"
+            value={newDesc}
+            onChange={(e) => setNewDesc(e.target.value)}
+          />
+        </Space>
+      </Modal>
+
+      {/* Edit List Modal */}
+      <Modal
+        title="Edit List"
+        open={editOpen}
+        onCancel={() => setEditOpen(false)}
+        footer={
+          <Space>
+            <Button onClick={() => setEditOpen(false)} icon={<CloseOutlined />}>Cancel</Button>
+            <Button type="primary" disabled={editing || !editName.trim()} onClick={onSaveEdit} icon={<SaveOutlined />}>Save</Button>
+          </Space>
+        }
+      >
+        <Space direction="vertical" style={{ width: '100%' }}>
+          <Input
+            placeholder="List name"
+            value={editName}
+            onChange={(e) => setEditName(e.target.value)}
+            autoFocus
+          />
+          <Input
+            placeholder="Description (optional)"
+            value={editDesc}
+            onChange={(e) => setEditDesc(e.target.value)}
+          />
+        </Space>
+      </Modal>
     </div>
   )
 }

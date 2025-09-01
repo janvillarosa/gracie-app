@@ -6,6 +6,7 @@ import { getMe, getListItems, getLists, createListItem, updateListItem, deleteLi
 import type { List, ListItem } from '@api/types'
 import { useLiveQueryOpts } from '@lib/liveQuery'
 import { Card, Typography, Space, Button, Input, Checkbox, List as AntList, Alert, Grid } from 'antd'
+import { ArrowLeftOutlined, DeleteOutlined, PlusOutlined, EyeOutlined, EyeInvisibleOutlined, CloseCircleOutlined } from '@ant-design/icons'
 
 export const ListPage: React.FC = () => {
   const { apiKey } = useAuth()
@@ -114,13 +115,13 @@ export const ListPage: React.FC = () => {
     return <div className="container"><Card>Loading…</Card></div>
   }
   if (!roomId) {
-    return <div className="container"><Card><Alert type="error" message="List not found." showIcon /><div className="spacer" /><Button onClick={() => navigate('/app')}>Back to House</Button></Card></div>
+    return <div className="container"><Card><Alert type="error" message="List not found." showIcon /><div className="spacer" /><Button onClick={() => navigate('/app')} icon={<ArrowLeftOutlined />}>Back to House</Button></Card></div>
   }
   if (!listMeta) {
     if (redirecting || hadListRef.current) {
       return <div className="container"><Card>Redirecting…</Card></div>
     }
-    return <div className="container"><Card><Alert type="error" message="List not found." showIcon /><div className="spacer" /><Button onClick={() => navigate('/app')}>Back to House</Button></Card></div>
+    return <div className="container"><Card><Alert type="error" message="List not found." showIcon /><div className="spacer" /><Button onClick={() => navigate('/app')} icon={<ArrowLeftOutlined />}>Back to House</Button></Card></div>
   }
 
   const items = itemsQuery.data ?? []
@@ -134,11 +135,11 @@ export const ListPage: React.FC = () => {
               <Typography.Title level={3} style={{ margin: 0 }}>{listMeta.name}</Typography.Title>
               <Space wrap>
                 {myVote(listMeta) ? (
-                  <Button onClick={onCancelVote}>Cancel delete vote</Button>
+                  <Button onClick={onCancelVote} icon={<CloseCircleOutlined />}>Cancel delete vote</Button>
                 ) : (
-                  <Button danger onClick={onVoteDelete}>Request delete</Button>
+                  <Button danger onClick={onVoteDelete} icon={<DeleteOutlined />}>Request delete</Button>
                 )}
-                <Button onClick={() => navigate('/app')}>Back</Button>
+                <Button onClick={() => navigate('/app')} icon={<ArrowLeftOutlined />}>Back</Button>
               </Space>
             </Space>
           ) : (
@@ -146,11 +147,11 @@ export const ListPage: React.FC = () => {
               <Typography.Title level={3} style={{ margin: 0 }}>{listMeta.name}</Typography.Title>
               <Space>
                 {myVote(listMeta) ? (
-                  <Button onClick={onCancelVote}>Cancel delete vote</Button>
+                  <Button onClick={onCancelVote} icon={<CloseCircleOutlined />}>Cancel delete vote</Button>
                 ) : (
-                  <Button danger onClick={onVoteDelete}>Request delete</Button>
+                  <Button danger onClick={onVoteDelete} icon={<DeleteOutlined />}>Request delete</Button>
                 )}
-                <Button onClick={() => navigate('/app')}>Back</Button>
+                <Button onClick={() => navigate('/app')} icon={<ArrowLeftOutlined />}>Back</Button>
               </Space>
             </div>
           )}
@@ -163,8 +164,8 @@ export const ListPage: React.FC = () => {
                 onChange={(e) => setNewDesc(e.target.value)}
               />
               <Space>
-                <Button type="primary" onClick={onCreateItem} disabled={!newDesc.trim()}>Add</Button>
-                <Button type="default" onClick={() => setIncludeCompleted((v) => !v)}>
+                <Button type="primary" onClick={onCreateItem} disabled={!newDesc.trim()} icon={<PlusOutlined />}>Add</Button>
+                <Button type="default" onClick={() => setIncludeCompleted((v) => !v)} icon={includeCompleted ? <EyeInvisibleOutlined /> : <EyeOutlined />}>
                   {includeCompleted ? 'Hide completed' : 'Show completed'}
                 </Button>
               </Space>
@@ -176,8 +177,8 @@ export const ListPage: React.FC = () => {
                 value={newDesc}
                 onChange={(e) => setNewDesc(e.target.value)}
               />
-              <Button type="primary" onClick={onCreateItem} disabled={!newDesc.trim()}>Add</Button>
-              <Button type="default" onClick={() => setIncludeCompleted((v) => !v)}>
+              <Button type="primary" onClick={onCreateItem} disabled={!newDesc.trim()} icon={<PlusOutlined />}>Add</Button>
+              <Button type="default" onClick={() => setIncludeCompleted((v) => !v)} icon={includeCompleted ? <EyeInvisibleOutlined /> : <EyeOutlined />}>
                 {includeCompleted ? 'Hide completed' : 'Show completed'}
               </Button>
             </Space.Compact>
@@ -189,7 +190,7 @@ export const ListPage: React.FC = () => {
               dataSource={items}
               renderItem={(it) => (
                 <AntList.Item
-                  actions={[<Button key="del" onClick={() => onDeleteItem(it)}>Delete</Button>]}
+                  actions={[<Button key="del" onClick={() => onDeleteItem(it)} icon={<DeleteOutlined />}>Delete</Button>]}
                 >
                   <Space>
                     <Checkbox checked={it.completed} onChange={() => onToggleComplete(it)} />

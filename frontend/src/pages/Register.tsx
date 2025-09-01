@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { registerAuth } from '@api/endpoints'
 import { Card, Typography, Form, Input, Button, Alert } from 'antd'
+import { UserAddOutlined } from '@ant-design/icons'
 
 export const Register: React.FC = () => {
   const [username, setUsername] = useState('')
@@ -42,7 +43,7 @@ export const Register: React.FC = () => {
           <Form.Item label="Display name (optional)">
             <Input placeholder="Display name (optional)" value={name} onChange={(e) => setName(e.target.value)} />
           </Form.Item>
-          <Button type="primary" htmlType="submit" disabled={!username || password.length < 8 || loading}>Register</Button>
+          <Button type="primary" htmlType="submit" disabled={!username || password.length < 8 || loading} icon={<UserAddOutlined />}>Register</Button>
         </Form>
         {error && <><div className="spacer" /><Alert type="error" message={error} showIcon /></>}
         {success && <><div className="spacer" /><Alert type="success" message="Account created. Redirecting to login…" showIcon /></>}

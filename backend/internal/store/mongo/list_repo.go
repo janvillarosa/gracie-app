@@ -40,11 +40,35 @@ func (r *ListRepo) GetByID(ctx context.Context, id string) (*models.List, error)
 }
 
 func (r *ListRepo) ListByRoom(ctx context.Context, roomID string) ([]models.List, error) {
-    cur, err := r.col().Find(ctx, bson.D{{Key: "room_id", Value: roomID}})
+    // Exclude soft-deleted lists
+    cur, err := r.col().Find(ctx, bson.D{{Key: "room_id", Value: roomID}, {Key: "is_deleted", Value: bson.D{{Key: "$ne", Value: true}}}})
     if err != nil { return nil, err }
     var out []models.List
     if err := cur.All(ctx, &out); err != nil { return nil, err }
     return out, nil
+}
+
+func (r *ListRepo) UpdateName(ctx context.Context, listID string, name string, updatedAt time.Time) error {
+    _, err := r.col().UpdateOne(ctx,
+        bson.D{{Key: "list_id", Value: listID}, {Key: "is_deleted", Value: bson.D{{Key: "$ne", Value: true}}}},
+        bson.D{{Key: "$set", Value: bson.D{{Key: "name", Value: name}, {Key: "updated_at", Value: updatedAt.UTC()}}}},
+    )
+    return err
+}
+
+func (r *ListRepo) UpdateDescription(ctx context.Context, listID string, description string, updatedAt time.Time) error {
+    if description == "" {
+        _, err := r.col().UpdateOne(ctx,
+            bson.D{{Key: "list_id", Value: listID}, {Key: "is_deleted", Value: bson.D{{Key: "$ne", Value: true}}}},
+            bson.D{{Key: "$unset", Value: bson.D{{Key: "description", Value: ""}}}, {Key: "$set", Value: bson.D{{Key: "updated_at", Value: updatedAt.UTC()}}}},
+        )
+        return err
+    }
+    _, err := r.col().UpdateOne(ctx,
+        bson.D{{Key: "list_id", Value: listID}, {Key: "is_deleted", Value: bson.D{{Key: "$ne", Value: true}}}},
+        bson.D{{Key: "$set", Value: bson.D{{Key: "description", Value: description}, {Key: "updated_at", Value: updatedAt.UTC()}}}},
+    )
+    return err
 }
 
 func (r *ListRepo) AddDeletionVote(ctx context.Context, listID string, userID string, ts time.Time) error {

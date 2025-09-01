@@ -59,6 +59,7 @@ func NewRouter(userFinder authmw.UserFinder, authHandler *handlers.AuthHandler, 
         // Lists
         ar.Post("/rooms/{room_id}/lists", listHandler.CreateList)
         ar.Get("/rooms/{room_id}/lists", listHandler.ListLists)
+        ar.Patch("/rooms/{room_id}/lists/{list_id}", listHandler.UpdateList)
         ar.Post("/rooms/{room_id}/lists/{list_id}/deletion/vote", listHandler.VoteListDeletion)
         ar.Post("/rooms/{room_id}/lists/{list_id}/deletion/cancel", listHandler.CancelListDeletionVote)
         ar.Post("/rooms/{room_id}/lists/{list_id}/items", listHandler.CreateItem)

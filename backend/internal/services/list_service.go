@@ -78,6 +78,24 @@ func (s *ListService) CancelListDeletionVote(ctx context.Context, user *models.U
     return s.lists.RemoveDeletionVote(ctx, listID, user.UserID)
 }
 
+// UpdateList updates the list's name and/or description.
+func (s *ListService) UpdateList(ctx context.Context, user *models.User, roomID, listID string, name *string, description *string) (*models.List, error) {
+    if err := s.ensureRoomMembership(ctx, user, roomID); err != nil { return nil, err }
+    l, err := s.lists.GetByID(ctx, listID)
+    if err != nil { return nil, err }
+    if l.RoomID != roomID || l.IsDeleted { return nil, derr.ErrForbidden }
+    if name == nil && description == nil { return l, nil }
+    now := time.Now().UTC()
+    if name != nil {
+        if *name == "" { return nil, derr.ErrBadRequest }
+        if err := s.lists.UpdateName(ctx, listID, *name, now); err != nil { return nil, err }
+    }
+    if description != nil {
+        if err := s.lists.UpdateDescription(ctx, listID, *description, now); err != nil { return nil, err }
+    }
+    return s.lists.GetByID(ctx, listID)
+}
+
 // Items
 func (s *ListService) CreateItem(ctx context.Context, user *models.User, roomID, listID, description string) (*models.ListItem, error) {
     if err := s.ensureRoomMembership(ctx, user, roomID); err != nil { return nil, err }

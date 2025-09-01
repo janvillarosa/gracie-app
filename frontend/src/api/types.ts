@@ -12,6 +12,7 @@ export type RoomView = {
   members: string[]
   created_at: string
   updated_at: string
+  my_deletion_vote?: boolean
 }
 
 export type CreateUserResponse = {
