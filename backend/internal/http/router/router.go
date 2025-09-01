@@ -2,9 +2,11 @@ package router
 
 import (
     "net/http"
+    "os"
 
     "github.com/go-chi/chi/v5"
     "github.com/go-chi/chi/v5/middleware"
+    "github.com/go-chi/cors"
     "github.com/janvillarosa/gracie-app/backend/internal/http/handlers"
     authmw "github.com/janvillarosa/gracie-app/backend/internal/http/middleware"
     "github.com/janvillarosa/gracie-app/backend/internal/store/dynamo"
@@ -15,6 +17,24 @@ func NewRouter(usersRepo *dynamo.UserRepo, authHandler *handlers.AuthHandler, us
     r.Use(middleware.RequestID)
     r.Use(middleware.Logger)
     r.Use(middleware.Recoverer)
+
+    // CORS for production (Vercel frontend → Railway API). Control via CORS_ORIGIN env.
+    // If CORS_ORIGIN is set, allow only that origin and credentials; otherwise allow all without credentials.
+    origin := os.Getenv("CORS_ORIGIN")
+    allowedOrigins := []string{"*"}
+    allowCreds := false
+    if origin != "" {
+        allowedOrigins = []string{origin}
+        allowCreds = true
+    }
+    r.Use(cors.Handler(cors.Options{
+        AllowedOrigins:   allowedOrigins,
+        AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+        AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-Requested-With"},
+        ExposedHeaders:   []string{"Link"},
+        AllowCredentials: allowCreds,
+        MaxAge:           300,
+    }))
 
     // Public endpoints
     r.Post("/auth/register", authHandler.Register)

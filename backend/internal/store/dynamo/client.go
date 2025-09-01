@@ -22,16 +22,25 @@ type Client struct {
 }
 
 func New(ctx context.Context, region, endpoint string, tables Tables) (*Client, error) {
-    // Use static dummy creds for DynamoDB Local
-    cfg, err := awsconfig.LoadDefaultConfig(ctx,
-        awsconfig.WithRegion(region),
-        awsconfig.WithCredentialsProvider(credentials.NewStaticCredentialsProvider("local", "local", "")),
-        awsconfig.WithEndpointResolverWithOptions(aws.EndpointResolverWithOptionsFunc(
-            func(service, region string, options ...interface{}) (aws.Endpoint, error) {
-                return aws.Endpoint{URL: endpoint, HostnameImmutable: true, PartitionID: "aws"}, nil
-            },
-        )),
+    var (
+        cfg aws.Config
+        err error
     )
+    if endpoint != "" {
+        // DynamoDB Local mode: use static creds and custom endpoint
+        cfg, err = awsconfig.LoadDefaultConfig(ctx,
+            awsconfig.WithRegion(region),
+            awsconfig.WithCredentialsProvider(credentials.NewStaticCredentialsProvider("local", "local", "")),
+            awsconfig.WithEndpointResolverWithOptions(aws.EndpointResolverWithOptionsFunc(
+                func(service, region string, options ...interface{}) (aws.Endpoint, error) {
+                    return aws.Endpoint{URL: endpoint, HostnameImmutable: true, PartitionID: "aws"}, nil
+                },
+            )),
+        )
+    } else {
+        // AWS-managed DynamoDB: default credentials chain + standard endpoints
+        cfg, err = awsconfig.LoadDefaultConfig(ctx, awsconfig.WithRegion(region))
+    }
     if err != nil {
         return nil, err
     }

@@ -37,6 +37,13 @@ func Load() (*Config, error) {
         APIKeyTTLHours: getEnvInt("API_KEY_TTL_HOURS", 720),
     }
 
+    // If DDB_ENDPOINT is explicitly set to empty or "aws", use AWS-managed DynamoDB (no custom endpoint)
+    if v, ok := os.LookupEnv("DDB_ENDPOINT"); ok {
+        if v == "" || v == "aws" {
+            cfg.DDBEndpoint = ""
+        }
+    }
+
     if cfg.UsersTable == "" || cfg.RoomsTable == "" || cfg.ListsTable == "" || cfg.ListItemsTable == "" {
         return nil, fmt.Errorf("missing table names")
     }
