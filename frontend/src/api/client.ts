@@ -6,7 +6,10 @@ export async function apiFetch<T>(
   path: string,
   options: RequestInit & { apiKey?: string | null } = {}
 ): Promise<T> {
-  const base = import.meta.env.VITE_API_BASE_URL ?? DEFAULT_BASE
+  // Prefer absolute URL in VITE_API_BASE_URL; otherwise always use '/api' so Vercel rewrite applies
+  const envBase = (import.meta as any).env?.VITE_API_BASE_URL as string | undefined
+  const isAbsolute = typeof envBase === 'string' && /^(https?:)?\/\//.test(envBase)
+  const base = isAbsolute ? envBase! : DEFAULT_BASE
   const url = `${base}${path}`
   const { apiKey, headers, ...rest } = options
   const resp = await fetch(url, {
@@ -32,4 +35,3 @@ export async function apiFetch<T>(
   // @ts-expect-error allow empty responses
   return undefined
 }
-
