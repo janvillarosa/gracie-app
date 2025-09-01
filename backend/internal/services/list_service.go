@@ -6,20 +6,19 @@ import (
 
     derr "github.com/janvillarosa/gracie-app/backend/internal/errors"
     "github.com/janvillarosa/gracie-app/backend/internal/models"
-    "github.com/janvillarosa/gracie-app/backend/internal/store/dynamo"
+    "github.com/janvillarosa/gracie-app/backend/internal/store"
     "github.com/janvillarosa/gracie-app/backend/pkg/ids"
 )
 
 type ListService struct {
-    ddb   *dynamo.Client
-    users *dynamo.UserRepo
-    rooms *dynamo.RoomRepo
-    lists *dynamo.ListRepo
-    items *dynamo.ListItemRepo
+    users store.UserRepository
+    rooms store.RoomRepository
+    lists store.ListRepository
+    items store.ListItemRepository
 }
 
-func NewListService(ddb *dynamo.Client, users *dynamo.UserRepo, rooms *dynamo.RoomRepo, lists *dynamo.ListRepo, items *dynamo.ListItemRepo) *ListService {
-    return &ListService{ddb: ddb, users: users, rooms: rooms, lists: lists, items: items}
+func NewListService(users store.UserRepository, rooms store.RoomRepository, lists store.ListRepository, items store.ListItemRepository) *ListService {
+    return &ListService{users: users, rooms: rooms, lists: lists, items: items}
 }
 
 func (s *ListService) ensureRoomMembership(ctx context.Context, user *models.User, roomID string) error {
@@ -135,4 +134,3 @@ func (s *ListService) DeleteItem(ctx context.Context, user *models.User, roomID,
     if it.RoomID != roomID || it.ListID != listID { return derr.ErrForbidden }
     return s.items.Delete(ctx, itemID)
 }
-

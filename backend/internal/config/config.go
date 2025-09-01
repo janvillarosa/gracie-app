@@ -15,6 +15,11 @@ type Config struct {
     ListItemsTable string
     EncKeyFile  string
     APIKeyTTLHours int
+    // Store selection: "dynamo" (default) or "mongo"
+    DataStore   string
+    // Mongo settings (used when DataStore == "mongo")
+    MongoURI    string
+    MongoDB     string
 }
 
 func getEnv(key, def string) string {
@@ -35,6 +40,9 @@ func Load() (*Config, error) {
         ListItemsTable: getEnv("LIST_ITEMS_TABLE", "ListItems"),
         EncKeyFile:  getEnv("ENC_KEY_FILE", "/app/secrets/enc.key"),
         APIKeyTTLHours: getEnvInt("API_KEY_TTL_HOURS", 720),
+        DataStore:   getEnv("DATA_STORE", "mongo"),
+        MongoURI:    getEnv("MONGODB_URI", "mongodb://localhost:27017"),
+        MongoDB:     getEnv("MONGODB_DB", "gracie"),
     }
 
     // If DDB_ENDPOINT is explicitly set to empty or "aws", use AWS-managed DynamoDB (no custom endpoint)

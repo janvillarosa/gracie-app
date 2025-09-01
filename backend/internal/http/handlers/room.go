@@ -7,15 +7,15 @@ import (
     api "github.com/janvillarosa/gracie-app/backend/internal/http"
     derr "github.com/janvillarosa/gracie-app/backend/internal/errors"
     "github.com/janvillarosa/gracie-app/backend/internal/services"
-    "github.com/janvillarosa/gracie-app/backend/internal/store/dynamo"
+    "github.com/janvillarosa/gracie-app/backend/internal/store"
 )
 
 type RoomHandler struct {
     Rooms *services.RoomService
-    Users *dynamo.UserRepo
+    Users store.UserRepository
 }
 
-func NewRoomHandler(rooms *services.RoomService, users *dynamo.UserRepo) *RoomHandler { return &RoomHandler{Rooms: rooms, Users: users} }
+func NewRoomHandler(rooms *services.RoomService, users store.UserRepository) *RoomHandler { return &RoomHandler{Rooms: rooms, Users: users} }
 
 func (h *RoomHandler) GetMyRoom(w http.ResponseWriter, r *http.Request) {
     u, ok := api.UserFrom(r.Context())

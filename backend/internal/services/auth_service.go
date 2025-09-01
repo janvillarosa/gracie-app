@@ -5,13 +5,11 @@ import (
     "regexp"
     "time"
 
-    "github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
-    "github.com/aws/aws-sdk-go-v2/service/dynamodb"
     apiauth "github.com/janvillarosa/gracie-app/backend/internal/auth"
     "github.com/janvillarosa/gracie-app/backend/internal/crypto"
     derr "github.com/janvillarosa/gracie-app/backend/internal/errors"
     "github.com/janvillarosa/gracie-app/backend/internal/models"
-    "github.com/janvillarosa/gracie-app/backend/internal/store/dynamo"
+    "github.com/janvillarosa/gracie-app/backend/internal/store"
     "github.com/janvillarosa/gracie-app/backend/pkg/ids"
     "golang.org/x/crypto/bcrypt"
 )
@@ -19,17 +17,16 @@ import (
 var emailRe = regexp.MustCompile(`^[^@\s]+@[^@\s]+\.[^@\s]+$`)
 
 type AuthService struct {
-    ddb   *dynamo.Client
-    users *dynamo.UserRepo
+    users store.UserRepository
     key   []byte
     ttl   time.Duration
 }
 
-func NewAuthService(ddb *dynamo.Client, users *dynamo.UserRepo, encKeyPath string, ttlHours int) (*AuthService, error) {
+func NewAuthService(users store.UserRepository, encKeyPath string, ttlHours int) (*AuthService, error) {
     key, err := crypto.LoadOrCreateKey(encKeyPath)
     if err != nil { return nil, err }
     ttl := time.Duration(ttlHours) * time.Hour
-    return &AuthService{ddb: ddb, users: users, key: key, ttl: ttl}, nil
+    return &AuthService{users: users, key: key, ttl: ttl}, nil
 }
 
 func (s *AuthService) Register(ctx context.Context, username, password, name string) error {
@@ -55,14 +52,7 @@ func (s *AuthService) Register(ctx context.Context, username, password, name str
         CreatedAt:   now,
         UpdatedAt:   now,
     }
-    item, err := attributevalue.MarshalMap(user)
-    if err != nil { return err }
-    _, err = s.ddb.DB.PutItem(ctx, &dynamodb.PutItemInput{
-        TableName:           &s.ddb.Tables.Users,
-        Item:                item,
-        ConditionExpression: strPtr("attribute_not_exists(user_id)"),
-    })
-    return err
+    return s.users.Put(ctx, user)
 }
 
 type LoginResult struct {

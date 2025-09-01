@@ -13,7 +13,7 @@ import (
     "github.com/janvillarosa/gracie-app/backend/internal/http/handlers"
     "github.com/janvillarosa/gracie-app/backend/internal/http/router"
     "github.com/janvillarosa/gracie-app/backend/internal/services"
-    "github.com/janvillarosa/gracie-app/backend/internal/store/dynamo"
+    mongostore "github.com/janvillarosa/gracie-app/backend/internal/store/mongo"
 )
 
 func main() {
@@ -23,21 +23,23 @@ func main() {
     }
 
     ctx := context.Background()
-    ddb, err := dynamo.New(ctx, cfg.AWSRegion, cfg.DDBEndpoint, dynamo.Tables{Users: cfg.UsersTable, Rooms: cfg.RoomsTable, Lists: cfg.ListsTable, ListItems: cfg.ListItemsTable})
-    if err != nil {
-        log.Fatalf("dynamo client: %v", err)
-    }
+    mcli, err := mongostore.New(ctx, cfg.MongoURI, cfg.MongoDB)
+    if err != nil { log.Fatalf("mongo connect: %v", err) }
+    usersRepo := mongostore.NewUserRepo(mcli)
+    roomsRepo := mongostore.NewRoomRepo(mcli)
+    listsRepo := mongostore.NewListRepo(mcli)
+    itemsRepo := mongostore.NewListItemRepo(mcli)
+    _ = usersRepo.EnsureIndexes(ctx)
+    _ = roomsRepo.EnsureIndexes(ctx)
+    _ = listsRepo.EnsureIndexes(ctx)
+    _ = itemsRepo.EnsureIndexes(ctx)
+    tx := mongostore.NewTx(mcli)
 
-    usersRepo := dynamo.NewUserRepo(ddb)
-    roomsRepo := dynamo.NewRoomRepo(ddb)
-    listsRepo := dynamo.NewListRepo(ddb)
-    itemsRepo := dynamo.NewListItemRepo(ddb)
-
-    userSvc := services.NewUserService(ddb, usersRepo)
-    roomSvc := services.NewRoomService(ddb, usersRepo, roomsRepo)
+    userSvc := services.NewUserService(usersRepo, roomsRepo, tx)
+    roomSvc := services.NewRoomService(usersRepo, roomsRepo, tx)
     roomSvc.UseListRepos(listsRepo, itemsRepo)
-    listSvc := services.NewListService(ddb, usersRepo, roomsRepo, listsRepo, itemsRepo)
-    authSvc, err := services.NewAuthService(ddb, usersRepo, cfg.EncKeyFile, cfg.APIKeyTTLHours)
+    listSvc := services.NewListService(usersRepo, roomsRepo, listsRepo, itemsRepo)
+    authSvc, err := services.NewAuthService(usersRepo, cfg.EncKeyFile, cfg.APIKeyTTLHours)
     if err != nil { log.Fatalf("auth service: %v", err) }
 
     userHandler := handlers.NewUserHandler(userSvc)

@@ -58,6 +58,9 @@ heap.pprof
 dynamodb_local_*
 shared-local-instance.db
 
+# MongoDB (local dev volume)
+.mongo/
+
 # Node / frontend
 node_modules/
 frontend/node_modules/

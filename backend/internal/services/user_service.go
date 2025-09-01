@@ -1,26 +1,24 @@
 package services
 
 import (
-	"context"
-	"time"
+    "context"
+    "time"
 
-	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
-	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
-	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
-	authpkg "github.com/janvillarosa/gracie-app/backend/internal/auth"
-	derr "github.com/janvillarosa/gracie-app/backend/internal/errors"
-	"github.com/janvillarosa/gracie-app/backend/internal/models"
-	"github.com/janvillarosa/gracie-app/backend/internal/store/dynamo"
-	"github.com/janvillarosa/gracie-app/backend/pkg/ids"
+    authpkg "github.com/janvillarosa/gracie-app/backend/internal/auth"
+    derr "github.com/janvillarosa/gracie-app/backend/internal/errors"
+    "github.com/janvillarosa/gracie-app/backend/internal/models"
+    "github.com/janvillarosa/gracie-app/backend/internal/store"
+    "github.com/janvillarosa/gracie-app/backend/pkg/ids"
 )
 
 type UserService struct {
-	ddb   *dynamo.Client
-	users *dynamo.UserRepo
+    users store.UserRepository
+    rooms store.RoomRepository
+    tx    store.TxRunner
 }
 
-func NewUserService(ddb *dynamo.Client, users *dynamo.UserRepo) *UserService {
-	return &UserService{ddb: ddb, users: users}
+func NewUserService(users store.UserRepository, rooms store.RoomRepository, tx store.TxRunner) *UserService {
+    return &UserService{users: users, rooms: rooms, tx: tx}
 }
 
 type CreatedUser struct {
@@ -29,70 +27,47 @@ type CreatedUser struct {
 }
 
 func (s *UserService) CreateUserWithSoloRoom(ctx context.Context, name string) (*CreatedUser, error) {
-	now := time.Now().UTC()
+    now := time.Now().UTC()
 
-	userID := ids.NewID("usr")
-	roomID := ids.NewID("room")
+    userID := ids.NewID("usr")
+    roomID := ids.NewID("room")
 
-	apiKey, apiHash, err := authpkg.GenerateAPIKey()
-	if err != nil {
-		return nil, err
-	}
-	lookup := authpkg.DeriveLookup(apiKey)
+    apiKey, apiHash, err := authpkg.GenerateAPIKey()
+    if err != nil {
+        return nil, err
+    }
+    lookup := authpkg.DeriveLookup(apiKey)
 
-	user := &models.User{
-		UserID:       userID,
-		Name:         name,
-		APIKeyHash:   apiHash,
-		APIKeyLookup: lookup,
-		RoomID:       &roomID,
-		CreatedAt:    now,
-		UpdatedAt:    now,
-	}
-	room := &models.Room{
-		RoomID:        roomID,
-		MemberIDs:     []string{userID},
-		DeletionVotes: map[string]string{},
-		CreatedAt:     now,
-		UpdatedAt:     now,
-	}
+    user := &models.User{
+        UserID:       userID,
+        Name:         name,
+        APIKeyHash:   apiHash,
+        APIKeyLookup: lookup,
+        RoomID:       &roomID,
+        CreatedAt:    now,
+        UpdatedAt:    now,
+    }
+    room := &models.Room{
+        RoomID:        roomID,
+        MemberIDs:     []string{userID},
+        DeletionVotes: map[string]string{},
+        CreatedAt:     now,
+        UpdatedAt:     now,
+    }
 
-	userItem, err := attributevalue.MarshalMap(user)
-	if err != nil {
-		return nil, err
-	}
-	roomItem, err := attributevalue.MarshalMap(room)
-	if err != nil {
-		return nil, err
-	}
-
-	_, err = s.ddb.DB.TransactWriteItems(ctx, &dynamodb.TransactWriteItemsInput{
-		TransactItems: []types.TransactWriteItem{
-			{Put: &types.Put{
-				TableName:           &s.ddb.Tables.Users,
-				Item:                userItem,
-				ConditionExpression: strPtr("attribute_not_exists(user_id)"),
-			}},
-			{Put: &types.Put{
-				TableName:           &s.ddb.Tables.Rooms,
-				Item:                roomItem,
-				ConditionExpression: strPtr("attribute_not_exists(room_id)"),
-			}},
-		},
-	})
-	if err != nil {
-		return nil, err
-	}
-	return &CreatedUser{User: user, APIKey: apiKey}, nil
+    if err := s.tx.WithTransaction(ctx, func(txctx context.Context) error {
+        if err := s.users.Put(txctx, user); err != nil { return err }
+        if err := s.rooms.Put(txctx, room); err != nil { return err }
+        return nil
+    }); err != nil {
+        return nil, err
+    }
+    return &CreatedUser{User: user, APIKey: apiKey}, nil
 }
 
-func (s *UserService) GetMe(ctx context.Context, userID string) (*models.User, error) {
-	return s.users.GetByID(ctx, userID)
-}
+func (s *UserService) GetMe(ctx context.Context, userID string) (*models.User, error) { return s.users.GetByID(ctx, userID) }
 
 func (s *UserService) UpdateName(ctx context.Context, userID string, name string) error {
-	if name == "" {
-		return derr.ErrBadRequest
-	}
-	return s.users.UpdateName(ctx, userID, name, time.Now().UTC())
+    if name == "" { return derr.ErrBadRequest }
+    return s.users.UpdateName(ctx, userID, name, time.Now().UTC())
 }

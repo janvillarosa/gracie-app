@@ -1,12 +1,11 @@
 services:
-  dynamodb:
-    image: amazon/dynamodb-local:latest
-    container_name: gracie-ddb
-    command: ["-jar", "DynamoDBLocal.jar", "-sharedDb"]
+  mongo:
+    image: mongo:6
+    container_name: gracie-mongo
     ports:
-      - "8000:8000"
+      - "27017:27017"
     volumes:
-      - ./.dynamodb:/home/dynamodblocal/data
+      - ./.mongo:/data/db
     restart: unless-stopped
 
   api:
@@ -15,19 +14,13 @@ services:
       dockerfile: backend/Dockerfile
     container_name: gracie-api
     depends_on:
-      - dynamodb
+      - mongo
     environment:
-      DDB_ENDPOINT: http://dynamodb:8000
-      AWS_REGION: us-east-1
-      AWS_ACCESS_KEY_ID: local
-      AWS_SECRET_ACCESS_KEY: local
-      USERS_TABLE: Users
-      ROOMS_TABLE: Rooms
-      LISTS_TABLE: Lists
-      LIST_ITEMS_TABLE: ListItems
       PORT: 8080
-      SETUP_RETRIES: 30
       ENC_KEY_FILE: /app/secrets/enc.key
+      DATA_STORE: mongo
+      MONGODB_URI: mongodb://mongo:27017
+      MONGODB_DB: gracie
     ports:
       - "8080:8080"
     volumes:

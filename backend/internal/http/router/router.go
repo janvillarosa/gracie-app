@@ -9,10 +9,9 @@ import (
     "github.com/go-chi/cors"
     "github.com/janvillarosa/gracie-app/backend/internal/http/handlers"
     authmw "github.com/janvillarosa/gracie-app/backend/internal/http/middleware"
-    "github.com/janvillarosa/gracie-app/backend/internal/store/dynamo"
 )
 
-func NewRouter(usersRepo *dynamo.UserRepo, authHandler *handlers.AuthHandler, userHandler *handlers.UserHandler, roomHandler *handlers.RoomHandler, listHandler *handlers.ListHandler) http.Handler {
+func NewRouter(userFinder authmw.UserFinder, authHandler *handlers.AuthHandler, userHandler *handlers.UserHandler, roomHandler *handlers.RoomHandler, listHandler *handlers.ListHandler) http.Handler {
     r := chi.NewRouter()
     r.Use(middleware.RequestID)
     r.Use(middleware.Logger)
@@ -43,7 +42,7 @@ func NewRouter(usersRepo *dynamo.UserRepo, authHandler *handlers.AuthHandler, us
 
     // Authenticated endpoints
     r.Group(func(ar chi.Router) {
-        ar.Use(authmw.AuthMiddleware(usersRepo))
+        ar.Use(authmw.AuthMiddleware(userFinder))
 
         ar.Get("/me", userHandler.GetMe)
         ar.Put("/me", userHandler.UpdateMe)
