@@ -14,6 +14,7 @@
   --color-warning: #F3F78A;         /* softer yellow */
   --color-danger: #ff4d4f;          /* ant default danger */
   --border: #E6E6E6;                /* lighter borders */
+  --border-strong: #D2D2D2;         /* stronger border for list items */
 }
 
 /* Optional dark theme hook if needed later */
@@ -128,4 +129,20 @@ body {
   padding: 10px 12px;
   border-radius: 8px;
   box-shadow: 0 6px 18px rgba(0,0,0,0.3);
+}
+
+/* Stronger borders for list items within list page */
+.items-list .ant-list-item {
+  border-bottom: 2px solid var(--border-strong) !important;
+}
+.items-list .ant-list-item:last-child {
+  border-bottom: none !important;
+}
+
+/* Stronger borders for lists on RoomPage */
+.lists-list .ant-list-item {
+  border-bottom: 2px solid var(--border-strong) !important;
+}
+.lists-list .ant-list-item:last-child {
+  border-bottom: none !important;
 }

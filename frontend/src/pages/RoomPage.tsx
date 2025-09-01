@@ -176,6 +176,7 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
             <Typography.Text type="secondary">No lists yet. Add one below.</Typography.Text>
           ) : (
             <AntList
+              className="lists-list"
               itemLayout={isMobile ? 'vertical' : 'horizontal'}
               dataSource={lists}
               renderItem={(l) => (

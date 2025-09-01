@@ -137,7 +137,7 @@ export const ListPage: React.FC = () => {
                 {myVote(listMeta) ? (
                   <Button onClick={onCancelVote} icon={<CloseCircleOutlined />}>Cancel delete vote</Button>
                 ) : (
-                  <Button danger onClick={onVoteDelete} icon={<DeleteOutlined />}>Request delete</Button>
+                  <Button danger onClick={onVoteDelete} icon={<DeleteOutlined />}>Vote to Delete</Button>
                 )}
                 <Button onClick={() => navigate('/app')} icon={<ArrowLeftOutlined />}>Back</Button>
               </Space>
@@ -149,7 +149,7 @@ export const ListPage: React.FC = () => {
                 {myVote(listMeta) ? (
                   <Button onClick={onCancelVote} icon={<CloseCircleOutlined />}>Cancel delete vote</Button>
                 ) : (
-                  <Button danger onClick={onVoteDelete} icon={<DeleteOutlined />}>Request delete</Button>
+                  <Button danger onClick={onVoteDelete} icon={<DeleteOutlined />}>Vote to Delete</Button>
                 )}
                 <Button onClick={() => navigate('/app')} icon={<ArrowLeftOutlined />}>Back</Button>
               </Space>
@@ -187,10 +187,22 @@ export const ListPage: React.FC = () => {
             <Typography.Text type="secondary">{includeCompleted ? 'No items yet.' : 'No incomplete items.'}</Typography.Text>
           ) : (
             <AntList
+              className="items-list"
               dataSource={items}
               renderItem={(it) => (
                 <AntList.Item
-                  actions={[<Button key="del" onClick={() => onDeleteItem(it)} icon={<DeleteOutlined />}>Delete</Button>]}
+                  actions={[
+                    <Button
+                      key="del"
+                      type="text"
+                      danger
+                      icon={<DeleteOutlined />}
+                      aria-label="Delete item"
+                      title="Delete item"
+                      onClick={() => onDeleteItem(it)}
+                      style={{ paddingInline: 8 }}
+                    />
+                  ]}
                 >
                   <Space>
                     <Checkbox checked={it.completed} onChange={() => onToggleComplete(it)} />
