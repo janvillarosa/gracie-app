@@ -6,11 +6,10 @@ export type User = {
   updated_at: string
 }
 
-export type Room = {
-  room_id: string
-  member_ids: string[]
-  share_token?: string | null
-  deletion_votes: Record<string, string>
+export type RoomView = {
+  display_name?: string
+  description?: string
+  members: string[]
   created_at: string
   updated_at: string
 }
@@ -19,4 +18,3 @@ export type CreateUserResponse = {
   user: User
   api_key: string
 }
-

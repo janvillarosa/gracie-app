@@ -39,6 +39,8 @@ func (s *RoomService) CreateSoloRoom(ctx context.Context, user *models.User) (*m
         RoomID:        ids.NewID("room"),
         MemberIDs:     []string{user.UserID},
         DeletionVotes: map[string]string{},
+        DisplayName:   "My Room",
+        Description:   "",
         CreatedAt:     now,
         UpdatedAt:     now,
     }
@@ -150,6 +152,16 @@ func (s *RoomService) JoinRoom(ctx context.Context, joiner *models.User, roomID,
     joiner.RoomID = &rm.RoomID
     // Return the updated room (now with two members)
     return s.rooms.GetByID(ctx, rm.RoomID)
+}
+
+// JoinRoomByToken joins using only a token by looking up the room via GSI.
+func (s *RoomService) JoinRoomByToken(ctx context.Context, joiner *models.User, token string) (*models.Room, error) {
+    if token == "" {
+        return nil, derr.ErrBadRequest
+    }
+    rm, err := s.rooms.GetByShareToken(ctx, token)
+    if err != nil { return nil, err }
+    return s.JoinRoom(ctx, joiner, rm.RoomID, token)
 }
 
 func (s *RoomService) VoteDeletion(ctx context.Context, voter *models.User) (deleted bool, err error) {

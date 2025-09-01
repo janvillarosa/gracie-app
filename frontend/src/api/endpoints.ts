@@ -1,5 +1,5 @@
 import { apiFetch, ApiError } from './client'
-import type { CreateUserResponse, Room, User } from './types'
+import type { CreateUserResponse, RoomView, User } from './types'
 
 export async function registerUser(name: string): Promise<CreateUserResponse> {
   return apiFetch<CreateUserResponse>('/users', {
@@ -30,24 +30,20 @@ export async function updateMe(apiKey: string, name: string): Promise<User> {
   return apiFetch<User>('/me', { method: 'PUT', apiKey, body: JSON.stringify({ name }) })
 }
 
-export async function getMyRoom(apiKey: string): Promise<Room> {
-  return apiFetch<Room>('/rooms/me', { apiKey })
+export async function getMyRoom(apiKey: string): Promise<RoomView> {
+  return apiFetch<RoomView>('/rooms/me', { apiKey })
 }
 
-export async function createRoom(apiKey: string): Promise<Room> {
-  return apiFetch<Room>('/rooms', { method: 'POST', apiKey })
+export async function createRoom(apiKey: string): Promise<RoomView> {
+  return apiFetch<RoomView>('/rooms', { method: 'POST', apiKey })
 }
 
-export async function rotateShare(apiKey: string): Promise<{ room_id: string; token: string }> {
-  return apiFetch<{ room_id: string; token: string }>('/rooms/share', { method: 'POST', apiKey })
+export async function rotateShare(apiKey: string): Promise<{ token: string }> {
+  return apiFetch<{ token: string }>('/rooms/share', { method: 'POST', apiKey })
 }
 
-export async function joinRoom(apiKey: string, roomId: string, token: string): Promise<Room> {
-  return apiFetch<Room>(`/rooms/${encodeURIComponent(roomId)}/join`, {
-    method: 'POST',
-    apiKey,
-    body: JSON.stringify({ token }),
-  })
+export async function joinRoomByToken(apiKey: string, token: string): Promise<RoomView> {
+  return apiFetch<RoomView>(`/rooms/join`, { method: 'POST', apiKey, body: JSON.stringify({ token }) })
 }
 
 export async function voteDeletion(apiKey: string): Promise<{ deleted: boolean }> {

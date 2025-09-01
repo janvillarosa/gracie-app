@@ -140,6 +140,21 @@ func ensureUsersGSI(ctx context.Context, db *dynamodb.Client, table string) erro
 
 func ensureRoomsTable(ctx context.Context, db *dynamodb.Client, table string) error {
     if _, err := db.DescribeTable(ctx, &dynamodb.DescribeTableInput{TableName: &table}); err == nil {
+        // Ensure share_token GSI exists
+        out, _ := db.DescribeTable(ctx, &dynamodb.DescribeTableInput{TableName: &table})
+        has := false
+        if out != nil && out.Table.GlobalSecondaryIndexes != nil {
+            for _, g := range out.Table.GlobalSecondaryIndexes {
+                if g.IndexName != nil && *g.IndexName == "share_token_index" { has = true }
+            }
+        }
+        if !has {
+            _, _ = db.UpdateTable(ctx, &dynamodb.UpdateTableInput{
+                TableName:            &table,
+                AttributeDefinitions: []types.AttributeDefinition{{AttributeName: strPtr("share_token"), AttributeType: types.ScalarAttributeTypeS}},
+                GlobalSecondaryIndexUpdates: []types.GlobalSecondaryIndexUpdate{{Create: &types.CreateGlobalSecondaryIndexAction{IndexName: strPtr("share_token_index"), KeySchema: []types.KeySchemaElement{{AttributeName: strPtr("share_token"), KeyType: types.KeyTypeHash}}, Projection: &types.Projection{ProjectionType: types.ProjectionTypeAll}}}},
+            })
+        }
         return nil
     } else if !isNotFound(err) {
         return err
@@ -148,9 +163,11 @@ func ensureRoomsTable(ctx context.Context, db *dynamodb.Client, table string) er
         TableName: &table,
         AttributeDefinitions: []types.AttributeDefinition{
             {AttributeName: strPtr("room_id"), AttributeType: types.ScalarAttributeTypeS},
+            {AttributeName: strPtr("share_token"), AttributeType: types.ScalarAttributeTypeS},
         },
         KeySchema:  []types.KeySchemaElement{{AttributeName: strPtr("room_id"), KeyType: types.KeyTypeHash}},
         BillingMode: types.BillingModePayPerRequest,
+        GlobalSecondaryIndexes: []types.GlobalSecondaryIndex{{IndexName: strPtr("share_token_index"), KeySchema: []types.KeySchemaElement{{AttributeName: strPtr("share_token"), KeyType: types.KeyTypeHash}}, Projection: &types.Projection{ProjectionType: types.ProjectionTypeAll}}},
     })
     if err != nil {
         return err

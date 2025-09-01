@@ -50,6 +50,30 @@ func (r *RoomRepo) GetByID(ctx context.Context, id string) (*models.Room, error)
     return &rm, nil
 }
 
+func (r *RoomRepo) GetByShareToken(ctx context.Context, token string) (*models.Room, error) {
+    idx := "share_token_index"
+    out, err := r.c.DB.Query(ctx, &dynamodb.QueryInput{
+        TableName:              &r.c.Tables.Rooms,
+        IndexName:              &idx,
+        KeyConditionExpression: strPtr("share_token = :t"),
+        ExpressionAttributeValues: map[string]types.AttributeValue{
+            ":t": &types.AttributeValueMemberS{Value: token},
+        },
+        Limit: int32Ptr(1),
+    })
+    if err != nil {
+        return nil, err
+    }
+    if out.Count == 0 || len(out.Items) == 0 {
+        return nil, derr.ErrNotFound
+    }
+    var rm models.Room
+    if err := attributevalue.UnmarshalMap(out.Items[0], &rm); err != nil {
+        return nil, err
+    }
+    return &rm, nil
+}
+
 func (r *RoomRepo) SetShareToken(ctx context.Context, roomID string, userID string, token string, updatedAt time.Time) error {
     _, err := r.c.DB.UpdateItem(ctx, &dynamodb.UpdateItemInput{
         TableName:        &r.c.Tables.Rooms,

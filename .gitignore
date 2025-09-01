@@ -37,7 +37,7 @@ mem.pprof
 heap.pprof
 
 # Go compile/cache (when redirected locally)
-.gocache/
+*.gocache/
 
 # Environment and local config
 .env

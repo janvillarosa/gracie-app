@@ -13,6 +13,7 @@ import (
 )
 
 const apiKeyLookupIndex = "api_key_lookup_index"
+const shareTokenIndex = "share_token_index"
 const usernameIndex = "username_index"
 
 func main() {
@@ -126,9 +127,33 @@ func ensureUsersGSI(ctx context.Context, db *dynamodb.Client, table string) erro
 
 func ensureRoomsTable(ctx context.Context, db *dynamodb.Client, table string) error {
     // Describe
-    _, err := db.DescribeTable(ctx, &dynamodb.DescribeTableInput{TableName: &table})
+    out, err := db.DescribeTable(ctx, &dynamodb.DescribeTableInput{TableName: &table})
     if err == nil {
         log.Printf("table %s exists", table)
+        // ensure GSI for share_token
+        hasIndex := false
+        if out.Table.GlobalSecondaryIndexes != nil {
+            for _, g := range out.Table.GlobalSecondaryIndexes {
+                if g.IndexName != nil && *g.IndexName == shareTokenIndex { hasIndex = true }
+            }
+        }
+        if !hasIndex {
+            log.Printf("adding GSI %s to %s...", shareTokenIndex, table)
+            addDefs := []types.AttributeDefinition{{AttributeName: strPtr("share_token"), AttributeType: types.ScalarAttributeTypeS}}
+            _, err := db.UpdateTable(ctx, &dynamodb.UpdateTableInput{
+                TableName:            &table,
+                AttributeDefinitions: addDefs,
+                GlobalSecondaryIndexUpdates: []types.GlobalSecondaryIndexUpdate{
+                    {Create: &types.CreateGlobalSecondaryIndexAction{
+                        IndexName: strPtr(shareTokenIndex),
+                        KeySchema: []types.KeySchemaElement{{AttributeName: strPtr("share_token"), KeyType: types.KeyTypeHash}},
+                        Projection: &types.Projection{ProjectionType: types.ProjectionTypeAll},
+                    }},
+                },
+            })
+            if err != nil { return err }
+            time.Sleep(1 * time.Second)
+        }
         return nil
     }
     if err != nil && !isNotFound(err) {
@@ -139,9 +164,13 @@ func ensureRoomsTable(ctx context.Context, db *dynamodb.Client, table string) er
         TableName: &table,
         AttributeDefinitions: []types.AttributeDefinition{
             {AttributeName: strPtr("room_id"), AttributeType: types.ScalarAttributeTypeS},
+            {AttributeName: strPtr("share_token"), AttributeType: types.ScalarAttributeTypeS},
         },
         KeySchema:  []types.KeySchemaElement{{AttributeName: strPtr("room_id"), KeyType: types.KeyTypeHash}},
         BillingMode: types.BillingModePayPerRequest,
+        GlobalSecondaryIndexes: []types.GlobalSecondaryIndex{
+            {IndexName: strPtr(shareTokenIndex), KeySchema: []types.KeySchemaElement{{AttributeName: strPtr("share_token"), KeyType: types.KeyTypeHash}}, Projection: &types.Projection{ProjectionType: types.ProjectionTypeAll}},
+        },
     })
     if err != nil {
         return err

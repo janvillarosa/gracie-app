@@ -38,7 +38,7 @@ func main() {
 
     userHandler := handlers.NewUserHandler(userSvc)
     authHandler := handlers.NewAuthHandler(authSvc)
-    roomHandler := handlers.NewRoomHandler(roomSvc)
+    roomHandler := handlers.NewRoomHandler(roomSvc, usersRepo)
 
     r := router.NewRouter(usersRepo, authHandler, userHandler, roomHandler)
 

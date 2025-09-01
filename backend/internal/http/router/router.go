@@ -5,8 +5,8 @@ import (
 
     "github.com/go-chi/chi/v5"
     "github.com/go-chi/chi/v5/middleware"
-    authmw "github.com/janvillarosa/gracie-app/backend/internal/http/middleware"
     "github.com/janvillarosa/gracie-app/backend/internal/http/handlers"
+    authmw "github.com/janvillarosa/gracie-app/backend/internal/http/middleware"
     "github.com/janvillarosa/gracie-app/backend/internal/store/dynamo"
 )
 
@@ -31,6 +31,7 @@ func NewRouter(usersRepo *dynamo.UserRepo, authHandler *handlers.AuthHandler, us
         ar.Get("/rooms/me", roomHandler.GetMyRoom)
         ar.Post("/rooms", roomHandler.CreateSoloRoom)
         ar.Post("/rooms/share", roomHandler.ShareRoom)
+        ar.Post("/rooms/join", roomHandler.JoinByToken)
         ar.Post("/rooms/{room_id}/join", roomHandler.JoinRoom)
         ar.Post("/rooms/deletion/vote", roomHandler.VoteDeletion)
         ar.Post("/rooms/deletion/cancel", roomHandler.CancelDeletion)

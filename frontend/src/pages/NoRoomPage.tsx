@@ -1,12 +1,11 @@
 import React, { useMemo, useState } from 'react'
 import { useAuth } from '@auth/AuthProvider'
-import { createRoom, isConflict, isForbidden, joinRoom } from '@api/endpoints'
+import { createRoom, isConflict, isForbidden, joinRoomByToken } from '@api/endpoints'
 
 const TOKEN_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ0123456789' // no I, O, L
 
 export const NoRoomPage: React.FC = () => {
   const { apiKey } = useAuth()
-  const [roomId, setRoomId] = useState('')
   const [token, setToken] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -31,7 +30,7 @@ export const NoRoomPage: React.FC = () => {
     setError(null)
     setLoading(true)
     try {
-      await joinRoom(apiKey!, roomId.trim(), token.trim().toUpperCase())
+      await joinRoomByToken(apiKey!, token.trim().toUpperCase())
       window.location.reload()
     } catch (e: any) {
       if (isForbidden(e)) setError('Invalid code for this room.')
@@ -55,7 +54,6 @@ export const NoRoomPage: React.FC = () => {
           </div>
           <form className="col" style={{ flex: 1 }} onSubmit={onJoin}>
             <div className="title">Join an existing room</div>
-            <input className="input" placeholder="Room ID" value={roomId} onChange={(e) => setRoomId(e.target.value)} />
             <input
               className="input"
               placeholder="5-char code (no I/O/L)"
@@ -63,7 +61,7 @@ export const NoRoomPage: React.FC = () => {
               onChange={(e) => setToken(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
               maxLength={5}
             />
-            <button className="button" disabled={!roomId || !tokenValid || loading}>Join room</button>
+            <button className="button" disabled={!tokenValid || loading}>Join room</button>
           </form>
         </div>
         {error && (
@@ -76,4 +74,3 @@ export const NoRoomPage: React.FC = () => {
     </div>
   )
 }
-

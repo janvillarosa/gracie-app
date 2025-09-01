@@ -1,9 +1,9 @@
 import React, { useState } from 'react'
-import type { Room } from '@api/types'
+import type { RoomView } from '@api/types'
 import { useAuth } from '@auth/AuthProvider'
 import { rotateShare, voteDeletion, cancelDeletion } from '@api/endpoints'
 
-export const RoomPage: React.FC<{ room: Room }> = ({ room }) => {
+export const RoomPage: React.FC<{ room: RoomView }> = ({ room }) => {
   const { apiKey, setApiKey } = useAuth()
   const [share, setShare] = useState<{ room_id: string; token: string } | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -45,12 +45,14 @@ export const RoomPage: React.FC<{ room: Room }> = ({ room }) => {
     <div className="container">
       <div className="panel">
         <div className="row" style={{ justifyContent: 'space-between' }}>
-          <div className="title">Room {room.room_id}</div>
+          <div className="title">{room.display_name || 'Room'}</div>
           <button className="button secondary" onClick={() => setApiKey(null)}>Logout</button>
         </div>
 
         <div className="spacer" />
-        <div>Members: {room.member_ids.join(', ') || '—'}</div>
+        {room.description && <div className="muted">{room.description}</div>}
+        <div className="spacer" />
+        <div>Members: {room.members?.join(', ') || '—'}</div>
         <div className="spacer" />
 
         <div className="row">
@@ -66,12 +68,9 @@ export const RoomPage: React.FC<{ room: Room }> = ({ room }) => {
               <div className="title">Share</div>
               <div className="spacer" />
               <div>
-                Room ID: <code>{share.room_id}</code>
-              </div>
-              <div>
                 Code: <code>{share.token}</code> (5 chars, no I/O/L)
               </div>
-              <div className="muted">Share both Room ID and Code with your partner.</div>
+              <div className="muted">Share this code with your partner.</div>
             </div>
           </>
         )}
@@ -86,4 +85,3 @@ export const RoomPage: React.FC<{ room: Room }> = ({ room }) => {
     </div>
   )
 }
-

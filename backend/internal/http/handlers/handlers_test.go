@@ -3,7 +3,6 @@ package handlers_test
 import (
     "bytes"
     "encoding/json"
-    "fmt"
     "net/http"
     "net/http/httptest"
     "testing"
@@ -29,7 +28,7 @@ func TestHTTPFlow(t *testing.T) {
 
     ah := handlers.NewAuthHandler(authSvc)
     uh := handlers.NewUserHandler(userSvc)
-    rh := handlers.NewRoomHandler(roomSvc)
+    rh := handlers.NewRoomHandler(roomSvc, usersRepo)
     r := router.NewRouter(usersRepo, ah, uh, rh)
 
     srv := httptest.NewServer(r)
@@ -45,18 +44,18 @@ func TestHTTPFlow(t *testing.T) {
     getAuthJSON(t, srv.URL+"/me", aResp.APIKey, &me, http.StatusOK)
 
     // Share
-    share := struct{ RoomID string `json:"room_id"`; Token string `json:"token"` }{}
+    share := struct{ Token string `json:"token"` }{}
     postAuthJSON(t, srv.URL+"/rooms/share", aResp.APIKey, nil, &share, http.StatusOK)
-    if share.RoomID == "" || share.Token == "" { t.Fatalf("share failed") }
+    if share.Token == "" { t.Fatalf("share failed") }
 
     // Create user B and join
     bResp := struct{ User struct{ UserID string; RoomID *string }; APIKey string `json:"api_key"` }{}
     postJSON(t, srv.URL+"/users", map[string]string{"name": "Bob"}, &bResp, http.StatusCreated)
 
-    // Join request by B
+    // Join request by B via token only
     joinReq := map[string]string{"token": share.Token}
     var joined map[string]any
-    postAuthJSON(t, fmt.Sprintf("%s/rooms/%s/join", srv.URL, share.RoomID), bResp.APIKey, joinReq, &joined, http.StatusOK)
+    postAuthJSON(t, srv.URL+"/rooms/join", bResp.APIKey, joinReq, &joined, http.StatusOK)
 
     // Vote deletion by both
     var del struct{ Deleted bool }
