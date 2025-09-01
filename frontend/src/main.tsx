@@ -4,7 +4,8 @@ import { BrowserRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider } from '@auth/AuthProvider'
 import { AppRoutes } from '@routes/AppRoutes'
-import { ToastProvider } from '@lib/toast'
+import { ConfigProvider, theme as antdTheme } from 'antd'
+import 'antd/dist/reset.css'
 import './styles.css'
 
 const queryClient = new QueryClient()
@@ -14,9 +15,24 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <AuthProvider>
-          <ToastProvider>
+          <ConfigProvider
+            theme={{
+              algorithm: antdTheme.defaultAlgorithm,
+              token: {
+                colorPrimary: 'var(--color-primary)',
+                colorLink: 'var(--color-primary)',
+                colorWarning: 'var(--color-warning)',
+                colorInfo: 'var(--color-secondary)',
+                colorText: 'var(--text)',
+                colorTextSecondary: 'var(--text-secondary)',
+                colorBgBase: 'var(--bg)',
+                colorBgContainer: 'var(--panel)',
+                colorBorder: 'var(--border)',
+              },
+            }}
+          >
             <AppRoutes />
-          </ToastProvider>
+          </ConfigProvider>
         </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>

@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react'
 import { useAuth } from '@auth/AuthProvider'
 import { createRoom, isConflict, isForbidden, joinRoomByToken } from '@api/endpoints'
+import { Card, Typography, Row, Col, Form, Input, Button, Alert, Space, Grid } from 'antd'
 
 const TOKEN_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ0123456789' // no I, O, L
 
@@ -41,39 +42,52 @@ export const NoRoomPage: React.FC = () => {
     }
   }
 
+  const screens = Grid.useBreakpoint()
+  const isMobile = !screens.md
+
   return (
     <div className="container">
-      <div className="panel">
-        <div className="row" style={{ justifyContent: 'space-between' }}>
-          <div className="title">You are not in a house yet</div>
-          <button className="button secondary" onClick={() => setApiKey(null)}>Logout</button>
-        </div>
-        <div className="spacer" />
-        <div className="row" style={{ alignItems: 'flex-start' }}>
-          <div className="col" style={{ flex: 1 }}>
-            <div className="title">Create a new house</div>
-            <button className="button" onClick={onCreate} disabled={loading}>Create solo house</button>
-            <div className="muted">You will be the only member until someone joins.</div>
-          </div>
-          <form className="col" style={{ flex: 1 }} onSubmit={onJoin}>
-            <div className="title">Join an existing house</div>
-            <input
-              className="input"
-              placeholder="5-char code (no I/O/L)"
-              value={token}
-              onChange={(e) => setToken(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
-              maxLength={5}
-            />
-            <button className="button" disabled={!tokenValid || loading}>Join house</button>
-          </form>
-        </div>
-        {error && (
-          <>
-            <div className="spacer" />
-            <div className="error">{error}</div>
-          </>
-        )}
-      </div>
+      <Card>
+        <Space direction="vertical" style={{ width: '100%' }} size="large">
+          {isMobile ? (
+            <Space direction="vertical" style={{ width: '100%' }} size="small">
+              <Typography.Title level={3} style={{ margin: 0 }}>You are not in a house yet</Typography.Title>
+              <Space wrap>
+                <Button onClick={() => setApiKey(null)}>Logout</Button>
+              </Space>
+            </Space>
+          ) : (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Typography.Title level={3} style={{ margin: 0 }}>You are not in a house yet</Typography.Title>
+              <Button onClick={() => setApiKey(null)}>Logout</Button>
+            </div>
+          )}
+          <Row gutter={16} align="top">
+            <Col xs={24} md={12} style={{ order: isMobile ? 2 : 1 }}>
+              <Space direction="vertical">
+                <Typography.Title level={4} style={{ marginTop: 0 }}>Create a new house</Typography.Title>
+                <Button type="primary" onClick={onCreate} disabled={loading}>Create solo house</Button>
+                <Typography.Text type="secondary">You will be the only member until someone joins.</Typography.Text>
+              </Space>
+            </Col>
+            <Col xs={24} md={12} style={{ order: isMobile ? 1 : 2 }}>
+              <Typography.Title level={4} style={{ marginTop: 0 }}>Join an existing house</Typography.Title>
+              <Form layout="vertical" onSubmitCapture={onJoin}>
+                <Form.Item label="5-char code (no I/O/L)">
+                  <Input
+                    placeholder="5-char code (no I/O/L)"
+                    value={token}
+                    onChange={(e) => setToken(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+                    maxLength={5}
+                  />
+                </Form.Item>
+                <Button type="primary" htmlType="submit" disabled={!tokenValid || loading}>Join house</Button>
+              </Form>
+            </Col>
+          </Row>
+          {error && <Alert type="error" message={error} showIcon />}
+        </Space>
+      </Card>
     </div>
   )
 }

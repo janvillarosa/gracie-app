@@ -2,8 +2,8 @@ import React, { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@auth/AuthProvider'
 import { rotateShare, voteDeletion, cancelDeletion, updateRoomSettings } from '@api/endpoints'
-import { Modal } from '@components/Modal'
 import { useQueryClient } from '@tanstack/react-query'
+import { Card, Typography, Space, Button, Input, Modal, Alert, Form, Grid } from 'antd'
 
 const NAME_RE = /^[A-Za-z0-9 ]+$/
 
@@ -18,6 +18,8 @@ export const RoomSettings: React.FC = () => {
   const [shareOpen, setShareOpen] = useState(false)
   const [shareToken, setShareToken] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const screens = Grid.useBreakpoint()
+  const isMobile = !screens.md
 
   const nameValid = useMemo(() => !displayName || (displayName.length <= 64 && NAME_RE.test(displayName)), [displayName])
 
@@ -86,60 +88,67 @@ export const RoomSettings: React.FC = () => {
 
   return (
     <div className="container">
-      <div className="panel">
-        <div className="row" style={{ justifyContent: 'space-between' }}>
-          <div className="title">House Settings</div>
-          <button className="button secondary" onClick={() => navigate('/app')}>Back</button>
-        </div>
-        <div className="spacer" />
-        <form className="col" onSubmit={onSave}>
-          <input className="input" placeholder="Display name (alphanumeric + spaces)" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
-          <textarea className="input" placeholder="Description" rows={4} value={description} onChange={(e) => setDescription(e.target.value)} />
-          <button className="button" disabled={saving || (!displayName && !description) || !nameValid}>Save</button>
-        </form>
-        <div className="spacer" />
-        <div className="row">
-          <button className="button" onClick={onShare}>Get share code</button>
-          <button className="button danger" onClick={onVoteDelete}>Vote to delete house</button>
-          <button className="button secondary" onClick={onCancelVote}>Cancel vote</button>
-        </div>
-        <Modal
-          isOpen={shareOpen}
-          title="Share House"
-          onClose={() => setShareOpen(false)}
-          footer={
-            <div className="row">
-              <button className="button" onClick={onShare}>Get new code</button>
-              <button className="button secondary" onClick={() => setShareOpen(false)}>Done</button>
+      <Card>
+        <Space direction="vertical" style={{ width: '100%' }} size="large">
+          {isMobile ? (
+            <Space direction="vertical" style={{ width: '100%' }} size="small">
+              <Typography.Title level={3} style={{ margin: 0 }}>House Settings</Typography.Title>
+              <Space wrap>
+                <Button onClick={() => navigate('/app')}>Back</Button>
+              </Space>
+            </Space>
+          ) : (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Typography.Title level={3} style={{ margin: 0 }}>House Settings</Typography.Title>
+              <Button onClick={() => navigate('/app')}>Back</Button>
             </div>
-          }
-        >
-          <div>
-            {shareToken ? (
-              <>
-                <div>
-                  Code: <code>{shareToken}</code> (5 chars, no I/O/L)
-                </div>
-                <div className="muted">Share this code with your partner.</div>
-              </>
-            ) : (
-              <div>Generating code…</div>
-            )}
-          </div>
-        </Modal>
-        {error && (
-          <>
-            <div className="spacer" />
-            <div className="error">{error}</div>
-          </>
-        )}
-        {success && (
-          <>
-            <div className="spacer" />
-            <div>{success}</div>
-          </>
-        )}
-      </div>
+          )}
+          <Form layout="vertical" onSubmitCapture={onSave}>
+            <Form.Item
+              label="Display name (alphanumeric + spaces)"
+              validateStatus={displayName && !nameValid ? 'error' : ''}
+              help={displayName && !nameValid ? 'Up to 64 chars; alphanumeric + spaces' : undefined}
+            >
+              <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
+            </Form.Item>
+            <Form.Item label="Description">
+              <Input.TextArea rows={4} value={description} onChange={(e) => setDescription(e.target.value)} />
+            </Form.Item>
+            <Button type="primary" htmlType="submit" disabled={saving || (!displayName && !description) || !nameValid}>Save</Button>
+          </Form>
+          <Space wrap>
+            <Button type="primary" onClick={onShare}>Get share code</Button>
+            <Button danger onClick={onVoteDelete}>Vote to delete house</Button>
+            <Button onClick={onCancelVote}>Cancel vote</Button>
+          </Space>
+          <Modal
+            title="Share House"
+            open={shareOpen}
+            onCancel={() => setShareOpen(false)}
+            footer={
+              <Space>
+                <Button type="primary" onClick={onShare}>Get new code</Button>
+                <Button onClick={() => setShareOpen(false)}>Done</Button>
+              </Space>
+            }
+          >
+            <div>
+              {shareToken ? (
+                <>
+                  <div>
+                    Code: <code>{shareToken}</code> (5 chars, no I/O/L)
+                  </div>
+                  <Typography.Text type="secondary">Share this code with your partner.</Typography.Text>
+                </>
+              ) : (
+                <div>Generating code…</div>
+              )}
+            </div>
+          </Modal>
+          {error && <Alert type="error" message={error} showIcon />}
+          {success && <Alert type="success" message={success} showIcon />}        
+        </Space>
+      </Card>
     </div>
   )
 }

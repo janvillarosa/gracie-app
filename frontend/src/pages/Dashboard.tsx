@@ -4,6 +4,7 @@ import { useAuth } from '@auth/AuthProvider'
 import { getMe, getMyRoom, isNotFound } from '@api/endpoints'
 import { RoomPage } from './RoomPage'
 import { NoRoomPage } from './NoRoomPage'
+import { Card, Alert, Spin, Button, Space } from 'antd'
 
 export const Dashboard: React.FC = () => {
   const { apiKey, setApiKey } = useAuth()
@@ -21,7 +22,7 @@ export const Dashboard: React.FC = () => {
   if (meQuery.isLoading || roomQuery.isLoading) {
     return (
       <div className="container">
-        <div className="panel">Loading…</div>
+        <Card><Spin /> Loading…</Card>
       </div>
     )
   }
@@ -29,11 +30,13 @@ export const Dashboard: React.FC = () => {
   if (meQuery.isError) {
     return (
       <div className="container">
-        <div className="panel">
-          <div className="error">Session expired. Please log in again.</div>
+        <Card>
+          <Alert type="error" message="Session expired. Please log in again." showIcon />
           <div className="spacer" />
-          <button className="button" onClick={() => setApiKey(null)}>Go to login</button>
-        </div>
+          <Space>
+            <Button type="primary" onClick={() => setApiKey(null)}>Go to login</Button>
+          </Space>
+        </Card>
       </div>
     )
   }
@@ -42,9 +45,9 @@ export const Dashboard: React.FC = () => {
     if (isNotFound(roomQuery.error)) return <NoRoomPage />
     return (
       <div className="container">
-        <div className="panel">
-          <div className="error">Failed to load your house. Please retry.</div>
-        </div>
+        <Card>
+          <Alert type="error" message="Failed to load your house. Please retry." showIcon />
+        </Card>
       </div>
     )
   }

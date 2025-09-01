@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { registerAuth } from '@api/endpoints'
+import { Card, Typography, Form, Input, Button, Alert } from 'antd'
 
 export const Register: React.FC = () => {
   const [username, setUsername] = useState('')
@@ -29,33 +30,25 @@ export const Register: React.FC = () => {
 
   return (
     <div className="container">
-      <div className="panel">
-        <div className="title">Create account</div>
+      <Card>
+        <Typography.Title level={3} style={{ marginTop: 0 }}>Create account</Typography.Title>
+        <Form layout="vertical" onSubmitCapture={onRegister}>
+          <Form.Item label="Email (username)">
+            <Input placeholder="Email (username)" value={username} onChange={(e) => setUsername(e.target.value)} />
+          </Form.Item>
+          <Form.Item label="Password (min 8 chars)">
+            <Input.Password placeholder="Password (min 8 chars)" value={password} onChange={(e) => setPassword(e.target.value)} />
+          </Form.Item>
+          <Form.Item label="Display name (optional)">
+            <Input placeholder="Display name (optional)" value={name} onChange={(e) => setName(e.target.value)} />
+          </Form.Item>
+          <Button type="primary" htmlType="submit" disabled={!username || password.length < 8 || loading}>Register</Button>
+        </Form>
+        {error && <><div className="spacer" /><Alert type="error" message={error} showIcon /></>}
+        {success && <><div className="spacer" /><Alert type="success" message="Account created. Redirecting to login…" showIcon /></>}
         <div className="spacer" />
-        <form className="col" onSubmit={onRegister}>
-          <input className="input" placeholder="Email (username)" value={username} onChange={(e) => setUsername(e.target.value)} />
-          <input className="input" placeholder="Password (min 8 chars)" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
-          <input className="input" placeholder="Display name (optional)" value={name} onChange={(e) => setName(e.target.value)} />
-          <button className="button" disabled={!username || password.length < 8 || loading}>Register</button>
-        </form>
-        {error && (
-          <>
-            <div className="spacer" />
-            <div className="error">{error}</div>
-          </>
-        )}
-        {success && (
-          <>
-            <div className="spacer" />
-            <div>Account created. Redirecting to login…</div>
-          </>
-        )}
-        <div className="spacer" />
-        <div className="muted">
-          Already have an account? <Link to="/login">Login</Link>
-        </div>
-      </div>
+        <Typography.Text type="secondary">Already have an account? <Link to="/login">Login</Link></Typography.Text>
+      </Card>
     </div>
   )
 }
-

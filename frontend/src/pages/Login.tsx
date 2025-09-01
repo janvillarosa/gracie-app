@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '@auth/AuthProvider'
 import { loginAuth } from '@api/endpoints'
+import { Card, Typography, Form, Input, Button, Alert } from 'antd'
 
 export const Login: React.FC = () => {
   const { setApiKey } = useAuth()
@@ -28,26 +29,21 @@ export const Login: React.FC = () => {
 
   return (
     <div className="container">
-      <div className="panel">
-        <div className="title">Login</div>
+      <Card>
+        <Typography.Title level={3} style={{ marginTop: 0 }}>Login</Typography.Title>
+        <Form layout="vertical" onSubmitCapture={onLogin}>
+          <Form.Item label="Email">
+            <Input placeholder="Email" value={username} onChange={(e) => setUsername(e.target.value)} />
+          </Form.Item>
+          <Form.Item label="Password">
+            <Input.Password placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          </Form.Item>
+          <Button type="primary" htmlType="submit" disabled={!username || !password || loading}>Login</Button>
+        </Form>
+        {error && <><div className="spacer" /><Alert type="error" message={error} showIcon /></>}
         <div className="spacer" />
-        <form className="col" onSubmit={onLogin}>
-          <input className="input" placeholder="Email" value={username} onChange={(e) => setUsername(e.target.value)} />
-          <input className="input" placeholder="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
-          <button className="button" disabled={!username || !password || loading}>Login</button>
-        </form>
-        {error && (
-          <>
-            <div className="spacer" />
-            <div className="error">{error}</div>
-          </>
-        )}
-        <div className="spacer" />
-        <div className="muted">
-          New here? <Link to="/register">Create an account</Link>
-        </div>
-      </div>
+        <Typography.Text type="secondary">New here? <Link to="/register">Create an account</Link></Typography.Text>
+      </Card>
     </div>
   )
 }
-

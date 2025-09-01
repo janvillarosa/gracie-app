@@ -6,6 +6,7 @@ import { Register } from '@pages/Register'
 import { Dashboard } from '@pages/Dashboard'
 import { RoomSettings } from '@pages/RoomSettings'
 import { ListPage } from '@pages/ListPage'
+import { ListsIndex } from '@pages/ListsIndex'
 
 const RequireAuth: React.FC<React.PropsWithChildren> = ({ children }) => {
   const { isAuthed } = useAuth()
@@ -42,6 +43,14 @@ export const AppRoutes: React.FC = () => {
         element={
           <RequireAuth>
             <ListPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/app/lists"
+        element={
+          <RequireAuth>
+            <ListsIndex />
           </RequireAuth>
         }
       />

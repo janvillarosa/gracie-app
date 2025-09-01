@@ -1,10 +1,31 @@
+@import "tailwindcss";
+
+/* Theme tokens via CSS variables (Adobe UI/UX palette) */
 :root {
+  /* Light pastel theme (default) */
+  --bg: #F2F2F2;            /* page background */
+  --panel: #FFFFFF;         /* container background */
+  --text: #0D0D0D;          /* primary text */
+  --text-secondary: rgba(13, 13, 13, 0.65);
+  --muted: #6B7280;         /* supplemental muted */
+  --color-primary: #A094F2; /* lavender */
+  --color-secondary: #BFA07A; /* tan */
+  --color-warning: #EDF25E; /* yellow */
+  --color-danger: #ff4d4f;  /* ant default danger */
+  --border: #E0E0E0;        /* borders */
+}
+
+/* Optional dark theme hook if needed later */
+.theme-dark {
   --bg: #0b0d0f;
   --panel: #13161a;
   --text: #f5f7fa;
+  --text-secondary: rgba(245, 247, 250, 0.65);
   --muted: #b8c1cc;
-  --primary: #3b82f6;
-  --danger: #ef4444;
+  --color-primary: #A094F2; /* keep brand */
+  --color-secondary: #BFA07A;
+  --color-warning: #EDF25E;
+  --color-danger: #ef4444;
   --border: #22303c;
 }
 
@@ -23,35 +44,19 @@ body {
   padding: 24px;
 }
 
-.panel {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 24px;
-}
+/* Keep legacy layout wrappers; inner content now uses Ant components */
+.panel { padding: 0; border: none; background: transparent; }
 
 .row { display: flex; gap: 12px; align-items: center; }
 .col { display: flex; flex-direction: column; gap: 8px; }
 
-.input, .button, .select {
-  padding: 10px 12px;
-  background: #0f1317;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  color: var(--text);
-  font-size: 14px;
-}
-
-.button { background: var(--primary); border-color: var(--primary); cursor: pointer; }
-.button:disabled { opacity: 0.6; cursor: not-allowed; }
-.button.secondary { background: transparent; border-color: var(--border); }
-.button.danger { background: var(--danger); border-color: var(--danger); }
+/* Controls now come from Ant Design */
 
 .muted { color: var(--muted); }
 .spacer { height: 16px; }
 .title { font-size: 20px; font-weight: 600; }
 
-.error { color: var(--danger); font-size: 14px; }
+.error { color: var(--color-danger); font-size: 14px; }
 
 /* Modal */
 .modal-backdrop {
