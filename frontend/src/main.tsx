@@ -17,17 +17,40 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <AuthProvider>
           <ConfigProvider
             theme={{
+              cssVar: true,
               algorithm: antdTheme.defaultAlgorithm,
               token: {
-                colorPrimary: 'var(--color-primary)',
-                colorLink: 'var(--color-primary)',
+                colorPrimary: 'var(--color-primary, #A094F2)',
+                colorLink: 'var(--color-primary, #A094F2)',
                 colorWarning: 'var(--color-warning)',
                 colorInfo: 'var(--color-secondary)',
                 colorText: 'var(--text)',
                 colorTextSecondary: 'var(--text-secondary)',
                 colorBgBase: 'var(--bg)',
                 colorBgContainer: 'var(--panel)',
+                colorBgElevated: 'var(--panel)',
                 colorBorder: 'var(--border)',
+              },
+              components: {
+                Button: {
+                  colorPrimary: '#A094F2',
+                },
+                Modal: {
+                  colorBgElevated: 'var(--panel)',
+                  colorText: 'var(--text)'
+                },
+                Drawer: {
+                  colorBgElevated: 'var(--panel)'
+                },
+                Dropdown: {
+                  colorBgElevated: 'var(--panel)'
+                },
+                Popover: {
+                  colorBgElevated: 'var(--panel)'
+                },
+                Tooltip: {
+                  colorBgElevated: 'var(--panel)'
+                },
               },
             }}
           >

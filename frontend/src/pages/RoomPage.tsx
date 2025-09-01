@@ -6,7 +6,7 @@ import { createList, getLists, rotateShare, voteListDeletion, cancelListDeletion
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useLiveQueryOpts } from '@lib/liveQuery'
 import { Card, Typography, Space, Button, Modal, Input, List as AntList, Alert, Grid, Dropdown } from 'antd'
-import { MoreOutlined } from '@ant-design/icons'
+import { MoreOutlined, RightOutlined } from '@ant-design/icons'
 import type { MenuProps } from 'antd'
 
 export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string }> = ({ room, roomId, userId }) => {
@@ -39,10 +39,7 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
   const listsQuery = useQuery({ queryKey: ['lists', roomId], queryFn: () => getLists(apiKey!, roomId), ...liveOpts })
   const lists = listsQuery.data ?? []
 
-  const myVote = useMemo(() => {
-    // a simple helper to check if I voted on a given list
-    return (l: List) => !!l.deletion_votes && !!l.deletion_votes[userId]
-  }, [userId])
+  // Deletion actions removed from dashboard; keep minimal helpers only if needed elsewhere
 
   const onCreateList = async () => {
     if (!newName.trim()) return
@@ -77,25 +74,38 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
     <div className="container">
       <Card>
         <Space direction="vertical" style={{ width: '100%' }} size="large">
-          {isMobile ? (
-            <Space direction="vertical" style={{ width: '100%' }} size="small">
-              <Typography.Title level={3} style={{ margin: 0 }}>{room.display_name || 'House'}</Typography.Title>
-              <Space wrap>
-                <Button type="primary" onClick={onShare}>Share Code</Button>
-                <Button onClick={() => navigate('/app/settings')}>Settings</Button>
-                <Button onClick={() => setApiKey(null)}>Logout</Button>
+          {(() => {
+            const menu: MenuProps['items'] = [
+              { key: 'settings', label: 'House Settings' },
+              { type: 'divider' as const },
+              { key: 'logout', label: 'Logout' },
+            ]
+            const onMenuClick: MenuProps['onClick'] = ({ key }) => {
+              if (key === 'settings') navigate('/app/settings')
+              if (key === 'logout') setApiKey(null)
+            }
+            return isMobile ? (
+              <Space direction="vertical" style={{ width: '100%' }} size="small">
+                <Typography.Title level={3} style={{ margin: 0 }}>{room.display_name || 'House'}</Typography.Title>
+                <Space wrap>
+                  <Button type="primary" onClick={onShare}>Share Code</Button>
+                  <Dropdown menu={{ items: menu, onClick: onMenuClick }} trigger={['click']}>
+                    <Button icon={<MoreOutlined />} aria-label="More actions" />
+                  </Dropdown>
+                </Space>
               </Space>
-            </Space>
-          ) : (
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography.Title level={3} style={{ margin: 0 }}>{room.display_name || 'House'}</Typography.Title>
-              <Space>
-                <Button type="primary" onClick={onShare}>Share Code</Button>
-                <Button onClick={() => navigate('/app/settings')}>Settings</Button>
-                <Button onClick={() => setApiKey(null)}>Logout</Button>
-              </Space>
-            </div>
-          )}
+            ) : (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography.Title level={3} style={{ margin: 0 }}>{room.display_name || 'House'}</Typography.Title>
+                <Space>
+                  <Button type="primary" onClick={onShare}>Share Code</Button>
+                  <Dropdown menu={{ items: menu, onClick: onMenuClick }} trigger={['click']}>
+                    <Button icon={<MoreOutlined />} aria-label="More actions" />
+                  </Dropdown>
+                </Space>
+              </div>
+            )
+          })()}
 
           {room.description && (
             <Typography.Text type="secondary">{room.description}</Typography.Text>
@@ -168,51 +178,34 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
             <AntList
               itemLayout={isMobile ? 'vertical' : 'horizontal'}
               dataSource={lists}
-              renderItem={(l) => {
-                if (isMobile) {
-                  const items: MenuProps['items'] = [
-                    {
-                      key: 'toggle',
-                      label: myVote(l) ? 'Cancel vote' : 'Request delete',
-                      danger: !myVote(l),
-                    },
-                  ]
-                  return (
-                    <AntList.Item
-                      actions={[
-                        <Button key="open" type="primary" onClick={() => navigate(`/app/lists/${l.list_id}`)}>Open</Button>,
-                        <Dropdown key="more" menu={{ items, onClick: ({ key }) => {
-                          if (key === 'toggle') {
-                            myVote(l) ? onCancelVoteList(l) : onVoteList(l)
-                          }
-                        } }}>
-                          <Button icon={<MoreOutlined />} />
-                        </Dropdown>,
-                      ]}
-                    >
-                      <AntList.Item.Meta
-                        title={<Link to={`/app/lists/${l.list_id}`}>{l.name}</Link>}
-                        description={l.description ? <Typography.Text type="secondary">{l.description}</Typography.Text> : null}
-                      />
-                    </AntList.Item>
-                  )
-                }
-                return (
-                  <AntList.Item
-                    actions={[
-                      myVote(l)
-                        ? <Button key="cancel" onClick={() => onCancelVoteList(l)}>Cancel vote</Button>
-                        : <Button key="reqdel" danger onClick={() => onVoteList(l)}>Request delete</Button>,
-                      <Button key="open" type="primary" onClick={() => navigate(`/app/lists/${l.list_id}`)}>Open</Button>,
-                    ]}
-                  >
-                    <AntList.Item.Meta
-                      title={<Link to={`/app/lists/${l.list_id}`}>{l.name}</Link>}
-                      description={l.description ? <Typography.Text type="secondary">{l.description}</Typography.Text> : null}
-                    />
-                  </AntList.Item>
-                )
-              }}
+              renderItem={(l) => (
+                <AntList.Item
+                  style={{ cursor: 'pointer', paddingBlock: 16 }}
+                  onClick={() => navigate(`/app/lists/${l.list_id}`)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      navigate(`/app/lists/${l.list_id}`)
+                    }
+                  }}
+                >
+                  <div style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                    <div>
+                      <Typography.Link style={{ fontSize: 16 }}>
+                        {l.name}
+                      </Typography.Link>
+                      {l.description && (
+                        <div>
+                          <Typography.Text type="secondary">{l.description}</Typography.Text>
+                        </div>
+                      )}
+                    </div>
+                    <RightOutlined style={{ color: 'var(--color-primary)' }} />
+                  </div>
+                </AntList.Item>
+              )}
             />
           )}
 

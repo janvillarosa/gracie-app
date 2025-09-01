@@ -38,6 +38,30 @@ body {
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
 }
 
+/* Ensure Ant overlays inherit the light palette */
+.ant-dropdown, .ant-popover, .ant-tooltip, .ant-modal .ant-modal-content, .ant-drawer .ant-drawer-content {
+  background: var(--panel);
+  color: var(--text);
+}
+.ant-modal .ant-modal-header, .ant-popover .ant-popover-inner, .ant-dropdown-menu, .ant-drawer .ant-drawer-header {
+  background: var(--panel);
+}
+
+/* Ensure primary buttons adopt the palette even if tokens fail */
+.ant-btn-primary {
+  background-color: var(--color-primary, #A094F2) !important;
+  border-color: var(--color-primary, #A094F2) !important;
+}
+.ant-btn-primary:hover,
+.ant-btn-primary:focus {
+  background-color: color-mix(in srgb, var(--color-primary, #A094F2) 90%, white) !important;
+  border-color: color-mix(in srgb, var(--color-primary, #A094F2) 90%, white) !important;
+}
+.ant-btn-primary:active {
+  background-color: color-mix(in srgb, var(--color-primary, #A094F2) 80%, white) !important;
+  border-color: color-mix(in srgb, var(--color-primary, #A094F2) 80%, white) !important;
+}
+
 .container {
   max-width: 720px;
   margin: 0 auto;
