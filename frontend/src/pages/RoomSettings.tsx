@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@auth/AuthProvider'
 import { rotateShare, voteDeletion, cancelDeletion, updateRoomSettings } from '@api/endpoints'
+import { Modal } from '@components/Modal'
 import { useQueryClient } from '@tanstack/react-query'
 
 const NAME_RE = /^[A-Za-z0-9 ]+$/
@@ -14,7 +15,8 @@ export const RoomSettings: React.FC = () => {
   const [description, setDescription] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
-  const [share, setShare] = useState<string | null>(null)
+  const [shareOpen, setShareOpen] = useState(false)
+  const [shareToken, setShareToken] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
   const nameValid = useMemo(() => !displayName || (displayName.length <= 64 && NAME_RE.test(displayName)), [displayName])
@@ -48,7 +50,8 @@ export const RoomSettings: React.FC = () => {
     setSuccess(null)
     try {
       const r = await rotateShare(apiKey!)
-      setShare(r.token)
+      setShareToken(r.token)
+      setShareOpen(true)
     } catch (e: any) {
       setError(e?.message || 'Failed to rotate share code')
     }
@@ -85,7 +88,7 @@ export const RoomSettings: React.FC = () => {
     <div className="container">
       <div className="panel">
         <div className="row" style={{ justifyContent: 'space-between' }}>
-          <div className="title">Room Settings</div>
+          <div className="title">House Settings</div>
           <button className="button secondary" onClick={() => navigate('/app')}>Back</button>
         </div>
         <div className="spacer" />
@@ -97,15 +100,33 @@ export const RoomSettings: React.FC = () => {
         <div className="spacer" />
         <div className="row">
           <button className="button" onClick={onShare}>Get share code</button>
-          <button className="button danger" onClick={onVoteDelete}>Vote to delete room</button>
+          <button className="button danger" onClick={onVoteDelete}>Vote to delete house</button>
           <button className="button secondary" onClick={onCancelVote}>Cancel vote</button>
         </div>
-        {share && (
-          <>
-            <div className="spacer" />
-            <div>Share code: <code>{share}</code></div>
-          </>
-        )}
+        <Modal
+          isOpen={shareOpen}
+          title="Share House"
+          onClose={() => setShareOpen(false)}
+          footer={
+            <div className="row">
+              <button className="button" onClick={onShare}>Get new code</button>
+              <button className="button secondary" onClick={() => setShareOpen(false)}>Done</button>
+            </div>
+          }
+        >
+          <div>
+            {shareToken ? (
+              <>
+                <div>
+                  Code: <code>{shareToken}</code> (5 chars, no I/O/L)
+                </div>
+                <div className="muted">Share this code with your partner.</div>
+              </>
+            ) : (
+              <div>Generating code…</div>
+            )}
+          </div>
+        </Modal>
         {error && (
           <>
             <div className="spacer" />
@@ -122,4 +143,3 @@ export const RoomSettings: React.FC = () => {
     </div>
   )
 }
-

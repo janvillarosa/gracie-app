@@ -1,6 +1,6 @@
-# Gracie (Backend)
+# Gracie (Backend + Frontend)
 
-Gracie is a minimal grocery/shopping list backend designed for couples to share a single Room. This repo currently contains the backend API implemented in Go and DynamoDB (Local), with a simple authentication model using API keys.
+Gracie is a minimal grocery/shopping list app designed for couples to share a single House (UI term) backed by a Room (backend model). The repo includes the backend API in Go + DynamoDB (Local) and a React/Vite frontend. Authentication supports API keys and email/password.
 
 For now, Rooms are empty containers; the core flows implemented are user signup, room sharing via invite links (tokens), joining rooms, and two-party room deletion.
 
@@ -8,7 +8,8 @@ For now, Rooms are empty containers; the core flows implemented are user signup,
 
 Prereqs
 - Go 1.22+
-- Docker (for DynamoDB Local)
+- Docker (for DynamoDB Local and Compose)
+- Node 18+ (for local frontend)
 
 1) Start DynamoDB Local
 
@@ -46,20 +47,42 @@ go run ./cmd/gracie-server
 
 Server listens on `:8080` by default.
 
-## API Overview
+### One command (Docker Compose)
+
+Start DynamoDB Local, API, and frontend (Nginx) together:
+
+```
+docker compose up --build
+```
+
+URLs:
+- Frontend: http://localhost:3000 (proxies `/api` to API, no CORS)
+- API: http://localhost:8080
+- DynamoDB Local: http://localhost:8000
+
+If you wiped `.dynamodb`, ensure tables are created:
+
+```
+docker compose run --rm api /usr/local/bin/setup-ddb
+```
+
+## API Overview (highlights)
 
 Auth
-- API keys are created at signup and returned once.
-- Send `Authorization: Bearer <api_key>` on all endpoints except `POST /users`.
+- API keys: returned once at signup or login. Send `Authorization: Bearer <api_key>` on all endpoints except `/users`, `/auth/*`.
+- Email/Password: `/auth/register` and `/auth/login` supported; passwords are bcrypt‑hashed and encrypted-at-rest.
 
 Endpoints
 - POST `/users` (public): Create a user with name; also creates a solo room. Returns `{ user, api_key }`.
+- POST `/auth/register` (public): `{ username(email), password, name? }` → 201.
+- POST `/auth/login` (public): `{ username, password }` → `{ user, api_key }`.
 - GET `/me`: Get current user.
 - PUT `/me`: Update name.
-- GET `/rooms/me`: Get current room (404 if none).
+- GET `/rooms/me`: Get current room view (sanitized; no internal IDs; includes display name, description, member names).
 - POST `/rooms`: Create a solo room if user has none (409 if exists).
-- POST `/rooms/share`: Rotate share token and return `{ room_id, token }`.
-- POST `/rooms/{room_id}/join`: Body `{ token }` to join as second member.
+- POST `/rooms/share`: Rotate share token and return `{ token }`.
+- POST `/rooms/join`: Body `{ token }` to join as second member using code only.
+- PUT `/rooms/settings`: `{ display_name?, description? }` update.
 - POST `/rooms/deletion/vote`: Record deletion vote; when both members vote, the room is deleted and both users’ `room_id` is cleared.
 - POST `/rooms/deletion/cancel`: Remove caller’s vote.
 
@@ -77,15 +100,15 @@ Response includes `api_key` and `user.room_id`.
 curl -s -X POST http://localhost:8080/rooms/share \
   -H 'Authorization: Bearer <ALICE_API_KEY>'
 ```
-Response: `{ "room_id": "...", "token": "..." }`.
+Response: `{ "token": "ABCDE" }`.
 
 3) Join (Bob)
 ```
-# Bob signs up and receives <BOB_API_KEY>
-curl -s -X POST http://localhost:8080/rooms/<room_id>/join \
+# Bob registers/logs in and receives <BOB_API_KEY>
+curl -s -X POST http://localhost:8080/rooms/join \
   -H 'Authorization: Bearer <BOB_API_KEY>' \
   -H 'Content-Type: application/json' \
-  -d '{"token":"<token>"}'
+  -d '{"token":"<ABCDE>"}'
 ```
 
 4) Two‑party deletion
@@ -101,15 +124,17 @@ curl -s -X POST http://localhost:8080/rooms/deletion/vote \
 ## Important Notes
 - API key is returned only once on signup; store it securely on the client.
 - Only two users can be members of a room; joining a full room returns 409.
-- Share token rotation invalidates previous tokens.
+- Share token rotation invalidates previous tokens; share code is 5 chars (no I/O/L).
 - After room deletion, both users are left without a room (must create a new solo room to continue).
 - DynamoDB Local requires dummy credentials and any region value; defaults are provided.
+- When updating local tables, `setup-ddb` ensures GSIs exist (`api_key_lookup_index`, `username_index`, `share_token_index`); if you wiped `.dynamodb`, rerun setup.
 
 ## Project Layout
 - `backend/cmd/gracie-server`: HTTP server entrypoint
 - `backend/cmd/setup-ddb`: Helper to create local DynamoDB tables
 - `backend/internal/...`: Core packages (auth, config, http handlers/middleware/router, services, store/dynamo)
 - `backend/pkg/ids`: ID and token generation helpers
+- `frontend/`: React + Vite app (UI refers to “House”) served via Nginx in Docker
 
 ## Tests
 - Unit and integration tests are under `backend/internal/...`.
@@ -129,4 +154,3 @@ go test ./internal/config ./internal/auth ./internal/http/...
 
 ## License
 TBD for now (private/internal usage during development).
-

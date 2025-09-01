@@ -43,7 +43,7 @@ export const Dashboard: React.FC = () => {
     return (
       <div className="container">
         <div className="panel">
-          <div className="error">Failed to load your room. Please retry.</div>
+          <div className="error">Failed to load your house. Please retry.</div>
         </div>
       </div>
     )

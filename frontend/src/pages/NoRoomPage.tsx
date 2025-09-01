@@ -19,7 +19,7 @@ export const NoRoomPage: React.FC = () => {
       await createRoom(apiKey!)
       window.location.reload()
     } catch (e: any) {
-      setError(e?.message || 'Failed to create room')
+      setError(e?.message || 'Failed to create house')
     } finally {
       setLoading(false)
     }
@@ -33,9 +33,9 @@ export const NoRoomPage: React.FC = () => {
       await joinRoomByToken(apiKey!, token.trim().toUpperCase())
       window.location.reload()
     } catch (e: any) {
-      if (isForbidden(e)) setError('Invalid code for this room.')
-      else if (isConflict(e)) setError('Join not allowed: the room may be full.')
-      else setError(e?.message || 'Failed to join room')
+      if (isForbidden(e)) setError('Invalid code for this house.')
+      else if (isConflict(e)) setError('Join not allowed: the house may be full.')
+      else setError(e?.message || 'Failed to join house')
     } finally {
       setLoading(false)
     }
@@ -44,16 +44,16 @@ export const NoRoomPage: React.FC = () => {
   return (
     <div className="container">
       <div className="panel">
-        <div className="title">You are not in a room yet</div>
+        <div className="title">You are not in a house yet</div>
         <div className="spacer" />
         <div className="row" style={{ alignItems: 'flex-start' }}>
           <div className="col" style={{ flex: 1 }}>
-            <div className="title">Create a new room</div>
-            <button className="button" onClick={onCreate} disabled={loading}>Create solo room</button>
+            <div className="title">Create a new house</div>
+            <button className="button" onClick={onCreate} disabled={loading}>Create solo house</button>
             <div className="muted">You will be the only member until someone joins.</div>
           </div>
           <form className="col" style={{ flex: 1 }} onSubmit={onJoin}>
-            <div className="title">Join an existing room</div>
+            <div className="title">Join an existing house</div>
             <input
               className="input"
               placeholder="5-char code (no I/O/L)"
@@ -61,7 +61,7 @@ export const NoRoomPage: React.FC = () => {
               onChange={(e) => setToken(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
               maxLength={5}
             />
-            <button className="button" disabled={!tokenValid || loading}>Join room</button>
+            <button className="button" disabled={!tokenValid || loading}>Join house</button>
           </form>
         </div>
         {error && (

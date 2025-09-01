@@ -3,9 +3,9 @@
 Simple UI for the Gracie backend flows:
 
 - Login or Register (API key)
-- View current room (if any)
-- Join a room with Room ID + 5-char code (no I/O/L)
-- Create a solo room
+- View current house (if any)
+- Join a house with a 5-char code (no I/O/L); no need for an internal ID
+- Create a solo house
 - Vote to delete / cancel vote
 
 ## Prereqs
@@ -34,5 +34,6 @@ VITE_API_BASE_URL=http://localhost:8080 pnpm dev
 
 - API key is stored in `localStorage` under `gracie_api_key`.
 - Share codes are 5 characters, alphanumeric, excluding I/O/L.
+- “Room” is called “House” in the UI; backend endpoints remain `/rooms/*`.
+- House Settings lets you edit display name/description, rotate share code (in a dismissible modal with “Get new code”), and vote/cancel deletion.
 - Errors from the backend are surfaced with friendly messages for 403/409 during join.
-
