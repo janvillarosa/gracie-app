@@ -50,5 +50,6 @@ export const Dashboard: React.FC = () => {
   }
 
   const room = roomQuery.data!
-  return <RoomPage room={room} />
+  const me = meQuery.data!
+  return <RoomPage room={room} roomId={me.room_id!} userId={me.user_id} />
 }
