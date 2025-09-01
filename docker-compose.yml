@@ -2,11 +2,35 @@ services:
   mongo:
     image: mongo:6
     container_name: gracie-mongo
+    command: ["--replSet", "rs0", "--bind_ip_all"]
     ports:
       - "27017:27017"
     volumes:
       - ./.mongo:/data/db
+      - ./backend/mongo-init:/docker-entrypoint-initdb.d
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+
+  mongo-rs-init:
+    image: mongo:6
+    depends_on:
+      mongo:
+        condition: service_healthy
+    command:
+      - mongosh
+      - --host
+      - mongo:27017
+      - --eval
+      - |
+        try {
+          rs.initiate({_id:"rs0",members:[{_id:0,host:"mongo:27017"}]});
+        } catch (e) { print("rs.initiate:", e); }
+        try { printjson(rs.status()); } catch (e) { print("rs.status:", e); }
+    restart: "no"
 
   api:
     build:
@@ -14,12 +38,13 @@ services:
       dockerfile: backend/Dockerfile
     container_name: gracie-api
     depends_on:
-      - mongo
+      mongo-rs-init:
+        condition: service_completed_successfully
     environment:
       PORT: 8080
       ENC_KEY_FILE: /app/secrets/enc.key
       DATA_STORE: mongo
-      MONGODB_URI: mongodb://mongo:27017
+      MONGODB_URI: mongodb://mongo:27017/?replicaSet=rs0
       MONGODB_DB: gracie
     ports:
       - "8080:8080"

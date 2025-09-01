@@ -20,12 +20,43 @@ func NewUserRepo(c *Client) *UserRepo { return &UserRepo{db: c.DB} }
 
 func (r *UserRepo) col() *mgo.Collection { return r.db.Collection("users") }
 
+func filterByUserID(userID string) bson.D {
+    // Support legacy documents that may have been written without bson tags ("userid")
+    return bson.D{{Key: "$or", Value: bson.A{bson.D{{Key: "user_id", Value: userID}}, bson.D{{Key: "userid", Value: userID}}}}}
+}
+
 func (r *UserRepo) EnsureIndexes(ctx context.Context) error {
-    // unique on username, api_key_lookup
-    _, err := r.col().Indexes().CreateMany(ctx, []mgo.IndexModel{
-        {Keys: bson.D{{Key: "username", Value: 1}}, Options: options.Index().SetUnique(true)},
-        {Keys: bson.D{{Key: "api_key_lookup", Value: 1}}, Options: options.Index().SetUnique(true)},
-        {Keys: bson.D{{Key: "user_id", Value: 1}}, Options: options.Index().SetUnique(true)},
+    idx := r.col().Indexes()
+    // Drop legacy non-partial unique index on api_key_lookup if present
+    cur, err := idx.List(ctx)
+    if err == nil {
+        for cur.Next(ctx) {
+            var m bson.M
+            _ = cur.Decode(&m)
+            if name, _ := m["name"].(string); name == "api_key_lookup_1" {
+                _, _ = idx.DropOne(ctx, name)
+            }
+        }
+        _ = cur.Close(ctx)
+    }
+    // Create desired indexes (idempotent)
+    _, err = idx.CreateMany(ctx, []mgo.IndexModel{
+        {
+            Keys:    bson.D{{Key: "username", Value: 1}},
+            Options: options.Index().SetUnique(true).SetName("username_unique"),
+        },
+        {
+            Keys: bson.D{{Key: "api_key_lookup", Value: 1}},
+            Options: options.Index().
+                SetUnique(true).
+                SetName("api_key_lookup_unique").
+                // Only index docs where api_key_lookup is a string (present)
+                SetPartialFilterExpression(bson.D{{Key: "api_key_lookup", Value: bson.D{{Key: "$type", Value: "string"}}}}),
+        },
+        {
+            Keys:    bson.D{{Key: "user_id", Value: 1}},
+            Options: options.Index().SetUnique(true).SetName("user_id_unique"),
+        },
     })
     return err
 }
@@ -43,7 +74,7 @@ func (r *UserRepo) Put(ctx context.Context, u *models.User) error {
 
 func (r *UserRepo) GetByID(ctx context.Context, id string) (*models.User, error) {
     var u models.User
-    err := r.col().FindOne(ctx, bson.D{{Key: "user_id", Value: id}}).Decode(&u)
+    err := r.col().FindOne(ctx, filterByUserID(id)).Decode(&u)
     if err != nil {
         if err == mgo.ErrNoDocuments { return nil, derr.ErrNotFound }
         return nil, err
@@ -72,26 +103,25 @@ func (r *UserRepo) GetByAPIKeyLookup(ctx context.Context, lookup string) (*model
 }
 
 func (r *UserRepo) SetAPIKey(ctx context.Context, userID string, hash, lookup string, expiresAt *time.Time, updatedAt time.Time) error {
-    update := bson.D{{Key: "$set", Value: bson.D{{Key: "api_key_hash", Value: hash}, {Key: "api_key_lookup", Value: lookup}, {Key: "updated_at", Value: updatedAt.UTC().Format(time.RFC3339)}}}}
+    setDoc := bson.D{{Key: "api_key_hash", Value: hash}, {Key: "api_key_lookup", Value: lookup}, {Key: "updated_at", Value: updatedAt.UTC()}}
     if expiresAt != nil {
-        update = bson.D{{Key: "$set", Value: bson.D{{Key: "api_key_hash", Value: hash}, {Key: "api_key_lookup", Value: lookup}, {Key: "api_key_expires_at", Value: expiresAt.UTC().Format(time.RFC3339)}, {Key: "updated_at", Value: updatedAt.UTC().Format(time.RFC3339)}}}}
+        setDoc = append(setDoc, bson.E{Key: "api_key_expires_at", Value: expiresAt.UTC()})
     }
-    _, err := r.col().UpdateOne(ctx, bson.D{{Key: "user_id", Value: userID}}, update)
+    update := bson.D{{Key: "$set", Value: setDoc}}
+    _, err := r.col().UpdateOne(ctx, filterByUserID(userID), update)
     return err
 }
 
 func (r *UserRepo) UpdateName(ctx context.Context, userID string, name string, updatedAt time.Time) error {
-    _, err := r.col().UpdateOne(ctx, bson.D{{Key: "user_id", Value: userID}}, bson.D{{Key: "$set", Value: bson.D{{Key: "name", Value: name}, {Key: "updated_at", Value: updatedAt.UTC().Format(time.RFC3339)}}}})
+    _, err := r.col().UpdateOne(ctx, filterByUserID(userID), bson.D{{Key: "$set", Value: bson.D{{Key: "name", Value: name}, {Key: "updated_at", Value: updatedAt.UTC()}}}})
     return err
 }
 
 func (r *UserRepo) SetRoomID(ctx context.Context, userID string, roomID *string, updatedAt time.Time) error {
-    set := bson.D{{Key: "updated_at", Value: updatedAt.UTC().Format(time.RFC3339)}}
     if roomID == nil || *roomID == "" {
-        set = append(set, bson.E{Key: "room_id", Value: nil})
-    } else {
-        set = append(set, bson.E{Key: "room_id", Value: *roomID})
+        _, err := r.col().UpdateOne(ctx, filterByUserID(userID), bson.D{{Key: "$unset", Value: bson.D{{Key: "room_id", Value: ""}}}, {Key: "$set", Value: bson.D{{Key: "updated_at", Value: updatedAt.UTC()}}}})
+        return err
     }
-    _, err := r.col().UpdateOne(ctx, bson.D{{Key: "user_id", Value: userID}}, bson.D{{Key: "$set", Value: set}})
+    _, err := r.col().UpdateOne(ctx, filterByUserID(userID), bson.D{{Key: "$set", Value: bson.D{{Key: "room_id", Value: *roomID}, {Key: "updated_at", Value: updatedAt.UTC()}}}})
     return err
 }

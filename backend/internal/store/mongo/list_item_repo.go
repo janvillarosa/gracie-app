@@ -48,12 +48,12 @@ func (r *ListItemRepo) ListByList(ctx context.Context, listID string) ([]models.
 }
 
 func (r *ListItemRepo) UpdateCompletion(ctx context.Context, itemID string, completed bool, updatedAt time.Time) error {
-    _, err := r.col().UpdateOne(ctx, bson.D{{Key: "item_id", Value: itemID}}, bson.D{{Key: "$set", Value: bson.D{{Key: "completed", Value: completed}, {Key: "updated_at", Value: updatedAt.UTC().Format(time.RFC3339)}}}})
+    _, err := r.col().UpdateOne(ctx, bson.D{{Key: "item_id", Value: itemID}}, bson.D{{Key: "$set", Value: bson.D{{Key: "completed", Value: completed}, {Key: "updated_at", Value: updatedAt.UTC()}}}})
     return err
 }
 
 func (r *ListItemRepo) UpdateDescription(ctx context.Context, itemID string, description string, updatedAt time.Time) error {
-    _, err := r.col().UpdateOne(ctx, bson.D{{Key: "item_id", Value: itemID}}, bson.D{{Key: "$set", Value: bson.D{{Key: "description", Value: description}, {Key: "updated_at", Value: updatedAt.UTC().Format(time.RFC3339)}}}})
+    _, err := r.col().UpdateOne(ctx, bson.D{{Key: "item_id", Value: itemID}}, bson.D{{Key: "$set", Value: bson.D{{Key: "description", Value: description}, {Key: "updated_at", Value: updatedAt.UTC()}}}})
     return err
 }
 
@@ -61,4 +61,3 @@ func (r *ListItemRepo) Delete(ctx context.Context, itemID string) error {
     _, err := r.col().DeleteOne(ctx, bson.D{{Key: "item_id", Value: itemID}})
     return err
 }
-

@@ -53,7 +53,7 @@ func (r *RoomRepo) GetByShareToken(ctx context.Context, token string) (*models.R
 func (r *RoomRepo) SetShareToken(ctx context.Context, roomID string, userID string, token string, updatedAt time.Time) error {
     _, err := r.col().UpdateOne(ctx,
         bson.D{{Key: "room_id", Value: roomID}, {Key: "member_ids", Value: bson.D{{Key: "$in", Value: bson.A{userID}}}}},
-        bson.D{{Key: "$set", Value: bson.D{{Key: "share_token", Value: token}, {Key: "updated_at", Value: updatedAt.UTC().Format(time.RFC3339)}}}},
+        bson.D{{Key: "$set", Value: bson.D{{Key: "share_token", Value: token}, {Key: "updated_at", Value: updatedAt.UTC()}}}},
     )
     return err
 }
@@ -61,7 +61,7 @@ func (r *RoomRepo) SetShareToken(ctx context.Context, roomID string, userID stri
 func (r *RoomRepo) RemoveShareToken(ctx context.Context, roomID string, updatedAt time.Time) error {
     _, err := r.col().UpdateOne(ctx,
         bson.D{{Key: "room_id", Value: roomID}},
-        bson.D{{Key: "$set", Value: bson.D{{Key: "updated_at", Value: updatedAt.UTC().Format(time.RFC3339)}}}, {Key: "$unset", Value: bson.D{{Key: "share_token", Value: ""}}}},
+        bson.D{{Key: "$unset", Value: bson.D{{Key: "share_token", Value: ""}}}, {Key: "$set", Value: bson.D{{Key: "updated_at", Value: updatedAt.UTC()}}}},
     )
     return err
 }
@@ -70,13 +70,13 @@ func (r *RoomRepo) UpdateDescription(ctx context.Context, roomID string, userID 
     if description == "" {
         _, err := r.col().UpdateOne(ctx,
             bson.D{{Key: "room_id", Value: roomID}, {Key: "member_ids", Value: bson.D{{Key: "$in", Value: bson.A{userID}}}}},
-            bson.D{{Key: "$unset", Value: bson.D{{Key: "description", Value: ""}}}, {Key: "$set", Value: bson.D{{Key: "updated_at", Value: updatedAt.UTC().Format(time.RFC3339)}}}},
+            bson.D{{Key: "$unset", Value: bson.D{{Key: "description", Value: ""}}}, {Key: "$set", Value: bson.D{{Key: "updated_at", Value: updatedAt.UTC()}}}},
         )
         return err
     }
     _, err := r.col().UpdateOne(ctx,
         bson.D{{Key: "room_id", Value: roomID}, {Key: "member_ids", Value: bson.D{{Key: "$in", Value: bson.A{userID}}}}},
-        bson.D{{Key: "$set", Value: bson.D{{Key: "description", Value: description}, {Key: "updated_at", Value: updatedAt.UTC().Format(time.RFC3339)}}}},
+        bson.D{{Key: "$set", Value: bson.D{{Key: "description", Value: description}, {Key: "updated_at", Value: updatedAt.UTC()}}}},
     )
     return err
 }
@@ -84,13 +84,13 @@ func (r *RoomRepo) UpdateDescription(ctx context.Context, roomID string, userID 
 func (r *RoomRepo) UpdateDisplayName(ctx context.Context, roomID string, userID string, displayName string, updatedAt time.Time) error {
     _, err := r.col().UpdateOne(ctx,
         bson.D{{Key: "room_id", Value: roomID}, {Key: "member_ids", Value: bson.D{{Key: "$in", Value: bson.A{userID}}}}},
-        bson.D{{Key: "$set", Value: bson.D{{Key: "display_name", Value: displayName}, {Key: "updated_at", Value: updatedAt.UTC().Format(time.RFC3339)}}}},
+        bson.D{{Key: "$set", Value: bson.D{{Key: "display_name", Value: displayName}, {Key: "updated_at", Value: updatedAt.UTC()}}}},
     )
     return err
 }
 
 func (r *RoomRepo) VoteDeletion(ctx context.Context, roomID string, userID string, ts time.Time) error {
-    _, err := r.col().UpdateOne(ctx, bson.D{{Key: "room_id", Value: roomID}}, bson.D{{Key: "$set", Value: bson.D{{Key: "deletion_votes." + userID, Value: ts.UTC().Format(time.RFC3339)}, {Key: "updated_at", Value: ts.UTC().Format(time.RFC3339)}}}})
+    _, err := r.col().UpdateOne(ctx, bson.D{{Key: "room_id", Value: roomID}}, bson.D{{Key: "$set", Value: bson.D{{Key: "deletion_votes." + userID, Value: ts.UTC().Format(time.RFC3339)}, {Key: "updated_at", Value: ts.UTC()}}}})
     return err
 }
 
@@ -106,7 +106,6 @@ func (r *RoomRepo) Delete(ctx context.Context, roomID string) error {
 
 func (r *RoomRepo) AddMember(ctx context.Context, roomID string, userID string, updatedAt time.Time) error {
     // add userID if not present and ensure max two members by checking in service
-    _, err := r.col().UpdateOne(ctx, bson.D{{Key: "room_id", Value: roomID}}, bson.D{{Key: "$addToSet", Value: bson.D{{Key: "member_ids", Value: userID}}}, {Key: "$set", Value: bson.D{{Key: "updated_at", Value: updatedAt.UTC().Format(time.RFC3339)}}}})
+    _, err := r.col().UpdateOne(ctx, bson.D{{Key: "room_id", Value: roomID}}, bson.D{{Key: "$addToSet", Value: bson.D{{Key: "member_ids", Value: userID}}}, {Key: "$set", Value: bson.D{{Key: "updated_at", Value: updatedAt.UTC()}}}})
     return err
 }
-

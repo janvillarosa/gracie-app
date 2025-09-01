@@ -48,7 +48,7 @@ func (r *ListRepo) ListByRoom(ctx context.Context, roomID string) ([]models.List
 }
 
 func (r *ListRepo) AddDeletionVote(ctx context.Context, listID string, userID string, ts time.Time) error {
-    _, err := r.col().UpdateOne(ctx, bson.D{{Key: "list_id", Value: listID}}, bson.D{{Key: "$set", Value: bson.D{{Key: "deletion_votes." + userID, Value: ts.UTC().Format(time.RFC3339)}, {Key: "updated_at", Value: ts.UTC().Format(time.RFC3339)}}}})
+    _, err := r.col().UpdateOne(ctx, bson.D{{Key: "list_id", Value: listID}}, bson.D{{Key: "$set", Value: bson.D{{Key: "deletion_votes." + userID, Value: ts.UTC().Format(time.RFC3339)}, {Key: "updated_at", Value: ts.UTC()}}}})
     return err
 }
 
@@ -61,7 +61,7 @@ func (r *ListRepo) FinalizeDeleteIfBothVoted(ctx context.Context, listID, uid1, 
     // Set is_deleted when both votes exist and not already deleted
     res, err := r.col().UpdateOne(ctx,
         bson.D{{Key: "list_id", Value: listID}, {Key: "deletion_votes." + uid1, Value: bson.D{{Key: "$exists", Value: true}}}, {Key: "deletion_votes." + uid2, Value: bson.D{{Key: "$exists", Value: true}}}, {Key: "is_deleted", Value: bson.D{{Key: "$ne", Value: true}}}},
-        bson.D{{Key: "$set", Value: bson.D{{Key: "is_deleted", Value: true}, {Key: "updated_at", Value: ts.UTC().Format(time.RFC3339)}}}},
+        bson.D{{Key: "$set", Value: bson.D{{Key: "is_deleted", Value: true}, {Key: "updated_at", Value: ts.UTC()}}}},
     )
     if err != nil { return false, err }
     return res.ModifiedCount > 0, nil
@@ -71,4 +71,3 @@ func (r *ListRepo) Delete(ctx context.Context, listID string) error {
     _, err := r.col().DeleteOne(ctx, bson.D{{Key: "list_id", Value: listID}})
     return err
 }
-
