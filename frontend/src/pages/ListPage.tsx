@@ -5,8 +5,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getMe, getListItems, getLists, createListItem, updateListItem, deleteListItem, voteListDeletion, cancelListDeletion } from '@api/endpoints'
 import type { List, ListItem } from '@api/types'
 import { useLiveQueryOpts } from '@lib/liveQuery'
-import { Card, Typography, Space, Button, Input, Checkbox, List as AntList, Alert, Grid } from 'antd'
-import { ArrowLeftOutlined, DeleteOutlined, PlusOutlined, EyeOutlined, EyeInvisibleOutlined, CloseCircleOutlined } from '@ant-design/icons'
+import { Card, Typography, Space, Button, Input, Checkbox, List as AntList, Alert, Grid, Dropdown, message } from 'antd'
+import { ArrowLeftOutlined, DeleteOutlined, PlusOutlined, EyeOutlined, EyeInvisibleOutlined, CloseCircleOutlined, MoreOutlined } from '@ant-design/icons'
 
 export const ListPage: React.FC = () => {
   const { apiKey } = useAuth()
@@ -20,14 +20,25 @@ export const ListPage: React.FC = () => {
   const screens = Grid.useBreakpoint()
   const isMobile = !screens.md
   // antd message for toasts
-  const show = (msg: string) => {
-    // dynamic import to avoid circular; or simply use browser alert fallback
-    // eslint-disable-next-line no-alert
-    // For simplicity, we keep a minimal toast using alert replacement
-    // Consider switching to antd message.useMessage for richer UX
-    console.info(msg)
-  }
+  const [msgApi, contextHolder] = message.useMessage()
+  const show = (msg: string) => { msgApi.info(msg) }
   const [redirecting, setRedirecting] = useState(false)
+
+  const timeAgo = (iso: string | Date | undefined) => {
+    if (!iso) return 'less than a minute ago'
+    const d = typeof iso === 'string' ? new Date(iso) : iso
+    const now = new Date()
+    const diffMs = d.getTime() - now.getTime()
+    const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' })
+    const sec = Math.round(diffMs / 1000)
+    const min = Math.round(sec / 60)
+    const hr = Math.round(min / 60)
+    const day = Math.round(hr / 24)
+    if (Math.abs(sec) < 60) return 'less than a minute ago'
+    if (Math.abs(min) < 60) return rtf.format(min, 'minute')
+    if (Math.abs(hr) < 24) return rtf.format(hr, 'hour')
+    return rtf.format(day, 'day')
+  }
 
   const meQuery = useQuery({ queryKey: ['me'], queryFn: () => getMe(apiKey!) })
   const roomId = meQuery.data?.room_id as string | undefined
@@ -52,6 +63,14 @@ export const ListPage: React.FC = () => {
     enabled: !!roomId && !!listId,
     ...itemsLive,
   })
+
+  // Always derive items and sortedItems before any early returns to keep hook order stable
+  const items = itemsQuery.data ?? []
+  const sortedItems = useMemo(() => {
+    const copy = [...items]
+    copy.sort((a, b) => (a.completed === b.completed ? 0 : a.completed ? 1 : -1))
+    return copy
+  }, [items])
 
   // If the list disappears due to partner's vote while viewing, navigate home (avoid firing during refetch/errors)
   const hadListRef = useRef(false)
@@ -124,51 +143,82 @@ export const ListPage: React.FC = () => {
     return <div className="container"><Card><Alert type="error" message="List not found." showIcon /><div className="spacer" /><Button onClick={() => navigate('/app')} icon={<ArrowLeftOutlined />}>Back to House</Button></Card></div>
   }
 
-  const items = itemsQuery.data ?? []
+  // sortedItems defined earlier to maintain consistent hook order
 
   return (
     <div className="container">
+      {contextHolder}
       <Card>
         <Space direction="vertical" style={{ width: '100%' }} size="large">
           {isMobile ? (
             <Space direction="vertical" style={{ width: '100%' }} size="small">
-              <Typography.Title level={3} style={{ margin: 0 }}>{listMeta.name}</Typography.Title>
+              <Typography.Title level={2} style={{ margin: 0 }}>{listMeta.name}</Typography.Title>
+              <Typography.Text type="secondary">Updated {timeAgo(listMeta.updated_at)}</Typography.Text>
+              {listMeta.description && (
+                <Typography.Text type="secondary" style={{ marginTop: 4 }}>{listMeta.description}</Typography.Text>
+              )}
               <Space wrap>
-                {myVote(listMeta) ? (
-                  <Button onClick={onCancelVote} icon={<CloseCircleOutlined />}>Cancel delete vote</Button>
-                ) : (
-                  <Button danger onClick={onVoteDelete} icon={<DeleteOutlined />}>Vote to Delete</Button>
-                )}
+                <Button onClick={() => setIncludeCompleted((v) => !v)} icon={includeCompleted ? <EyeInvisibleOutlined /> : <EyeOutlined />}>
+                  {includeCompleted ? 'Hide completed' : 'Show completed'}
+                </Button>
                 <Button onClick={() => navigate('/app')} icon={<ArrowLeftOutlined />}>Back</Button>
+                <Dropdown
+                  trigger={["click"]}
+                  menu={{
+                    items: myVote(listMeta)
+                      ? [{ key: 'cancel', label: 'Cancel delete vote' }]
+                      : [{ key: 'vote', label: 'Vote to delete' }],
+                    onClick: ({ key }) => {
+                      if (key === 'vote') { onVoteDelete(); show('Vote recorded'); }
+                      if (key === 'cancel') { onCancelVote(); show('Vote canceled'); }
+                    },
+                  }}
+                >
+                  <Button icon={<MoreOutlined />} aria-label="More" />
+                </Dropdown>
               </Space>
             </Space>
           ) : (
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography.Title level={3} style={{ margin: 0 }}>{listMeta.name}</Typography.Title>
-              <Space>
-                {myVote(listMeta) ? (
-                  <Button onClick={onCancelVote} icon={<CloseCircleOutlined />}>Cancel delete vote</Button>
-                ) : (
-                  <Button danger onClick={onVoteDelete} icon={<DeleteOutlined />}>Vote to Delete</Button>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <Typography.Title level={2} style={{ margin: 0 }}>{listMeta.name}</Typography.Title>
+                <Typography.Text type="secondary">Updated {timeAgo(listMeta.updated_at)}</Typography.Text>
+                {listMeta.description && (
+                  <Typography.Text type="secondary" style={{ marginTop: 4 }}>{listMeta.description}</Typography.Text>
                 )}
+              </div>
+              <Space>
+                <Button onClick={() => setIncludeCompleted((v) => !v)} icon={includeCompleted ? <EyeInvisibleOutlined /> : <EyeOutlined />}>
+                  {includeCompleted ? 'Hide completed' : 'Show completed'}
+                </Button>
                 <Button onClick={() => navigate('/app')} icon={<ArrowLeftOutlined />}>Back</Button>
+                <Dropdown
+                  trigger={["click"]}
+                  menu={{
+                    items: myVote(listMeta)
+                      ? [{ key: 'cancel', label: 'Cancel delete vote' }]
+                      : [{ key: 'vote', label: 'Vote to delete' }],
+                    onClick: ({ key }) => {
+                      if (key === 'vote') { onVoteDelete(); show('Vote recorded'); }
+                      if (key === 'cancel') { onCancelVote(); show('Vote canceled'); }
+                    },
+                  }}
+                >
+                  <Button icon={<MoreOutlined />} aria-label="More" />
+                </Dropdown>
               </Space>
             </div>
           )}
-          {listMeta.description && <Typography.Text type="secondary">{listMeta.description}</Typography.Text>}
+          {/* description now displayed under the title to reduce top padding */}
           {isMobile ? (
             <Space direction="vertical" style={{ width: '100%' }}>
               <Input
                 placeholder="Add an item"
                 value={newDesc}
                 onChange={(e) => setNewDesc(e.target.value)}
+                size="large"
               />
-              <Space>
-                <Button type="primary" onClick={onCreateItem} disabled={!newDesc.trim()} icon={<PlusOutlined />}>Add</Button>
-                <Button type="default" onClick={() => setIncludeCompleted((v) => !v)} icon={includeCompleted ? <EyeInvisibleOutlined /> : <EyeOutlined />}>
-                  {includeCompleted ? 'Hide completed' : 'Show completed'}
-                </Button>
-              </Space>
+              <Button type="primary" onClick={onCreateItem} disabled={!newDesc.trim()} icon={<PlusOutlined />} size="large">Add</Button>
             </Space>
           ) : (
             <Space.Compact style={{ width: '100%' }}>
@@ -176,11 +226,9 @@ export const ListPage: React.FC = () => {
                 placeholder="Add an item"
                 value={newDesc}
                 onChange={(e) => setNewDesc(e.target.value)}
+                size="large"
               />
-              <Button type="primary" onClick={onCreateItem} disabled={!newDesc.trim()} icon={<PlusOutlined />}>Add</Button>
-              <Button type="default" onClick={() => setIncludeCompleted((v) => !v)} icon={includeCompleted ? <EyeInvisibleOutlined /> : <EyeOutlined />}>
-                {includeCompleted ? 'Hide completed' : 'Show completed'}
-              </Button>
+              <Button type="primary" onClick={onCreateItem} disabled={!newDesc.trim()} icon={<PlusOutlined />} size="large">Add</Button>
             </Space.Compact>
           )}
           {items.length === 0 ? (
@@ -188,7 +236,7 @@ export const ListPage: React.FC = () => {
           ) : (
             <AntList
               className="items-list"
-              dataSource={items}
+              dataSource={sortedItems}
               renderItem={(it) => (
                 <AntList.Item
                   actions={[
@@ -204,10 +252,12 @@ export const ListPage: React.FC = () => {
                     />
                   ]}
                 >
-                  <Space>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', flexWrap: 'wrap', width: '100%' }}>
                     <Checkbox checked={it.completed} onChange={() => onToggleComplete(it)} />
-                    <span style={{ textDecoration: it.completed ? 'line-through' : 'none' }}>{it.description}</span>
-                  </Space>
+                    <div style={{ flex: 1, minWidth: 0, whiteSpace: 'normal', overflowWrap: 'anywhere' }}>
+                      <span style={{ textDecoration: it.completed ? 'line-through' : 'none' }}>{it.description}</span>
+                    </div>
+                  </div>
                 </AntList.Item>
               )}
             />
