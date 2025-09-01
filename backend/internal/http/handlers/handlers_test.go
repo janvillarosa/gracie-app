@@ -23,7 +23,7 @@ func TestHTTPFlow(t *testing.T) {
     roomsRepo := dynamo.NewRoomRepo(client)
     userSvc := services.NewUserService(client, usersRepo)
     roomSvc := services.NewRoomService(client, usersRepo, roomsRepo)
-    authSvc, err := services.NewAuthService(client, usersRepo, "/tmp/gracie-test-enc.key")
+    authSvc, err := services.NewAuthService(client, usersRepo, "/tmp/gracie-test-enc.key", 720)
     if err != nil { t.Fatalf("auth svc: %v", err) }
 
     ah := handlers.NewAuthHandler(authSvc)

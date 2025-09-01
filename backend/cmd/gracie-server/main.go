@@ -33,7 +33,7 @@ func main() {
 
     userSvc := services.NewUserService(ddb, usersRepo)
     roomSvc := services.NewRoomService(ddb, usersRepo, roomsRepo)
-    authSvc, err := services.NewAuthService(ddb, usersRepo, cfg.EncKeyFile)
+    authSvc, err := services.NewAuthService(ddb, usersRepo, cfg.EncKeyFile, cfg.APIKeyTTLHours)
     if err != nil { log.Fatalf("auth service: %v", err) }
 
     userHandler := handlers.NewUserHandler(userSvc)

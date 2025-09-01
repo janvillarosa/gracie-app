@@ -1,8 +1,9 @@
 package middleware
 
 import (
-	"context"
-	stdhttp "net/http"
+    "context"
+    "time"
+    stdhttp "net/http"
 
 	authpkg "github.com/janvillarosa/gracie-app/backend/internal/auth"
 	derr "github.com/janvillarosa/gracie-app/backend/internal/errors"
@@ -29,13 +30,17 @@ func AuthMiddleware(users UserFinder) func(next stdhttp.Handler) stdhttp.Handler
 				httpError(w, derr.ErrUnauthorized, stdhttp.StatusUnauthorized)
 				return
 			}
-			if !authpkg.VerifyAPIKey(u.APIKeyHash, token) {
-				httpError(w, derr.ErrUnauthorized, stdhttp.StatusUnauthorized)
-				return
-			}
-			ctx := api.WithUser(r.Context(), u)
-			r = r.WithContext(ctx)
-			next.ServeHTTP(w, r)
+        if !authpkg.VerifyAPIKey(u.APIKeyHash, token) {
+            httpError(w, derr.ErrUnauthorized, stdhttp.StatusUnauthorized)
+            return
+        }
+        if u.APIKeyExpiresAt != nil && time.Now().UTC().After(*u.APIKeyExpiresAt) {
+            httpError(w, derr.ErrUnauthorized, stdhttp.StatusUnauthorized)
+            return
+        }
+        ctx := api.WithUser(r.Context(), u)
+        r = r.WithContext(ctx)
+        next.ServeHTTP(w, r)
 		})
 	}
 }

@@ -100,17 +100,23 @@ func (r *UserRepo) GetByUsername(ctx context.Context, username string) (*models.
     return &u, nil
 }
 
-func (r *UserRepo) SetAPIKey(ctx context.Context, userID string, hash, lookup string, updatedAt time.Time) error {
+func (r *UserRepo) SetAPIKey(ctx context.Context, userID string, hash, lookup string, expiresAt *time.Time, updatedAt time.Time) error {
+    set := "SET api_key_hash = :h, api_key_lookup = :l, updated_at = :ua"
+    eav := map[string]types.AttributeValue{
+        ":h":  &types.AttributeValueMemberS{Value: hash},
+        ":l":  &types.AttributeValueMemberS{Value: lookup},
+        ":ua": &types.AttributeValueMemberS{Value: updatedAt.UTC().Format(time.RFC3339)},
+    }
+    if expiresAt != nil {
+        set = "SET api_key_hash = :h, api_key_lookup = :l, api_key_expires_at = :exp, updated_at = :ua"
+        eav[":exp"] = &types.AttributeValueMemberS{Value: expiresAt.UTC().Format(time.RFC3339)}
+    }
     _, err := r.c.DB.UpdateItem(ctx, &dynamodb.UpdateItemInput{
-        TableName:        &r.c.Tables.Users,
-        Key:              map[string]types.AttributeValue{"user_id": &types.AttributeValueMemberS{Value: userID}},
-        UpdateExpression: strPtr("SET api_key_hash = :h, api_key_lookup = :l, updated_at = :ua"),
-        ExpressionAttributeValues: map[string]types.AttributeValue{
-            ":h":  &types.AttributeValueMemberS{Value: hash},
-            ":l":  &types.AttributeValueMemberS{Value: lookup},
-            ":ua": &types.AttributeValueMemberS{Value: updatedAt.UTC().Format(time.RFC3339)},
-        },
-        ReturnValues: types.ReturnValueNone,
+        TableName:                 &r.c.Tables.Users,
+        Key:                       map[string]types.AttributeValue{"user_id": &types.AttributeValueMemberS{Value: userID}},
+        UpdateExpression:          &set,
+        ExpressionAttributeValues: eav,
+        ReturnValues:              types.ReturnValueNone,
     })
     return err
 }

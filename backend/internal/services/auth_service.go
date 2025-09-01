@@ -22,12 +22,14 @@ type AuthService struct {
     ddb   *dynamo.Client
     users *dynamo.UserRepo
     key   []byte
+    ttl   time.Duration
 }
 
-func NewAuthService(ddb *dynamo.Client, users *dynamo.UserRepo, encKeyPath string) (*AuthService, error) {
+func NewAuthService(ddb *dynamo.Client, users *dynamo.UserRepo, encKeyPath string, ttlHours int) (*AuthService, error) {
     key, err := crypto.LoadOrCreateKey(encKeyPath)
     if err != nil { return nil, err }
-    return &AuthService{ddb: ddb, users: users, key: key}, nil
+    ttl := time.Duration(ttlHours) * time.Hour
+    return &AuthService{ddb: ddb, users: users, key: key, ttl: ttl}, nil
 }
 
 func (s *AuthService) Register(ctx context.Context, username, password, name string) error {
@@ -84,7 +86,13 @@ func (s *AuthService) Login(ctx context.Context, username, password string) (*Lo
     plain, hash, err := apiauth.GenerateAPIKey()
     if err != nil { return nil, err }
     lookup := apiauth.DeriveLookup(plain)
-    if err := s.users.SetAPIKey(ctx, u.UserID, hash, lookup, time.Now().UTC()); err != nil {
+    now := time.Now().UTC()
+    var exp *time.Time
+    if s.ttl > 0 {
+        e := now.Add(s.ttl)
+        exp = &e
+    }
+    if err := s.users.SetAPIKey(ctx, u.UserID, hash, lookup, exp, now); err != nil {
         return nil, err
     }
     return &LoginResult{User: u, APIKey: plain}, nil

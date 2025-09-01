@@ -29,7 +29,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
       try {
         await getMe(apiKey)
       } catch (e) {
-        // invalid key
+        // invalid/expired key → logout and go to login
         setApiKey(null)
         navigate('/login', { replace: true })
       }
@@ -46,4 +46,3 @@ export const useAuth = () => {
   if (!ctx) throw new Error('useAuth must be used within AuthProvider')
   return ctx
 }
-

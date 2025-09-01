@@ -12,6 +12,7 @@ type Config struct {
     UsersTable  string
     RoomsTable  string
     EncKeyFile  string
+    APIKeyTTLHours int
 }
 
 func getEnv(key, def string) string {
@@ -29,10 +30,20 @@ func Load() (*Config, error) {
         UsersTable:  getEnv("USERS_TABLE", "Users"),
         RoomsTable:  getEnv("ROOMS_TABLE", "Rooms"),
         EncKeyFile:  getEnv("ENC_KEY_FILE", "/app/secrets/enc.key"),
+        APIKeyTTLHours: getEnvInt("API_KEY_TTL_HOURS", 720),
     }
 
     if cfg.UsersTable == "" || cfg.RoomsTable == "" {
         return nil, fmt.Errorf("missing table names")
     }
     return cfg, nil
+}
+
+func getEnvInt(key string, def int) int {
+    if v := os.Getenv(key); v != "" {
+        var n int
+        _, _ = fmt.Sscanf(v, "%d", &n)
+        if n > 0 { return n }
+    }
+    return def
 }

@@ -15,11 +15,19 @@ const RequireAuth: React.FC<React.PropsWithChildren> = ({ children }) => {
   return <>{children}</>
 }
 
+const RequireGuest: React.FC<React.PropsWithChildren> = ({ children }) => {
+  const { isAuthed } = useAuth()
+  if (isAuthed) {
+    return <Navigate to="/app" replace />
+  }
+  return <>{children}</>
+}
+
 export const AppRoutes: React.FC = () => {
   return (
     <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
+      <Route path="/login" element={<RequireGuest><Login /></RequireGuest>} />
+      <Route path="/register" element={<RequireGuest><Register /></RequireGuest>} />
       <Route
         path="/app"
         element={

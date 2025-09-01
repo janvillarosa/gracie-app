@@ -5,7 +5,7 @@ import { createRoom, isConflict, isForbidden, joinRoomByToken } from '@api/endpo
 const TOKEN_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ0123456789' // no I, O, L
 
 export const NoRoomPage: React.FC = () => {
-  const { apiKey } = useAuth()
+  const { apiKey, setApiKey } = useAuth()
   const [token, setToken] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -44,7 +44,10 @@ export const NoRoomPage: React.FC = () => {
   return (
     <div className="container">
       <div className="panel">
-        <div className="title">You are not in a house yet</div>
+        <div className="row" style={{ justifyContent: 'space-between' }}>
+          <div className="title">You are not in a house yet</div>
+          <button className="button secondary" onClick={() => setApiKey(null)}>Logout</button>
+        </div>
         <div className="spacer" />
         <div className="row" style={{ alignItems: 'flex-start' }}>
           <div className="col" style={{ flex: 1 }}>
