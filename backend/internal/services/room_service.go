@@ -223,3 +223,37 @@ func (s *RoomService) CancelDeletionVote(ctx context.Context, user *models.User)
 }
 
 func strPtr(s string) *string { return &s }
+
+// UpdateRoomSettings updates display name and/or description for the caller's room.
+// Pass empty pointers to skip. Passing a non-nil empty description removes it.
+func (s *RoomService) UpdateRoomSettings(ctx context.Context, user *models.User, displayName *string, description *string) error {
+    if user.RoomID == nil || *user.RoomID == "" {
+        return derr.ErrNotFound
+    }
+    // Build dynamic update
+    now := time.Now().UTC().Format(time.RFC3339)
+    setExpr := "updated_at = :ua"
+    removeExpr := ""
+    eav := map[string]types.AttributeValue{":ua": &types.AttributeValueMemberS{Value: now}, ":uid": &types.AttributeValueMemberS{Value: user.UserID}}
+    if displayName != nil {
+        setExpr = "display_name = :dn, " + setExpr
+        eav[":dn"] = &types.AttributeValueMemberS{Value: *displayName}
+    }
+    if description != nil {
+        if *description == "" {
+            removeExpr = " REMOVE description"
+        } else {
+            setExpr = "description = :desc, " + setExpr
+            eav[":desc"] = &types.AttributeValueMemberS{Value: *description}
+        }
+    }
+    updateExpr := "SET " + setExpr + removeExpr
+    _, err := s.ddb.DB.UpdateItem(ctx, &dynamodb.UpdateItemInput{
+        TableName:                 &s.ddb.Tables.Rooms,
+        Key:                       map[string]types.AttributeValue{"room_id": &types.AttributeValueMemberS{Value: *user.RoomID}},
+        UpdateExpression:          &updateExpr,
+        ConditionExpression:       strPtr("contains(member_ids, :uid)"),
+        ExpressionAttributeValues: eav,
+    })
+    return err
+}

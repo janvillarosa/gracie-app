@@ -33,6 +33,7 @@ func NewRouter(usersRepo *dynamo.UserRepo, authHandler *handlers.AuthHandler, us
         ar.Post("/rooms/share", roomHandler.ShareRoom)
         ar.Post("/rooms/join", roomHandler.JoinByToken)
         ar.Post("/rooms/{room_id}/join", roomHandler.JoinRoom)
+        ar.Put("/rooms/settings", roomHandler.UpdateSettings)
         ar.Post("/rooms/deletion/vote", roomHandler.VoteDeletion)
         ar.Post("/rooms/deletion/cancel", roomHandler.CancelDeletion)
     })

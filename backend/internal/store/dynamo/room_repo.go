@@ -118,3 +118,46 @@ func (r *RoomRepo) VoteDeletion(ctx context.Context, roomID string, userID strin
     })
     return err
 }
+
+func (r *RoomRepo) UpdateDescription(ctx context.Context, roomID string, userID string, description string, updatedAt time.Time) error {
+    if description == "" {
+        _, err := r.c.DB.UpdateItem(ctx, &dynamodb.UpdateItemInput{
+            TableName:        &r.c.Tables.Rooms,
+            Key:              map[string]types.AttributeValue{"room_id": &types.AttributeValueMemberS{Value: roomID}},
+            UpdateExpression: strPtr("REMOVE description SET updated_at = :ua"),
+            ExpressionAttributeValues: map[string]types.AttributeValue{
+                ":ua":  &types.AttributeValueMemberS{Value: updatedAt.UTC().Format(time.RFC3339)},
+                ":uid": &types.AttributeValueMemberS{Value: userID},
+            },
+            ConditionExpression: strPtr("contains(member_ids, :uid)"),
+        })
+        return err
+    }
+    _, err := r.c.DB.UpdateItem(ctx, &dynamodb.UpdateItemInput{
+        TableName:        &r.c.Tables.Rooms,
+        Key:              map[string]types.AttributeValue{"room_id": &types.AttributeValueMemberS{Value: roomID}},
+        UpdateExpression: strPtr("SET description = :d, updated_at = :ua"),
+        ExpressionAttributeValues: map[string]types.AttributeValue{
+            ":d":   &types.AttributeValueMemberS{Value: description},
+            ":ua":  &types.AttributeValueMemberS{Value: updatedAt.UTC().Format(time.RFC3339)},
+            ":uid": &types.AttributeValueMemberS{Value: userID},
+        },
+        ConditionExpression: strPtr("contains(member_ids, :uid)"),
+    })
+    return err
+}
+
+func (r *RoomRepo) UpdateDisplayName(ctx context.Context, roomID string, userID string, displayName string, updatedAt time.Time) error {
+    _, err := r.c.DB.UpdateItem(ctx, &dynamodb.UpdateItemInput{
+        TableName:        &r.c.Tables.Rooms,
+        Key:              map[string]types.AttributeValue{"room_id": &types.AttributeValueMemberS{Value: roomID}},
+        UpdateExpression: strPtr("SET display_name = :n, updated_at = :ua"),
+        ExpressionAttributeValues: map[string]types.AttributeValue{
+            ":n":   &types.AttributeValueMemberS{Value: displayName},
+            ":ua":  &types.AttributeValueMemberS{Value: updatedAt.UTC().Format(time.RFC3339)},
+            ":uid": &types.AttributeValueMemberS{Value: userID},
+        },
+        ConditionExpression: strPtr("contains(member_ids, :uid)"),
+    })
+    return err
+}

@@ -187,3 +187,71 @@ func (h *RoomHandler) CancelDeletion(w http.ResponseWriter, r *http.Request) {
     }
     w.WriteHeader(http.StatusNoContent)
 }
+
+type updateSettingsReq struct {
+    DisplayName *string `json:"display_name"`
+    Description *string `json:"description"`
+}
+
+func (h *RoomHandler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
+    u, ok := api.UserFrom(r.Context())
+    if !ok {
+        api.WriteJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+        return
+    }
+    var req updateSettingsReq
+    if err := api.DecodeJSON(r, &req); err != nil {
+        api.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request"})
+        return
+    }
+    // Validate display name: alphanumeric + spaces, 1-64
+    if req.DisplayName != nil {
+        dn := *req.DisplayName
+        if len(dn) == 0 || len(dn) > 64 {
+            api.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid display name"})
+            return
+        }
+        for _, c := range dn {
+            if (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == ' ' {
+                continue
+            }
+            api.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": "display name must be alphanumeric with spaces"})
+            return
+        }
+    }
+    // Description: allow up to 512 chars; empty string removes
+    if req.Description != nil && len(*req.Description) > 512 {
+        api.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": "description too long"})
+        return
+    }
+    if req.DisplayName == nil && req.Description == nil {
+        w.WriteHeader(http.StatusNoContent)
+        return
+    }
+    if err := h.Rooms.UpdateRoomSettings(r.Context(), u, req.DisplayName, req.Description); err != nil {
+        code := http.StatusBadRequest
+        if err == derr.ErrNotFound { code = http.StatusNotFound }
+        if err == derr.ErrForbidden { code = http.StatusForbidden }
+        api.WriteJSON(w, code, map[string]string{"error": err.Error()})
+        return
+    }
+    // Return sanitized, updated view
+    rm, err := h.Rooms.GetMyRoom(r.Context(), u)
+    if err != nil {
+        api.WriteJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+        return
+    }
+    members := []string{}
+    for _, mid := range rm.MemberIDs {
+        if m, err := h.Users.GetByID(r.Context(), mid); err == nil {
+            members = append(members, m.Name)
+        }
+    }
+    api.WriteJSON(w, http.StatusOK, map[string]any{
+        "display_name": rm.DisplayName,
+        "description":  rm.Description,
+        "members":      members,
+        "created_at":   rm.CreatedAt,
+        "updated_at":   rm.UpdatedAt,
+    })
+}

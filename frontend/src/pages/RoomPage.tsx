@@ -1,11 +1,13 @@
 import React, { useState } from 'react'
 import type { RoomView } from '@api/types'
 import { useAuth } from '@auth/AuthProvider'
-import { rotateShare, voteDeletion, cancelDeletion } from '@api/endpoints'
+import { useNavigate } from 'react-router-dom'
+import { rotateShare } from '@api/endpoints'
 
 export const RoomPage: React.FC<{ room: RoomView }> = ({ room }) => {
   const { apiKey, setApiKey } = useAuth()
-  const [share, setShare] = useState<{ room_id: string; token: string } | null>(null)
+  const navigate = useNavigate()
+  const [share, setShare] = useState<{ token: string } | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const onShare = async () => {
@@ -18,35 +20,16 @@ export const RoomPage: React.FC<{ room: RoomView }> = ({ room }) => {
     }
   }
 
-  const onVoteDelete = async () => {
-    setError(null)
-    try {
-      const res = await voteDeletion(apiKey!)
-      if (res.deleted) {
-        // After deletion, user has no room; simplest is reload dashboard
-        window.location.reload()
-      }
-    } catch (e: any) {
-      setError(e?.message || 'Failed to vote deletion')
-    }
-  }
-
-  const onCancelVote = async () => {
-    setError(null)
-    try {
-      await cancelDeletion(apiKey!)
-      alert('Vote canceled')
-    } catch (e: any) {
-      setError(e?.message || 'Failed to cancel vote')
-    }
-  }
-
   return (
     <div className="container">
       <div className="panel">
         <div className="row" style={{ justifyContent: 'space-between' }}>
           <div className="title">{room.display_name || 'Room'}</div>
-          <button className="button secondary" onClick={() => setApiKey(null)}>Logout</button>
+          <div className="row">
+            <button className="button" onClick={onShare}>Share Code</button>
+            <button className="button secondary" onClick={() => navigate('/app/settings')}>Settings</button>
+            <button className="button secondary" onClick={() => setApiKey(null)}>Logout</button>
+          </div>
         </div>
 
         <div className="spacer" />
@@ -54,12 +37,6 @@ export const RoomPage: React.FC<{ room: RoomView }> = ({ room }) => {
         <div className="spacer" />
         <div>Members: {room.members?.join(', ') || '—'}</div>
         <div className="spacer" />
-
-        <div className="row">
-          <button className="button" onClick={onShare}>Get 5-char share code</button>
-          <button className="button danger" onClick={onVoteDelete}>Vote to delete room</button>
-          <button className="button secondary" onClick={onCancelVote}>Cancel delete vote</button>
-        </div>
 
         {share && (
           <>

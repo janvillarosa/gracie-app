@@ -54,6 +54,10 @@ export async function cancelDeletion(apiKey: string): Promise<void> {
   return apiFetch<void>(`/rooms/deletion/cancel`, { method: 'POST', apiKey })
 }
 
+export async function updateRoomSettings(apiKey: string, params: { display_name?: string; description?: string }): Promise<RoomView> {
+  return apiFetch<RoomView>(`/rooms/settings`, { method: 'PUT', apiKey, body: JSON.stringify(params) })
+}
+
 export function isNotFound(err: unknown): err is ApiError {
   return typeof err === 'object' && err !== null && (err as any).status === 404
 }
