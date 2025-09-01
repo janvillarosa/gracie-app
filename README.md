@@ -1,6 +1,6 @@
 # Gracie (Backend + Frontend)
 
-Gracie is a minimal grocery/shopping list app designed for couples to share a single House (UI term) backed by a Room (backend model). The repo includes the backend API in Go + DynamoDB (Local) and a React/Vite frontend. Authentication supports API keys and email/password.
+Gracie is a minimal grocery/shopping list app designed for couples to share a single House (UI term) backed by a Room (backend model). The repo includes the backend API in Go + MongoDB and a React/Vite frontend. Authentication supports API keys and email/password.
 
 For now, Rooms are empty containers; the core flows implemented are user signup, room sharing via invite links (tokens), joining rooms, and two-party room deletion.
 
@@ -8,48 +8,12 @@ For now, Rooms are empty containers; the core flows implemented are user signup,
 
 Prereqs
 - Go 1.22+
-- Docker (for DynamoDB Local and Compose)
+- Docker (for MongoDB and Compose)
 - Node 18+ (for local frontend)
-
-1) Start DynamoDB Local
-
-```
-docker run -d --name ddb-local -p 8000:8000 amazon/dynamodb-local
-```
-
-2) Set environment (optional; sensible defaults are used)
-
-```
-export DDB_ENDPOINT=http://localhost:8000
-export AWS_REGION=us-east-1      # SDK requires a region; arbitrary for local
-export AWS_ACCESS_KEY_ID=local   # dummy creds for DynamoDB Local
-export AWS_SECRET_ACCESS_KEY=local
-export USERS_TABLE=Users
-export ROOMS_TABLE=Rooms
-export PORT=8080
-```
-
-3) Create tables
-
-Use the included helper which creates `Users` with a GSI and `Rooms`:
-
-```
-cd backend
-go run ./cmd/setup-ddb
-```
-
-4) Run the server
-
-```
-cd backend
-go run ./cmd/gracie-server
-```
-
-Server listens on `:8080` by default.
 
 ### One command (Docker Compose)
 
-Start DynamoDB Local, API, and frontend (Nginx) together:
+Start MongoDB (single-node replica set), API, and frontend (Nginx) together:
 
 ```
 docker compose up --build
@@ -58,13 +22,17 @@ docker compose up --build
 URLs:
 - Frontend: http://localhost:3000 (proxies `/api` to API, no CORS)
 - API: http://localhost:8080
-- DynamoDB Local: http://localhost:8000
+- MongoDB: mongodb://localhost:27017
 
-If you wiped `.dynamodb`, ensure tables are created:
+The compose file includes a one-shot init service to initiate the replica set `rs0`. The API waits until it completes, so transactions work locally.
 
-```
-docker compose run --rm api /usr/local/bin/setup-ddb
-```
+Environment (compose)
+
+The backend runs with:
+- `DATA_STORE=mongo`
+- `MONGODB_URI=mongodb://mongo:27017/?replicaSet=rs0&retryWrites=true&w=majority`
+- `MONGODB_DB=gracie`
+- `ENC_KEY_FILE=/app/secrets/enc.key` (bind-mounted from `./.secrets/enc.key`)
 
 ## API Overview (highlights)
 
@@ -126,19 +94,19 @@ curl -s -X POST http://localhost:8080/rooms/deletion/vote \
 - Only two users can be members of a room; joining a full room returns 409.
 - Share token rotation invalidates previous tokens; share code is 5 chars (no I/O/L).
 - After room deletion, both users are left without a room (must create a new solo room to continue).
-- DynamoDB Local requires dummy credentials and any region value; defaults are provided.
-- When updating local tables, `setup-ddb` ensures GSIs exist (`api_key_lookup_index`, `username_index`, `share_token_index`); if you wiped `.dynamodb`, rerun setup.
+- Mongo transactions require a replica set. The provided compose starts a single-node RS and blocks API start until PRIMARY is ready.
+- We use a UNIQUE PARTIAL index on `users.api_key_lookup` so documents without an API key don’t collide on `null`.
+- Models carry `bson` tags and store timestamps as `time.Time` to avoid decode issues.
 
 ## Project Layout
 - `backend/cmd/gracie-server`: HTTP server entrypoint
-- `backend/cmd/setup-ddb`: Helper to create local DynamoDB tables
-- `backend/internal/...`: Core packages (auth, config, http handlers/middleware/router, services, store/dynamo)
+- `backend/internal/...`: Core packages (auth, config, http handlers/middleware/router, services, store/mongo)
 - `backend/pkg/ids`: ID and token generation helpers
 - `frontend/`: React + Vite app (UI refers to “House”) served via Nginx in Docker
 
 ## Tests
 - Unit and integration tests are under `backend/internal/...`.
-- Integration tests require DynamoDB Local and auto-skip if not reachable.
+- Integration tests expect Mongo to be reachable (replica set for tx paths) and auto-skip if not.
 
 Run all tests
 ```
