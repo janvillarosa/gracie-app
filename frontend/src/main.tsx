@@ -22,18 +22,18 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
               token: {
                 colorPrimary: 'var(--color-primary, #A094F2)',
                 colorLink: 'var(--color-primary, #A094F2)',
-                colorWarning: 'var(--color-warning)',
-                colorInfo: 'var(--color-secondary)',
-                colorText: 'var(--text)',
-                colorTextSecondary: 'var(--text-secondary)',
-                colorBgBase: 'var(--bg)',
-                colorBgContainer: 'var(--panel)',
-                colorBgElevated: 'var(--panel)',
-                colorBorder: 'var(--border)',
+                colorWarning: 'var(--color-warning, #F3F78A)',
+                colorInfo: 'var(--color-secondary, #C7B090)',
+                colorText: 'var(--text, #3B3B3B)',
+                colorTextSecondary: 'var(--text-secondary, rgba(59,59,59,0.7))',
+                colorBgBase: 'var(--bg, #F7F7F7)',
+                colorBgContainer: 'var(--panel, #FFFFFF)',
+                colorBgElevated: 'var(--panel, #FFFFFF)',
+                colorBorder: 'var(--border, #E6E6E6)',
               },
               components: {
                 Button: {
-                  colorPrimary: '#A094F2',
+                  colorPrimary: 'var(--color-primary-deep, #7D6EF0)',
                 },
                 Modal: {
                   colorBgElevated: 'var(--panel)',

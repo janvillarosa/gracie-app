@@ -3,16 +3,17 @@
 /* Theme tokens via CSS variables (Adobe UI/UX palette) */
 :root {
   /* Light pastel theme (default) */
-  --bg: #F2F2F2;            /* page background */
+  --bg: #F7F7F7;            /* slightly softer page background */
   --panel: #FFFFFF;         /* container background */
-  --text: #0D0D0D;          /* primary text */
-  --text-secondary: rgba(13, 13, 13, 0.65);
-  --muted: #6B7280;         /* supplemental muted */
-  --color-primary: #A094F2; /* lavender */
-  --color-secondary: #BFA07A; /* tan */
-  --color-warning: #EDF25E; /* yellow */
-  --color-danger: #ff4d4f;  /* ant default danger */
-  --border: #E0E0E0;        /* borders */
+  --text: #3B3B3B;          /* non-black primary text */
+  --text-secondary: rgba(59, 59, 59, 0.70);
+  --muted: #7A828E;         /* supplemental muted */
+  --color-primary: #A094F2;         /* lavender (general primary) */
+  --color-primary-deep: #7D6EF0;    /* deeper shade for primary buttons */
+  --color-secondary: #C7B090;       /* pastel tan */
+  --color-warning: #F3F78A;         /* softer yellow */
+  --color-danger: #ff4d4f;          /* ant default danger */
+  --border: #E6E6E6;                /* lighter borders */
 }
 
 /* Optional dark theme hook if needed later */
@@ -49,17 +50,17 @@ body {
 
 /* Ensure primary buttons adopt the palette even if tokens fail */
 .ant-btn-primary {
-  background-color: var(--color-primary, #A094F2) !important;
-  border-color: var(--color-primary, #A094F2) !important;
+  background-color: var(--color-primary-deep, #7D6EF0) !important;
+  border-color: var(--color-primary-deep, #7D6EF0) !important;
 }
 .ant-btn-primary:hover,
 .ant-btn-primary:focus {
-  background-color: color-mix(in srgb, var(--color-primary, #A094F2) 90%, white) !important;
-  border-color: color-mix(in srgb, var(--color-primary, #A094F2) 90%, white) !important;
+  background-color: color-mix(in srgb, var(--color-primary-deep, #7D6EF0) 90%, white) !important;
+  border-color: color-mix(in srgb, var(--color-primary-deep, #7D6EF0) 90%, white) !important;
 }
 .ant-btn-primary:active {
-  background-color: color-mix(in srgb, var(--color-primary, #A094F2) 80%, white) !important;
-  border-color: color-mix(in srgb, var(--color-primary, #A094F2) 80%, white) !important;
+  background-color: color-mix(in srgb, var(--color-primary-deep, #7D6EF0) 80%, white) !important;
+  border-color: color-mix(in srgb, var(--color-primary-deep, #7D6EF0) 80%, white) !important;
 }
 
 .container {
