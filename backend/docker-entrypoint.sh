@@ -3,6 +3,12 @@ set -e
 
 echo "[entrypoint] Using DDB endpoint: ${DDB_ENDPOINT:-http://dynamodb:8000}"
 
+# Ensure ENC_KEY_FILE directory exists (for Mongo/production mounts)
+if [ -n "$ENC_KEY_FILE" ]; then
+  keydir=$(dirname "$ENC_KEY_FILE")
+  mkdir -p "$keydir" || true
+fi
+
 attempts=0
 max_attempts=${SETUP_RETRIES:-30}
 
