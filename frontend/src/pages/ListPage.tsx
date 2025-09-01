@@ -1,9 +1,11 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '@auth/AuthProvider'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getMe, getListItems, getLists, createListItem, updateListItem, deleteListItem, voteListDeletion, cancelListDeletion } from '@api/endpoints'
 import type { List, ListItem } from '@api/types'
+import { useLiveQueryOpts } from '@lib/liveQuery'
+import { useToast } from '@lib/toast'
 
 export const ListPage: React.FC = () => {
   const { apiKey } = useAuth()
@@ -13,23 +15,43 @@ export const ListPage: React.FC = () => {
   const [newDesc, setNewDesc] = useState('')
   const [error, setError] = useState<string | null>(null)
   const qc = useQueryClient()
+  const { show } = useToast()
+  const [redirecting, setRedirecting] = useState(false)
 
   const meQuery = useQuery({ queryKey: ['me'], queryFn: () => getMe(apiKey!) })
   const roomId = meQuery.data?.room_id as string | undefined
   const userId = meQuery.data?.user_id as string | undefined
 
+  const parseMs = (v: any, def: number) => { const n = Number(v); return Number.isFinite(n) && n > 0 ? n : def }
+  const listsMs = parseMs((import.meta as any).env?.VITE_LIVE_QUERY_LISTS_MS, 4000)
+  const itemsMs = parseMs((import.meta as any).env?.VITE_LIVE_QUERY_ITEMS_MS, 2000)
+  const listsLive = useLiveQueryOpts(listsMs)
   const listsQuery = useQuery({
     queryKey: ['lists', roomId],
     queryFn: () => getLists(apiKey!, roomId!),
     enabled: !!roomId,
+    ...listsLive,
   })
   const listMeta: List | undefined = useMemo(() => listsQuery.data?.find(l => l.list_id === listId), [listsQuery.data, listId])
 
+  const itemsLive = useLiveQueryOpts(itemsMs)
   const itemsQuery = useQuery({
     queryKey: ['list-items', listId, includeCompleted],
     queryFn: () => getListItems(apiKey!, roomId!, listId, includeCompleted),
     enabled: !!roomId && !!listId,
+    ...itemsLive,
   })
+
+  // If the list disappears due to partner's vote while viewing, navigate home with a toast
+  const hadListRef = useRef(false)
+  useEffect(() => {
+    if (listMeta) hadListRef.current = true
+    if (listsQuery.isFetched && hadListRef.current && !listMeta) {
+      setRedirecting(true)
+      show('List is successfully deleted')
+      navigate('/app')
+    }
+  }, [listsQuery.isFetched, listMeta, navigate, show])
 
   const onCreateItem = async () => {
     if (!newDesc.trim()) return
@@ -61,8 +83,13 @@ export const ListPage: React.FC = () => {
   const onVoteDelete = async () => {
     setError(null)
     try {
-      await voteListDeletion(apiKey!, roomId!, listId)
+      const res = await voteListDeletion(apiKey!, roomId!, listId)
       await qc.invalidateQueries({ queryKey: ['lists', roomId] })
+      if (res.deleted) {
+        setRedirecting(true)
+        show('List is successfully deleted')
+        navigate('/app')
+      }
     } catch (e: any) { setError(e?.message || 'Failed to vote deletion') }
   }
   const onCancelVote = async () => {
@@ -76,7 +103,13 @@ export const ListPage: React.FC = () => {
   if (meQuery.isLoading || listsQuery.isLoading || itemsQuery.isLoading) {
     return <div className="container"><div className="panel">Loading…</div></div>
   }
-  if (!roomId || !listMeta) {
+  if (!roomId) {
+    return <div className="container"><div className="panel"><div className="error">List not found.</div><div className="spacer" /><button className="button" onClick={() => navigate('/app')}>Back to House</button></div></div>
+  }
+  if (!listMeta) {
+    if (redirecting || hadListRef.current) {
+      return <div className="container"><div className="panel">Redirecting…</div></div>
+    }
     return <div className="container"><div className="panel"><div className="error">List not found.</div><div className="spacer" /><button className="button" onClick={() => navigate('/app')}>Back to House</button></div></div>
   }
 
@@ -140,4 +173,3 @@ export const ListPage: React.FC = () => {
     </div>
   )
 }
-

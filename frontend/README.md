@@ -37,3 +37,15 @@ VITE_API_BASE_URL=http://localhost:8080 pnpm dev
 - “Room” is called “House” in the UI; backend endpoints remain `/rooms/*`.
 - House Settings lets you edit display name/description, rotate share code (in a dismissible modal with “Get new code”), and vote/cancel deletion.
 - Errors from the backend are surfaced with friendly messages for 403/409 during join.
+
+### Live Query Refresh Intervals
+
+You can control live refresh intervals via Vite env vars (milliseconds):
+
+```
+VITE_LIVE_QUERY_LISTS_MS=4000   # refresh Lists on the House page
+VITE_LIVE_QUERY_ITEMS_MS=2000   # refresh Items on the List page
+```
+
+- Dev: prefix on the command, e.g., `VITE_LIVE_QUERY_ITEMS_MS=1000 pnpm dev`.
+- Docker: set build args under the `frontend` service in `docker-compose.yml`. These are compiled at build time and baked into the bundle.

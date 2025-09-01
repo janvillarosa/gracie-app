@@ -5,6 +5,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { createList, getLists, rotateShare, voteListDeletion, cancelListDeletion } from '@api/endpoints'
 import { Modal } from '@components/Modal'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useLiveQueryOpts } from '@lib/liveQuery'
 
 export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string }> = ({ room, roomId, userId }) => {
   const { apiKey, setApiKey } = useAuth()
@@ -28,7 +29,10 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
     }
   }
 
-  const listsQuery = useQuery({ queryKey: ['lists', roomId], queryFn: () => getLists(apiKey!, roomId) })
+  const parseMs = (v: any, def: number) => { const n = Number(v); return Number.isFinite(n) && n > 0 ? n : def }
+  const listsMs = parseMs((import.meta as any).env?.VITE_LIVE_QUERY_LISTS_MS, 4000)
+  const liveOpts = useLiveQueryOpts(listsMs)
+  const listsQuery = useQuery({ queryKey: ['lists', roomId], queryFn: () => getLists(apiKey!, roomId), ...liveOpts })
   const lists = listsQuery.data ?? []
 
   const myVote = useMemo(() => {
