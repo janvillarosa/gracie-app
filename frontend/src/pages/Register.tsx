@@ -32,7 +32,7 @@ export const Register: React.FC = () => {
   return (
     <div className="container">
       <Card>
-        <Typography.Title level={3} style={{ marginTop: 0 }}>Create account</Typography.Title>
+        <Typography.Title level={2} style={{ marginTop: 0 }}>Create account</Typography.Title>
         <Form layout="vertical" onSubmitCapture={onRegister}>
           <Form.Item label="Email (username)">
             <Input placeholder="Email (username)" value={username} onChange={(e) => setUsername(e.target.value)} />

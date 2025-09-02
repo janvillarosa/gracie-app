@@ -31,7 +31,7 @@ export const Login: React.FC = () => {
   return (
     <div className="container">
       <Card>
-        <Typography.Title level={3} style={{ marginTop: 0 }}>Login</Typography.Title>
+        <Typography.Title level={2} style={{ marginTop: 0 }}>Login</Typography.Title>
         <Form layout="vertical" onSubmitCapture={onLogin}>
           <Form.Item label="Email">
             <Input placeholder="Email" value={username} onChange={(e) => setUsername(e.target.value)} />

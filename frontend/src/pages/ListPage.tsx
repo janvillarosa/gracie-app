@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getMe, getListItems, getLists, createListItem, updateListItem, deleteListItem, voteListDeletion, cancelListDeletion } from '@api/endpoints'
 import type { List, ListItem } from '@api/types'
 import { useLiveQueryOpts } from '@lib/liveQuery'
-import { Card, Typography, Space, Button, Input, Checkbox, List as AntList, Alert, Grid, Dropdown, message } from 'antd'
+import { Card, Typography, Space, Button, Input, Checkbox, List as AntList, Alert, Grid, Dropdown, message, Skeleton } from 'antd'
 import { ArrowLeftOutlined, DeleteOutlined, PlusOutlined, EyeOutlined, EyeInvisibleOutlined, CloseCircleOutlined, MoreOutlined } from '@ant-design/icons'
 
 export const ListPage: React.FC = () => {
@@ -64,13 +64,15 @@ export const ListPage: React.FC = () => {
     ...itemsLive,
   })
 
-  // Always derive items and sortedItems before any early returns to keep hook order stable
+  // Always derive items and sorted views before any early returns to keep hook order stable
   const items = itemsQuery.data ?? []
   const sortedItems = useMemo(() => {
     const copy = [...items]
     copy.sort((a, b) => (a.completed === b.completed ? 0 : a.completed ? 1 : -1))
     return copy
   }, [items])
+  const incompleteItems = useMemo(() => sortedItems.filter(it => !it.completed), [sortedItems])
+  const completedItems = useMemo(() => sortedItems.filter(it => it.completed), [sortedItems])
 
   // If the list disappears due to partner's vote while viewing, navigate home (avoid firing during refetch/errors)
   const hadListRef = useRef(false)
@@ -152,44 +154,48 @@ export const ListPage: React.FC = () => {
         <Space direction="vertical" style={{ width: '100%' }} size="large">
           {isMobile ? (
             <Space direction="vertical" style={{ width: '100%' }} size="small">
-              <Typography.Title level={2} style={{ margin: 0 }}>{listMeta.name}</Typography.Title>
-              <Typography.Text type="secondary">Updated {timeAgo(listMeta.updated_at)}</Typography.Text>
-              {listMeta.description && (
-                <Typography.Text type="secondary" style={{ marginTop: 4 }}>{listMeta.description}</Typography.Text>
-              )}
-              <Space wrap>
-                <Button onClick={() => setIncludeCompleted((v) => !v)} icon={includeCompleted ? <EyeInvisibleOutlined /> : <EyeOutlined />}>
-                  {includeCompleted ? 'Hide completed' : 'Show completed'}
-                </Button>
-                <Button onClick={() => navigate('/app')} icon={<ArrowLeftOutlined />}>Back</Button>
-                <Dropdown
-                  trigger={["click"]}
-                  menu={{
-                    items: myVote(listMeta)
-                      ? [{ key: 'cancel', label: 'Cancel delete vote' }]
-                      : [{ key: 'vote', label: 'Vote to delete' }],
-                    onClick: ({ key }) => {
-                      if (key === 'vote') { onVoteDelete(); show('Vote recorded'); }
-                      if (key === 'cancel') { onCancelVote(); show('Vote canceled'); }
-                    },
-                  }}
-                >
-                  <Button icon={<MoreOutlined />} aria-label="More" />
-                </Dropdown>
-              </Space>
+              <div className="list-header-grid">
+                <div className="list-header-title">
+                  <Typography.Title level={2} style={{ margin: 0, lineHeight: 1.2 }}>{listMeta.name}</Typography.Title>
+                  <Typography.Text className="list-meta">Updated {timeAgo(listMeta.updated_at)}</Typography.Text>
+                  {listMeta.description && (
+                    <Typography.Text className="list-description">{listMeta.description}</Typography.Text>
+                  )}
+                </div>
+                <div className="list-actions">
+                  <Button onClick={() => setIncludeCompleted((v) => !v)} icon={includeCompleted ? <EyeInvisibleOutlined /> : <EyeOutlined />}>
+                    {includeCompleted ? 'Hide' : 'Show'} completed
+                  </Button>
+                  <Button onClick={() => navigate('/app')} icon={<ArrowLeftOutlined />}>Back</Button>
+                  <Dropdown
+                    trigger={["click"]}
+                    menu={{
+                      items: myVote(listMeta)
+                        ? [{ key: 'cancel', label: 'Cancel delete vote' }]
+                        : [{ key: 'vote', label: 'Vote to delete' }],
+                      onClick: ({ key }) => {
+                        if (key === 'vote') { onVoteDelete(); show('Vote recorded'); }
+                        if (key === 'cancel') { onCancelVote(); show('Vote canceled'); }
+                      },
+                    }}
+                  >
+                    <Button icon={<MoreOutlined />} aria-label="More" />
+                  </Dropdown>
+                </div>
+              </div>
             </Space>
           ) : (
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <Typography.Title level={2} style={{ margin: 0 }}>{listMeta.name}</Typography.Title>
-                <Typography.Text type="secondary">Updated {timeAgo(listMeta.updated_at)}</Typography.Text>
+            <div className="list-header-grid">
+              <div className="list-header-title">
+                <Typography.Title level={2} style={{ margin: 0, lineHeight: 1.2 }}>{listMeta.name}</Typography.Title>
+                <Typography.Text className="list-meta">Updated {timeAgo(listMeta.updated_at)}</Typography.Text>
                 {listMeta.description && (
-                  <Typography.Text type="secondary" style={{ marginTop: 4 }}>{listMeta.description}</Typography.Text>
+                  <Typography.Text className="list-description">{listMeta.description}</Typography.Text>
                 )}
               </div>
-              <Space>
+              <div className="list-actions">
                 <Button onClick={() => setIncludeCompleted((v) => !v)} icon={includeCompleted ? <EyeInvisibleOutlined /> : <EyeOutlined />}>
-                  {includeCompleted ? 'Hide completed' : 'Show completed'}
+                  {includeCompleted ? 'Hide' : 'Show'} completed
                 </Button>
                 <Button onClick={() => navigate('/app')} icon={<ArrowLeftOutlined />}>Back</Button>
                 <Dropdown
@@ -206,61 +212,107 @@ export const ListPage: React.FC = () => {
                 >
                   <Button icon={<MoreOutlined />} aria-label="More" />
                 </Dropdown>
-              </Space>
+              </div>
             </div>
           )}
           {/* description now displayed under the title to reduce top padding */}
-          {isMobile ? (
-            <Space direction="vertical" style={{ width: '100%' }}>
-              <Input
-                placeholder="Add an item"
-                value={newDesc}
-                onChange={(e) => setNewDesc(e.target.value)}
-                size="large"
-              />
-              <Button type="primary" onClick={onCreateItem} disabled={!newDesc.trim()} icon={<PlusOutlined />} size="large">Add</Button>
-            </Space>
+          <div className="add-bar">
+            {isMobile ? (
+              <Space direction="vertical" style={{ width: '100%' }}>
+                <Input
+                  placeholder="Add an item"
+                  value={newDesc}
+                  onChange={(e) => setNewDesc(e.target.value)}
+                  size="large"
+                />
+                <Button type="primary" onClick={onCreateItem} disabled={!newDesc.trim()} icon={<PlusOutlined />} size="large">Add</Button>
+              </Space>
+            ) : (
+              <Space.Compact style={{ width: '100%' }}>
+                <Input
+                  placeholder="Add an item"
+                  value={newDesc}
+                  onChange={(e) => setNewDesc(e.target.value)}
+                  size="large"
+                />
+                <Button type="primary" onClick={onCreateItem} disabled={!newDesc.trim()} icon={<PlusOutlined />} size="large">Add</Button>
+              </Space.Compact>
+            )}
+          </div>
+          {itemsQuery.isLoading ? (
+            <Skeleton active paragraph={{ rows: 4 }} />
+          ) : items.length === 0 ? (
+            <div className="empty-state"><PlusOutlined style={{ color: 'var(--color-primary)' }} />
+              <Typography.Text type="secondary">No items yet. Add your first item above.</Typography.Text>
+            </div>
           ) : (
-            <Space.Compact style={{ width: '100%' }}>
-              <Input
-                placeholder="Add an item"
-                value={newDesc}
-                onChange={(e) => setNewDesc(e.target.value)}
-                size="large"
-              />
-              <Button type="primary" onClick={onCreateItem} disabled={!newDesc.trim()} icon={<PlusOutlined />} size="large">Add</Button>
-            </Space.Compact>
-          )}
-          {items.length === 0 ? (
-            <Typography.Text type="secondary">{includeCompleted ? 'No items yet.' : 'No incomplete items.'}</Typography.Text>
-          ) : (
-            <AntList
-              className="items-list"
-              dataSource={sortedItems}
-              renderItem={(it) => (
-                <AntList.Item
-                  actions={[
-                    <Button
-                      key="del"
-                      type="text"
-                      danger
-                      icon={<DeleteOutlined />}
-                      aria-label="Delete item"
-                      title="Delete item"
-                      onClick={() => onDeleteItem(it)}
-                      style={{ paddingInline: 8 }}
-                    />
-                  ]}
-                >
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', flexWrap: 'wrap', width: '100%' }}>
-                    <Checkbox checked={it.completed} onChange={() => onToggleComplete(it)} />
-                    <div style={{ flex: 1, minWidth: 0, whiteSpace: 'normal', overflowWrap: 'anywhere' }}>
-                      <span style={{ textDecoration: it.completed ? 'line-through' : 'none' }}>{it.description}</span>
-                    </div>
-                  </div>
-                </AntList.Item>
+            <>
+              {incompleteItems.length > 0 && (
+                <AntList
+                  itemLayout="horizontal"
+                  className="items-list"
+                  dataSource={incompleteItems}
+                  renderItem={(it) => (
+                    <AntList.Item
+                      actions={[
+                        <Button
+                          key="del"
+                          type="text"
+                          danger
+                          icon={<DeleteOutlined />}
+                          aria-label="Delete item"
+                          title="Delete item"
+                          onClick={() => onDeleteItem(it)}
+                          style={{ paddingInline: 8 }}
+                        />
+                      ]}
+                    >
+                      <div className="item-row">
+                        <Checkbox checked={it.completed} onChange={() => onToggleComplete(it)} />
+                        <div className="item-text">
+                          <span style={{ textDecoration: it.completed ? 'line-through' : 'none' }}>{it.description}</span>
+                        </div>
+                      </div>
+                    </AntList.Item>
+                  )}
+                />
               )}
-            />
+              {includeCompleted && completedItems.length > 0 && (
+                <>
+                  <div className="completed-header">
+                    <span>Completed ({completedItems.length})</span>
+                  </div>
+                  <AntList
+                    itemLayout="horizontal"
+                    className="items-list"
+                    dataSource={completedItems}
+                    renderItem={(it) => (
+                      <AntList.Item
+                        actions={[
+                          <Button
+                            key="del"
+                            type="text"
+                            danger
+                            icon={<DeleteOutlined />}
+                            aria-label="Delete item"
+                            title="Delete item"
+                            onClick={() => onDeleteItem(it)}
+                            style={{ paddingInline: 8 }}
+                          />
+                        ]}
+                      >
+                        <div className="item-row item-row-completed">
+                          <Checkbox checked={it.completed} onChange={() => onToggleComplete(it)} />
+                          <div className="item-text">
+                            <span style={{ textDecoration: it.completed ? 'line-through' : 'none' }}>{it.description}</span>
+                          </div>
+                        </div>
+                      </AntList.Item>
+                    )}
+                  />
+                </>
+              )}
+            </>
           )}
           {error && <Alert type="error" message={error} showIcon />}
         </Space>

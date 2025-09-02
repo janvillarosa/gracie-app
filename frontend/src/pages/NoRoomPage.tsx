@@ -52,27 +52,27 @@ export const NoRoomPage: React.FC = () => {
         <Space direction="vertical" style={{ width: '100%' }} size="large">
           {isMobile ? (
             <Space direction="vertical" style={{ width: '100%' }} size="small">
-              <Typography.Title level={3} style={{ margin: 0 }}>You are not in a house yet</Typography.Title>
+              <Typography.Title level={2} style={{ margin: 0 }}>You are not in a house yet</Typography.Title>
               <Space wrap>
                 <Button onClick={() => setApiKey(null)} icon={<LogoutOutlined />}>Logout</Button>
               </Space>
             </Space>
           ) : (
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography.Title level={3} style={{ margin: 0 }}>You are not in a house yet</Typography.Title>
+              <Typography.Title level={2} style={{ margin: 0 }}>You are not in a house yet</Typography.Title>
               <Button onClick={() => setApiKey(null)} icon={<LogoutOutlined />}>Logout</Button>
             </div>
           )}
           <Row gutter={16} align="top">
             <Col xs={24} md={12} style={{ order: isMobile ? 2 : 1 }}>
               <Space direction="vertical">
-                <Typography.Title level={4} style={{ marginTop: 0 }}>Create a new house</Typography.Title>
+                <Typography.Title level={3} style={{ marginTop: 0 }}>Create a new house</Typography.Title>
                 <Button type="primary" onClick={onCreate} disabled={loading} icon={<PlusOutlined />}>Create solo house</Button>
                 <Typography.Text type="secondary">You will be the only member until someone joins.</Typography.Text>
               </Space>
             </Col>
             <Col xs={24} md={12} style={{ order: isMobile ? 1 : 2 }}>
-              <Typography.Title level={4} style={{ marginTop: 0 }}>Join an existing house</Typography.Title>
+              <Typography.Title level={3} style={{ marginTop: 0 }}>Join an existing house</Typography.Title>
               <Form layout="vertical" onSubmitCapture={onJoin}>
                 <Form.Item label="5-char code (no I/O/L)">
                   <Input

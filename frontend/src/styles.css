@@ -15,6 +15,8 @@
   --color-danger: #ff4d4f;          /* ant default danger */
   --border: #E6E6E6;                /* lighter borders */
   --border-strong: #D2D2D2;         /* stronger border for list items */
+  --panel-subtle: #FAFAFA;          /* soft panel background for inline sections */
+  --font-headings: 'Outfit', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
 }
 
 /* Optional dark theme hook if needed later */
@@ -39,6 +41,19 @@ body {
   color: var(--text);
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
 }
+
+/* Headings: use Outfit only for titles across the app */
+h1, h2, h3, h4, h5,
+h1.ant-typography, h2.ant-typography, h3.ant-typography, h4.ant-typography, h5.ant-typography {
+  font-family: var(--font-headings) !important;
+  line-height: 1.2;
+}
+/* Responsive, slightly larger titles (mobile-first with clamp) */
+h1, h1.ant-typography { font-size: clamp(28px, 4.2vw, 40px); font-weight: 700; }
+h2, h2.ant-typography { font-size: clamp(22px, 3.2vw, 32px); font-weight: 700; }
+h3, h3.ant-typography { font-size: clamp(18px, 2.6vw, 26px); font-weight: 600; }
+h4, h4.ant-typography { font-size: clamp(16px, 2.2vw, 22px); font-weight: 600; }
+h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
 
 /* Ensure Ant overlays inherit the light palette */
 .ant-dropdown, .ant-popover, .ant-tooltip, .ant-modal .ant-modal-content, .ant-drawer .ant-drawer-content {
@@ -134,10 +149,20 @@ body {
 /* Stronger borders for list items within list page */
 .items-list .ant-list-item {
   border-bottom: 2px solid var(--border-strong) !important;
+  display: grid !important;
+  grid-template-columns: 1fr auto;
+  align-items: start;
+  column-gap: 8px;
 }
 .items-list .ant-list-item:last-child {
   border-bottom: none !important;
 }
+.items-list .ant-list-item-action {
+  margin-left: 12px !important;
+  white-space: nowrap;
+  justify-self: end;
+}
+.items-list .ant-list-item-action > li { padding: 0 !important; }
 
 /* Stronger borders for lists on RoomPage */
 .lists-list .ant-list-item {
@@ -145,4 +170,95 @@ body {
 }
 .lists-list .ant-list-item:last-child {
   border-bottom: none !important;
+}
+
+/* List page header */
+.list-header-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-areas:
+    "title"
+    "actions";
+  gap: 12px;
+}
+.list-actions {
+  grid-area: actions;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-start;
+}
+.list-header-title {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.list-meta { color: var(--text-secondary); }
+.list-description { color: var(--text-secondary); margin-top: 4px; }
+
+/* Prominent add bar (mobile-first sticky) */
+.add-bar {
+  position: sticky;
+  bottom: 0;
+  background: var(--panel);
+  padding: 8px 12px;
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.04);
+  z-index: 1;
+}
+@media (min-width: 768px) {
+  .list-header-grid {
+    grid-template-columns: 1fr auto;
+    grid-template-areas: "title actions";
+    align-items: center;
+  }
+  .list-actions { justify-content: flex-end; }
+  .add-bar {
+    border-radius: 8px;
+    background: var(--panel-subtle);
+    box-shadow: none;
+  }
+}
+
+/* Completed header */
+.completed-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+
+/* Item row layout tweaks */
+.item-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  width: 100%;
+}
+.item-row .item-text {
+  flex: 1;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/* Empty state */
+.empty-state {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  background: var(--panel-subtle);
+}
+
+/* Card/page border color adjustments */
+.ant-card-bordered, .ant-card {
+  border-color: var(--border-strong) !important;
 }

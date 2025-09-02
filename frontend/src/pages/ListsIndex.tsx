@@ -42,7 +42,7 @@ export const ListsIndex: React.FC = () => {
       <Card>
         <Space direction="vertical" style={{ width: '100%' }} size="large">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Typography.Title level={3} style={{ margin: 0 }}>Lists</Typography.Title>
+            <Typography.Title level={2} style={{ margin: 0 }}>Lists</Typography.Title>
             <Button onClick={() => navigate('/app')} icon={<ArrowLeftOutlined />}>Back</Button>
           </div>
           {lists.length === 0 ? (

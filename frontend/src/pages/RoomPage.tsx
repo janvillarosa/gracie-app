@@ -115,7 +115,7 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
             }
             return isMobile ? (
               <Space direction="vertical" style={{ width: '100%' }} size="small">
-                <Typography.Title level={3} style={{ margin: 0 }}>{room.display_name || 'House'}</Typography.Title>
+                <Typography.Title level={2} style={{ margin: 0 }}>{room.display_name || 'House'}</Typography.Title>
                 <Space wrap>
                   <Button type="primary" onClick={onShare} icon={<ShareAltOutlined />}>Share Code</Button>
                   <Dropdown menu={{ items: menu, onClick: onMenuClick }} trigger={['click']}>
@@ -125,7 +125,7 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
               </Space>
             ) : (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Typography.Title level={3} style={{ margin: 0 }}>{room.display_name || 'House'}</Typography.Title>
+                <Typography.Title level={2} style={{ margin: 0 }}>{room.display_name || 'House'}</Typography.Title>
                 <Space>
                   <Button type="primary" onClick={onShare} icon={<ShareAltOutlined />}>Share Code</Button>
                   <Dropdown menu={{ items: menu, onClick: onMenuClick }} trigger={['click']}>
@@ -167,7 +167,7 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
           </Modal>
 
           <div>
-            <Typography.Title level={4} style={{ marginTop: 0 }}>Lists</Typography.Title>
+            <Typography.Title level={3} style={{ marginTop: 0 }}>Lists</Typography.Title>
           </div>
 
           {listsQuery.isLoading ? (

@@ -96,14 +96,14 @@ export const RoomSettings: React.FC = () => {
         <Space direction="vertical" style={{ width: '100%' }} size="large">
           {isMobile ? (
             <Space direction="vertical" style={{ width: '100%' }} size="small">
-              <Typography.Title level={3} style={{ margin: 0 }}>House Settings</Typography.Title>
+              <Typography.Title level={2} style={{ margin: 0 }}>House Settings</Typography.Title>
               <Space wrap>
                 <Button onClick={() => navigate('/app')} icon={<ArrowLeftOutlined />}>Back</Button>
               </Space>
             </Space>
           ) : (
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography.Title level={3} style={{ margin: 0 }}>House Settings</Typography.Title>
+              <Typography.Title level={2} style={{ margin: 0 }}>House Settings</Typography.Title>
               <Button onClick={() => navigate('/app')} icon={<ArrowLeftOutlined />}>Back</Button>
             </div>
           )}
