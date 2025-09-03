@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import { getMe, getLists } from '@api/endpoints'
 import type { List } from '@api/types'
 import { Card, Typography, Space, Button, List as AntList, Alert } from 'antd'
-import { ArrowLeftOutlined, FolderOpenOutlined } from '@ant-design/icons'
+import { ArrowLeft, FolderOpen } from '@phosphor-icons/react'
 
 export const ListsIndex: React.FC = () => {
   const { apiKey } = useAuth()
@@ -29,7 +29,7 @@ export const ListsIndex: React.FC = () => {
         <Card>
           <Alert type="error" message="No house found." showIcon />
           <div className="spacer" />
-          <Button onClick={() => navigate('/app')} icon={<ArrowLeftOutlined />}>Back to House</Button>
+          <Button onClick={() => navigate('/app')} icon={<ArrowLeft />}>Back to House</Button>
         </Card>
       </div>
     )
@@ -43,7 +43,7 @@ export const ListsIndex: React.FC = () => {
         <Space direction="vertical" style={{ width: '100%' }} size="large">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography.Title level={2} style={{ margin: 0 }}>Lists</Typography.Title>
-            <Button onClick={() => navigate('/app')} icon={<ArrowLeftOutlined />}>Back</Button>
+            <Button onClick={() => navigate('/app')} icon={<ArrowLeft />}>Back</Button>
           </div>
           {lists.length === 0 ? (
             <Typography.Text type="secondary">No lists yet. Go to your House to create one.</Typography.Text>
@@ -53,7 +53,7 @@ export const ListsIndex: React.FC = () => {
               renderItem={(l) => (
                 <AntList.Item
                   actions={[
-                    <Button key="open" type="primary" onClick={() => navigate(`/app/lists/${l.list_id}`)} icon={<FolderOpenOutlined />}>Open</Button>,
+                    <Button key="open" type="primary" onClick={() => navigate(`/app/lists/${l.list_id}`)} icon={<FolderOpen />}>Open</Button>,
                   ]}
                 >
                   <AntList.Item.Meta

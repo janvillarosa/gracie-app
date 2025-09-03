@@ -6,7 +6,7 @@ import { getMe, getListItems, getLists, createListItem, updateListItem, deleteLi
 import type { List, ListItem } from '@api/types'
 import { useLiveQueryOpts } from '@lib/liveQuery'
 import { Card, Typography, Space, Button, Input, Checkbox, List as AntList, Alert, Grid, Dropdown, message, Skeleton } from 'antd'
-import { ArrowLeftOutlined, DeleteOutlined, PlusOutlined, EyeOutlined, EyeInvisibleOutlined, CloseCircleOutlined, MoreOutlined } from '@ant-design/icons'
+import { ArrowLeft, Trash, Plus, Eye, EyeSlash, DotsThreeVertical } from '@phosphor-icons/react'
 
 export const ListPage: React.FC = () => {
   const { apiKey } = useAuth()
@@ -136,13 +136,13 @@ export const ListPage: React.FC = () => {
     return <div className="container"><Card>Loading…</Card></div>
   }
   if (!roomId) {
-    return <div className="container"><Card><Alert type="error" message="List not found." showIcon /><div className="spacer" /><Button onClick={() => navigate('/app')} icon={<ArrowLeftOutlined />}>Back to House</Button></Card></div>
+    return <div className="container"><Card><Alert type="error" message="List not found." showIcon /><div className="spacer" /><Button onClick={() => navigate('/app')} icon={<ArrowLeft />}>Back to House</Button></Card></div>
   }
   if (!listMeta) {
     if (redirecting || hadListRef.current) {
       return <div className="container"><Card>Redirecting…</Card></div>
     }
-    return <div className="container"><Card><Alert type="error" message="List not found." showIcon /><div className="spacer" /><Button onClick={() => navigate('/app')} icon={<ArrowLeftOutlined />}>Back to House</Button></Card></div>
+    return <div className="container"><Card><Alert type="error" message="List not found." showIcon /><div className="spacer" /><Button onClick={() => navigate('/app')} icon={<ArrowLeft />}>Back to House</Button></Card></div>
   }
 
   // sortedItems defined earlier to maintain consistent hook order
@@ -164,10 +164,10 @@ export const ListPage: React.FC = () => {
                   )}
                 </div>
                 <div className="list-actions">
-                  <Button onClick={() => setIncludeCompleted((v) => !v)} icon={includeCompleted ? <EyeInvisibleOutlined /> : <EyeOutlined />}>
+                  <Button onClick={() => setIncludeCompleted((v) => !v)} icon={includeCompleted ? <EyeSlash /> : <Eye />}>
                     {includeCompleted ? 'Hide' : 'Show'} completed
                   </Button>
-                  <Button onClick={() => navigate('/app')} icon={<ArrowLeftOutlined />}>Back</Button>
+                  <Button onClick={() => navigate('/app')} icon={<ArrowLeft />}>Back</Button>
                   <Dropdown
                     trigger={["click"]}
                     menu={{
@@ -180,7 +180,7 @@ export const ListPage: React.FC = () => {
                       },
                     }}
                   >
-                    <Button icon={<MoreOutlined />} aria-label="More" />
+                    <Button icon={<DotsThreeVertical />} aria-label="More" />
                   </Dropdown>
                 </div>
               </div>
@@ -195,10 +195,10 @@ export const ListPage: React.FC = () => {
                 )}
               </div>
               <div className="list-actions">
-                <Button onClick={() => setIncludeCompleted((v) => !v)} icon={includeCompleted ? <EyeInvisibleOutlined /> : <EyeOutlined />}>
+                <Button onClick={() => setIncludeCompleted((v) => !v)} icon={includeCompleted ? <EyeSlash /> : <Eye />}>
                   {includeCompleted ? 'Hide' : 'Show'} completed
                 </Button>
-                <Button onClick={() => navigate('/app')} icon={<ArrowLeftOutlined />}>Back</Button>
+                <Button onClick={() => navigate('/app')} icon={<ArrowLeft />}>Back</Button>
                 <Dropdown
                   trigger={["click"]}
                   menu={{
@@ -211,7 +211,7 @@ export const ListPage: React.FC = () => {
                     },
                   }}
                 >
-                  <Button icon={<MoreOutlined />} aria-label="More" />
+                  <Button icon={<DotsThreeVertical />} aria-label="More" />
                 </Dropdown>
               </div>
             </div>
@@ -236,7 +236,7 @@ export const ListPage: React.FC = () => {
                   shape="circle"
                   onClick={onCreateItem}
                   disabled={!newDesc.trim()}
-                  icon={<PlusOutlined />}
+                  icon={<Plus />}
                   size="large"
                   aria-label="Add item"
                 />
@@ -245,7 +245,7 @@ export const ListPage: React.FC = () => {
             {itemsQuery.isLoading ? (
               <Skeleton active paragraph={{ rows: 4 }} />
             ) : items.length === 0 ? (
-              <div className="empty-state"><PlusOutlined style={{ color: 'var(--color-primary)' }} />
+              <div className="empty-state"><Plus style={{ color: 'var(--color-primary)' }} />
                 <Typography.Text type="secondary">No items yet. Add your first item above.</Typography.Text>
               </div>
             ) : (
@@ -262,7 +262,7 @@ export const ListPage: React.FC = () => {
                             key="del"
                             type="text"
                             danger
-                            icon={<DeleteOutlined />}
+                            icon={<Trash />}
                             aria-label="Delete item"
                             title="Delete item"
                             onClick={() => onDeleteItem(it)}
@@ -296,7 +296,7 @@ export const ListPage: React.FC = () => {
                               key="del"
                               type="text"
                               danger
-                              icon={<DeleteOutlined />}
+                              icon={<Trash />}
                               aria-label="Delete item"
                               title="Delete item"
                               onClick={() => onDeleteItem(it)}

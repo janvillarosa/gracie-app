@@ -56,11 +56,12 @@ h3, h3.ant-typography { font-size: clamp(18px, 2.6vw, 26px); font-weight: 600; }
 h4, h4.ant-typography { font-size: clamp(16px, 2.2vw, 22px); font-weight: 600; }
 h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
 
-/* On mobile, bump headings by ~15% */
+/* On mobile, bump main headers ~15%, subheadings (~h3) ~10% */
 @media (max-width: 767px) {
   h1, h1.ant-typography { font-size: clamp(32px, 4.8vw, 46px); }
   h2, h2.ant-typography { font-size: clamp(25px, 3.68vw, 36px); }
-  h3, h3.ant-typography { font-size: clamp(21px, 2.99vw, 30px); }
+  /* Subheadings */
+  h3, h3.ant-typography { font-size: clamp(20px, 2.86vw, 28px); }
   h4, h4.ant-typography { font-size: clamp(18px, 2.53vw, 25px); }
   h5, h5.ant-typography { font-size: clamp(16px, 2.30vw, 21px); }
 }
@@ -354,6 +355,11 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
 .ant-drawer .ant-drawer-content, .ant-message-notice-content {
   border-radius: var(--radius-squircle) !important;
 }
+
+/* Ensure non-Ant icon components (e.g., Phosphor) render correctly inside Ant buttons */
+.ant-btn .ant-btn-icon { font-size: 18px; display: inline-flex; align-items: center; justify-content: center; }
+.ant-btn-lg .ant-btn-icon { font-size: 20px; }
+.ant-btn .ant-btn-icon svg { width: 1em; height: 1em; }
 
 /* Add bar elements */
 .add-input { flex: 1 1 auto; }

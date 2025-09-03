@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '@auth/AuthProvider'
 import { loginAuth } from '@api/endpoints'
 import { Card, Typography, Form, Input, Button, Alert } from 'antd'
-import { LoginOutlined } from '@ant-design/icons'
+import { SignIn } from '@phosphor-icons/react'
 
 export const Login: React.FC = () => {
   const { setApiKey } = useAuth()
@@ -39,7 +39,7 @@ export const Login: React.FC = () => {
           <Form.Item label="Password">
             <Input.Password placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
           </Form.Item>
-          <Button type="primary" htmlType="submit" disabled={!username || !password || loading} icon={<LoginOutlined />}>Login</Button>
+          <Button type="primary" htmlType="submit" disabled={!username || !password || loading} icon={<SignIn />}>Login</Button>
         </Form>
         {error && <><div className="spacer" /><Alert type="error" message={error} showIcon /></>}
         <div className="spacer" />

@@ -6,7 +6,7 @@ import { createList, getLists, rotateShare, voteListDeletion, cancelListDeletion
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useLiveQueryOpts } from '@lib/liveQuery'
 import { Card, Typography, Space, Button, Modal, Input, List as AntList, Alert, Grid, Dropdown } from 'antd'
-import { MoreOutlined, RightOutlined, ShareAltOutlined, PlusOutlined, ReloadOutlined, CheckOutlined, SaveOutlined, CloseOutlined } from '@ant-design/icons'
+import { DotsThreeVertical, CaretRight, ShareNetwork, Plus, ArrowClockwise, Check, FloppyDisk, X } from '@phosphor-icons/react'
 import type { MenuProps } from 'antd'
 
 export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string }> = ({ room, roomId, userId }) => {
@@ -118,9 +118,9 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
               <Space direction="vertical" style={{ width: '100%' }} size="small">
                 <Typography.Title level={2} style={{ margin: 0 }}>{room.display_name || 'House'}</Typography.Title>
                 <Space wrap>
-                  <Button type="primary" onClick={onShare} icon={<ShareAltOutlined />}>Share Code</Button>
+                  <Button type="primary" onClick={onShare} icon={<ShareNetwork />}>Share Code</Button>
                   <Dropdown menu={{ items: menu, onClick: onMenuClick }} trigger={['click']}>
-                    <Button icon={<MoreOutlined />} aria-label="More actions" />
+                    <Button icon={<DotsThreeVertical />} aria-label="More actions" />
                   </Dropdown>
                 </Space>
               </Space>
@@ -128,9 +128,9 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Typography.Title level={2} style={{ margin: 0 }}>{room.display_name || 'House'}</Typography.Title>
                 <Space>
-                  <Button type="primary" onClick={onShare} icon={<ShareAltOutlined />}>Share Code</Button>
+                  <Button type="primary" onClick={onShare} icon={<ShareNetwork />}>Share Code</Button>
                   <Dropdown menu={{ items: menu, onClick: onMenuClick }} trigger={['click']}>
-                    <Button icon={<MoreOutlined />} aria-label="More actions" />
+                    <Button icon={<DotsThreeVertical />} aria-label="More actions" />
                   </Dropdown>
                 </Space>
               </div>
@@ -148,7 +148,7 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
           <Space direction="vertical" style={{ width: '100%' }} size="large">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
               <Typography.Title level={3} style={{ marginTop: 0, marginBottom: 0 }}>Our Lists</Typography.Title>
-              <Button type="primary" onClick={() => setCreateOpen(true)} icon={<PlusOutlined />}>New List</Button>
+              <Button type="primary" onClick={() => setCreateOpen(true)} icon={<Plus />}>New List</Button>
             </div>
 
             {listsQuery.isLoading ? (
@@ -202,10 +202,10 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
                               },
                             }}
                           >
-                            <Button icon={<MoreOutlined />} aria-label="List actions" />
+                            <Button icon={<DotsThreeVertical />} aria-label="List actions" />
                           </Dropdown>
                         </span>
-                        <RightOutlined style={{ color: 'var(--color-primary)' }} />
+                        <CaretRight style={{ color: 'var(--color-primary)' }} />
                       </Space>
                     </div>
                   </AntList.Item>
@@ -225,8 +225,8 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
         onCancel={() => setCreateOpen(false)}
         footer={
           <Space>
-            <Button onClick={() => setCreateOpen(false)} icon={<CloseOutlined />}>Cancel</Button>
-            <Button type="primary" disabled={creating || !newName.trim()} onClick={onCreateList} icon={<PlusOutlined />}>Create</Button>
+            <Button onClick={() => setCreateOpen(false)} icon={<X />}>Cancel</Button>
+            <Button type="primary" disabled={creating || !newName.trim()} onClick={onCreateList} icon={<Plus />}>Create</Button>
           </Space>
         }
       >
@@ -252,8 +252,8 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
         onCancel={() => setEditOpen(false)}
         footer={
           <Space>
-            <Button onClick={() => setEditOpen(false)} icon={<CloseOutlined />}>Cancel</Button>
-            <Button type="primary" disabled={editing || !editName.trim()} onClick={onSaveEdit} icon={<SaveOutlined />}>Save</Button>
+            <Button onClick={() => setEditOpen(false)} icon={<X />}>Cancel</Button>
+            <Button type="primary" disabled={editing || !editName.trim()} onClick={onSaveEdit} icon={<FloppyDisk />}>Save</Button>
           </Space>
         }
       >

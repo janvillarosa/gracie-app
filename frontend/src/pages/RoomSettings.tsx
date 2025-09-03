@@ -4,7 +4,7 @@ import { useAuth } from '@auth/AuthProvider'
 import { rotateShare, voteDeletion, cancelDeletion, updateRoomSettings, getMyRoom } from '@api/endpoints'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Card, Typography, Space, Button, Input, Modal, Alert, Form, Grid } from 'antd'
-import { ArrowLeftOutlined, SaveOutlined, ShareAltOutlined, DeleteOutlined, CloseCircleOutlined, ReloadOutlined, CheckOutlined } from '@ant-design/icons'
+import { ArrowLeft, FloppyDisk, ShareNetwork, Trash, XCircle, ArrowClockwise, Check } from '@phosphor-icons/react'
 
 const NAME_RE = /^[A-Za-z0-9 ]+$/
 
@@ -98,13 +98,13 @@ export const RoomSettings: React.FC = () => {
             <Space direction="vertical" style={{ width: '100%' }} size="small">
               <Typography.Title level={2} style={{ margin: 0 }}>House Settings</Typography.Title>
               <Space wrap>
-                <Button onClick={() => navigate('/app')} icon={<ArrowLeftOutlined />}>Back</Button>
+                <Button onClick={() => navigate('/app')} icon={<ArrowLeft />}>Back</Button>
               </Space>
             </Space>
           ) : (
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Typography.Title level={2} style={{ margin: 0 }}>House Settings</Typography.Title>
-              <Button onClick={() => navigate('/app')} icon={<ArrowLeftOutlined />}>Back</Button>
+              <Button onClick={() => navigate('/app')} icon={<ArrowLeft />}>Back</Button>
             </div>
           )}
           <Form layout="vertical" onSubmitCapture={onSave}>
@@ -118,14 +118,14 @@ export const RoomSettings: React.FC = () => {
             <Form.Item label="Description">
               <Input.TextArea rows={4} value={description} onChange={(e) => setDescription(e.target.value)} />
             </Form.Item>
-            <Button type="primary" htmlType="submit" disabled={saving || (!displayName && !description) || !nameValid} icon={<SaveOutlined />}>Save</Button>
+            <Button type="primary" htmlType="submit" disabled={saving || (!displayName && !description) || !nameValid} icon={<FloppyDisk />}>Save</Button>
           </Form>
           <Space wrap>
-            <Button type="primary" onClick={onShare} icon={<ShareAltOutlined />}>Get share code</Button>
+            <Button type="primary" onClick={onShare} icon={<ShareNetwork />}>Get share code</Button>
             {roomQuery.data?.my_deletion_vote ? (
-              <Button onClick={onCancelVote} icon={<CloseCircleOutlined />}>Cancel vote</Button>
+              <Button onClick={onCancelVote} icon={<XCircle />}>Cancel vote</Button>
             ) : (
-              <Button danger onClick={onVoteDelete} icon={<DeleteOutlined />}>Vote to delete house</Button>
+              <Button danger onClick={onVoteDelete} icon={<Trash />}>Vote to delete house</Button>
             )}
           </Space>
           <Modal
@@ -134,8 +134,8 @@ export const RoomSettings: React.FC = () => {
             onCancel={() => setShareOpen(false)}
             footer={
               <Space>
-                <Button type="primary" onClick={onShare} icon={<ReloadOutlined />}>Get new code</Button>
-                <Button onClick={() => setShareOpen(false)} icon={<CheckOutlined />}>Done</Button>
+                <Button type="primary" onClick={onShare} icon={<ArrowClockwise />}>Get new code</Button>
+                <Button onClick={() => setShareOpen(false)} icon={<Check />}>Done</Button>
               </Space>
             }
           >

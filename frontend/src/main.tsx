@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider } from '@auth/AuthProvider'
 import { AppRoutes } from '@routes/AppRoutes'
 import { ConfigProvider, theme as antdTheme } from 'antd'
+import { IconContext } from '@phosphor-icons/react'
 import 'antd/dist/reset.css'
 import './styles.css'
 
@@ -15,8 +16,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <AuthProvider>
-          <ConfigProvider
-            theme={{
+          <IconContext.Provider value={{ weight: 'bold' }}>
+            <ConfigProvider
+              theme={{
               cssVar: true,
               algorithm: antdTheme.defaultAlgorithm,
               token: {
@@ -52,10 +54,11 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
                   colorBgElevated: 'var(--panel)'
                 },
               },
-            }}
-          >
-            <AppRoutes />
-          </ConfigProvider>
+              }}
+            >
+              <AppRoutes />
+            </ConfigProvider>
+          </IconContext.Provider>
         </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>

@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react'
 import { useAuth } from '@auth/AuthProvider'
 import { createRoom, isConflict, isForbidden, joinRoomByToken } from '@api/endpoints'
 import { Card, Typography, Row, Col, Form, Input, Button, Alert, Space, Grid } from 'antd'
-import { LogoutOutlined, PlusOutlined, TeamOutlined } from '@ant-design/icons'
+import { SignOut, Plus, UsersThree } from '@phosphor-icons/react'
 
 const TOKEN_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ0123456789' // no I, O, L
 
@@ -54,20 +54,20 @@ export const NoRoomPage: React.FC = () => {
             <Space direction="vertical" style={{ width: '100%' }} size="small">
               <Typography.Title level={2} style={{ margin: 0 }}>You are not in a house yet</Typography.Title>
               <Space wrap>
-                <Button onClick={() => setApiKey(null)} icon={<LogoutOutlined />}>Logout</Button>
+                <Button onClick={() => setApiKey(null)} icon={<SignOut />}>Logout</Button>
               </Space>
             </Space>
           ) : (
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Typography.Title level={2} style={{ margin: 0 }}>You are not in a house yet</Typography.Title>
-              <Button onClick={() => setApiKey(null)} icon={<LogoutOutlined />}>Logout</Button>
+              <Button onClick={() => setApiKey(null)} icon={<SignOut />}>Logout</Button>
             </div>
           )}
           <Row gutter={16} align="top">
             <Col xs={24} md={12} style={{ order: isMobile ? 2 : 1 }}>
               <Space direction="vertical">
                 <Typography.Title level={3} style={{ marginTop: 0 }}>Create a new house</Typography.Title>
-                <Button type="primary" onClick={onCreate} disabled={loading} icon={<PlusOutlined />}>Create solo house</Button>
+                <Button type="primary" onClick={onCreate} disabled={loading} icon={<Plus />}>Create solo house</Button>
                 <Typography.Text type="secondary">You will be the only member until someone joins.</Typography.Text>
               </Space>
             </Col>
@@ -82,7 +82,7 @@ export const NoRoomPage: React.FC = () => {
                     maxLength={5}
                   />
                 </Form.Item>
-                <Button type="primary" htmlType="submit" disabled={!tokenValid || loading} icon={<TeamOutlined />}>Join house</Button>
+                <Button type="primary" htmlType="submit" disabled={!tokenValid || loading} icon={<UsersThree />}>Join house</Button>
               </Form>
             </Col>
           </Row>
