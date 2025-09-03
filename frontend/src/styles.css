@@ -230,7 +230,9 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
 
 /* Stronger borders for lists on RoomPage */
 .lists-list .ant-list-item {
-  border-bottom: 2px solid var(--border-strong) !important;
+  border-bottom: 1px solid var(--border-strong) !important;
+  font-weight: 600;
+  align-items: center;
 }
 .lists-list .ant-list-item:last-child {
   border-bottom: none !important;
