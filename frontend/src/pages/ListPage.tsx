@@ -8,6 +8,7 @@ import { useLiveQueryOpts } from '@lib/liveQuery'
 import { Card, Typography, Space, Button, Input, Checkbox, List as AntList, Alert, Grid, Dropdown, message, Skeleton } from 'antd'
 import { ArrowLeft, Trash, Plus, Eye, EyeSlash, DotsThreeVertical } from '@phosphor-icons/react'
 import { toEmoji } from '../icons'
+import { confettiAt } from '@lib/confetti'
 import { InlineEditText } from '@components/InlineEditText'
 
 export const ListPage: React.FC = () => {
@@ -19,6 +20,8 @@ export const ListPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null)
   const [editingItemId, setEditingItemId] = useState<string | null>(null)
   const [savingItemId, setSavingItemId] = useState<string | null>(null)
+  const checkboxRefs = useRef<Record<string, HTMLElement | null>>({})
+  const setCheckboxRef = (id: string) => (el: HTMLElement | null) => { checkboxRefs.current[id] = el }
   const qc = useQueryClient()
   // Breakpoints hook must be called before any early returns
   const screens = Grid.useBreakpoint()
@@ -104,6 +107,14 @@ export const ListPage: React.FC = () => {
     setError(null)
     try {
       await updateListItem(apiKey!, roomId!, listId, it.item_id, { completed: !it.completed })
+      // Play confetti when marking complete
+      if (!it.completed) {
+        const el = checkboxRefs.current[it.item_id]
+        const rect = el?.getBoundingClientRect()
+        if (rect) {
+          confettiAt(rect.left + rect.width / 2, rect.top + rect.height / 2, { durationMs: 2000 })
+        }
+      }
       await qc.invalidateQueries({ queryKey: ['list-items', listId] })
     } catch (e: any) { setError(e?.message || 'Failed to update item') }
   }
@@ -306,7 +317,9 @@ export const ListPage: React.FC = () => {
                         ]}
                       >
                         <div className="item-row">
-                          <Checkbox checked={it.completed} onChange={() => onToggleComplete(it)} disabled={savingItemId === it.item_id || editingItemId === it.item_id} />
+                          <span ref={setCheckboxRef(it.item_id)} className="checkbox-anchor">
+                            <Checkbox checked={it.completed} onChange={() => onToggleComplete(it)} disabled={savingItemId === it.item_id || editingItemId === it.item_id} />
+                          </span>
                           <div className="item-text" onClick={(e) => { e.stopPropagation(); startEdit(it) }}>
                             {editingItemId === it.item_id ? (
                               <InlineEditText
@@ -349,7 +362,9 @@ export const ListPage: React.FC = () => {
                           ]}
                         >
                           <div className="item-row item-row-completed">
-                            <Checkbox checked={it.completed} onChange={() => onToggleComplete(it)} disabled={savingItemId === it.item_id || editingItemId === it.item_id} />
+                            <span ref={setCheckboxRef(it.item_id)} className="checkbox-anchor">
+                              <Checkbox checked={it.completed} onChange={() => onToggleComplete(it)} disabled={savingItemId === it.item_id || editingItemId === it.item_id} />
+                            </span>
                             <div className="item-text" onClick={(e) => { e.stopPropagation(); startEdit(it) }}>
                               {editingItemId === it.item_id ? (
                                 <InlineEditText

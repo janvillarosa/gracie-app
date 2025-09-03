@@ -214,8 +214,9 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
   border-bottom: 1px solid var(--border-strong) !important;
   display: grid !important;
   grid-template-columns: 1fr auto;
+  font-weight: 600;
   align-items: center;
-  column-gap: 8px;
+  column-gap: 10px;
 }
 .items-list .ant-list-item:last-child {
   border-bottom: none !important;
@@ -329,11 +330,20 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
   flex-wrap: wrap;
   width: 100%;
 }
+/* Add a bit more spacing between checkbox and text in list items */
+.items-list .item-row { gap: 14px; }
 .item-row .item-text {
   flex: 1;
   min-width: 0;
   white-space: normal;
   overflow-wrap: anywhere;
+}
+
+/* Slightly larger checkbox in list items */
+.items-list .checkbox-anchor { display: inline-flex; align-items: center; justify-content: center; }
+.items-list .checkbox-anchor .ant-checkbox {
+  transform: scale(1.2);
+  transform-origin: center;
 }
 
 /* Empty state */
@@ -398,3 +408,14 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
 /* Add bar elements */
 .add-input { flex: 1 1 auto; }
 .add-btn { min-width: 84px; }
+
+/* Confetti animation */
+.confetti-root { position: fixed; inset: 0; pointer-events: none; z-index: 9999; }
+.confetti-piece {
+  position: fixed;
+  width: 6px;
+  height: 10px;
+  border-radius: 2px;
+  opacity: 1;
+  transform: translate3d(0, 0, 0) rotate(0);
+}
