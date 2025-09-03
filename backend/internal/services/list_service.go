@@ -34,7 +34,7 @@ func (s *ListService) ensureRoomMembership(ctx context.Context, user *models.Use
 }
 
 // Lists
-func (s *ListService) CreateList(ctx context.Context, user *models.User, roomID, name, description string) (*models.List, error) {
+func (s *ListService) CreateList(ctx context.Context, user *models.User, roomID, name, description string, icon string) (*models.List, error) {
     if err := s.ensureRoomMembership(ctx, user, roomID); err != nil { return nil, err }
     if name == "" { return nil, derr.ErrBadRequest }
     now := time.Now().UTC()
@@ -46,6 +46,10 @@ func (s *ListService) CreateList(ctx context.Context, user *models.User, roomID,
         DeletionVotes: map[string]string{},
         CreatedAt:     now,
         UpdatedAt:     now,
+    }
+    if icon != "" {
+        if !models.IsValidListIcon(icon) { return nil, derr.ErrBadRequest }
+        l.Icon = icon
     }
     if err := s.lists.Put(ctx, l); err != nil { return nil, err }
     return l, nil
@@ -79,12 +83,12 @@ func (s *ListService) CancelListDeletionVote(ctx context.Context, user *models.U
 }
 
 // UpdateList updates the list's name and/or description.
-func (s *ListService) UpdateList(ctx context.Context, user *models.User, roomID, listID string, name *string, description *string) (*models.List, error) {
+func (s *ListService) UpdateList(ctx context.Context, user *models.User, roomID, listID string, name *string, description *string, icon *string) (*models.List, error) {
     if err := s.ensureRoomMembership(ctx, user, roomID); err != nil { return nil, err }
     l, err := s.lists.GetByID(ctx, listID)
     if err != nil { return nil, err }
     if l.RoomID != roomID || l.IsDeleted { return nil, derr.ErrForbidden }
-    if name == nil && description == nil { return l, nil }
+    if name == nil && description == nil && icon == nil { return l, nil }
     now := time.Now().UTC()
     if name != nil {
         if *name == "" { return nil, derr.ErrBadRequest }
@@ -92,6 +96,14 @@ func (s *ListService) UpdateList(ctx context.Context, user *models.User, roomID,
     }
     if description != nil {
         if err := s.lists.UpdateDescription(ctx, listID, *description, now); err != nil { return nil, err }
+    }
+    if icon != nil {
+        if *icon == "" {
+            if err := s.lists.UpdateIcon(ctx, listID, "", now); err != nil { return nil, err }
+        } else {
+            if !models.IsValidListIcon(*icon) { return nil, derr.ErrBadRequest }
+            if err := s.lists.UpdateIcon(ctx, listID, *icon, now); err != nil { return nil, err }
+        }
     }
     return s.lists.GetByID(ctx, listID)
 }

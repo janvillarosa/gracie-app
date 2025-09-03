@@ -71,6 +71,21 @@ func (r *ListRepo) UpdateDescription(ctx context.Context, listID string, descrip
     return err
 }
 
+func (r *ListRepo) UpdateIcon(ctx context.Context, listID string, icon string, updatedAt time.Time) error {
+    if icon == "" {
+        _, err := r.col().UpdateOne(ctx,
+            bson.D{{Key: "list_id", Value: listID}, {Key: "is_deleted", Value: bson.D{{Key: "$ne", Value: true}}}},
+            bson.D{{Key: "$unset", Value: bson.D{{Key: "icon", Value: ""}}}, {Key: "$set", Value: bson.D{{Key: "updated_at", Value: updatedAt.UTC()}}}},
+        )
+        return err
+    }
+    _, err := r.col().UpdateOne(ctx,
+        bson.D{{Key: "list_id", Value: listID}, {Key: "is_deleted", Value: bson.D{{Key: "$ne", Value: true}}}},
+        bson.D{{Key: "$set", Value: bson.D{{Key: "icon", Value: icon}, {Key: "updated_at", Value: updatedAt.UTC()}}}},
+    )
+    return err
+}
+
 func (r *ListRepo) AddDeletionVote(ctx context.Context, listID string, userID string, ts time.Time) error {
     _, err := r.col().UpdateOne(ctx, bson.D{{Key: "list_id", Value: listID}}, bson.D{{Key: "$set", Value: bson.D{{Key: "deletion_votes." + userID, Value: ts.UTC().Format(time.RFC3339)}, {Key: "updated_at", Value: ts.UTC()}}}})
     return err

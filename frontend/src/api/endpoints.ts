@@ -1,5 +1,5 @@
 import { apiFetch, ApiError } from './client'
-import type { CreateUserResponse, RoomView, User, List, ListItem } from './types'
+import type { CreateUserResponse, RoomView, User, List, ListItem, ListIcon } from './types'
 
 export async function registerUser(name: string): Promise<CreateUserResponse> {
   return apiFetch<CreateUserResponse>('/users', {
@@ -75,7 +75,11 @@ export async function getLists(apiKey: string, roomId: string): Promise<List[]> 
   return apiFetch<List[]>(`/rooms/${roomId}/lists`, { apiKey })
 }
 
-export async function createList(apiKey: string, roomId: string, params: { name: string; description?: string }): Promise<List> {
+export async function createList(
+  apiKey: string,
+  roomId: string,
+  params: { name: string; description?: string; icon?: ListIcon }
+): Promise<List> {
   return apiFetch<List>(`/rooms/${roomId}/lists`, { method: 'POST', apiKey, body: JSON.stringify(params) })
 }
 
@@ -83,7 +87,7 @@ export async function updateList(
   apiKey: string,
   roomId: string,
   listId: string,
-  params: { name?: string; description?: string }
+  params: { name?: string; description?: string; icon?: ListIcon | '' }
 ): Promise<List> {
   return apiFetch<List>(`/rooms/${roomId}/lists/${listId}`, { method: 'PATCH', apiKey, body: JSON.stringify(params) })
 }

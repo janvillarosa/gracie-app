@@ -62,7 +62,7 @@ Room (`rooms`)
 - `created_at`, `updated_at`
 
 List (`lists`)
-- `list_id` (unique), `room_id` (indexed), `name`, `description?`, `deletion_votes`, `is_deleted`, timestamps
+- `list_id` (unique), `room_id` (indexed), `name`, `description?`, `icon?` (enum: HOUSE|CAR|PLANE|PENCIL|APPLE|BROCCOLI|TV|SUNFLOWER), `deletion_votes`, `is_deleted`, timestamps
 
 ListItems (`list_items`)
 - `item_id` (unique), `list_id` (indexed), `room_id`, `description`, `completed`, timestamps

@@ -20,6 +20,7 @@ func NewListHandler(lists *services.ListService) *ListHandler { return &ListHand
 type createListReq struct {
     Name        string `json:"name"`
     Description string `json:"description"`
+    Icon        string `json:"icon"`
 }
 
 func (h *ListHandler) CreateList(w http.ResponseWriter, r *http.Request) {
@@ -30,7 +31,7 @@ func (h *ListHandler) CreateList(w http.ResponseWriter, r *http.Request) {
     if err := api.DecodeJSON(r, &req); err != nil || req.Name == "" {
         api.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request"}); return
     }
-    l, err := h.Lists.CreateList(r.Context(), u, roomID, req.Name, req.Description)
+    l, err := h.Lists.CreateList(r.Context(), u, roomID, req.Name, req.Description, req.Icon)
     if err != nil {
         code := statusFromErr(err)
         api.WriteJSON(w, code, map[string]string{"error": err.Error()}); return
@@ -71,6 +72,7 @@ func (h *ListHandler) CancelListDeletionVote(w http.ResponseWriter, r *http.Requ
 type updateListReq struct {
     Name        *string `json:"name"`
     Description *string `json:"description"`
+    Icon        *string `json:"icon"`
 }
 
 func (h *ListHandler) UpdateList(w http.ResponseWriter, r *http.Request) {
@@ -82,11 +84,11 @@ func (h *ListHandler) UpdateList(w http.ResponseWriter, r *http.Request) {
     if err := api.DecodeJSON(r, &req); err != nil {
         api.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request"}); return
     }
-    if req.Name == nil && req.Description == nil {
+    if req.Name == nil && req.Description == nil && req.Icon == nil {
         w.WriteHeader(http.StatusNoContent)
         return
     }
-    l, err := h.Lists.UpdateList(r.Context(), u, roomID, listID, req.Name, req.Description)
+    l, err := h.Lists.UpdateList(r.Context(), u, roomID, listID, req.Name, req.Description, req.Icon)
     if err != nil { api.WriteJSON(w, statusFromErr(err), map[string]string{"error": err.Error()}); return }
     api.WriteJSON(w, http.StatusOK, l)
 }

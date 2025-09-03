@@ -7,6 +7,7 @@ import type { List, ListItem } from '@api/types'
 import { useLiveQueryOpts } from '@lib/liveQuery'
 import { Card, Typography, Space, Button, Input, Checkbox, List as AntList, Alert, Grid, Dropdown, message, Skeleton } from 'antd'
 import { ArrowLeft, Trash, Plus, Eye, EyeSlash, DotsThreeVertical } from '@phosphor-icons/react'
+import { toEmoji } from '../icons'
 
 export const ListPage: React.FC = () => {
   const { apiKey } = useAuth()
@@ -157,7 +158,10 @@ export const ListPage: React.FC = () => {
             <Space direction="vertical" style={{ width: '100%' }} size="small">
               <div className="list-header-grid">
                 <div className="list-header-title">
-                  <Typography.Title level={2} style={{ margin: 0, lineHeight: 1.2 }}>{listMeta.name}</Typography.Title>
+                  <Typography.Title level={2} style={{ margin: 0, lineHeight: 1.2 }}>
+                    {listMeta.icon ? <span style={{ marginRight: 10 }}>{toEmoji(listMeta.icon)}</span> : null}
+                    {listMeta.name}
+                  </Typography.Title>
                   <Typography.Text className="list-meta">Updated {timeAgo(listMeta.updated_at)}</Typography.Text>
                   {listMeta.description && (
                     <Typography.Text className="list-description">{listMeta.description}</Typography.Text>
@@ -188,7 +192,10 @@ export const ListPage: React.FC = () => {
           ) : (
             <div className="list-header-grid">
               <div className="list-header-title">
-                <Typography.Title level={2} style={{ margin: 0, lineHeight: 1.2 }}>{listMeta.name}</Typography.Title>
+                <Typography.Title level={2} style={{ margin: 0, lineHeight: 1.2 }}>
+                  {listMeta.icon ? <span style={{ marginRight: 10 }}>{toEmoji(listMeta.icon)}</span> : null}
+                  {listMeta.name}
+                </Typography.Title>
                 <Typography.Text className="list-meta">Updated {timeAgo(listMeta.updated_at)}</Typography.Text>
                 {listMeta.description && (
                   <Typography.Text className="list-description">{listMeta.description}</Typography.Text>
@@ -245,7 +252,7 @@ export const ListPage: React.FC = () => {
             {itemsQuery.isLoading ? (
               <Skeleton active paragraph={{ rows: 4 }} />
             ) : items.length === 0 ? (
-              <div className="empty-state"><Plus style={{ color: 'var(--color-primary)' }} />
+              <div className="empty-state"><Plus size={20} style={{ color: 'var(--color-primary)' }} />
                 <Typography.Text type="secondary">No items yet. Add your first item above.</Typography.Text>
               </div>
             ) : (

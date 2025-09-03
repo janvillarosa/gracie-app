@@ -26,6 +26,7 @@ export type List = {
   room_id: string
   name: string
   description?: string
+  icon?: ListIcon
   deletion_votes?: Record<string, string>
   is_deleted: boolean
   created_at: string
@@ -41,3 +42,13 @@ export type ListItem = {
   created_at: string
   updated_at: string
 }
+
+export type ListIcon =
+  | 'HOUSE'
+  | 'CAR'
+  | 'PLANE'
+  | 'PENCIL'
+  | 'APPLE'
+  | 'BROCCOLI'
+  | 'TV'
+  | 'SUNFLOWER'

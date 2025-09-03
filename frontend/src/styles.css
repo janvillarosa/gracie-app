@@ -50,16 +50,16 @@ h1.ant-typography, h2.ant-typography, h3.ant-typography, h4.ant-typography, h5.a
   line-height: 1.2;
 }
 /* Responsive, slightly larger titles (mobile-first with clamp) */
-h1, h1.ant-typography { font-size: clamp(28px, 4.2vw, 40px); font-weight: 700; }
-h2, h2.ant-typography { font-size: clamp(22px, 3.2vw, 32px); font-weight: 700; }
+h1, h1.ant-typography { font-size: clamp(32px, 4.2vw, 45px); font-weight: 700; }
+h2, h2.ant-typography { font-size: clamp(26px, 3.2vw, 38px); font-weight: 700; }
 h3, h3.ant-typography { font-size: clamp(18px, 2.6vw, 26px); font-weight: 600; }
 h4, h4.ant-typography { font-size: clamp(16px, 2.2vw, 22px); font-weight: 600; }
 h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
 
 /* On mobile, bump main headers ~15%, subheadings (~h3) ~10% */
 @media (max-width: 767px) {
-  h1, h1.ant-typography { font-size: clamp(32px, 4.8vw, 46px); }
-  h2, h2.ant-typography { font-size: clamp(25px, 3.68vw, 36px); }
+  h1, h1.ant-typography { font-size: clamp(42px, 4.8vw, 56px); }
+  h2, h2.ant-typography { font-size: clamp(35px, 3.68vw, 46px); }
   /* Subheadings */
   h3, h3.ant-typography { font-size: clamp(20px, 2.86vw, 28px); }
   h4, h4.ant-typography { font-size: clamp(18px, 2.53vw, 25px); }
@@ -75,6 +75,11 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
   background: var(--panel);
 }
 
+/* Buttons: smooth color transitions */
+.ant-btn {
+  transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease, box-shadow 180ms ease, filter 180ms ease, opacity 180ms ease;
+}
+
 /* Primary buttons: playful purple gradient + hover animation */
 .ant-btn-primary {
   border-color: var(--color-primary-deep, #7D6EF0) !important;
@@ -87,7 +92,12 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
   background-position: 50% 0, 50% 0 !important;
   transition: transform 120ms cubic-bezier(0.2, 0.8, 0.2, 1),
               box-shadow 200ms ease,
-              background-position 300ms ease;
+              background-position 300ms ease,
+              background-color 180ms ease,
+              color 180ms ease,
+              border-color 180ms ease,
+              filter 180ms ease,
+              opacity 180ms ease;
   will-change: transform, background-position;
   box-shadow: 0 2px 6px rgba(0,0,0,0.08);
   border-radius: var(--radius-squircle) !important;
@@ -102,6 +112,30 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
   background-position: 50% 60%, 50% 60% !important;
   transform: translateY(0) scale(0.98);
   box-shadow: 0 2px 6px rgba(0,0,0,0.10);
+}
+/* Disabled buttons: neutral grey, no purple gradient */
+.ant-btn[disabled],
+.ant-btn:disabled,
+.ant-btn.ant-btn-disabled,
+.ant-btn[aria-disabled='true'] {
+  background: #F2F3F5 !important;
+  border-color: var(--border-strong, #D2D2D2) !important;
+  color: var(--text-secondary, rgba(59,59,59,0.7)) !important;
+  box-shadow: none !important;
+  background-image: none !important;
+}
+.ant-btn-primary[disabled],
+.ant-btn-primary:disabled,
+.ant-btn-primary.ant-btn-disabled,
+.ant-btn-primary[aria-disabled='true'] {
+  background: #E9EAEE !important;
+  border-color: #D9DDE3 !important;
+  color: #9AA0A6 !important;
+  box-shadow: none !important;
+  background-image: none !important;
+  transform: none !important;
+  filter: grayscale(0.12) saturate(0.6) brightness(0.98);
+  opacity: 0.9;
 }
 @media (prefers-reduced-motion: reduce) {
   .ant-btn-primary { transition: box-shadow 200ms ease; }

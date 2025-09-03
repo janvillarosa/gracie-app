@@ -8,6 +8,9 @@ import { useLiveQueryOpts } from '@lib/liveQuery'
 import { Card, Typography, Space, Button, Modal, Input, List as AntList, Alert, Grid, Dropdown } from 'antd'
 import { DotsThreeVertical, CaretRight, ShareNetwork, Plus, ArrowClockwise, Check, FloppyDisk, X } from '@phosphor-icons/react'
 import type { MenuProps } from 'antd'
+import { IconPicker } from '@components/IconPicker'
+import { toEmoji } from '../icons'
+import type { ListIcon } from '@api/types'
 
 export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string }> = ({ room, roomId, userId }) => {
   const { apiKey, setApiKey } = useAuth()
@@ -24,6 +27,9 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
   const [editTarget, setEditTarget] = useState<List | null>(null)
   const [editName, setEditName] = useState('')
   const [editDesc, setEditDesc] = useState('')
+  const [newIcon, setNewIcon] = useState<ListIcon | undefined>(undefined)
+  const [editIcon, setEditIcon] = useState<ListIcon | undefined>(undefined)
+  const [editIconTouched, setEditIconTouched] = useState(false)
   const qc = useQueryClient()
   const screens = Grid.useBreakpoint()
   const isMobile = !screens.md
@@ -52,9 +58,10 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
     setCreating(true)
     setError(null)
     try {
-      await createList(apiKey!, roomId, { name: newName.trim(), description: newDesc.trim() || undefined })
+      await createList(apiKey!, roomId, { name: newName.trim(), description: newDesc.trim() || undefined, icon: newIcon })
       setNewName('')
       setNewDesc('')
+      setNewIcon(undefined)
       setCreateOpen(false)
       await qc.invalidateQueries({ queryKey: ['lists', roomId] })
     } catch (e: any) {
@@ -66,6 +73,8 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
     setEditTarget(l)
     setEditName(l.name)
     setEditDesc(l.description || '')
+    setEditIcon(l.icon as ListIcon | undefined)
+    setEditIconTouched(false)
     setEditOpen(true)
   }
 
@@ -75,7 +84,11 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
     setEditing(true)
     setError(null)
     try {
-      await updateList(apiKey!, roomId, editTarget.list_id, { name: editName.trim(), description: editDesc.trim() || undefined })
+      const body: any = { name: editName.trim(), description: editDesc.trim() || undefined }
+      if (editIconTouched) {
+        body.icon = editIcon ?? ''
+      }
+      await updateList(apiKey!, roomId, editTarget.list_id, body)
       setEditOpen(false)
       setEditTarget(null)
       await qc.invalidateQueries({ queryKey: ['lists', roomId] })
@@ -176,6 +189,7 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
                     <div style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                       <div>
                         <Typography.Link style={{ fontSize: 16 }}>
+                          {l.icon ? <span style={{ marginRight: 8 }}>{toEmoji(l.icon)}</span> : null}
                           {l.name}
                         </Typography.Link>
                         {l.description && (
@@ -242,6 +256,10 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
             value={newDesc}
             onChange={(e) => setNewDesc(e.target.value)}
           />
+          <div>
+            <Typography.Text type="secondary">Icon (optional)</Typography.Text>
+            <IconPicker value={newIcon} onChange={setNewIcon} />
+          </div>
         </Space>
       </Modal>
 
@@ -269,6 +287,13 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
             value={editDesc}
             onChange={(e) => setEditDesc(e.target.value)}
           />
+          <div>
+            <Typography.Text type="secondary">Icon</Typography.Text>
+            <IconPicker
+              value={editIcon}
+              onChange={(val) => { setEditIcon(val); setEditIconTouched(true) }}
+            />
+          </div>
         </Space>
       </Modal>
     </div>
