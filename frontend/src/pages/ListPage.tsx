@@ -8,6 +8,7 @@ import { useLiveQueryOpts } from '@lib/liveQuery'
 import { Card, Typography, Space, Button, Input, Checkbox, List as AntList, Alert, Grid, Dropdown, message, Skeleton } from 'antd'
 import { ArrowLeft, Trash, Plus, Eye, EyeSlash, DotsThreeVertical } from '@phosphor-icons/react'
 import { toEmoji } from '../icons'
+import { InlineEditText } from '@components/InlineEditText'
 
 export const ListPage: React.FC = () => {
   const { apiKey } = useAuth()
@@ -16,6 +17,8 @@ export const ListPage: React.FC = () => {
   const [includeCompleted, setIncludeCompleted] = useState(false)
   const [newDesc, setNewDesc] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [editingItemId, setEditingItemId] = useState<string | null>(null)
+  const [savingItemId, setSavingItemId] = useState<string | null>(null)
   const qc = useQueryClient()
   // Breakpoints hook must be called before any early returns
   const screens = Grid.useBreakpoint()
@@ -97,6 +100,7 @@ export const ListPage: React.FC = () => {
   }
 
   const onToggleComplete = async (it: ListItem) => {
+    if (savingItemId === it.item_id || editingItemId === it.item_id) return
     setError(null)
     try {
       await updateListItem(apiKey!, roomId!, listId, it.item_id, { completed: !it.completed })
@@ -105,11 +109,33 @@ export const ListPage: React.FC = () => {
   }
 
   const onDeleteItem = async (it: ListItem) => {
+    if (savingItemId === it.item_id) return
     setError(null)
     try {
       await deleteListItem(apiKey!, roomId!, listId, it.item_id)
       await qc.invalidateQueries({ queryKey: ['list-items', listId] })
     } catch (e: any) { setError(e?.message || 'Failed to delete item') }
+  }
+
+  const startEdit = (it: ListItem) => {
+    if (savingItemId) return
+    setEditingItemId(it.item_id)
+  }
+
+  const submitEdit = async (it: ListItem, next: string) => {
+    const trimmed = next.trim()
+    if (trimmed === it.description.trim()) { setEditingItemId(null); return }
+    setError(null)
+    try {
+      setSavingItemId(it.item_id)
+      await updateListItem(apiKey!, roomId!, listId, it.item_id, { description: trimmed })
+      setEditingItemId(null)
+      await qc.invalidateQueries({ queryKey: ['list-items', listId] })
+    } catch (e: any) {
+      setError(e?.message || 'Failed to update item')
+    } finally {
+      setSavingItemId(null)
+    }
   }
 
   const myVote = (l?: List) => !!l?.deletion_votes && !!userId && !!l.deletion_votes[userId]
@@ -236,6 +262,7 @@ export const ListPage: React.FC = () => {
                   value={newDesc}
                   onChange={(e) => setNewDesc(e.target.value)}
                   size="large"
+                  onPressEnter={onCreateItem}
                 />
                 <Button
                   className="add-btn"
@@ -274,13 +301,22 @@ export const ListPage: React.FC = () => {
                             title="Delete item"
                             onClick={() => onDeleteItem(it)}
                             style={{ paddingInline: 8 }}
+                            disabled={savingItemId === it.item_id || editingItemId === it.item_id}
                           />
                         ]}
                       >
                         <div className="item-row">
-                          <Checkbox checked={it.completed} onChange={() => onToggleComplete(it)} />
-                          <div className="item-text">
-                            <span style={{ textDecoration: it.completed ? 'line-through' : 'none' }}>{it.description}</span>
+                          <Checkbox checked={it.completed} onChange={() => onToggleComplete(it)} disabled={savingItemId === it.item_id || editingItemId === it.item_id} />
+                          <div className="item-text" onClick={(e) => { e.stopPropagation(); startEdit(it) }}>
+                            {editingItemId === it.item_id ? (
+                              <InlineEditText
+                                value={it.description}
+                                onSubmit={(val) => submitEdit(it, val)}
+                                disabled={savingItemId === it.item_id}
+                              />
+                            ) : (
+                              <span style={{ textDecoration: it.completed ? 'line-through' : 'none' }}>{it.description}</span>
+                            )}
                           </div>
                         </div>
                       </AntList.Item>
@@ -308,13 +344,22 @@ export const ListPage: React.FC = () => {
                               title="Delete item"
                               onClick={() => onDeleteItem(it)}
                               style={{ paddingInline: 8 }}
+                              disabled={savingItemId === it.item_id || editingItemId === it.item_id}
                             />
                           ]}
                         >
                           <div className="item-row item-row-completed">
-                            <Checkbox checked={it.completed} onChange={() => onToggleComplete(it)} />
-                            <div className="item-text">
-                              <span style={{ textDecoration: it.completed ? 'line-through' : 'none' }}>{it.description}</span>
+                            <Checkbox checked={it.completed} onChange={() => onToggleComplete(it)} disabled={savingItemId === it.item_id || editingItemId === it.item_id} />
+                            <div className="item-text" onClick={(e) => { e.stopPropagation(); startEdit(it) }}>
+                              {editingItemId === it.item_id ? (
+                                <InlineEditText
+                                  value={it.description}
+                                  onSubmit={(val) => submitEdit(it, val)}
+                                  disabled={savingItemId === it.item_id}
+                                />
+                              ) : (
+                                <span style={{ textDecoration: it.completed ? 'line-through' : 'none' }}>{it.description}</span>
+                              )}
                             </div>
                           </div>
                         </AntList.Item>

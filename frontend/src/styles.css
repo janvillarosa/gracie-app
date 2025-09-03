@@ -211,10 +211,10 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
 
 /* Stronger borders for list items within list page */
 .items-list .ant-list-item {
-  border-bottom: 2px solid var(--border-strong) !important;
+  border-bottom: 1px solid var(--border-strong) !important;
   display: grid !important;
   grid-template-columns: 1fr auto;
-  align-items: start;
+  align-items: center;
   column-gap: 8px;
 }
 .items-list .ant-list-item:last-child {
