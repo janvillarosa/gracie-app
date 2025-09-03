@@ -1,10 +1,11 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@auth/AuthProvider'
 import { rotateShare, voteDeletion, cancelDeletion, updateRoomSettings, getMyRoom } from '@api/endpoints'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Card, Typography, Space, Button, Input, Modal, Alert, Form, Grid } from 'antd'
-import { ArrowLeft, FloppyDisk, ShareNetwork, Trash, XCircle, ArrowClockwise, Check } from '@phosphor-icons/react'
+import { Card, Typography, Space, Button, Input, Alert, Form, Grid } from 'antd'
+import { ArrowLeft, FloppyDisk, ShareNetwork, Trash, XCircle } from '@phosphor-icons/react'
+import { ShareCodeModal } from '@components/ShareCodeModal'
 
 const NAME_RE = /^[A-Za-z0-9 ]+$/
 
@@ -15,6 +16,7 @@ export const RoomSettings: React.FC = () => {
   const roomQuery = useQuery({ queryKey: ['my-room'], queryFn: () => getMyRoom(apiKey!) })
   const [displayName, setDisplayName] = useState('')
   const [description, setDescription] = useState('')
+  const [initialized, setInitialized] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [shareOpen, setShareOpen] = useState(false)
@@ -24,6 +26,19 @@ export const RoomSettings: React.FC = () => {
   const isMobile = !screens.md
 
   const nameValid = useMemo(() => !displayName || (displayName.length <= 64 && NAME_RE.test(displayName)), [displayName])
+
+  // Initialize form fields with current values once room data is loaded
+  useEffect(() => {
+    if (!initialized && roomQuery.data) {
+      setDisplayName(roomQuery.data.display_name || '')
+      setDescription(roomQuery.data.description || '')
+      setInitialized(true)
+    }
+  }, [roomQuery.data, initialized])
+
+  const originalName = roomQuery.data?.display_name || ''
+  const originalDesc = roomQuery.data?.description || ''
+  const hasChanges = displayName !== originalName || description !== originalDesc
 
   const onSave = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -39,7 +54,10 @@ export const RoomSettings: React.FC = () => {
     }
     setSaving(true)
     try {
-      await updateRoomSettings(apiKey!, { display_name: displayName || undefined, description })
+      const payload: { display_name?: string; description?: string } = {}
+      if (displayName !== originalName) payload.display_name = displayName || undefined
+      if (description !== originalDesc) payload.description = description
+      await updateRoomSettings(apiKey!, payload)
       setSuccess('Saved')
       qc.invalidateQueries({ queryKey: ['my-room'] })
     } catch (e: any) {
@@ -118,7 +136,7 @@ export const RoomSettings: React.FC = () => {
             <Form.Item label="Description">
               <Input.TextArea rows={4} value={description} onChange={(e) => setDescription(e.target.value)} />
             </Form.Item>
-            <Button type="primary" htmlType="submit" disabled={saving || (!displayName && !description) || !nameValid} icon={<FloppyDisk />}>Save</Button>
+            <Button type="primary" htmlType="submit" disabled={saving || !hasChanges || !nameValid} icon={<FloppyDisk />}>Save</Button>
           </Form>
           <Space wrap>
             <Button type="primary" onClick={onShare} icon={<ShareNetwork />}>Get share code</Button>
@@ -128,30 +146,13 @@ export const RoomSettings: React.FC = () => {
               <Button danger onClick={onVoteDelete} icon={<Trash />}>Vote to delete house</Button>
             )}
           </Space>
-          <Modal
-            title="Share House"
+          <ShareCodeModal
             open={shareOpen}
-            onCancel={() => setShareOpen(false)}
-            footer={
-              <Space>
-                <Button type="primary" onClick={onShare} icon={<ArrowClockwise />}>Get new code</Button>
-                <Button onClick={() => setShareOpen(false)} icon={<Check />}>Done</Button>
-              </Space>
-            }
-          >
-            <div>
-              {shareToken ? (
-                <>
-                  <div>
-                    Code: <code>{shareToken}</code> (5 chars, no I/O/L)
-                  </div>
-                  <Typography.Text type="secondary">Share this code with your partner.</Typography.Text>
-                </>
-              ) : (
-                <div>Generating code…</div>
-              )}
-            </div>
-          </Modal>
+            token={shareToken}
+            onClose={() => setShareOpen(false)}
+            onRotate={onShare}
+            title="Share House"
+          />
           {error && <Alert type="error" message={error} showIcon />}
           {success && <Alert type="success" message={success} showIcon />}        
         </Space>

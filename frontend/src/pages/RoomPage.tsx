@@ -6,9 +6,10 @@ import { createList, getLists, rotateShare, voteListDeletion, cancelListDeletion
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useLiveQueryOpts } from '@lib/liveQuery'
 import { Card, Typography, Space, Button, Modal, Input, List as AntList, Alert, Grid, Dropdown } from 'antd'
-import { DotsThreeVertical, CaretRight, ShareNetwork, Plus, ArrowClockwise, Check, FloppyDisk, X } from '@phosphor-icons/react'
+import { DotsThreeVertical, CaretRight, ShareNetwork, Plus, FloppyDisk, X } from '@phosphor-icons/react'
 import type { MenuProps } from 'antd'
 import { IconPicker } from '@components/IconPicker'
+import { ShareCodeModal } from '@components/ShareCodeModal'
 import { toEmoji } from '../icons'
 import type { ListIcon } from '@api/types'
 
@@ -231,6 +232,13 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
           </Space>
         </Card>
       </div>
+
+      <ShareCodeModal
+        open={shareOpen}
+        token={shareToken}
+        onClose={() => setShareOpen(false)}
+        onRotate={async () => { try { const r = await rotateShare(apiKey!); setShareToken(r.token) } catch(e:any){ setError(e?.message||'Failed to rotate code') } }}
+      />
 
       {/* Create List Modal */}
       <Modal
