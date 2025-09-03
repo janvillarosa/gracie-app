@@ -150,8 +150,9 @@ export const ListPage: React.FC = () => {
   return (
     <div className="container">
       {contextHolder}
-      <Card>
-        <Space direction="vertical" style={{ width: '100%' }} size="large">
+      <div className="paper-stack">
+        {/* Bottom sheet: title + details + actions */}
+        <Card className="paper-card paper-meta">
           {isMobile ? (
             <Space direction="vertical" style={{ width: '100%' }} size="small">
               <div className="list-header-grid">
@@ -215,77 +216,45 @@ export const ListPage: React.FC = () => {
               </div>
             </div>
           )}
-          {/* description now displayed under the title to reduce top padding */}
-          <div className="add-bar">
-            {isMobile ? (
-              <Space direction="vertical" style={{ width: '100%' }}>
+        </Card>
+
+        {/* Top sheet: input + list items */}
+        <Card className="paper-card paper-list">
+          <Space direction="vertical" style={{ width: '100%' }} size="large">
+            <div className="add-bar">
+              <div className="add-row">
                 <Input
+                  className="add-input"
                   placeholder="Add an item"
                   value={newDesc}
                   onChange={(e) => setNewDesc(e.target.value)}
                   size="large"
                 />
-                <Button type="primary" onClick={onCreateItem} disabled={!newDesc.trim()} icon={<PlusOutlined />} size="large">Add</Button>
-              </Space>
-            ) : (
-              <Space.Compact style={{ width: '100%' }}>
-                <Input
-                  placeholder="Add an item"
-                  value={newDesc}
-                  onChange={(e) => setNewDesc(e.target.value)}
+                <Button
+                  className="add-btn"
+                  type="primary"
+                  shape="circle"
+                  onClick={onCreateItem}
+                  disabled={!newDesc.trim()}
+                  icon={<PlusOutlined />}
                   size="large"
+                  aria-label="Add item"
                 />
-                <Button type="primary" onClick={onCreateItem} disabled={!newDesc.trim()} icon={<PlusOutlined />} size="large">Add</Button>
-              </Space.Compact>
-            )}
-          </div>
-          {itemsQuery.isLoading ? (
-            <Skeleton active paragraph={{ rows: 4 }} />
-          ) : items.length === 0 ? (
-            <div className="empty-state"><PlusOutlined style={{ color: 'var(--color-primary)' }} />
-              <Typography.Text type="secondary">No items yet. Add your first item above.</Typography.Text>
+              </div>
             </div>
-          ) : (
-            <>
-              {incompleteItems.length > 0 && (
-                <AntList
-                  itemLayout="horizontal"
-                  className="items-list"
-                  dataSource={incompleteItems}
-                  renderItem={(it) => (
-                    <AntList.Item
-                      actions={[
-                        <Button
-                          key="del"
-                          type="text"
-                          danger
-                          icon={<DeleteOutlined />}
-                          aria-label="Delete item"
-                          title="Delete item"
-                          onClick={() => onDeleteItem(it)}
-                          style={{ paddingInline: 8 }}
-                        />
-                      ]}
-                    >
-                      <div className="item-row">
-                        <Checkbox checked={it.completed} onChange={() => onToggleComplete(it)} />
-                        <div className="item-text">
-                          <span style={{ textDecoration: it.completed ? 'line-through' : 'none' }}>{it.description}</span>
-                        </div>
-                      </div>
-                    </AntList.Item>
-                  )}
-                />
-              )}
-              {includeCompleted && completedItems.length > 0 && (
-                <>
-                  <div className="completed-header">
-                    <span>Completed ({completedItems.length})</span>
-                  </div>
+            {itemsQuery.isLoading ? (
+              <Skeleton active paragraph={{ rows: 4 }} />
+            ) : items.length === 0 ? (
+              <div className="empty-state"><PlusOutlined style={{ color: 'var(--color-primary)' }} />
+                <Typography.Text type="secondary">No items yet. Add your first item above.</Typography.Text>
+              </div>
+            ) : (
+              <>
+                {incompleteItems.length > 0 && (
                   <AntList
                     itemLayout="horizontal"
                     className="items-list"
-                    dataSource={completedItems}
+                    dataSource={incompleteItems}
                     renderItem={(it) => (
                       <AntList.Item
                         actions={[
@@ -301,7 +270,7 @@ export const ListPage: React.FC = () => {
                           />
                         ]}
                       >
-                        <div className="item-row item-row-completed">
+                        <div className="item-row">
                           <Checkbox checked={it.completed} onChange={() => onToggleComplete(it)} />
                           <div className="item-text">
                             <span style={{ textDecoration: it.completed ? 'line-through' : 'none' }}>{it.description}</span>
@@ -310,13 +279,48 @@ export const ListPage: React.FC = () => {
                       </AntList.Item>
                     )}
                   />
-                </>
-              )}
-            </>
-          )}
-          {error && <Alert type="error" message={error} showIcon />}
-        </Space>
-      </Card>
+                )}
+                {includeCompleted && completedItems.length > 0 && (
+                  <>
+                    <div className="completed-header">
+                      <span>Completed ({completedItems.length})</span>
+                    </div>
+                    <AntList
+                      itemLayout="horizontal"
+                      className="items-list"
+                      dataSource={completedItems}
+                      renderItem={(it) => (
+                        <AntList.Item
+                          actions={[
+                            <Button
+                              key="del"
+                              type="text"
+                              danger
+                              icon={<DeleteOutlined />}
+                              aria-label="Delete item"
+                              title="Delete item"
+                              onClick={() => onDeleteItem(it)}
+                              style={{ paddingInline: 8 }}
+                            />
+                          ]}
+                        >
+                          <div className="item-row item-row-completed">
+                            <Checkbox checked={it.completed} onChange={() => onToggleComplete(it)} />
+                            <div className="item-text">
+                              <span style={{ textDecoration: it.completed ? 'line-through' : 'none' }}>{it.description}</span>
+                            </div>
+                          </div>
+                        </AntList.Item>
+                      )}
+                    />
+                  </>
+                )}
+              </>
+            )}
+            {error && <Alert type="error" message={error} showIcon />}
+          </Space>
+        </Card>
+      </div>
     </div>
   )
 }

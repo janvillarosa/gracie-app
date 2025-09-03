@@ -17,6 +17,7 @@
   --border-strong: #D2D2D2;         /* stronger border for list items */
   --panel-subtle: #FAFAFA;          /* soft panel background for inline sections */
   --font-headings: 'Outfit', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+  --radius-squircle: 16px;          /* unified rounded shape */
 }
 
 /* Optional dark theme hook if needed later */
@@ -55,6 +56,15 @@ h3, h3.ant-typography { font-size: clamp(18px, 2.6vw, 26px); font-weight: 600; }
 h4, h4.ant-typography { font-size: clamp(16px, 2.2vw, 22px); font-weight: 600; }
 h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
 
+/* On mobile, bump headings by ~15% */
+@media (max-width: 767px) {
+  h1, h1.ant-typography { font-size: clamp(32px, 4.8vw, 46px); }
+  h2, h2.ant-typography { font-size: clamp(25px, 3.68vw, 36px); }
+  h3, h3.ant-typography { font-size: clamp(21px, 2.99vw, 30px); }
+  h4, h4.ant-typography { font-size: clamp(18px, 2.53vw, 25px); }
+  h5, h5.ant-typography { font-size: clamp(16px, 2.30vw, 21px); }
+}
+
 /* Ensure Ant overlays inherit the light palette */
 .ant-dropdown, .ant-popover, .ant-tooltip, .ant-modal .ant-modal-content, .ant-drawer .ant-drawer-content {
   background: var(--panel);
@@ -64,19 +74,37 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
   background: var(--panel);
 }
 
-/* Ensure primary buttons adopt the palette even if tokens fail */
+/* Primary buttons: playful purple gradient + hover animation */
 .ant-btn-primary {
-  background-color: var(--color-primary-deep, #7D6EF0) !important;
   border-color: var(--color-primary-deep, #7D6EF0) !important;
+  background-image:
+    radial-gradient(120% 180% at 50% 0%,
+      color-mix(in srgb, var(--color-primary-deep, #7D6EF0) 85%, white) 0%,
+      var(--color-primary-deep, #7D6EF0) 65%),
+    linear-gradient(135deg, #A094F2 0%, #7D6EF0 60%, #B9B0FA 100%) !important;
+  background-size: 160% 160%, 160% 160% !important;
+  background-position: 50% 0, 50% 0 !important;
+  transition: transform 120ms cubic-bezier(0.2, 0.8, 0.2, 1),
+              box-shadow 200ms ease,
+              background-position 300ms ease;
+  will-change: transform, background-position;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  border-radius: var(--radius-squircle) !important;
 }
 .ant-btn-primary:hover,
 .ant-btn-primary:focus {
-  background-color: color-mix(in srgb, var(--color-primary-deep, #7D6EF0) 90%, white) !important;
-  border-color: color-mix(in srgb, var(--color-primary-deep, #7D6EF0) 90%, white) !important;
+  background-position: 50% 40%, 50% 40% !important;
+  box-shadow: 0 6px 14px rgba(0,0,0,0.12);
+  transform: translateY(-1px) scale(1.03);
 }
 .ant-btn-primary:active {
-  background-color: color-mix(in srgb, var(--color-primary-deep, #7D6EF0) 80%, white) !important;
-  border-color: color-mix(in srgb, var(--color-primary-deep, #7D6EF0) 80%, white) !important;
+  background-position: 50% 60%, 50% 60% !important;
+  transform: translateY(0) scale(0.98);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.10);
+}
+@media (prefers-reduced-motion: reduce) {
+  .ant-btn-primary { transition: box-shadow 200ms ease; }
+  .ant-btn-primary:hover, .ant-btn-primary:focus, .ant-btn-primary:active { transform: none; }
 }
 
 .container {
@@ -197,15 +225,43 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
 .list-meta { color: var(--text-secondary); }
 .list-description { color: var(--text-secondary); margin-top: 4px; }
 
-/* Prominent add bar (mobile-first sticky) */
+/* Add bar: sticky at the very top of the list sheet; seamless, no top shadows */
 .add-bar {
   position: sticky;
-  bottom: 0;
+  top: -1px; /* ensures flush with rounded edge */
   background: var(--panel);
-  padding: 8px 12px;
-  border-top: 1px solid var(--border);
-  box-shadow: 0 -2px 10px rgba(0,0,0,0.04);
+  padding: 12px 0; /* align with list items (uses Card's own padding) */
+  border-top: none;
+  box-shadow: none;
   z-index: 1;
+  border-top-left-radius: var(--radius-squircle);
+  border-top-right-radius: var(--radius-squircle);
+}
+
+/* Add row layout: input expands; button stays on right */
+.add-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: nowrap;
+}
+.add-input { flex: 1 1 auto; min-width: 0; }
+.add-btn {
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 50% !important; /* ensure perfect circle over primary radius */
+  aspect-ratio: 1 / 1 !important;
+  line-height: 1 !important;
+}
+
+/* Ensure any Ant circle buttons remain perfectly circular despite global primary radius */
+.ant-btn-circle, .ant-btn-icon-only.ant-btn-round {
+  border-radius: 50% !important;
 }
 @media (min-width: 768px) {
   .list-header-grid {
@@ -215,9 +271,7 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
   }
   .list-actions { justify-content: flex-end; }
   .add-bar {
-    border-radius: 8px;
-    background: var(--panel-subtle);
-    box-shadow: none;
+    background: var(--panel);
   }
 }
 
@@ -261,4 +315,46 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
 /* Card/page border color adjustments */
 .ant-card-bordered, .ant-card {
   border-color: var(--border-strong) !important;
+  border-radius: var(--radius-squircle) !important;
 }
+
+/* Paper stack layout for ListPage */
+.paper-stack {
+  position: relative;
+}
+.paper-card {
+  background: var(--panel);
+  border: 1px solid var(--border-strong) !important;
+  border-radius: var(--radius-squircle) !important;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.06);
+}
+.paper-card.paper-meta {
+  /* Extend downward so side edges flow behind the top sheet */
+  padding-bottom: 10px;
+  /* Visually continue: hide its own bottom edge */
+  border-bottom: none !important;
+  border-bottom-left-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+}
+.paper-card.paper-list {
+  position: relative;
+  z-index: 2;
+  margin-top: -20px; /* ~5px overlap */
+  box-shadow: 0 10px 22px rgba(0,0,0,0.08);
+}
+
+
+@media (min-width: 768px) {
+  .paper-card.paper-list { margin-top: -20px; }
+}
+
+/* Inputs and other controls: unified squircle radius */
+.ant-input, .ant-input-affix-wrapper, .ant-select-selector, .ant-input-number,
+.ant-modal .ant-modal-content, .ant-popover .ant-popover-inner, .ant-dropdown-menu,
+.ant-drawer .ant-drawer-content, .ant-message-notice-content {
+  border-radius: var(--radius-squircle) !important;
+}
+
+/* Add bar elements */
+.add-input { flex: 1 1 auto; }
+.add-btn { min-width: 84px; }

@@ -101,8 +101,9 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
 
   return (
     <div className="container">
-      <Card>
-        <Space direction="vertical" style={{ width: '100%' }} size="large">
+      <div className="paper-stack">
+        {/* Bottom meta sheet: title/description/share */}
+        <Card className="paper-card paper-meta">
           {(() => {
             const menu: MenuProps['items'] = [
               { key: 'settings', label: 'House Settings' },
@@ -140,105 +141,82 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
             <Typography.Text type="secondary">{room.description}</Typography.Text>
           )}
           <div>Members: {room.members?.join(', ') || '—'}</div>
+        </Card>
 
-          <Modal
-            title="Share House"
-            open={shareOpen}
-            onCancel={() => setShareOpen(false)}
-            footer={
-              <Space>
-                <Button type="primary" onClick={onShare} icon={<ReloadOutlined />}>Get new code</Button>
-                <Button onClick={() => setShareOpen(false)} icon={<CheckOutlined />}>Done</Button>
-              </Space>
-            }
-          >
-            <div>
-              {shareToken ? (
-                <>
-                  <div>
-                    Code: <code>{shareToken}</code> (5 chars, no I/O/L)
-                  </div>
-                  <Typography.Text type="secondary">Share this code with your partner.</Typography.Text>
-                </>
-              ) : (
-                <div>Generating code…</div>
-              )}
+        {/* Top list sheet: lists and actions */}
+        <Card className="paper-card paper-list">
+          <Space direction="vertical" style={{ width: '100%' }} size="large">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+              <Typography.Title level={3} style={{ marginTop: 0, marginBottom: 0 }}>Our Lists</Typography.Title>
+              <Button type="primary" onClick={() => setCreateOpen(true)} icon={<PlusOutlined />}>New List</Button>
             </div>
-          </Modal>
 
-          <div>
-            <Typography.Title level={3} style={{ marginTop: 0 }}>Lists</Typography.Title>
-          </div>
-
-          {listsQuery.isLoading ? (
-            <div>Loading lists…</div>
-          ) : lists.length === 0 ? (
-            <Typography.Text type="secondary">No lists yet. Add one below.</Typography.Text>
-          ) : (
-            <AntList
-              className="lists-list"
-              itemLayout={isMobile ? 'vertical' : 'horizontal'}
-              dataSource={lists}
-              renderItem={(l) => (
-                <AntList.Item
-                  style={{ cursor: 'pointer', paddingBlock: 16 }}
-                  onClick={() => navigate(`/app/lists/${l.list_id}`)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault()
-                      navigate(`/app/lists/${l.list_id}`)
-                    }
-                  }}
-                >
-                  <div style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                    <div>
-                      <Typography.Link style={{ fontSize: 16 }}>
-                        {l.name}
-                      </Typography.Link>
-                      {l.description && (
-                        <div>
-                          <Typography.Text type="secondary">{l.description}</Typography.Text>
-                        </div>
-                      )}
+            {listsQuery.isLoading ? (
+              <div>Loading lists…</div>
+            ) : lists.length === 0 ? (
+              <Typography.Text type="secondary">No lists yet. Add one below.</Typography.Text>
+            ) : (
+              <AntList
+                className="lists-list"
+                itemLayout={isMobile ? 'vertical' : 'horizontal'}
+                dataSource={lists}
+                renderItem={(l) => (
+                  <AntList.Item
+                    style={{ cursor: 'pointer', paddingBlock: 16 }}
+                    onClick={() => navigate(`/app/lists/${l.list_id}`)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        navigate(`/app/lists/${l.list_id}`)
+                      }
+                    }}
+                  >
+                    <div style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                      <div>
+                        <Typography.Link style={{ fontSize: 16 }}>
+                          {l.name}
+                        </Typography.Link>
+                        {l.description && (
+                          <div>
+                            <Typography.Text type="secondary">{l.description}</Typography.Text>
+                          </div>
+                        )}
+                      </div>
+                      <Space>
+                        <span onClick={(e) => e.stopPropagation()}>
+                          <Dropdown
+                            trigger={["click"]}
+                            menu={{
+                              items: [
+                                { key: 'edit', label: 'Edit details' },
+                                ...(l.deletion_votes && l.deletion_votes[userId]
+                                  ? [{ key: 'cancel', label: 'Cancel delete vote' }]
+                                  : [{ key: 'vote', label: 'Vote to delete' }]),
+                              ],
+                              onClick: ({ key }) => {
+                                if (key === 'edit') onOpenEdit(l)
+                                if (key === 'vote') onVoteList(l)
+                                if (key === 'cancel') onCancelVoteList(l)
+                              },
+                            }}
+                          >
+                            <Button icon={<MoreOutlined />} aria-label="List actions" />
+                          </Dropdown>
+                        </span>
+                        <RightOutlined style={{ color: 'var(--color-primary)' }} />
+                      </Space>
                     </div>
-                    <Space>
-                      <span onClick={(e) => e.stopPropagation()}>
-                        <Dropdown
-                          trigger={["click"]}
-                          menu={{
-                            items: [
-                              { key: 'edit', label: 'Edit details' },
-                              ...(l.deletion_votes && l.deletion_votes[userId]
-                                ? [{ key: 'cancel', label: 'Cancel delete vote' }]
-                                : [{ key: 'vote', label: 'Vote to delete' }]),
-                            ],
-                            onClick: ({ key }) => {
-                              if (key === 'edit') onOpenEdit(l)
-                              if (key === 'vote') onVoteList(l)
-                              if (key === 'cancel') onCancelVoteList(l)
-                            },
-                          }}
-                        >
-                          <Button icon={<MoreOutlined />} aria-label="List actions" />
-                        </Dropdown>
-                      </span>
-                      <RightOutlined style={{ color: 'var(--color-primary)' }} />
-                    </Space>
-                  </div>
-                </AntList.Item>
-              )}
-            />
-          )}
+                  </AntList.Item>
+                )}
+              />
+            )}
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <Button type="primary" onClick={() => setCreateOpen(true)} icon={<PlusOutlined />}>Add List</Button>
-          </div>
-
-          {error && <Alert type="error" message={error} showIcon />}
-        </Space>
-      </Card>
+            {error && <Alert type="error" message={error} showIcon />}
+          </Space>
+        </Card>
+      </div>
 
       {/* Create List Modal */}
       <Modal
