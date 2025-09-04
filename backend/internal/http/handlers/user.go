@@ -9,14 +9,12 @@ import (
 )
 
 type UserHandler struct {
-    Users        *services.UserService
-    AvatarSalt   []byte
-    AvatarStyle  string
+    Users      *services.UserService
+    AvatarSalt []byte
 }
 
-func NewUserHandler(users *services.UserService, avatarSalt []byte, avatarStyle string) *UserHandler {
-    if avatarStyle == "" { avatarStyle = "adventurer-neutral" }
-    return &UserHandler{Users: users, AvatarSalt: avatarSalt, AvatarStyle: avatarStyle}
+func NewUserHandler(users *services.UserService, avatarSalt []byte) *UserHandler {
+    return &UserHandler{Users: users, AvatarSalt: avatarSalt}
 }
 
 type createUserReq struct {
@@ -63,7 +61,6 @@ func (h *UserHandler) GetMe(w http.ResponseWriter, r *http.Request) {
         "created_at": u.CreatedAt,
         "updated_at": u.UpdatedAt,
         "avatar_key": ids.DeriveAvatarKey(u.UserID, h.AvatarSalt),
-        "avatar_style": h.AvatarStyle,
     }
     api.WriteJSON(w, http.StatusOK, respUser)
 }

@@ -42,7 +42,7 @@ export const RoomSettings: React.FC = () => {
   const onSave = async (e: React.FormEvent) => {
     e.preventDefault()
     if (displayName && !nameValid) {
-      message.error('Display name must be alphanumeric with spaces, up to 64 chars')
+      message.error('Name is up to 64 characters. Only letters, numbers and spaces')
       return
     }
     if (description.length > MAX_DESCRIPTION) {

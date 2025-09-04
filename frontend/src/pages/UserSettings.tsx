@@ -150,7 +150,7 @@ export const UserSettings: React.FC = () => {
                 <Input.Password value={curPwd} onChange={(e) => setCurPwd(e.target.value)} autoComplete="current-password" />
               </Form.Item>
             )}
-            <Form.Item label="New password (min 8 chars)">
+            <Form.Item label="New password (mininum of 8 characters)">
               <Input.Password value={newPwd} onChange={(e) => setNewPwd(e.target.value)} autoComplete="new-password" />
             </Form.Item>
             <Form.Item label="Confirm new password">
@@ -162,8 +162,8 @@ export const UserSettings: React.FC = () => {
           <Divider className="settings-divider" />
 
           <div>
-            <Typography.Title level={4} style={{ marginTop: 0 }}>Danger zone</Typography.Title>
-            <Button danger icon={<Trash />} onClick={() => setConfirmOpen(true)}>Delete account</Button>
+            <Typography.Title level={4} style={{ marginTop: 0 }}>Danger Zone</Typography.Title>
+            <Button danger icon={<Trash />} onClick={() => setConfirmOpen(true)}>Permanently delete my account</Button>
           </div>
 
         </Space>

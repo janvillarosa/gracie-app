@@ -12,15 +12,13 @@ import (
 )
 
 type RoomHandler struct {
-    Rooms       *services.RoomService
-    Users       store.UserRepository
-    AvatarSalt  []byte
-    AvatarStyle string
+    Rooms      *services.RoomService
+    Users      store.UserRepository
+    AvatarSalt []byte
 }
 
-func NewRoomHandler(rooms *services.RoomService, users store.UserRepository, avatarSalt []byte, avatarStyle string) *RoomHandler {
-    if avatarStyle == "" { avatarStyle = "adventurer-neutral" }
-    return &RoomHandler{Rooms: rooms, Users: users, AvatarSalt: avatarSalt, AvatarStyle: avatarStyle}
+func NewRoomHandler(rooms *services.RoomService, users store.UserRepository, avatarSalt []byte) *RoomHandler {
+    return &RoomHandler{Rooms: rooms, Users: users, AvatarSalt: avatarSalt}
 }
 
 func (h *RoomHandler) GetMyRoom(w http.ResponseWriter, r *http.Request) {

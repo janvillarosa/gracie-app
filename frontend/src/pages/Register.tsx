@@ -32,7 +32,7 @@ export const Register: React.FC = () => {
       <Card className="paper-card">
         <Typography.Title level={2} style={{ marginTop: 0 }}>Create account</Typography.Title>
         <Form layout="vertical" onSubmitCapture={onRegister}>
-          <Form.Item label="Email (username)">
+          <Form.Item label="Email (this will be your username)">
             <Input
               placeholder="you@example.com"
               value={username}
@@ -41,7 +41,7 @@ export const Register: React.FC = () => {
               inputMode="email"
             />
           </Form.Item>
-          <Form.Item label="Password (min 8 chars)">
+          <Form.Item label="Password">
             <Input.Password
               placeholder="At least 8 characters"
               value={password}

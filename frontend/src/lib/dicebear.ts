@@ -24,14 +24,14 @@ function deriveBgHex(seed: string): string {
 }
 
 export function dicebearUrl(style: string, seed: string, size = 64, withBackground = true) {
-  const s = encodeURIComponent(style || 'adventurer-neutral')
+  const s = encodeURIComponent(style || 'miniavs')
   const q = new URLSearchParams({ seed, size: String(size), radius: '50' })
   if (withBackground) {
     q.set('backgroundType', 'solid')
     q.set('backgroundColor', deriveBgHex(seed))
   }
   // Miniavs supports an explicit hair list. Exclude 'balndess' by whitelisting others.
-  if ((style || 'adventurer-neutral').toLowerCase() === 'miniavs') {
+  if ((style || 'miniavs').toLowerCase() === 'miniavs') {
     const allowed = [
       'classic01', 'classic02', 'curly', 'elvis', 'long', 'ponyTail', 'slaughter', 'stylish',
     ]

@@ -14,7 +14,7 @@ export const CreateHouseModal: React.FC<Props> = ({ open, onClose, onSubmit, sub
   const [description, setDescription] = useState('')
   const nameError = useMemo(() => {
     if (!displayName) return undefined // optional
-    return isValidDisplayName(displayName) ? undefined : 'Up to 64 chars; alphanumeric + spaces'
+    return isValidDisplayName(displayName) ? undefined : 'Name is up to 64 characters. Only letters, numbers and spaces'
   }, [displayName])
   const descError = useMemo(() => {
     return description.length <= MAX_DESCRIPTION ? undefined : 'Description too long'

@@ -43,9 +43,9 @@ func main() {
     authSvc, err := services.NewAuthService(usersRepo, cfg.EncKeyFile, cfg.APIKeyTTLHours)
     if err != nil { log.Fatalf("auth service: %v", err) }
 
-    userHandler := handlers.NewUserHandler(userSvc, []byte(cfg.AvatarSalt), "adventurer-neutral")
+    userHandler := handlers.NewUserHandler(userSvc, []byte(cfg.AvatarSalt))
     authHandler := handlers.NewAuthHandler(authSvc)
-    roomHandler := handlers.NewRoomHandler(roomSvc, usersRepo, []byte(cfg.AvatarSalt), "adventurer-neutral")
+    roomHandler := handlers.NewRoomHandler(roomSvc, usersRepo, []byte(cfg.AvatarSalt))
     listHandler := handlers.NewListHandler(listSvc)
 
     r := router.NewRouter(usersRepo, authHandler, userHandler, roomHandler, listHandler)
