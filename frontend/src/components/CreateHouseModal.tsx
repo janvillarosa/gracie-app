@@ -45,12 +45,12 @@ export const CreateHouseModal: React.FC<Props> = ({ open, onClose, onSubmit, sub
     >
       <Form layout="vertical">
         <Form.Item
-          label="Display name (optional)"
+          label="House name"
           validateStatus={nameError ? 'error' : ''}
           help={nameError}
         >
           <Input
-            placeholder="e.g., Our House"
+            placeholder="e.g., Our Little Mansion"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
             autoFocus
