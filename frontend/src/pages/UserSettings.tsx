@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getMe, updateMyProfile, changeMyPassword, deleteMyAccount } from '@api/endpoints'
 import type { User } from '@api/types'
-import { Card, Typography, Space, Button, Input, Alert, Form, Modal, Grid, Divider } from 'antd'
+import { Card, Typography, Space, Button, Input, Form, Modal, Grid, Divider, message } from 'antd'
 import { ArrowLeft, FloppyDisk, Trash } from '@phosphor-icons/react'
 
 function isEmail(v: string) {
@@ -21,8 +21,6 @@ export const UserSettings: React.FC = () => {
   const [initialized, setInitialized] = useState(false)
   const [profileSaving, setProfileSaving] = useState(false)
   const [pwdSaving, setPwdSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState<string | null>(null)
   const [curPwd, setCurPwd] = useState('')
   const [newPwd, setNewPwd] = useState('')
   const [newPwd2, setNewPwd2] = useState('')
@@ -50,19 +48,17 @@ export const UserSettings: React.FC = () => {
 
   async function onSaveProfile(e: React.FormEvent) {
     e.preventDefault()
-    setError(null)
-    setSuccess(null)
-    if (email && !isEmail(email)) { setError('Invalid email'); return }
+    if (email && !isEmail(email)) { message.error('Invalid email'); return }
     setProfileSaving(true)
     try {
       const body: any = {}
       if (name !== meQuery.data?.name) body.name = name
       if (email !== meQuery.data?.username) body.username = email
       await updateMyProfile(apiKey!, body)
-      setSuccess('Profile updated')
+      message.success('Profile updated')
       await qc.invalidateQueries({ queryKey: ['me'] })
     } catch (e: any) {
-      setError(e?.message || 'Failed to update profile')
+      message.error(e?.message || 'Failed to update profile')
     } finally {
       setProfileSaving(false)
     }
@@ -73,8 +69,6 @@ export const UserSettings: React.FC = () => {
 
   async function onSavePassword(e: React.FormEvent) {
     e.preventDefault()
-    setError(null)
-    setSuccess(null)
     if (!canSavePwd) return
     setPwdSaving(true)
     try {
@@ -83,22 +77,21 @@ export const UserSettings: React.FC = () => {
       setCurPwd('')
       setNewPwd('')
       setNewPwd2('')
-      setSuccess('Password updated')
+      message.success('Password updated')
     } catch (e: any) {
-      setError(e?.message || 'Failed to update password')
+      message.error(e?.message || 'Failed to update password')
     } finally {
       setPwdSaving(false)
     }
   }
 
   async function onConfirmDelete() {
-    setError(null)
     try {
       await deleteMyAccount(apiKey!)
       setApiKey(null)
       navigate('/login', { replace: true })
     } catch (e: any) {
-      setError(e?.message || 'Failed to delete account')
+      message.error(e?.message || 'Failed to delete account')
     } finally {
       setConfirmOpen(false)
     }
@@ -158,8 +151,6 @@ export const UserSettings: React.FC = () => {
             <Button danger icon={<Trash />} onClick={() => setConfirmOpen(true)}>Delete account</Button>
           </div>
 
-          {error && <Alert type="error" message={error} showIcon />}
-          {success && <Alert type="success" message={success} showIcon />}
         </Space>
       </Card>
 
@@ -193,4 +184,3 @@ const DeleteConfirm: React.FC<{ onConfirm: () => void; onCancel: () => void }> =
 }
 
 export default UserSettings
-

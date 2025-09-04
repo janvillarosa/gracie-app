@@ -5,7 +5,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { createList, getLists, rotateShare, voteListDeletion, cancelListDeletion, updateList } from '@api/endpoints'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useLiveQueryOpts } from '@lib/liveQuery'
-import { Card, Typography, Space, Button, Modal, Input, List as AntList, Alert, Grid, Dropdown } from 'antd'
+import { Card, Typography, Space, Button, Modal, Input, List as AntList, Grid, Dropdown, message } from 'antd'
 import { DotsThreeVertical, CaretRight, ShareNetwork, Plus, FloppyDisk, X } from '@phosphor-icons/react'
 import type { MenuProps } from 'antd'
 import { IconPicker } from '@components/IconPicker'
@@ -18,7 +18,7 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
   const navigate = useNavigate()
   const [shareOpen, setShareOpen] = useState(false)
   const [shareToken, setShareToken] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  
   const [creating, setCreating] = useState(false)
   const [newName, setNewName] = useState('')
   const [newDesc, setNewDesc] = useState('')
@@ -36,13 +36,12 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
   const isMobile = !screens.md
 
   const onShare = async () => {
-    setError(null)
     try {
       const r = await rotateShare(apiKey!)
       setShareToken(r.token)
       setShareOpen(true)
     } catch (e: any) {
-      setError(e?.message || 'Failed to get share token')
+      message.error(e?.message || 'Failed to get share token')
     }
   }
 
@@ -57,7 +56,6 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
   const onCreateList = async () => {
     if (!newName.trim()) return
     setCreating(true)
-    setError(null)
     try {
       await createList(apiKey!, roomId, { name: newName.trim(), description: newDesc.trim() || undefined, icon: newIcon })
       setNewName('')
@@ -66,7 +64,7 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
       setCreateOpen(false)
       await qc.invalidateQueries({ queryKey: ['lists', roomId] })
     } catch (e: any) {
-      setError(e?.message || 'Failed to create list')
+      message.error(e?.message || 'Failed to create list')
     } finally { setCreating(false) }
   }
 
@@ -81,9 +79,8 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
 
   const onSaveEdit = async () => {
     if (!editTarget) return
-    if (!editName.trim()) { setError('List name is required'); return }
+    if (!editName.trim()) { message.error('List name is required'); return }
     setEditing(true)
-    setError(null)
     try {
       const body: any = { name: editName.trim(), description: editDesc.trim() || undefined }
       if (editIconTouched) {
@@ -94,23 +91,21 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
       setEditTarget(null)
       await qc.invalidateQueries({ queryKey: ['lists', roomId] })
     } catch (e: any) {
-      setError(e?.message || 'Failed to update list')
+      message.error(e?.message || 'Failed to update list')
     } finally { setEditing(false) }
   }
 
   const onVoteList = async (l: List) => {
-    setError(null)
     try {
       await voteListDeletion(apiKey!, roomId, l.list_id)
       await qc.invalidateQueries({ queryKey: ['lists', roomId] })
-    } catch (e: any) { setError(e?.message || 'Failed to vote') }
+    } catch (e: any) { message.error(e?.message || 'Failed to vote') }
   }
   const onCancelVoteList = async (l: List) => {
-    setError(null)
     try {
       await cancelListDeletion(apiKey!, roomId, l.list_id)
       await qc.invalidateQueries({ queryKey: ['lists', roomId] })
-    } catch (e: any) { setError(e?.message || 'Failed to cancel vote') }
+    } catch (e: any) { message.error(e?.message || 'Failed to cancel vote') }
   }
 
   return (
@@ -229,8 +224,6 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
                 )}
               />
             )}
-
-            {error && <Alert type="error" message={error} showIcon />}
           </Space>
         </Card>
       </div>
@@ -239,7 +232,7 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
         open={shareOpen}
         token={shareToken}
         onClose={() => setShareOpen(false)}
-        onRotate={async () => { try { const r = await rotateShare(apiKey!); setShareToken(r.token) } catch(e:any){ setError(e?.message||'Failed to rotate code') } }}
+        onRotate={async () => { try { const r = await rotateShare(apiKey!); setShareToken(r.token) } catch(e:any){ message.error(e?.message||'Failed to rotate code') } }}
       />
 
       {/* Create List Modal */}

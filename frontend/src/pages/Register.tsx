@@ -1,28 +1,26 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { registerAuth } from '@api/endpoints'
-import { Card, Typography, Form, Input, Button, Alert } from 'antd'
+import { Card, Typography, Form, Input, Button, message } from 'antd'
 
 export const Register: React.FC = () => {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
+  
   const navigate = useNavigate()
 
   async function onRegister(e: React.FormEvent) {
     e.preventDefault()
-    setError(null)
     setLoading(true)
     try {
       await registerAuth(username.trim(), password, name.trim())
-      setSuccess(true)
+      message.success('Account created. Redirecting to login…')
       // Ask them to login afterwards per requirement
       setTimeout(() => navigate('/login', { replace: true }), 800)
     } catch (err: any) {
-      setError(err?.message || 'Registration failed')
+      message.error(err?.message || 'Registration failed')
     } finally {
       setLoading(false)
     }
@@ -63,8 +61,7 @@ export const Register: React.FC = () => {
             Create Account
           </Button>
         </Form>
-        {error && <><div className="spacer" /><Alert type="error" message={error} showIcon /></>}
-        {success && <><div className="spacer" /><Alert type="success" message="Account created. Redirecting to login…" showIcon /></>}
+        
         <Typography.Text type="secondary" style={{ display: 'inline-block', paddingTop: 40 }}>
           Already have an account? <Link to="/login" className="link-primary">Log in</Link>
         </Typography.Text>

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@auth/AuthProvider'
 import { rotateShare, voteDeletion, cancelDeletion, updateRoomSettings, getMyRoom } from '@api/endpoints'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Card, Typography, Space, Button, Input, Alert, Form, Grid } from 'antd'
+import { Card, Typography, Space, Button, Input, Form, Grid, message } from 'antd'
 import { ArrowLeft, FloppyDisk, ShareNetwork, Trash, XCircle } from '@phosphor-icons/react'
 import { isValidDisplayName, MAX_DESCRIPTION } from '@lib/validation'
 import { ShareCodeModal } from '@components/ShareCodeModal'
@@ -18,8 +18,6 @@ export const RoomSettings: React.FC = () => {
   const [displayName, setDisplayName] = useState('')
   const [description, setDescription] = useState('')
   const [initialized, setInitialized] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState<string | null>(null)
   const [shareOpen, setShareOpen] = useState(false)
   const [shareToken, setShareToken] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -43,14 +41,12 @@ export const RoomSettings: React.FC = () => {
 
   const onSave = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError(null)
-    setSuccess(null)
     if (displayName && !nameValid) {
-      setError('Display name must be alphanumeric with spaces, up to 64 chars')
+      message.error('Display name must be alphanumeric with spaces, up to 64 chars')
       return
     }
     if (description.length > MAX_DESCRIPTION) {
-      setError('Description too long')
+      message.error('Description too long')
       return
     }
     setSaving(true)
@@ -59,53 +55,47 @@ export const RoomSettings: React.FC = () => {
       if (displayName !== originalName) payload.display_name = displayName || undefined
       if (description !== originalDesc) payload.description = description
       await updateRoomSettings(apiKey!, payload)
-      setSuccess('Saved')
+      message.success('Saved')
       qc.invalidateQueries({ queryKey: ['my-room'] })
     } catch (e: any) {
-      setError(e?.message || 'Failed to save')
+      message.error(e?.message || 'Failed to save')
     } finally {
       setSaving(false)
     }
   }
 
   const onShare = async () => {
-    setError(null)
-    setSuccess(null)
     try {
       const r = await rotateShare(apiKey!)
       setShareToken(r.token)
       setShareOpen(true)
     } catch (e: any) {
-      setError(e?.message || 'Failed to rotate share code')
+      message.error(e?.message || 'Failed to rotate share code')
     }
   }
 
   const onVoteDelete = async () => {
-    setError(null)
-    setSuccess(null)
     try {
       const res = await voteDeletion(apiKey!)
       if (res.deleted) {
         // Room deleted; go back to dashboard
         navigate('/app', { replace: true })
       } else {
-        setSuccess('Deletion vote recorded')
+        message.success('Deletion vote recorded')
       }
       qc.invalidateQueries({ queryKey: ['my-room'] })
     } catch (e: any) {
-      setError(e?.message || 'Failed to vote deletion')
+      message.error(e?.message || 'Failed to vote deletion')
     }
   }
 
   const onCancelVote = async () => {
-    setError(null)
-    setSuccess(null)
     try {
       await cancelDeletion(apiKey!)
-      setSuccess('Deletion vote canceled')
+      message.success('Deletion vote canceled')
       qc.invalidateQueries({ queryKey: ['my-room'] })
     } catch (e: any) {
-      setError(e?.message || 'Failed to cancel vote')
+      message.error(e?.message || 'Failed to cancel vote')
     }
   }
 
@@ -154,8 +144,6 @@ export const RoomSettings: React.FC = () => {
             onRotate={onShare}
             title="Share House"
           />
-          {error && <Alert type="error" message={error} showIcon />}
-          {success && <Alert type="success" message={success} showIcon />}        
         </Space>
       </Card>
     </div>

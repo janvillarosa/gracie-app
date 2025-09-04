@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getMe, getListItems, getLists, createListItem, updateListItem, deleteListItem, voteListDeletion, cancelListDeletion } from '@api/endpoints'
 import type { List, ListItem } from '@api/types'
 import { useLiveQueryOpts } from '@lib/liveQuery'
-import { Card, Typography, Space, Button, Input, Checkbox, List as AntList, Alert, Grid, Dropdown, message, Skeleton } from 'antd'
+import { Card, Typography, Space, Button, Input, Checkbox, List as AntList, Grid, Dropdown, message, Skeleton, Alert } from 'antd'
 import { ArrowLeft, Trash, Plus, Eye, EyeSlash, DotsThreeVertical } from '@phosphor-icons/react'
 import { toEmoji } from '../icons'
 import { confettiAt } from '@lib/confetti'
@@ -17,7 +17,7 @@ export const ListPage: React.FC = () => {
   const { listId = '' } = useParams()
   const [includeCompleted, setIncludeCompleted] = useState(false)
   const [newDesc, setNewDesc] = useState('')
-  const [error, setError] = useState<string | null>(null)
+  
   const [editingItemId, setEditingItemId] = useState<string | null>(null)
   const [savingItemId, setSavingItemId] = useState<string | null>(null)
   const checkboxRefs = useRef<Record<string, HTMLElement | null>>({})
@@ -94,17 +94,15 @@ export const ListPage: React.FC = () => {
 
   const onCreateItem = async () => {
     if (!newDesc.trim()) return
-    setError(null)
     try {
       await createListItem(apiKey!, roomId!, listId, newDesc.trim())
       setNewDesc('')
       await qc.invalidateQueries({ queryKey: ['list-items', listId] })
-    } catch (e: any) { setError(e?.message || 'Failed to add item') }
+    } catch (e: any) { msgApi.error(e?.message || 'Failed to add item') }
   }
 
   const onToggleComplete = async (it: ListItem) => {
     if (savingItemId === it.item_id || editingItemId === it.item_id) return
-    setError(null)
     try {
       await updateListItem(apiKey!, roomId!, listId, it.item_id, { completed: !it.completed })
       // Play confetti when marking complete
@@ -116,16 +114,15 @@ export const ListPage: React.FC = () => {
         }
       }
       await qc.invalidateQueries({ queryKey: ['list-items', listId] })
-    } catch (e: any) { setError(e?.message || 'Failed to update item') }
+    } catch (e: any) { msgApi.error(e?.message || 'Failed to update item') }
   }
 
   const onDeleteItem = async (it: ListItem) => {
     if (savingItemId === it.item_id) return
-    setError(null)
     try {
       await deleteListItem(apiKey!, roomId!, listId, it.item_id)
       await qc.invalidateQueries({ queryKey: ['list-items', listId] })
-    } catch (e: any) { setError(e?.message || 'Failed to delete item') }
+    } catch (e: any) { msgApi.error(e?.message || 'Failed to delete item') }
   }
 
   const startEdit = (it: ListItem) => {
@@ -136,14 +133,13 @@ export const ListPage: React.FC = () => {
   const submitEdit = async (it: ListItem, next: string) => {
     const trimmed = next.trim()
     if (trimmed === it.description.trim()) { setEditingItemId(null); return }
-    setError(null)
     try {
       setSavingItemId(it.item_id)
       await updateListItem(apiKey!, roomId!, listId, it.item_id, { description: trimmed })
       setEditingItemId(null)
       await qc.invalidateQueries({ queryKey: ['list-items', listId] })
     } catch (e: any) {
-      setError(e?.message || 'Failed to update item')
+      msgApi.error(e?.message || 'Failed to update item')
     } finally {
       setSavingItemId(null)
     }
@@ -151,7 +147,6 @@ export const ListPage: React.FC = () => {
 
   const myVote = (l?: List) => !!l?.deletion_votes && !!userId && !!l.deletion_votes[userId]
   const onVoteDelete = async () => {
-    setError(null)
     try {
       const res = await voteListDeletion(apiKey!, roomId!, listId)
       await qc.invalidateQueries({ queryKey: ['lists', roomId] })
@@ -160,14 +155,13 @@ export const ListPage: React.FC = () => {
         show('List is successfully deleted')
         navigate('/app')
       }
-    } catch (e: any) { setError(e?.message || 'Failed to vote deletion') }
+    } catch (e: any) { msgApi.error(e?.message || 'Failed to vote deletion') }
   }
   const onCancelVote = async () => {
-    setError(null)
     try {
       await cancelListDeletion(apiKey!, roomId!, listId)
       await qc.invalidateQueries({ queryKey: ['lists', roomId] })
-    } catch (e: any) { setError(e?.message || 'Failed to cancel vote') }
+    } catch (e: any) { msgApi.error(e?.message || 'Failed to cancel vote') }
   }
 
   if (meQuery.isLoading || listsQuery.isLoading || itemsQuery.isLoading) {
@@ -384,7 +378,7 @@ export const ListPage: React.FC = () => {
                 )}
               </>
             )}
-            {error && <Alert type="error" message={error} showIcon />}
+            
           </Space>
         </Card>
       </div>

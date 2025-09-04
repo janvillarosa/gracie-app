@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react'
 import { useAuth } from '@auth/AuthProvider'
 import { createRoom, updateRoomSettings, isConflict, isForbidden, joinRoomByToken } from '@api/endpoints'
-import { Card, Typography, Form, Input, Button, Alert, Space, Grid, Divider } from 'antd'
+import { Card, Typography, Form, Input, Button, Space, Grid, Divider, message } from 'antd'
 import { SignOut, Plus, UsersThree } from '@phosphor-icons/react'
 import { CreateHouseModal } from '@components/CreateHouseModal'
 import { useNavigate } from 'react-router-dom'
@@ -12,7 +12,7 @@ export const NoRoomPage: React.FC = () => {
   const { apiKey, setApiKey } = useAuth()
   const navigate = useNavigate()
   const [token, setToken] = useState('')
-  const [error, setError] = useState<string | null>(null)
+  
   const [loading, setLoading] = useState(false)
   const [createOpen, setCreateOpen] = useState(false)
   const [creating, setCreating] = useState(false)
@@ -20,7 +20,6 @@ export const NoRoomPage: React.FC = () => {
   const tokenValid = useMemo(() => token.length === 5 && [...token].every((c) => TOKEN_ALPHABET.includes(c)), [token])
 
   const onCreateWithDetails = async (vals: { display_name?: string; description?: string }) => {
-    setError(null)
     setCreating(true)
     try {
       await createRoom(apiKey!)
@@ -30,7 +29,7 @@ export const NoRoomPage: React.FC = () => {
       setCreateOpen(false)
       navigate('/app', { replace: true })
     } catch (e: any) {
-      setError(e?.message || 'Failed to create house')
+      message.error(e?.message || 'Failed to create house')
     } finally {
       setCreating(false)
     }
@@ -38,15 +37,14 @@ export const NoRoomPage: React.FC = () => {
 
   const onJoin = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError(null)
     setLoading(true)
     try {
       await joinRoomByToken(apiKey!, token.trim().toUpperCase())
       window.location.reload()
     } catch (e: any) {
-      if (isForbidden(e)) setError('Invalid code for this house.')
-      else if (isConflict(e)) setError('Join not allowed: the house may be full.')
-      else setError(e?.message || 'Failed to join house')
+      if (isForbidden(e)) message.error('Invalid code for this house.')
+      else if (isConflict(e)) message.error('Join not allowed: the house may be full.')
+      else message.error(e?.message || 'Failed to join house')
     } finally {
       setLoading(false)
     }
@@ -105,7 +103,7 @@ export const NoRoomPage: React.FC = () => {
               )}
             </Form>
           </div>
-          {error && <Alert type="error" message={error} showIcon />}
+          
         </Space>
         <CreateHouseModal open={createOpen} onClose={() => setCreateOpen(false)} onSubmit={onCreateWithDetails} submitting={creating} />
       </Card>
