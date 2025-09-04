@@ -69,10 +69,10 @@ func (s *RoomService) JoinRoom(ctx context.Context, joiner *models.User, roomID,
     if joiner.RoomID != nil && *joiner.RoomID != "" {
         jr, err := s.rooms.GetByID(ctx, *joiner.RoomID)
         if err != nil { return nil, err }
-        // Preserve invariant: a user can belong to only one room at a time.
-        // If the joiner already belongs to a room with other members, block joining.
-        if len(jr.MemberIDs) > 1 { return nil, derr.ErrConflict }
-        deleteSolo = jr
+        // If the joiner currently has a solo room (only them), delete it post-join.
+        if len(jr.MemberIDs) == 1 && jr.MemberIDs[0] == joiner.UserID {
+            deleteSolo = jr
+        }
     }
     if err := s.tx.WithTransaction(ctx, func(txctx context.Context) error {
         if err := s.rooms.AddMember(txctx, rm.RoomID, joiner.UserID, now); err != nil { return err }

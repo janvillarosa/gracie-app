@@ -122,7 +122,7 @@ Uses API key issued at signup. Send header `Authorization: Bearer <api_key>` on 
 - GET `/rooms/me`: returns current room; `404` if none.
 - POST `/rooms`: create solo room if none; `409` if already in one.
 - POST `/rooms/share`: rotate share token, returns `{ room_id, token }`.
-- POST `/rooms/{room_id}/join`: body `{ token }` → join a room by code. If the joiner has a solo room, it is deleted atomically. Errors: `403` (bad token), `409` (joiner already belongs to a different room with other members).
+- POST `/rooms/{room_id}/join`: body `{ token }` → join a room by code. If the joiner has a solo room, it is deleted atomically. Errors: `403` (bad token), `409` (already a member of the room).
 - POST `/rooms/deletion/vote`: record vote; when all current members have voted, deletes the room and clears each member’s `room_id`. Response `{ deleted: true|false }`.
 - POST `/rooms/deletion/cancel`: cancels caller’s vote.
 

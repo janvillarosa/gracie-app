@@ -46,7 +46,7 @@ export const NoRoomPage: React.FC = () => {
       window.location.reload()
     } catch (e: any) {
       if (isForbidden(e)) message.error('Invalid code for this house.')
-      else if (isConflict(e)) message.error('Join not allowed: you may already be in another house.')
+      else if (isConflict(e)) message.error('You’re already a member of this house.')
       else message.error(e?.message || 'Failed to join house')
     } finally {
       setLoading(false)

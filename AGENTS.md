@@ -77,7 +77,7 @@ ListItems (`list_items`)
 - Signup (API‑key): Create user + API key (hash + lookup) and a solo room; set `room_id` on the user. Transactional.
 - Register/Login (email/password): Register creates user with encrypted bcrypt; Login verifies and rotates API key, returning it to the client.
 - Share: Rotate a 5‑char share code (URL‑safe, excluding I/O/L) for the current room.
-- Join: Validate share code and add the joiner to the room; set `room_id` for the joiner. If the joiner has a solo room, delete it in the same transaction. Users can belong to only one room at a time.
+- Join: Validate share code and add the joiner to the room; set `room_id` for the joiner. If the joiner has a solo room, delete it in the same transaction.
 - Deletion by consensus: Each member votes; when all current members have voted, transactionally delete the room and clear `room_id` on all users. Prefer conditional Delete on the room over ConditionCheck to avoid multiple ops on one item in a transaction.
 
 ## Key Design Decisions
