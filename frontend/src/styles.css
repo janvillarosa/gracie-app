@@ -390,6 +390,7 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
 /* No-room page sections and divider */
 .no-room-card .section { padding: 8px 0; }
 .no-room-divider { border-block-start: 1px solid var(--border-strong) !important; margin: 12px 0 !important; }
+.settings-divider { border-block-start: 1px solid var(--border-strong) !important; margin: 12px 0 !important; }
 .no-room-card .ant-btn { width: auto; }
 @media (max-width: 767px) {
   .no-room-card .ant-btn { width: 100%; }

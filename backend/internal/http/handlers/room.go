@@ -8,14 +8,20 @@ import (
     derr "github.com/janvillarosa/gracie-app/backend/internal/errors"
     "github.com/janvillarosa/gracie-app/backend/internal/services"
     "github.com/janvillarosa/gracie-app/backend/internal/store"
+    "github.com/janvillarosa/gracie-app/backend/pkg/ids"
 )
 
 type RoomHandler struct {
-    Rooms *services.RoomService
-    Users store.UserRepository
+    Rooms       *services.RoomService
+    Users       store.UserRepository
+    AvatarSalt  []byte
+    AvatarStyle string
 }
 
-func NewRoomHandler(rooms *services.RoomService, users store.UserRepository) *RoomHandler { return &RoomHandler{Rooms: rooms, Users: users} }
+func NewRoomHandler(rooms *services.RoomService, users store.UserRepository, avatarSalt []byte, avatarStyle string) *RoomHandler {
+    if avatarStyle == "" { avatarStyle = "adventurer-neutral" }
+    return &RoomHandler{Rooms: rooms, Users: users, AvatarSalt: avatarSalt, AvatarStyle: avatarStyle}
+}
 
 func (h *RoomHandler) GetMyRoom(w http.ResponseWriter, r *http.Request) {
     u, ok := api.UserFrom(r.Context())
@@ -34,9 +40,14 @@ func (h *RoomHandler) GetMyRoom(w http.ResponseWriter, r *http.Request) {
     }
     // Build a view without internal IDs
     members := []string{}
+    membersMeta := make([]map[string]any, 0, len(rm.MemberIDs))
     for _, mid := range rm.MemberIDs {
         if m, err := h.Users.GetByID(r.Context(), mid); err == nil {
             members = append(members, m.Name)
+            membersMeta = append(membersMeta, map[string]any{
+                "name": m.Name,
+                "avatar_key": ids.DeriveAvatarKey(m.UserID, h.AvatarSalt),
+            })
         }
     }
     myVote := false
@@ -47,6 +58,7 @@ func (h *RoomHandler) GetMyRoom(w http.ResponseWriter, r *http.Request) {
         "display_name": rm.DisplayName,
         "description":  rm.Description,
         "members":      members,
+        "members_meta": membersMeta,
         "created_at":   rm.CreatedAt,
         "updated_at":   rm.UpdatedAt,
         "my_deletion_vote": myVote,
@@ -116,15 +128,21 @@ func (h *RoomHandler) JoinRoom(w http.ResponseWriter, r *http.Request) {
     }
     // Return a sanitized view
     members := []string{}
+    membersMeta := make([]map[string]any, 0, len(rm.MemberIDs))
     for _, mid := range rm.MemberIDs {
         if m, err := h.Users.GetByID(r.Context(), mid); err == nil {
             members = append(members, m.Name)
+            membersMeta = append(membersMeta, map[string]any{
+                "name": m.Name,
+                "avatar_key": ids.DeriveAvatarKey(m.UserID, h.AvatarSalt),
+            })
         }
     }
     api.WriteJSON(w, http.StatusOK, map[string]any{
         "display_name": rm.DisplayName,
         "description":  rm.Description,
         "members":      members,
+        "members_meta": membersMeta,
         "created_at":   rm.CreatedAt,
         "updated_at":   rm.UpdatedAt,
     })
@@ -152,15 +170,21 @@ func (h *RoomHandler) JoinByToken(w http.ResponseWriter, r *http.Request) {
         return
     }
     members := []string{}
+    membersMeta := make([]map[string]any, 0, len(rm.MemberIDs))
     for _, mid := range rm.MemberIDs {
         if m, err := h.Users.GetByID(r.Context(), mid); err == nil {
             members = append(members, m.Name)
+            membersMeta = append(membersMeta, map[string]any{
+                "name": m.Name,
+                "avatar_key": ids.DeriveAvatarKey(m.UserID, h.AvatarSalt),
+            })
         }
     }
     api.WriteJSON(w, http.StatusOK, map[string]any{
         "display_name": rm.DisplayName,
         "description":  rm.Description,
         "members":      members,
+        "members_meta": membersMeta,
         "created_at":   rm.CreatedAt,
         "updated_at":   rm.UpdatedAt,
     })
@@ -247,15 +271,21 @@ func (h *RoomHandler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
         return
     }
     members := []string{}
+    membersMeta := make([]map[string]any, 0, len(rm.MemberIDs))
     for _, mid := range rm.MemberIDs {
         if m, err := h.Users.GetByID(r.Context(), mid); err == nil {
             members = append(members, m.Name)
+            membersMeta = append(membersMeta, map[string]any{
+                "name": m.Name,
+                "avatar_key": ids.DeriveAvatarKey(m.UserID, h.AvatarSalt),
+            })
         }
     }
     api.WriteJSON(w, http.StatusOK, map[string]any{
         "display_name": rm.DisplayName,
         "description":  rm.Description,
         "members":      members,
+        "members_meta": membersMeta,
         "created_at":   rm.CreatedAt,
         "updated_at":   rm.UpdatedAt,
     })

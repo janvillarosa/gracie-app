@@ -5,12 +5,15 @@ export type User = {
   room_id?: string | null
   created_at: string
   updated_at: string
+  avatar_key?: string
+  avatar_style?: string
 }
 
 export type RoomView = {
   display_name?: string
   description?: string
   members: string[]
+  members_meta?: { name: string; avatar_key: string }[]
   created_at: string
   updated_at: string
   my_deletion_vote?: boolean

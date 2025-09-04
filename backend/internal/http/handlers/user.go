@@ -5,13 +5,19 @@ import (
 
     api "github.com/janvillarosa/gracie-app/backend/internal/http"
     "github.com/janvillarosa/gracie-app/backend/internal/services"
+    "github.com/janvillarosa/gracie-app/backend/pkg/ids"
 )
 
 type UserHandler struct {
-    Users *services.UserService
+    Users        *services.UserService
+    AvatarSalt   []byte
+    AvatarStyle  string
 }
 
-func NewUserHandler(users *services.UserService) *UserHandler { return &UserHandler{Users: users} }
+func NewUserHandler(users *services.UserService, avatarSalt []byte, avatarStyle string) *UserHandler {
+    if avatarStyle == "" { avatarStyle = "adventurer-neutral" }
+    return &UserHandler{Users: users, AvatarSalt: avatarSalt, AvatarStyle: avatarStyle}
+}
 
 type createUserReq struct {
     Name string `json:"name"`
@@ -56,6 +62,8 @@ func (h *UserHandler) GetMe(w http.ResponseWriter, r *http.Request) {
         "room_id":    u.RoomID,
         "created_at": u.CreatedAt,
         "updated_at": u.UpdatedAt,
+        "avatar_key": ids.DeriveAvatarKey(u.UserID, h.AvatarSalt),
+        "avatar_style": h.AvatarStyle,
     }
     api.WriteJSON(w, http.StatusOK, respUser)
 }

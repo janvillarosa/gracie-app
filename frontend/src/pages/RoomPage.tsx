@@ -9,6 +9,7 @@ import { Card, Typography, Space, Button, Modal, Input, List as AntList, Grid, D
 import { DotsThreeVertical, CaretRight, ShareNetwork, Plus, FloppyDisk, X } from '@phosphor-icons/react'
 import type { MenuProps } from 'antd'
 import { IconPicker } from '@components/IconPicker'
+import { AvatarBadge } from '@components/AvatarBadge'
 import { ShareCodeModal } from '@components/ShareCodeModal'
 import { toEmoji } from '../icons'
 import type { ListIcon } from '@api/types'
@@ -151,7 +152,18 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
           {room.description && (
             <Typography.Text type="secondary">{room.description}</Typography.Text>
           )}
-          <div>Members: {room.members?.join(', ') || '—'}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 15 }}>
+            <Typography.Text type="secondary">Members:</Typography.Text>
+            <Space size={8} wrap>
+              {(room as any).members_meta?.length ? (
+                (room as any).members_meta.map((m: any, idx: number) => (
+                  <AvatarBadge key={idx} seed={m.avatar_key} name={m.name} size={35} style="miniavs" />
+                ))
+              ) : (
+                <span>{room.members?.join(', ') || '—'}</span>
+              )}
+            </Space>
+          </div>
         </Card>
 
         {/* Top list sheet: lists and actions */}

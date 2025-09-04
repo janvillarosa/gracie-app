@@ -20,6 +20,8 @@ type Config struct {
     // Mongo settings (used when DataStore == "mongo")
     MongoURI    string
     MongoDB     string
+    // AvatarSalt is used to derive deterministic avatar keys (HMAC of user_id).
+    AvatarSalt  string
 }
 
 func getEnv(key, def string) string {
@@ -43,6 +45,7 @@ func Load() (*Config, error) {
         DataStore:   getEnv("DATA_STORE", "mongo"),
         MongoURI:    getEnv("MONGODB_URI", "mongodb://localhost:27017"),
         MongoDB:     getEnv("MONGODB_DB", "gracie"),
+        AvatarSalt:  getEnv("AVATAR_SALT", "local-avatar-salt"),
     }
 
     // If DDB_ENDPOINT is explicitly set to empty or "aws", use AWS-managed DynamoDB (no custom endpoint)

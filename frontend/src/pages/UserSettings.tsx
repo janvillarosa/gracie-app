@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getMe, updateMyProfile, changeMyPassword, deleteMyAccount } from '@api/endpoints'
 import type { User } from '@api/types'
 import { Card, Typography, Space, Button, Input, Form, Modal, Grid, Divider, message } from 'antd'
+import { Avatar } from '@components/Avatar'
 import { ArrowLeft, FloppyDisk, Trash } from '@phosphor-icons/react'
 
 function isEmail(v: string) {
@@ -117,16 +118,30 @@ export const UserSettings: React.FC = () => {
 
           <Form layout="vertical" onSubmitCapture={onSaveProfile}>
             <Typography.Title level={4} style={{ marginTop: 0 }}>Profile</Typography.Title>
-            <Form.Item label="Display name">
-              <Input value={name} onChange={(e) => setName(e.target.value)} />
-            </Form.Item>
-            <Form.Item label="Email">
-              <Input value={email} onChange={(e) => setEmail(e.target.value)} inputMode="email" />
-            </Form.Item>
-            <Button type="primary" htmlType="submit" disabled={!canSaveProfile || profileSaving} icon={<FloppyDisk />}>Save Profile</Button>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: isMobile ? 'wrap' as const : 'nowrap' as const }}>
+              <div style={{ flex: 1, minWidth: 280 }}>
+                <Form.Item label="Display name">
+                  <Input value={name} onChange={(e) => setName(e.target.value)} />
+                </Form.Item>
+                <Form.Item label="Email">
+                  <Input value={email} onChange={(e) => setEmail(e.target.value)} inputMode="email" />
+                </Form.Item>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                {meQuery.data?.avatar_key && (
+                  <Avatar seed={meQuery.data.avatar_key} size={96} style={'miniavs'} alt={`${name || email || 'User'} avatar`} />
+                )}
+                <Typography.Text type="secondary" style={{ textAlign: 'center', maxWidth: 220 }}>
+                  This avatar is auto‑generated. Changing it isn’t supported yet.
+                </Typography.Text>
+              </div>
+            </div>
+            <div style={{ paddingTop: 8 }}>
+              <Button type="primary" htmlType="submit" disabled={!canSaveProfile || profileSaving} icon={<FloppyDisk />}>Save Profile</Button>
+            </div>
           </Form>
 
-          <Divider />
+          <Divider className="settings-divider" />
 
           <Form layout="vertical" onSubmitCapture={onSavePassword}>
             <Typography.Title level={4} style={{ marginTop: 0 }}>Password</Typography.Title>
@@ -144,7 +159,7 @@ export const UserSettings: React.FC = () => {
             <Button type="primary" htmlType="submit" disabled={!canSavePwd || pwdSaving} icon={<FloppyDisk />}>Save Password</Button>
           </Form>
 
-          <Divider />
+          <Divider className="settings-divider" />
 
           <div>
             <Typography.Title level={4} style={{ marginTop: 0 }}>Danger zone</Typography.Title>
