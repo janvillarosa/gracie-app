@@ -1,6 +1,6 @@
-# Gracie Frontend (React + Vite)
+# Bauhouse Frontend (React + Vite)
 
-Simple UI for the Gracie backend flows:
+Simple UI for the Bauhouse backend flows:
 
 - Login or Register (API key)
 - View current house (if any)
