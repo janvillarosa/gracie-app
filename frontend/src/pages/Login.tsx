@@ -34,10 +34,21 @@ export const Login: React.FC = () => {
         <Typography.Title level={2} style={{ marginTop: 0 }}>Welcome</Typography.Title>
         <Form layout="vertical" onSubmitCapture={onLogin}>
           <Form.Item label="Email">
-            <Input placeholder="Email" value={username} onChange={(e) => setUsername(e.target.value)} />
+            <Input
+              placeholder="you@example.com"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              autoComplete="email"
+              inputMode="email"
+            />
           </Form.Item>
           <Form.Item label="Password">
-            <Input.Password placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
+            <Input.Password
+              placeholder="Your password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+            />
           </Form.Item>
           <Button type="primary" htmlType="submit" disabled={!username || !password || loading} size="large" block>
             Log In

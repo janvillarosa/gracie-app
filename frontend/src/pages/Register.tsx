@@ -35,13 +35,29 @@ export const Register: React.FC = () => {
         <Typography.Title level={2} style={{ marginTop: 0 }}>Create account</Typography.Title>
         <Form layout="vertical" onSubmitCapture={onRegister}>
           <Form.Item label="Email (username)">
-            <Input placeholder="Email (username)" value={username} onChange={(e) => setUsername(e.target.value)} />
+            <Input
+              placeholder="you@example.com"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              autoComplete="email"
+              inputMode="email"
+            />
           </Form.Item>
           <Form.Item label="Password (min 8 chars)">
-            <Input.Password placeholder="Password (min 8 chars)" value={password} onChange={(e) => setPassword(e.target.value)} />
+            <Input.Password
+              placeholder="At least 8 characters"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="new-password"
+            />
           </Form.Item>
           <Form.Item label="Display name (optional)">
-            <Input placeholder="Display name (optional)" value={name} onChange={(e) => setName(e.target.value)} />
+            <Input
+              placeholder="Your name (optional)"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              autoComplete="name"
+            />
           </Form.Item>
           <Button type="primary" htmlType="submit" disabled={!username || password.length < 8 || loading} size="large" block>
             Create Account

@@ -51,7 +51,7 @@ body {
   display: flex;
   align-items: flex-start;
 }
-.login-page .container { width: 100%; }
+.login-page .container { width: 100%; max-width: 520px; }
 
 /* Make login panel shadow a touch more prominent */
 .login-page .paper-card {
