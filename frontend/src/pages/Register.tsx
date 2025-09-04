@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { registerAuth } from '@api/endpoints'
 import { Card, Typography, Form, Input, Button, message } from 'antd'
 import { useDocumentTitle } from '@lib/useDocumentTitle'
+import { BrandLogo } from '@components/BrandLogo'
 
 export const Register: React.FC = () => {
   useDocumentTitle('Register')
@@ -31,6 +32,7 @@ export const Register: React.FC = () => {
   return (
     <div className="login-page">
       <div className="container">
+      <BrandLogo to="/register" />
       <Card className="paper-card">
         <Typography.Title level={2} style={{ marginTop: 0 }}>Create account</Typography.Title>
         <Form layout="vertical" onSubmitCapture={onRegister}>

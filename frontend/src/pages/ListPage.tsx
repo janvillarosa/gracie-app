@@ -11,6 +11,7 @@ import { toEmoji } from '../icons'
 import { confettiAt } from '@lib/confetti'
 import { InlineEditText } from '@components/InlineEditText'
 import { useDocumentTitle } from '@lib/useDocumentTitle'
+import { BrandLogo } from '@components/BrandLogo'
 
 export const ListPage: React.FC = () => {
   const { apiKey } = useAuth()
@@ -183,6 +184,7 @@ export const ListPage: React.FC = () => {
 
   return (
     <div className="container">
+      <BrandLogo />
       {contextHolder}
       <div className="paper-stack">
         {/* Bottom sheet: title + details + actions */}

@@ -6,6 +6,7 @@ import { SignOut, Plus, UsersThree } from '@phosphor-icons/react'
 import { CreateHouseModal } from '@components/CreateHouseModal'
 import { useNavigate } from 'react-router-dom'
 import { useDocumentTitle } from '@lib/useDocumentTitle'
+import { BrandLogo } from '@components/BrandLogo'
 
 const TOKEN_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ0123456789' // no I, O, L
 
@@ -57,6 +58,7 @@ export const NoRoomPage: React.FC = () => {
 
   return (
     <div className="container">
+      <BrandLogo />
       <Card className="no-room-card">
         <Space direction="vertical" style={{ width: '100%' }} size="large">
           {isMobile ? (

@@ -4,6 +4,7 @@ import { useAuth } from '@auth/AuthProvider'
 import { loginAuth } from '@api/endpoints'
 import { Card, Typography, Form, Input, Button, message } from 'antd'
 import { useDocumentTitle } from '@lib/useDocumentTitle'
+import { BrandLogo } from '@components/BrandLogo'
 
 export const Login: React.FC = () => {
   const { setApiKey } = useAuth()
@@ -30,6 +31,7 @@ export const Login: React.FC = () => {
   return (
     <div className="login-page">
       <div className="container">
+      <BrandLogo to="/login" />
       <Card className="paper-card">
         <Typography.Title level={2} style={{ marginTop: 0 }}>Welcome</Typography.Title>
         <Form layout="vertical" onSubmitCapture={onLogin}>

@@ -6,6 +6,7 @@ import { getMe, getLists } from '@api/endpoints'
 import type { List } from '@api/types'
 import { Card, Typography, Space, Button, List as AntList, Alert } from 'antd'
 import { ArrowLeft, FolderOpen } from '@phosphor-icons/react'
+import { BrandLogo } from '@components/BrandLogo'
 import { useDocumentTitle } from '@lib/useDocumentTitle'
 
 export const ListsIndex: React.FC = () => {
@@ -41,6 +42,7 @@ export const ListsIndex: React.FC = () => {
 
   return (
     <div className="container">
+      <BrandLogo />
       <Card>
         <Space direction="vertical" style={{ width: '100%' }} size="large">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

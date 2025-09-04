@@ -11,6 +11,7 @@ import type { MenuProps } from 'antd'
 import { IconPicker } from '@components/IconPicker'
 import { AvatarBadge } from '@components/AvatarBadge'
 import { ShareCodeModal } from '@components/ShareCodeModal'
+import { BrandLogo } from '@components/BrandLogo'
 import { toEmoji } from '../icons'
 import type { ListIcon } from '@api/types'
 import { useDocumentTitle } from '@lib/useDocumentTitle'
@@ -113,6 +114,7 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
 
   return (
     <div className="container">
+      <BrandLogo />
       <div className="paper-stack">
         {/* Bottom meta sheet: title/description/share */}
         <Card className="paper-card paper-meta">

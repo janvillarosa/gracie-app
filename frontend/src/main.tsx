@@ -8,8 +8,12 @@ import { ConfigProvider, theme as antdTheme } from 'antd'
 import { IconContext } from '@phosphor-icons/react'
 import 'antd/dist/reset.css'
 import './styles.css'
+import { setupPWAAssets } from '@lib/pwaAssets'
 
 const queryClient = new QueryClient()
+
+// Inject icons/manifest before app mounts
+setupPWAAssets()
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
@@ -22,10 +26,11 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
               cssVar: true,
               algorithm: antdTheme.defaultAlgorithm,
               token: {
-                colorPrimary: 'var(--color-primary, #A094F2)',
-                colorLink: 'var(--color-primary, #A094F2)',
+                colorPrimary: 'var(--color-primary, #FFD417)',
+                colorLink: 'var(--brand-blue, #2348A6)',
                 colorWarning: 'var(--color-warning, #F3F78A)',
                 colorInfo: 'var(--color-secondary, #C7B090)',
+                colorError: 'var(--color-danger, #BE1E2D)',
                 colorText: 'var(--text, #3B3B3B)',
                 colorTextSecondary: 'var(--text-secondary, rgba(59,59,59,0.7))',
                 colorBgBase: 'var(--bg, #F7F7F7)',
@@ -35,7 +40,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
               },
               components: {
                 Button: {
-                  colorPrimary: 'var(--color-primary-deep, #7D6EF0)',
+                  colorPrimary: 'var(--color-primary, #FFD417)',
                 },
                 Modal: {
                   colorBgElevated: 'var(--panel)',

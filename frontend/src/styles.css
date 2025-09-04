@@ -8,11 +8,18 @@
   --text: #3B3B3B;          /* non-black primary text */
   --text-secondary: rgba(59, 59, 59, 0.70);
   --muted: #7A828E;         /* supplemental muted */
-  --color-primary: #A094F2;         /* lavender (general primary) */
-  --color-primary-deep: #7D6EF0;    /* deeper shade for primary buttons */
+  /* Brand palette */
+  --brand-yellow: #FFD417;          /* primary actions */
+  --brand-yellow-deep: #E6BE00;     /* hover/active shade */
+  --brand-red: #BE1E2D;             /* danger */
+  --brand-blue: #2348A6;            /* primary links */
+
+  /* Mapped theme tokens for compatibility */
+  --color-primary: var(--brand-yellow);
+  --color-primary-deep: var(--brand-yellow-deep);
   --color-secondary: #C7B090;       /* pastel tan */
-  --color-warning: #F3F78A;         /* softer yellow */
-  --color-danger: #ff4d4f;          /* ant default danger */
+  --color-warning: #FFE766;         /* soft light yellow */
+  --color-danger: var(--brand-red); /* brand danger */
   --border: #E6E6E6;                /* lighter borders */
   --border-strong: #D2D2D2;         /* stronger border for list items */
   --panel-subtle: #FAFAFA;          /* soft panel background for inline sections */
@@ -28,10 +35,10 @@
   --text: #f5f7fa;
   --text-secondary: rgba(245, 247, 250, 0.65);
   --muted: #b8c1cc;
-  --color-primary: #A094F2; /* keep brand */
+  --color-primary: var(--brand-yellow);
   --color-secondary: #BFA07A;
-  --color-warning: #EDF25E;
-  --color-danger: #ef4444;
+  --color-warning: #FFE766;
+  --color-danger: var(--brand-red);
   --border: #22303c;
 }
 
@@ -47,8 +54,8 @@ body {
 /* Auth pages */
 .login-page {
   min-height: 100vh;
-  /* Lighter purple background relative to primary deep */
-  background: color-mix(in srgb, var(--color-primary-deep, #7D6EF0) 85%, white);
+  /* Solid brand yellow background for auth screens */
+  background: var(--brand-yellow);
   display: flex;
   align-items: flex-start;
 }
@@ -59,9 +66,9 @@ body {
   box-shadow: 0 10px 26px rgba(0, 0, 0, 0.12);
 }
 
-/* Reusable purple link */
-.link-primary { color: var(--color-primary-deep, #7D6EF0) !important; }
-.link-primary:hover { color: var(--color-primary, #A094F2) !important; }
+/* Primary link color (brand blue) */
+.link-primary { color: var(--brand-blue) !important; }
+.link-primary:hover { color: color-mix(in srgb, var(--brand-blue) 86%, black) !important; }
 
 /* Headings: use Outfit only for titles across the app */
 h1, h2, h3, h4, h5,
@@ -102,19 +109,14 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
   transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease, box-shadow 180ms ease, filter 180ms ease, opacity 180ms ease;
 }
 
-/* Primary buttons: playful purple gradient + hover animation */
+/* Primary buttons: brand yellow */
 .ant-btn-primary {
-  border-color: var(--color-primary-deep, #7D6EF0) !important;
-  background-image:
-    radial-gradient(120% 180% at 50% 0%,
-      color-mix(in srgb, var(--color-primary-deep, #7D6EF0) 85%, white) 0%,
-      var(--color-primary-deep, #7D6EF0) 65%),
-    linear-gradient(135deg, #A094F2 0%, #7D6EF0 60%, #B9B0FA 100%) !important;
-  background-size: 160% 160%, 160% 160% !important;
-  background-position: 50% 0, 50% 0 !important;
+  border-color: var(--brand-yellow-deep) !important;
+  background: var(--brand-yellow) !important;
+  background-image: none !important;
+  color: #111 !important;
   transition: transform 120ms cubic-bezier(0.2, 0.8, 0.2, 1),
               box-shadow 200ms ease,
-              background-position 300ms ease,
               background-color 180ms ease,
               color 180ms ease,
               border-color 180ms ease,
@@ -126,14 +128,40 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
 }
 .ant-btn-primary:hover,
 .ant-btn-primary:focus {
-  background-position: 50% 40%, 50% 40% !important;
+  background: color-mix(in srgb, var(--brand-yellow) 88%, black) !important;
   box-shadow: 0 6px 14px rgba(0,0,0,0.12);
   transform: translateY(-1px) scale(1.03);
 }
 .ant-btn-primary:active {
-  background-position: 50% 60%, 50% 60% !important;
+  background: color-mix(in srgb, var(--brand-yellow) 80%, black) !important;
   transform: translateY(0) scale(0.98);
   box-shadow: 0 2px 6px rgba(0,0,0,0.10);
+}
+
+/* Ensure danger primary buttons use brand red */
+.ant-btn-primary.ant-btn-dangerous {
+  background: #BE1E2D !important; /* exact brand red */
+  border-color: #BE1E2D !important;
+  color: #fff !important;
+}
+.ant-btn-primary.ant-btn-dangerous:hover,
+.ant-btn-primary.ant-btn-dangerous:focus,
+.ant-btn-primary.ant-btn-dangerous:active {
+  background: #BE1E2D !important; /* keep exact shade */
+  border-color: #BE1E2D !important;
+}
+
+/* Default (non-primary) danger buttons */
+.ant-btn-dangerous:not(.ant-btn-primary) {
+  color: #BE1E2D !important;
+  border-color: #BE1E2D !important;
+}
+.ant-btn-dangerous:not(.ant-btn-primary):hover,
+.ant-btn-dangerous:not(.ant-btn-primary):focus,
+.ant-btn-dangerous:not(.ant-btn-primary):active {
+  color: #BE1E2D !important;
+  border-color: #BE1E2D !important;
+  background: rgba(190, 30, 45, 0.08) !important; /* subtle tint */
 }
 /* Disabled buttons: neutral grey, no purple gradient */
 .ant-btn[disabled],
@@ -168,6 +196,18 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
   max-width: 720px;
   margin: 0 auto;
   padding: 24px;
+}
+
+/* Brand logo alignment: sits above the main panel, aligned left */
+.brand-logo {
+  display: block;
+  /* Offset to start after the card's curved corner */
+  margin: 0 0 10px var(--radius-squircle);
+}
+.brand-logo-img {
+  display: block;
+  height: auto;
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,0.12));
 }
 
 /* Keep legacy layout wrappers; inner content now uses Ant components */

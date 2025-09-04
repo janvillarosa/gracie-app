@@ -19,6 +19,7 @@
       "@api/*": ["src/api/*"],
       "@auth/*": ["src/auth/*"],
       "@components/*": ["src/components/*"],
+      "@assets/*": ["src/assets/*"],
       "@pages/*": ["src/pages/*"],
       "@routes/*": ["src/routes/*"],
       "@lib/*": ["src/lib/*"]
@@ -26,4 +27,3 @@
   },
   "include": ["src"]
 }
-
