@@ -67,11 +67,10 @@ func (s *ListService) VoteListDeletion(ctx context.Context, user *models.User, r
     if l.RoomID != roomID { return false, derr.ErrForbidden }
     now := time.Now().UTC()
     if err := s.lists.AddDeletionVote(ctx, listID, user.UserID, now); err != nil { return false, err }
-    // finalize if both members voted
+    // finalize when all room members have voted
     rm, err := s.rooms.GetByID(ctx, roomID)
     if err != nil { return false, err }
-    if len(rm.MemberIDs) != 2 { return false, nil }
-    return s.lists.FinalizeDeleteIfBothVoted(ctx, listID, rm.MemberIDs[0], rm.MemberIDs[1], now)
+    return s.lists.FinalizeDeleteIfVotedByAll(ctx, listID, rm.MemberIDs, now)
 }
 
 func (s *ListService) CancelListDeletionVote(ctx context.Context, user *models.User, roomID, listID string) error {

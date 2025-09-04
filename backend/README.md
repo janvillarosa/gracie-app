@@ -123,14 +123,14 @@ Uses API key issued at signup. Send header `Authorization: Bearer <api_key>` on 
 - POST `/rooms`: create solo room if none; `409` if already in one.
 - POST `/rooms/share`: rotate share token, returns `{ room_id, token }`.
 - POST `/rooms/{room_id}/join`: body `{ token }` → join as second member. If joiner has a solo room, it is deleted atomically. Errors: `403` (bad token), `409` (room full, or joiner already in 2-person room).
-- POST `/rooms/deletion/vote`: record vote; when both members have voted, deletes room and clears both users’ `room_id`. Response `{ deleted: true|false }`.
+- POST `/rooms/deletion/vote`: record vote; when all current members have voted, deletes the room and clears each member’s `room_id`. Response `{ deleted: true|false }`.
 - POST `/rooms/deletion/cancel`: cancels caller’s vote.
 
 Lists (per Room)
 - POST `/rooms/{room_id}/lists`: `{ name, description?, icon? }` → create a list. `icon` is an optional enum: HOUSE|CAR|PLANE|PENCIL|APPLE|BROCCOLI|TV|SUNFLOWER.
 - GET `/rooms/{room_id}/lists`: list all non-deleted lists for the room.
 - PATCH `/rooms/{room_id}/lists/{list_id}`: `{ name?, description?, icon? }` → update list details. To clear an icon, send `icon: ""`.
-- POST `/rooms/{room_id}/lists/{list_id}/deletion/vote`: record caller’s vote; when both room members vote, soft-deletes the list. `{ deleted: true|false }`.
+- POST `/rooms/{room_id}/lists/{list_id}/deletion/vote`: record caller’s vote; when all current room members have voted, soft-deletes the list. `{ deleted: true|false }`.
 - POST `/rooms/{room_id}/lists/{list_id}/deletion/cancel`: cancel caller’s vote.
 
 List Items

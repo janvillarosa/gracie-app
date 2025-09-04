@@ -45,7 +45,7 @@ type ListRepository interface {
     UpdateIcon(ctx context.Context, listID string, icon string, updatedAt time.Time) error
     AddDeletionVote(ctx context.Context, listID string, userID string, ts time.Time) error
     RemoveDeletionVote(ctx context.Context, listID string, userID string) error
-    FinalizeDeleteIfBothVoted(ctx context.Context, listID, uid1, uid2 string, ts time.Time) (bool, error)
+    FinalizeDeleteIfVotedByAll(ctx context.Context, listID string, memberIDs []string, ts time.Time) (bool, error)
     Delete(ctx context.Context, listID string) error
 }
 

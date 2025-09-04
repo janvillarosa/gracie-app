@@ -95,21 +95,24 @@ func (s *RoomService) VoteDeletion(ctx context.Context, voter *models.User) (boo
     if err := s.rooms.VoteDeletion(ctx, *voter.RoomID, voter.UserID, now); err != nil { return false, err }
     rm, err := s.rooms.GetByID(ctx, *voter.RoomID)
     if err != nil { return false, err }
-    if len(rm.MemberIDs) == 2 {
-        v1 := rm.DeletionVotes[rm.MemberIDs[0]]
-        v2 := rm.DeletionVotes[rm.MemberIDs[1]]
-        if v1 != "" && v2 != "" {
-            if err := s.tx.WithTransaction(ctx, func(txctx context.Context) error {
-                if err := s.rooms.Delete(txctx, rm.RoomID); err != nil { return err }
-                if err := s.users.SetRoomID(txctx, rm.MemberIDs[0], nil, now); err != nil { return err }
-                if err := s.users.SetRoomID(txctx, rm.MemberIDs[1], nil, now); err != nil { return err }
-                return nil
-            }); err != nil { return false, err }
-            go s.cleanupRoomResources(context.Background(), rm.RoomID)
-            return true, nil
+    // Delete when ALL current members have voted (works for solo rooms too)
+    allVoted := true
+    for _, mid := range rm.MemberIDs {
+        if rm.DeletionVotes[mid] == "" {
+            allVoted = false
+            break
         }
     }
-    return false, nil
+    if !allVoted { return false, nil }
+    if err := s.tx.WithTransaction(ctx, func(txctx context.Context) error {
+        if err := s.rooms.Delete(txctx, rm.RoomID); err != nil { return err }
+        for _, mid := range rm.MemberIDs {
+            if err := s.users.SetRoomID(txctx, mid, nil, now); err != nil { return err }
+        }
+        return nil
+    }); err != nil { return false, err }
+    go s.cleanupRoomResources(context.Background(), rm.RoomID)
+    return true, nil
 }
 
 func (s *RoomService) CancelDeletionVote(ctx context.Context, user *models.User) error {
@@ -136,4 +139,3 @@ func (s *RoomService) cleanupRoomResources(ctx context.Context, roomID string) {
     if err != nil { return }
     for _, l := range lists { _ = s.lists.Delete(ctx, l.ListID) }
 }
-

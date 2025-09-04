@@ -3,6 +3,7 @@ package dynamo
 import (
     "context"
     "errors"
+    "fmt"
     "time"
 
     "github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
@@ -173,9 +174,16 @@ func (r *ListRepo) UpdateIcon(ctx context.Context, listID string, icon string, u
     return err
 }
 
-// FinalizeDeleteIfBothVoted sets is_deleted=true when both member votes exist.
-// Pass the two userIDs who are members of the room.
-func (r *ListRepo) FinalizeDeleteIfBothVoted(ctx context.Context, listID, uid1, uid2 string, ts time.Time) (bool, error) {
+// FinalizeDeleteIfVotedByAll sets is_deleted=true when votes exist for all memberIDs passed.
+func (r *ListRepo) FinalizeDeleteIfVotedByAll(ctx context.Context, listID string, memberIDs []string, ts time.Time) (bool, error) {
+    // Build dynamic ConditionExpression requiring all deletion_votes for memberIDs
+    names := map[string]string{}
+    cond := "attribute_not_exists(is_deleted)"
+    for i, uid := range memberIDs {
+        key := fmt.Sprintf("#u%d", i)
+        names[key] = uid
+        cond = fmt.Sprintf("%s AND attribute_exists(deletion_votes.%s)", cond, key)
+    }
     _, err := r.c.DB.UpdateItem(ctx, &dynamodb.UpdateItemInput{
         TableName:        &r.c.Tables.Lists,
         Key:              map[string]types.AttributeValue{"list_id": &types.AttributeValueMemberS{Value: listID}},
@@ -184,8 +192,8 @@ func (r *ListRepo) FinalizeDeleteIfBothVoted(ctx context.Context, listID, uid1, 
             ":true": &types.AttributeValueMemberBOOL{Value: true},
             ":ua":   &types.AttributeValueMemberS{Value: ts.UTC().Format(time.RFC3339)},
         },
-        ExpressionAttributeNames: map[string]string{"#u1": uid1, "#u2": uid2},
-        ConditionExpression:      strPtr("attribute_exists(deletion_votes.#u1) AND attribute_exists(deletion_votes.#u2) AND attribute_not_exists(is_deleted)"),
+        ExpressionAttributeNames: names,
+        ConditionExpression:      &cond,
         ReturnValues:             types.ReturnValueNone,
     })
     if err != nil {

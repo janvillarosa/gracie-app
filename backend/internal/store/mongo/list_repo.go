@@ -96,12 +96,14 @@ func (r *ListRepo) RemoveDeletionVote(ctx context.Context, listID string, userID
     return err
 }
 
-func (r *ListRepo) FinalizeDeleteIfBothVoted(ctx context.Context, listID, uid1, uid2 string, ts time.Time) (bool, error) {
-    // Set is_deleted when both votes exist and not already deleted
-    res, err := r.col().UpdateOne(ctx,
-        bson.D{{Key: "list_id", Value: listID}, {Key: "deletion_votes." + uid1, Value: bson.D{{Key: "$exists", Value: true}}}, {Key: "deletion_votes." + uid2, Value: bson.D{{Key: "$exists", Value: true}}}, {Key: "is_deleted", Value: bson.D{{Key: "$ne", Value: true}}}},
-        bson.D{{Key: "$set", Value: bson.D{{Key: "is_deleted", Value: true}, {Key: "updated_at", Value: ts.UTC()}}}},
-    )
+func (r *ListRepo) FinalizeDeleteIfVotedByAll(ctx context.Context, listID string, memberIDs []string, ts time.Time) (bool, error) {
+    // Build filter requiring all member vote keys to exist
+    filter := bson.D{{Key: "list_id", Value: listID}}
+    for _, uid := range memberIDs {
+        filter = append(filter, bson.E{Key: "deletion_votes." + uid, Value: bson.D{{Key: "$exists", Value: true}}})
+    }
+    filter = append(filter, bson.E{Key: "is_deleted", Value: bson.D{{Key: "$ne", Value: true}}})
+    res, err := r.col().UpdateOne(ctx, filter, bson.D{{Key: "$set", Value: bson.D{{Key: "is_deleted", Value: true}, {Key: "updated_at", Value: ts.UTC()}}}})
     if err != nil { return false, err }
     return res.ModifiedCount > 0, nil
 }
