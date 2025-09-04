@@ -3,7 +3,6 @@ import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '@auth/AuthProvider'
 import { loginAuth } from '@api/endpoints'
 import { Card, Typography, Form, Input, Button, Alert } from 'antd'
-import { SignIn } from '@phosphor-icons/react'
 
 export const Login: React.FC = () => {
   const { setApiKey } = useAuth()
@@ -29,9 +28,10 @@ export const Login: React.FC = () => {
   }
 
   return (
-    <div className="container">
-      <Card>
-        <Typography.Title level={2} style={{ marginTop: 0 }}>Login</Typography.Title>
+    <div className="login-page">
+      <div className="container">
+      <Card className="paper-card">
+        <Typography.Title level={2} style={{ marginTop: 0 }}>Welcome</Typography.Title>
         <Form layout="vertical" onSubmitCapture={onLogin}>
           <Form.Item label="Email">
             <Input placeholder="Email" value={username} onChange={(e) => setUsername(e.target.value)} />
@@ -39,12 +39,16 @@ export const Login: React.FC = () => {
           <Form.Item label="Password">
             <Input.Password placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
           </Form.Item>
-          <Button type="primary" htmlType="submit" disabled={!username || !password || loading} icon={<SignIn />}>Login</Button>
+          <Button type="primary" htmlType="submit" disabled={!username || !password || loading} size="large" block>
+            Log In
+          </Button>
         </Form>
         {error && <><div className="spacer" /><Alert type="error" message={error} showIcon /></>}
-        <div className="spacer" />
-        <Typography.Text type="secondary">New here? <Link to="/register">Create an account</Link></Typography.Text>
+        <Typography.Text type="secondary" style={{ display: 'inline-block', paddingTop: 40 }}>
+          New here? <Link to="/register" className="link-primary">Create an account</Link>
+        </Typography.Text>
       </Card>
+      </div>
     </div>
   )
 }

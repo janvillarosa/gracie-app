@@ -43,6 +43,25 @@ body {
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
 }
 
+/* Auth pages */
+.login-page {
+  min-height: 100vh;
+  /* Lighter purple background relative to primary deep */
+  background: color-mix(in srgb, var(--color-primary-deep, #7D6EF0) 85%, white);
+  display: flex;
+  align-items: flex-start;
+}
+.login-page .container { width: 100%; }
+
+/* Make login panel shadow a touch more prominent */
+.login-page .paper-card {
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.12);
+}
+
+/* Reusable purple link */
+.link-primary { color: var(--color-primary-deep, #7D6EF0) !important; }
+.link-primary:hover { color: var(--color-primary, #A094F2) !important; }
+
 /* Headings: use Outfit only for titles across the app */
 h1, h2, h3, h4, h5,
 h1.ant-typography, h2.ant-typography, h3.ant-typography, h4.ant-typography, h5.ant-typography {
