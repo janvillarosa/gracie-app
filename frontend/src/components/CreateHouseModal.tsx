@@ -35,17 +35,19 @@ export const CreateHouseModal: React.FC<Props> = ({ open, onClose, onSubmit, sub
       open={open}
       onCancel={onClose}
       footer={
-        <Space>
-          <Button onClick={onClose}>Cancel</Button>
-          <Button type="primary" disabled={!canSubmit} onClick={() => onSubmit({ display_name: displayName || undefined, description: description || undefined })}>
-            Create
-          </Button>
-        </Space>
+        <div style={{ paddingTop: 12 }}>
+          <Space>
+            <Button onClick={onClose}>Cancel</Button>
+            <Button type="primary" disabled={!canSubmit} onClick={() => onSubmit({ display_name: displayName || undefined, description: description || undefined })}>
+              Create
+            </Button>
+          </Space>
+        </div>
       }
     >
       <Form layout="vertical">
         <Form.Item
-          label="House name"
+          label="Name"
           validateStatus={nameError ? 'error' : ''}
           help={nameError}
         >
@@ -58,7 +60,7 @@ export const CreateHouseModal: React.FC<Props> = ({ open, onClose, onSubmit, sub
           />
         </Form.Item>
         <Form.Item
-          label="Description (optional)"
+          label="Description"
           validateStatus={descError ? 'error' : ''}
           help={descError}
         >
@@ -76,4 +78,3 @@ export const CreateHouseModal: React.FC<Props> = ({ open, onClose, onSubmit, sub
 }
 
 export default CreateHouseModal
-

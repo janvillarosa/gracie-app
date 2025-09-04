@@ -283,7 +283,7 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
           </Space>
         }
       >
-        <Space direction="vertical" style={{ width: '100%' }}>
+        <Space direction="vertical" size="large" style={{ width: '100%', paddingTop: 8 }}>
           <Input
             placeholder="List name"
             value={editName}

@@ -18,6 +18,7 @@
   --panel-subtle: #FAFAFA;          /* soft panel background for inline sections */
   --font-headings: 'Outfit', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
   --radius-squircle: 16px;          /* unified rounded shape */
+  --ant-modal-footer-margin-top: 25px; /* app-wide modal footer spacing */
 }
 
 /* Optional dark theme hook if needed later */
@@ -93,6 +94,8 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
 .ant-modal .ant-modal-header, .ant-popover .ant-popover-inner, .ant-dropdown-menu, .ant-drawer .ant-drawer-header {
   background: var(--panel);
 }
+/* Hard override: ensure modal footer spacing applies */
+.ant-modal .ant-modal-footer { margin-top: 25px !important; }
 
 /* Buttons: smooth color transitions */
 .ant-btn {
