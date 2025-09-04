@@ -210,6 +210,28 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
   filter: drop-shadow(0 2px 6px rgba(0,0,0,0.12));
 }
 
+/* Wordmark next to logo on auth screen */
+.brand-banner {
+  margin: 0 0 10px var(--radius-squircle);
+}
+.brand-banner .brand-row {
+  display: flex;
+  align-items: center; /* align text bottom with logo bottom */
+  gap: 12px;
+}
+.brand-banner .brand-logo { margin: 0; }
+.brand-wordmark {
+  padding-top: 28px;
+  margin-left: -12px;
+  font-family: var(--font-headings) !important;
+  font-weight: 900;
+  font-size: clamp(48px, 3.4vw, 38px);
+  line-height: 1.0;
+  color: #000;
+  /* For variable fonts, push to max weight if supported */
+  font-variation-settings: 'wght' 900;
+}
+
 /* Keep legacy layout wrappers; inner content now uses Ant components */
 .panel { padding: 0; border: none; background: transparent; }
 

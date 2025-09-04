@@ -31,9 +31,14 @@ export const Login: React.FC = () => {
   return (
     <div className="login-page">
       <div className="container">
-      <BrandLogo to="/login" />
+      <div className="brand-banner">
+        <div className="brand-row">
+          <BrandLogo to="/login" size={80} />
+          <span className="brand-wordmark">Bauhouse</span>
+        </div>
+      </div>
       <Card className="paper-card">
-        <Typography.Title level={2} style={{ marginTop: 0 }}>Welcome</Typography.Title>
+        <Typography.Title level={2} style={{ marginTop: 0 }}>Log In</Typography.Title>
         <Form layout="vertical" onSubmitCapture={onLogin}>
           <Form.Item label="Email">
             <Input
