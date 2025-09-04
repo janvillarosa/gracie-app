@@ -87,3 +87,36 @@ func (s *AuthService) Login(ctx context.Context, username, password string) (*Lo
     }
     return &LoginResult{User: u, APIKey: plain}, nil
 }
+
+// ChangePassword verifies the current password when present, sets the new password,
+// rotates the API key, and returns the new api key. Enforces minimum length.
+func (s *AuthService) ChangePassword(ctx context.Context, userID, current, next string) (string, error) {
+    if len(next) < 8 { return "", derr.ErrBadRequest }
+    u, err := s.users.GetByID(ctx, userID)
+    if err != nil { return "", derr.ErrUnauthorized }
+    if u.PasswordEnc != "" {
+        if current == "" { return "", derr.ErrBadRequest }
+        ph, err := crypto.Decrypt(s.key, u.PasswordEnc)
+        if err != nil { return "", derr.ErrUnauthorized }
+        if bcrypt.CompareHashAndPassword(ph, []byte(current)) != nil { return "", derr.ErrUnauthorized }
+    }
+    // Hash and encrypt new password
+    phNew, err := bcrypt.GenerateFromPassword([]byte(next), bcrypt.DefaultCost)
+    if err != nil { return "", err }
+    enc, err := crypto.Encrypt(s.key, phNew)
+    if err != nil { return "", err }
+    now := time.Now().UTC()
+    if err := s.users.UpdatePasswordEnc(ctx, userID, enc, now); err != nil { return "", err }
+
+    // Rotate API key
+    plain, hash, err := apiauth.GenerateAPIKey()
+    if err != nil { return "", err }
+    lookup := apiauth.DeriveLookup(plain)
+    var exp *time.Time
+    if s.ttl > 0 {
+        e := now.Add(s.ttl)
+        exp = &e
+    }
+    if err := s.users.SetAPIKey(ctx, userID, hash, lookup, exp, now); err != nil { return "", err }
+    return plain, nil
+}

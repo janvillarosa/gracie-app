@@ -30,6 +30,10 @@ export async function updateMe(apiKey: string, name: string): Promise<User> {
   return apiFetch<User>('/me', { method: 'PUT', apiKey, body: JSON.stringify({ name }) })
 }
 
+export async function updateMyProfile(apiKey: string, params: { name?: string; username?: string }): Promise<void> {
+  await apiFetch<void>('/me', { method: 'PATCH', apiKey, body: JSON.stringify(params) })
+}
+
 export async function getMyRoom(apiKey: string): Promise<RoomView> {
   return apiFetch<RoomView>('/rooms/me', { apiKey })
 }
@@ -56,6 +60,14 @@ export async function cancelDeletion(apiKey: string): Promise<void> {
 
 export async function updateRoomSettings(apiKey: string, params: { display_name?: string; description?: string }): Promise<RoomView> {
   return apiFetch<RoomView>(`/rooms/settings`, { method: 'PUT', apiKey, body: JSON.stringify(params) })
+}
+
+export async function changeMyPassword(apiKey: string, params: { current_password?: string; new_password: string }): Promise<{ api_key: string }> {
+  return apiFetch<{ api_key: string }>(`/me/password`, { method: 'POST', apiKey, body: JSON.stringify(params) })
+}
+
+export async function deleteMyAccount(apiKey: string): Promise<void> {
+  await apiFetch<void>('/me', { method: 'DELETE', apiKey, body: JSON.stringify({ confirm: 'DELETE' }) })
 }
 
 export function isNotFound(err: unknown): err is ApiError {

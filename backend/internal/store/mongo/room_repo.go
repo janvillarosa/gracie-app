@@ -109,3 +109,8 @@ func (r *RoomRepo) AddMember(ctx context.Context, roomID string, userID string, 
     _, err := r.col().UpdateOne(ctx, bson.D{{Key: "room_id", Value: roomID}}, bson.D{{Key: "$addToSet", Value: bson.D{{Key: "member_ids", Value: userID}}}, {Key: "$set", Value: bson.D{{Key: "updated_at", Value: updatedAt.UTC()}}}})
     return err
 }
+
+func (r *RoomRepo) RemoveMember(ctx context.Context, roomID string, userID string, updatedAt time.Time) error {
+    _, err := r.col().UpdateOne(ctx, bson.D{{Key: "room_id", Value: roomID}}, bson.D{{Key: "$pull", Value: bson.D{{Key: "member_ids", Value: userID}}}, {Key: "$set", Value: bson.D{{Key: "updated_at", Value: updatedAt.UTC()}}}})
+    return err
+}

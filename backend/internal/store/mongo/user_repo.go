@@ -125,3 +125,18 @@ func (r *UserRepo) SetRoomID(ctx context.Context, userID string, roomID *string,
     _, err := r.col().UpdateOne(ctx, filterByUserID(userID), bson.D{{Key: "$set", Value: bson.D{{Key: "room_id", Value: *roomID}, {Key: "updated_at", Value: updatedAt.UTC()}}}})
     return err
 }
+
+func (r *UserRepo) UpdateUsername(ctx context.Context, userID string, username string, updatedAt time.Time) error {
+    _, err := r.col().UpdateOne(ctx, filterByUserID(userID), bson.D{{Key: "$set", Value: bson.D{{Key: "username", Value: username}, {Key: "updated_at", Value: updatedAt.UTC()}}}})
+    return err
+}
+
+func (r *UserRepo) UpdatePasswordEnc(ctx context.Context, userID string, enc string, updatedAt time.Time) error {
+    _, err := r.col().UpdateOne(ctx, filterByUserID(userID), bson.D{{Key: "$set", Value: bson.D{{Key: "password_enc", Value: enc}, {Key: "updated_at", Value: updatedAt.UTC()}}}})
+    return err
+}
+
+func (r *UserRepo) Delete(ctx context.Context, userID string) error {
+    _, err := r.col().DeleteOne(ctx, filterByUserID(userID))
+    return err
+}

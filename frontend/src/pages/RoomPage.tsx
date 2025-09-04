@@ -121,11 +121,13 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
           {(() => {
             const menu: MenuProps['items'] = [
               { key: 'settings', label: 'House Settings' },
+              { key: 'account', label: 'Account Settings' },
               { type: 'divider' as const },
               { key: 'logout', label: 'Logout' },
             ]
             const onMenuClick: MenuProps['onClick'] = ({ key }) => {
               if (key === 'settings') navigate('/app/settings')
+              if (key === 'account') navigate('/app/account')
               if (key === 'logout') setApiKey(null)
             }
             return isMobile ? (

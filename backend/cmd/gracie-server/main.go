@@ -38,6 +38,7 @@ func main() {
     userSvc := services.NewUserService(usersRepo, roomsRepo, tx)
     roomSvc := services.NewRoomService(usersRepo, roomsRepo, tx)
     roomSvc.UseListRepos(listsRepo, itemsRepo)
+    userSvc.UseListRepos(listsRepo, itemsRepo)
     listSvc := services.NewListService(usersRepo, roomsRepo, listsRepo, itemsRepo)
     authSvc, err := services.NewAuthService(usersRepo, cfg.EncKeyFile, cfg.APIKeyTTLHours)
     if err != nil { log.Fatalf("auth service: %v", err) }

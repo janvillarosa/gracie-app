@@ -46,6 +46,9 @@ func NewRouter(userFinder authmw.UserFinder, authHandler *handlers.AuthHandler, 
 
         ar.Get("/me", userHandler.GetMe)
         ar.Put("/me", userHandler.UpdateMe)
+        ar.Patch("/me", userHandler.UpdateMePartial)
+        ar.Post("/me/password", authHandler.ChangePassword)
+        ar.Delete("/me", userHandler.DeleteMe)
 
         ar.Get("/rooms/me", roomHandler.GetMyRoom)
         ar.Post("/rooms", roomHandler.CreateSoloRoom)

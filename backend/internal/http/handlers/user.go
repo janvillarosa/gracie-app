@@ -52,6 +52,7 @@ func (h *UserHandler) GetMe(w http.ResponseWriter, r *http.Request) {
     respUser := map[string]interface{}{
         "user_id":    u.UserID,
         "name":       u.Name,
+        "username":   u.Username,
         "room_id":    u.RoomID,
         "created_at": u.CreatedAt,
         "updated_at": u.UpdatedAt,
@@ -72,6 +73,60 @@ func (h *UserHandler) UpdateMe(w http.ResponseWriter, r *http.Request) {
     }
     if err := h.Users.UpdateName(r.Context(), u.UserID, req.Name); err != nil {
         api.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+        return
+    }
+    w.WriteHeader(http.StatusNoContent)
+}
+
+type updateProfileReq struct {
+    Name     *string `json:"name,omitempty"`
+    Username *string `json:"username,omitempty"`
+}
+
+// UpdateMePartial supports partial updates of user profile (name/email).
+func (h *UserHandler) UpdateMePartial(w http.ResponseWriter, r *http.Request) {
+    u, ok := api.UserFrom(r.Context())
+    if !ok {
+        api.WriteJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+        return
+    }
+    var req updateProfileReq
+    if err := api.DecodeJSON(r, &req); err != nil || (req.Name == nil && req.Username == nil) {
+        api.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request"})
+        return
+    }
+    if err := h.Users.UpdateProfile(r.Context(), u.UserID, req.Name, req.Username); err != nil {
+        code := http.StatusBadRequest
+        if err.Error() == "conflict" { code = http.StatusConflict }
+        api.WriteJSON(w, code, map[string]string{"error": err.Error()})
+        return
+    }
+    w.WriteHeader(http.StatusNoContent)
+}
+
+type changePasswordReq struct {
+    Current string `json:"current_password"`
+    Next    string `json:"new_password"`
+}
+
+
+type deleteReq struct {
+    Confirm string `json:"confirm"`
+}
+
+func (h *UserHandler) DeleteMe(w http.ResponseWriter, r *http.Request) {
+    u, ok := api.UserFrom(r.Context())
+    if !ok {
+        api.WriteJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+        return
+    }
+    var req deleteReq
+    if err := api.DecodeJSON(r, &req); err != nil || req.Confirm != "DELETE" {
+        api.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": "confirmation required"})
+        return
+    }
+    if err := h.Users.DeleteAccount(r.Context(), u.UserID); err != nil {
+        api.WriteJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
         return
     }
     w.WriteHeader(http.StatusNoContent)

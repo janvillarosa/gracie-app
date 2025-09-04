@@ -20,6 +20,9 @@ type UserRepository interface {
     SetAPIKey(ctx context.Context, userID string, hash, lookup string, expiresAt *time.Time, updatedAt time.Time) error
     UpdateName(ctx context.Context, userID string, name string, updatedAt time.Time) error
     SetRoomID(ctx context.Context, userID string, roomID *string, updatedAt time.Time) error
+    UpdateUsername(ctx context.Context, userID string, username string, updatedAt time.Time) error
+    UpdatePasswordEnc(ctx context.Context, userID string, enc string, updatedAt time.Time) error
+    Delete(ctx context.Context, userID string) error
 }
 
 type RoomRepository interface {
@@ -34,6 +37,7 @@ type RoomRepository interface {
     RemoveDeletionVote(ctx context.Context, roomID string, userID string) error
     Delete(ctx context.Context, roomID string) error
     AddMember(ctx context.Context, roomID string, userID string, updatedAt time.Time) error
+    RemoveMember(ctx context.Context, roomID string, userID string, updatedAt time.Time) error
 }
 
 type ListRepository interface {

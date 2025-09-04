@@ -1,6 +1,7 @@
 export type User = {
   user_id: string
   name: string
+  username?: string
   room_id?: string | null
   created_at: string
   updated_at: string

@@ -5,6 +5,7 @@ import { Login } from '@pages/Login'
 import { Register } from '@pages/Register'
 import { Dashboard } from '@pages/Dashboard'
 import { RoomSettings } from '@pages/RoomSettings'
+import { UserSettings } from '@pages/UserSettings'
 import { ListPage } from '@pages/ListPage'
 import { ListsIndex } from '@pages/ListsIndex'
 
@@ -59,6 +60,14 @@ export const AppRoutes: React.FC = () => {
         element={
           <RequireAuth>
             <RoomSettings />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/app/account"
+        element={
+          <RequireAuth>
+            <UserSettings />
           </RequireAuth>
         }
       />
