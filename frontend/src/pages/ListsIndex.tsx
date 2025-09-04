@@ -6,10 +6,12 @@ import { getMe, getLists } from '@api/endpoints'
 import type { List } from '@api/types'
 import { Card, Typography, Space, Button, List as AntList, Alert } from 'antd'
 import { ArrowLeft, FolderOpen } from '@phosphor-icons/react'
+import { useDocumentTitle } from '@lib/useDocumentTitle'
 
 export const ListsIndex: React.FC = () => {
   const { apiKey } = useAuth()
   const navigate = useNavigate()
+  useDocumentTitle('Lists')
 
   const meQuery = useQuery({ queryKey: ['me'], queryFn: () => getMe(apiKey!) })
   const roomId = meQuery.data?.room_id as string | undefined

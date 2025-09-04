@@ -5,12 +5,14 @@ import { Card, Typography, Form, Input, Button, Space, Grid, Divider, message } 
 import { SignOut, Plus, UsersThree } from '@phosphor-icons/react'
 import { CreateHouseModal } from '@components/CreateHouseModal'
 import { useNavigate } from 'react-router-dom'
+import { useDocumentTitle } from '@lib/useDocumentTitle'
 
 const TOKEN_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ0123456789' // no I, O, L
 
 export const NoRoomPage: React.FC = () => {
   const { apiKey, setApiKey } = useAuth()
   const navigate = useNavigate()
+  useDocumentTitle('Join or Create a House')
   const [token, setToken] = useState('')
   
   const [loading, setLoading] = useState(false)

@@ -2,8 +2,10 @@ import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { registerAuth } from '@api/endpoints'
 import { Card, Typography, Form, Input, Button, message } from 'antd'
+import { useDocumentTitle } from '@lib/useDocumentTitle'
 
 export const Register: React.FC = () => {
+  useDocumentTitle('Register')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')

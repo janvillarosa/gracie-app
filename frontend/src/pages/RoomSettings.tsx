@@ -7,12 +7,14 @@ import { Card, Typography, Space, Button, Input, Form, Grid, message } from 'ant
 import { ArrowLeft, FloppyDisk, ShareNetwork, Trash, XCircle } from '@phosphor-icons/react'
 import { isValidDisplayName, MAX_DESCRIPTION } from '@lib/validation'
 import { ShareCodeModal } from '@components/ShareCodeModal'
+import { useDocumentTitle } from '@lib/useDocumentTitle'
 
 const NAME_RE = /^[A-Za-z0-9 ]+$/ // kept for backwards compatibility if referenced; prefer lib/validation
 
 export const RoomSettings: React.FC = () => {
   const { apiKey } = useAuth()
   const navigate = useNavigate()
+  useDocumentTitle('House Settings')
   const qc = useQueryClient()
   const roomQuery = useQuery({ queryKey: ['my-room'], queryFn: () => getMyRoom(apiKey!) })
   const [displayName, setDisplayName] = useState('')

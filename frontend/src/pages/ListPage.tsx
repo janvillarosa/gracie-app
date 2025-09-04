@@ -10,6 +10,7 @@ import { ArrowLeft, Trash, Plus, Eye, EyeSlash, DotsThreeVertical } from '@phosp
 import { toEmoji } from '../icons'
 import { confettiAt } from '@lib/confetti'
 import { InlineEditText } from '@components/InlineEditText'
+import { useDocumentTitle } from '@lib/useDocumentTitle'
 
 export const ListPage: React.FC = () => {
   const { apiKey } = useAuth()
@@ -164,6 +165,9 @@ export const ListPage: React.FC = () => {
     } catch (e: any) { msgApi.error(e?.message || 'Failed to cancel vote') }
   }
 
+  // Set the document title unconditionally (before any early returns)
+  useDocumentTitle(listMeta?.name || 'List')
+
   if (meQuery.isLoading || listsQuery.isLoading || itemsQuery.isLoading) {
     return <div className="container"><Card>Loading…</Card></div>
   }
@@ -176,8 +180,6 @@ export const ListPage: React.FC = () => {
     }
     return <div className="container"><Card><Alert type="error" message="List not found." showIcon /><div className="spacer" /><Button onClick={() => navigate('/app')} icon={<ArrowLeft />}>Back to House</Button></Card></div>
   }
-
-  // sortedItems defined earlier to maintain consistent hook order
 
   return (
     <div className="container">

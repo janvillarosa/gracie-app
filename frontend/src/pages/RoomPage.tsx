@@ -13,10 +13,12 @@ import { AvatarBadge } from '@components/AvatarBadge'
 import { ShareCodeModal } from '@components/ShareCodeModal'
 import { toEmoji } from '../icons'
 import type { ListIcon } from '@api/types'
+import { useDocumentTitle } from '@lib/useDocumentTitle'
 
 export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string }> = ({ room, roomId, userId }) => {
   const { apiKey, setApiKey } = useAuth()
   const navigate = useNavigate()
+  useDocumentTitle(room.display_name || 'House')
   const [shareOpen, setShareOpen] = useState(false)
   const [shareToken, setShareToken] = useState<string | null>(null)
   

@@ -3,9 +3,11 @@ import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '@auth/AuthProvider'
 import { loginAuth } from '@api/endpoints'
 import { Card, Typography, Form, Input, Button, message } from 'antd'
+import { useDocumentTitle } from '@lib/useDocumentTitle'
 
 export const Login: React.FC = () => {
   const { setApiKey } = useAuth()
+  useDocumentTitle('Login')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)

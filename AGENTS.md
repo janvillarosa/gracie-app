@@ -2,6 +2,12 @@
 
 This document captures how to develop, test, and extend the Gracie backend, plus key design decisions made during implementation so future agents can continue the work smoothly.
 
+## Branding / Rebrand Note
+- External brand: Bauhouse. All user‑facing copy (UI text, page titles, marketing) should use “Bauhouse”.
+- Internal system name: Gracie. Keep internal identifiers as-is (package/module names, service names, repository paths, database name `gracie`, environment variables, Docker compose service names, etc.). Do not rename internal code or infrastructure solely for branding.
+- Deployment routing: Existing domains or rewrites that point to `gracie-*` backends are acceptable until infra changes; only update targets when backend domains actually change.
+- Frontend storage: If keys or identifiers previously used the "gracie" prefix, add non‑breaking migrations when changing them (e.g., migrate `gracie_api_key` → `bauhouse_api_key`).
+
 ## Tech Stack
 - Language: Go 1.22+ (backend), React 18 + Vite + TypeScript (frontend)
 - HTTP Router: `go-chi/chi`
@@ -134,6 +140,7 @@ How integration tests work (to be updated for Mongo)
 
 ## Frontend Notes (UI uses “House” terminology)
 - The UI refers to rooms as “House” only (copy change). Backend endpoints remain `/rooms/*`.
+- Branding: All visible UI should say “Bauhouse”; internal references can remain “Gracie”.
 - Pages:
   - Dashboard: Shows House (display name, description, members).
   - House Settings: Edit display name/description, rotate share code, vote/cancel deletion.

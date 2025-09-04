@@ -7,6 +7,7 @@ import type { User } from '@api/types'
 import { Card, Typography, Space, Button, Input, Form, Modal, Grid, Divider, message } from 'antd'
 import { Avatar } from '@components/Avatar'
 import { ArrowLeft, FloppyDisk, Trash } from '@phosphor-icons/react'
+import { useDocumentTitle } from '@lib/useDocumentTitle'
 
 function isEmail(v: string) {
   return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)
@@ -15,6 +16,7 @@ function isEmail(v: string) {
 export const UserSettings: React.FC = () => {
   const { apiKey, setApiKey } = useAuth()
   const navigate = useNavigate()
+  useDocumentTitle('Account Settings')
   const qc = useQueryClient()
   const meQuery = useQuery<User>({ queryKey: ['me'], queryFn: () => getMe(apiKey!) })
   const [name, setName] = useState('')
