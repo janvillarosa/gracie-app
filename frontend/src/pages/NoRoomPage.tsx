@@ -1,29 +1,38 @@
 import React, { useMemo, useState } from 'react'
 import { useAuth } from '@auth/AuthProvider'
-import { createRoom, isConflict, isForbidden, joinRoomByToken } from '@api/endpoints'
-import { Card, Typography, Row, Col, Form, Input, Button, Alert, Space, Grid } from 'antd'
+import { createRoom, updateRoomSettings, isConflict, isForbidden, joinRoomByToken } from '@api/endpoints'
+import { Card, Typography, Form, Input, Button, Alert, Space, Grid, Divider } from 'antd'
 import { SignOut, Plus, UsersThree } from '@phosphor-icons/react'
+import { CreateHouseModal } from '@components/CreateHouseModal'
+import { useNavigate } from 'react-router-dom'
 
 const TOKEN_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ0123456789' // no I, O, L
 
 export const NoRoomPage: React.FC = () => {
   const { apiKey, setApiKey } = useAuth()
+  const navigate = useNavigate()
   const [token, setToken] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [createOpen, setCreateOpen] = useState(false)
+  const [creating, setCreating] = useState(false)
 
   const tokenValid = useMemo(() => token.length === 5 && [...token].every((c) => TOKEN_ALPHABET.includes(c)), [token])
 
-  const onCreate = async () => {
+  const onCreateWithDetails = async (vals: { display_name?: string; description?: string }) => {
     setError(null)
-    setLoading(true)
+    setCreating(true)
     try {
       await createRoom(apiKey!)
-      window.location.reload()
+      if (vals.display_name || typeof vals.description === 'string') {
+        await updateRoomSettings(apiKey!, { display_name: vals.display_name, description: vals.description ?? '' })
+      }
+      setCreateOpen(false)
+      navigate('/app', { replace: true })
     } catch (e: any) {
       setError(e?.message || 'Failed to create house')
     } finally {
-      setLoading(false)
+      setCreating(false)
     }
   }
 
@@ -48,7 +57,7 @@ export const NoRoomPage: React.FC = () => {
 
   return (
     <div className="container">
-      <Card>
+      <Card className="no-room-card">
         <Space direction="vertical" style={{ width: '100%' }} size="large">
           {isMobile ? (
             <Space direction="vertical" style={{ width: '100%' }} size="small">
@@ -63,31 +72,42 @@ export const NoRoomPage: React.FC = () => {
               <Button onClick={() => setApiKey(null)} icon={<SignOut />}>Logout</Button>
             </div>
           )}
-          <Row gutter={16} align="top">
-            <Col xs={24} md={12} style={{ order: isMobile ? 2 : 1 }}>
-              <Space direction="vertical">
-                <Typography.Title level={3} style={{ marginTop: 0 }}>Create a new house</Typography.Title>
-                <Button type="primary" onClick={onCreate} disabled={loading} icon={<Plus />}>Create solo house</Button>
-                <Typography.Text type="secondary">You will be the only member until someone joins.</Typography.Text>
-              </Space>
-            </Col>
-            <Col xs={24} md={12} style={{ order: isMobile ? 1 : 2 }}>
-              <Typography.Title level={3} style={{ marginTop: 0 }}>Join an existing house</Typography.Title>
-              <Form layout="vertical" onSubmitCapture={onJoin}>
-                <Form.Item label="5-char code (no I/O/L)">
+          <div className="section">
+            <Typography.Title level={3} style={{ marginTop: 0 }}>Create a new house</Typography.Title>
+            <Typography.Text className="no-room-subtitle">You will be the only member until someone joins.</Typography.Text>
+            <Button type="primary" onClick={() => setCreateOpen(true)} disabled={loading} icon={<Plus />} block>
+              New House
+            </Button>
+          </div>
+
+          <Divider className="no-room-divider" />
+
+          <div className="section">
+            <Typography.Title level={3} style={{ marginTop: 0 }}>Join an existing house</Typography.Title>
+            <Form layout="vertical" onSubmitCapture={onJoin}>
+              <Form.Item label="5-character code">
+                <div className="join-row">
                   <Input
-                    placeholder="5-char code (no I/O/L)"
+                    placeholder="5-character code"
                     value={token}
                     onChange={(e) => setToken(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
                     maxLength={5}
                   />
-                </Form.Item>
-                <Button type="primary" htmlType="submit" disabled={!tokenValid || loading} icon={<UsersThree />}>Join house</Button>
-              </Form>
-            </Col>
-          </Row>
+                  {!isMobile && (
+                    <Button type="primary" htmlType="submit" disabled={!tokenValid || loading} icon={<UsersThree />}>Join house</Button>
+                  )}
+                </div>
+              </Form.Item>
+              {isMobile && (
+                <Button type="primary" htmlType="submit" disabled={!tokenValid || loading} icon={<UsersThree />} block>
+                  Join house
+                </Button>
+              )}
+            </Form>
+          </div>
           {error && <Alert type="error" message={error} showIcon />}
         </Space>
+        <CreateHouseModal open={createOpen} onClose={() => setCreateOpen(false)} onSubmit={onCreateWithDetails} submitting={creating} />
       </Card>
     </div>
   )

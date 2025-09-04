@@ -5,9 +5,10 @@ import { rotateShare, voteDeletion, cancelDeletion, updateRoomSettings, getMyRoo
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Card, Typography, Space, Button, Input, Alert, Form, Grid } from 'antd'
 import { ArrowLeft, FloppyDisk, ShareNetwork, Trash, XCircle } from '@phosphor-icons/react'
+import { isValidDisplayName, MAX_DESCRIPTION } from '@lib/validation'
 import { ShareCodeModal } from '@components/ShareCodeModal'
 
-const NAME_RE = /^[A-Za-z0-9 ]+$/
+const NAME_RE = /^[A-Za-z0-9 ]+$/ // kept for backwards compatibility if referenced; prefer lib/validation
 
 export const RoomSettings: React.FC = () => {
   const { apiKey } = useAuth()
@@ -25,7 +26,7 @@ export const RoomSettings: React.FC = () => {
   const screens = Grid.useBreakpoint()
   const isMobile = !screens.md
 
-  const nameValid = useMemo(() => !displayName || (displayName.length <= 64 && NAME_RE.test(displayName)), [displayName])
+  const nameValid = useMemo(() => !displayName || isValidDisplayName(displayName), [displayName])
 
   // Initialize form fields with current values once room data is loaded
   useEffect(() => {
@@ -48,7 +49,7 @@ export const RoomSettings: React.FC = () => {
       setError('Display name must be alphanumeric with spaces, up to 64 chars')
       return
     }
-    if (description.length > 512) {
+    if (description.length > MAX_DESCRIPTION) {
       setError('Description too long')
       return
     }
