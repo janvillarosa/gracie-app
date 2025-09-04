@@ -2,7 +2,6 @@ import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { registerAuth } from '@api/endpoints'
 import { Card, Typography, Form, Input, Button, Alert } from 'antd'
-import { UserPlus } from '@phosphor-icons/react'
 
 export const Register: React.FC = () => {
   const [username, setUsername] = useState('')
@@ -30,8 +29,9 @@ export const Register: React.FC = () => {
   }
 
   return (
-    <div className="container">
-      <Card>
+    <div className="login-page">
+      <div className="container">
+      <Card className="paper-card">
         <Typography.Title level={2} style={{ marginTop: 0 }}>Create account</Typography.Title>
         <Form layout="vertical" onSubmitCapture={onRegister}>
           <Form.Item label="Email (username)">
@@ -43,13 +43,17 @@ export const Register: React.FC = () => {
           <Form.Item label="Display name (optional)">
             <Input placeholder="Display name (optional)" value={name} onChange={(e) => setName(e.target.value)} />
           </Form.Item>
-          <Button type="primary" htmlType="submit" disabled={!username || password.length < 8 || loading} icon={<UserPlus />}>Register</Button>
+          <Button type="primary" htmlType="submit" disabled={!username || password.length < 8 || loading} size="large" block>
+            Create Account
+          </Button>
         </Form>
         {error && <><div className="spacer" /><Alert type="error" message={error} showIcon /></>}
         {success && <><div className="spacer" /><Alert type="success" message="Account created. Redirecting to login…" showIcon /></>}
-        <div className="spacer" />
-        <Typography.Text type="secondary">Already have an account? <Link to="/login">Login</Link></Typography.Text>
+        <Typography.Text type="secondary" style={{ display: 'inline-block', paddingTop: 40 }}>
+          Already have an account? <Link to="/login" className="link-primary">Log in</Link>
+        </Typography.Text>
       </Card>
+      </div>
     </div>
   )
 }
