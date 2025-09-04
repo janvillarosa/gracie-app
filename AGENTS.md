@@ -60,7 +60,7 @@ User (`users`)
 
 Room (`rooms`)
 - `room_id` (unique)
-- `member_ids` (array, max 2)
+- `member_ids` (array)
 - `display_name` (optional; alphanumeric + spaces)
 - `description` (optional)
 - `share_token` (indexed)
@@ -77,13 +77,13 @@ ListItems (`list_items`)
 - Signup (API‑key): Create user + API key (hash + lookup) and a solo room; set `room_id` on the user. Transactional.
 - Register/Login (email/password): Register creates user with encrypted bcrypt; Login verifies and rotates API key, returning it to the client.
 - Share: Rotate a 5‑char share code (URL‑safe, excluding I/O/L) for the current room.
-- Join: Validate share code, ensure target room has exactly one member; add joiner as second member and set `room_id`. If joiner has a solo room, delete it in the same transaction.
-- Two‑party deletion: Each member votes; when both votes exist, transactionally delete the room and clear `room_id` on both users. Prefer conditional Delete on the room over ConditionCheck to avoid multiple ops on one item in a transaction.
+- Join: Validate share code and add the joiner to the room; set `room_id` for the joiner. If the joiner has a solo room, delete it in the same transaction. Users can belong to only one room at a time.
+- Deletion by consensus: Each member votes; when all current members have voted, transactionally delete the room and clear `room_id` on all users. Prefer conditional Delete on the room over ConditionCheck to avoid multiple ops on one item in a transaction.
 
 ## Key Design Decisions
 - API keys: Only returned once at signup or login. Hash stored via bcrypt; separate SHA‑256 hex `api_key_lookup` used for GSI lookup to avoid scans.
 - Passwords: Bcrypt‑hashed and encrypted-at-rest with AES‑256‑GCM. Encryption key stored in a local file (`ENC_KEY_FILE`), persisted via a bind‑mount (`./.secrets/enc.key`) and never committed.
-- Mongo transactions: Used for signup, join, and finalize deletion to maintain invariants (1 room per user, <= 2 members per room, atomic cleanup on deletion). Requires a replica set (single-node RS locally).
+- Mongo transactions: Used for signup, join, and finalize deletion to maintain invariants (1 room per user, atomic cleanup on deletion). Requires a replica set (single-node RS locally).
 - Tx fallback in dev: If transactions aren’t available (standalone), the Tx runner falls back to non-transactional execution to keep local dev unblocked.
 - Router package split: `internal/http/router` separated from HTTP helpers to avoid import cycles.
 - Error mapping: Minimal mapping to HTTP codes (401, 403, 404, 409).

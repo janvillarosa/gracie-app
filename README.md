@@ -1,8 +1,8 @@
 # Gracie (Backend + Frontend)
 
-Gracie is a minimal grocery/shopping list app designed for couples to share a single House (UI term) backed by a Room (backend model). The repo includes the backend API in Go + MongoDB and a React/Vite frontend. Authentication supports API keys and email/password.
+Gracie is a minimal grocery/shopping list app designed to share a single House (UI term) backed by a Room (backend model). The repo includes the backend API in Go + MongoDB and a React/Vite frontend. Authentication supports API keys and email/password.
 
-For now, Rooms are empty containers; the core flows implemented are user signup, room sharing via invite links (tokens), joining rooms, and two-party room deletion.
+For now, Rooms are empty containers; the core flows implemented are user signup, room sharing via invite links (tokens), joining rooms, and room deletion by member votes.
 
 ## Quick Start
 
@@ -49,9 +49,9 @@ Endpoints
 - GET `/rooms/me`: Get current room view (sanitized; no internal IDs; includes display name, description, member names).
 - POST `/rooms`: Create a solo room if user has none (409 if exists).
 - POST `/rooms/share`: Rotate share token and return `{ token }`.
-- POST `/rooms/join`: Body `{ token }` to join as second member using code only.
+- POST `/rooms/join`: Body `{ token }` to join a room using a 5‑char code (no room ID required).
 - PUT `/rooms/settings`: `{ display_name?, description? }` update.
-- POST `/rooms/deletion/vote`: Record deletion vote; when both members vote, the room is deleted and both users’ `room_id` is cleared.
+- POST `/rooms/deletion/vote`: Record deletion vote; when all current members have voted, the room is deleted and all users’ `room_id` values are cleared.
 - POST `/rooms/deletion/cancel`: Remove caller’s vote.
 
 Example flow (abbreviated)
@@ -91,9 +91,8 @@ curl -s -X POST http://localhost:8080/rooms/deletion/vote \
 
 ## Important Notes
 - API key is returned only once on signup; store it securely on the client.
-- Only two users can be members of a room; joining a full room returns 409.
 - Share token rotation invalidates previous tokens; share code is 5 chars (no I/O/L).
-- After room deletion, both users are left without a room (must create a new solo room to continue).
+ - After room deletion, all members are left without a room (must create a new solo room to continue).
 - Mongo transactions require a replica set. The provided compose starts a single-node RS and blocks API start until PRIMARY is ready.
 - We use a UNIQUE PARTIAL index on `users.api_key_lookup` so documents without an API key don’t collide on `null`.
 - Models carry `bson` tags and store timestamps as `time.Time` to avoid decode issues.

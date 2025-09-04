@@ -62,13 +62,15 @@ func (s *RoomService) JoinRoom(ctx context.Context, joiner *models.User, roomID,
     rm, err := s.rooms.GetByID(ctx, roomID)
     if err != nil { return nil, err }
     if rm.ShareToken == nil || *rm.ShareToken == "" || token == "" || token != *rm.ShareToken { return nil, derr.ErrForbidden }
-    if len(rm.MemberIDs) != 1 { return nil, derr.ErrConflict }
-    if rm.MemberIDs[0] == joiner.UserID { return nil, derr.ErrConflict }
+    // Disallow joining the same room twice
+    for _, mid := range rm.MemberIDs { if mid == joiner.UserID { return nil, derr.ErrConflict } }
 
     var deleteSolo *models.Room
     if joiner.RoomID != nil && *joiner.RoomID != "" {
         jr, err := s.rooms.GetByID(ctx, *joiner.RoomID)
         if err != nil { return nil, err }
+        // Preserve invariant: a user can belong to only one room at a time.
+        // If the joiner already belongs to a room with other members, block joining.
         if len(jr.MemberIDs) > 1 { return nil, derr.ErrConflict }
         deleteSolo = jr
     }
