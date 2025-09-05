@@ -48,3 +48,41 @@ jobs:
       - name: Run unit tests
         working-directory: frontend
         run: pnpm test:ci
+
+  api-integration:
+    name: API + Mongo Integration
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22.x'
+      - name: Start MongoDB single-node replica set
+        run: |
+          docker run -d --name mongo-rs -p 27017:27017 mongo:7 --replSet rs0 --bind_ip_all
+          # wait for mongod
+          for i in {1..60}; do
+            if docker exec mongo-rs mongosh --quiet --eval 'db.runCommand({ ping: 1 }).ok' | grep -q 1; then break; fi
+            sleep 1
+          done
+          # initiate replica set
+          docker exec mongo-rs mongosh --quiet --eval 'rs.initiate({_id:"rs0",members:[{_id:0,host:"localhost:27017"}]})'
+          # wait for PRIMARY
+          for i in {1..60}; do
+            state=$(docker exec mongo-rs mongosh --quiet --eval 'rs.status().myState') || true
+            if [ "$state" = "1" ]; then break; fi
+            sleep 1
+          done
+      - name: Run Mongo-backed integration tests
+        env:
+          MONGODB_URI: mongodb://localhost:27017/?replicaSet=rs0&retryWrites=true&w=majority
+        working-directory: backend
+        run: |
+          go test ./internal/store/mongo -v -count=1
+          # API flow tests (in-process router)
+          go test ./internal/http/handlers -v -count=1
+      - name: Cleanup Mongo
+        if: always()
+        run: |
+          docker logs mongo-rs || true
+          docker rm -f mongo-rs || true
