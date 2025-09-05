@@ -7,100 +7,88 @@ import (
     "net/http/httptest"
     "testing"
 
-    "github.com/janvillarosa/gracie-app/backend/internal/http/router"
     handlers "github.com/janvillarosa/gracie-app/backend/internal/http/handlers"
+    "github.com/janvillarosa/gracie-app/backend/internal/http/router"
     "github.com/janvillarosa/gracie-app/backend/internal/services"
-    "github.com/janvillarosa/gracie-app/backend/internal/store/dynamo"
-    "github.com/janvillarosa/gracie-app/backend/internal/testutil"
+    "github.com/janvillarosa/gracie-app/backend/internal/testutil/memstore"
 )
 
 func TestHTTPFlow(t *testing.T) {
-    db, usersTable, roomsTable, listsTable, listItemsTable, cleanup := testutil.SetupDynamoWithListsOrSkip(t)
-    defer cleanup()
-    client := &dynamo.Client{DB: db, Tables: dynamo.Tables{Users: usersTable, Rooms: roomsTable, Lists: listsTable, ListItems: listItemsTable}}
-
-    usersRepo := dynamo.NewUserRepo(client)
-    roomsRepo := dynamo.NewRoomRepo(client)
-    userSvc := services.NewUserService(client, usersRepo)
-    roomSvc := services.NewRoomService(client, usersRepo, roomsRepo)
-    listSvc := services.NewListService(client, usersRepo, roomsRepo, dynamo.NewListRepo(client), dynamo.NewListItemRepo(client))
-    authSvc, err := services.NewAuthService(client, usersRepo, "/tmp/gracie-test-enc.key", 720)
+    tx, usersRepo, roomsRepo, listsRepo, itemsRepo := memstore.Compose()
+    userSvc := services.NewUserService(usersRepo, roomsRepo, tx)
+    roomSvc := services.NewRoomService(usersRepo, roomsRepo, tx)
+    listSvc := services.NewListService(usersRepo, roomsRepo, listsRepo, itemsRepo)
+    authSvc, err := services.NewAuthService(usersRepo, "/tmp/gracie-test-enc.key", 720)
     if err != nil { t.Fatalf("auth svc: %v", err) }
 
     ah := handlers.NewAuthHandler(authSvc)
-    uh := handlers.NewUserHandler(userSvc)
-    rh := handlers.NewRoomHandler(roomSvc, usersRepo)
+    uh := handlers.NewUserHandler(userSvc, []byte("salt"))
+    rh := handlers.NewRoomHandler(roomSvc, usersRepo, []byte("salt"))
     lh := handlers.NewListHandler(listSvc)
     r := router.NewRouter(usersRepo, ah, uh, rh, lh)
 
-    srv := httptest.NewServer(r)
-    defer srv.Close()
-
     // Create user A
     aResp := struct{ User struct{ UserID, Name, CreatedAt, UpdatedAt string; RoomID *string `json:"room_id"` }; APIKey string `json:"api_key"` }{}
-    postJSON(t, srv.URL+"/users", map[string]string{"name": "Alice"}, &aResp, http.StatusCreated)
+    doPostJSON(t, r, "/users", map[string]string{"name": "Alice"}, &aResp, http.StatusCreated)
     if aResp.APIKey == "" || aResp.User.RoomID == nil { t.Fatalf("signup A failed") }
 
     // Get me
     var me map[string]any
-    getAuthJSON(t, srv.URL+"/me", aResp.APIKey, &me, http.StatusOK)
+    doGetAuthJSON(t, r, "/me", aResp.APIKey, &me, http.StatusOK)
 
     // Share
     share := struct{ Token string `json:"token"` }{}
-    postAuthJSON(t, srv.URL+"/rooms/share", aResp.APIKey, nil, &share, http.StatusOK)
+    doPostAuthJSON(t, r, "/rooms/share", aResp.APIKey, nil, &share, http.StatusOK)
     if share.Token == "" { t.Fatalf("share failed") }
 
     // Create user B and join
     bResp := struct{ User struct{ UserID string; RoomID *string }; APIKey string `json:"api_key"` }{}
-    postJSON(t, srv.URL+"/users", map[string]string{"name": "Bob"}, &bResp, http.StatusCreated)
+    doPostJSON(t, r, "/users", map[string]string{"name": "Bob"}, &bResp, http.StatusCreated)
 
     // Join request by B via token only
     joinReq := map[string]string{"token": share.Token}
     var joined map[string]any
-    postAuthJSON(t, srv.URL+"/rooms/join", bResp.APIKey, joinReq, &joined, http.StatusOK)
+    doPostAuthJSON(t, r, "/rooms/join", bResp.APIKey, joinReq, &joined, http.StatusOK)
 
     // Vote deletion by both
     var del struct{ Deleted bool }
-    postAuthJSON(t, srv.URL+"/rooms/deletion/vote", aResp.APIKey, nil, &del, http.StatusOK)
-    postAuthJSON(t, srv.URL+"/rooms/deletion/vote", bResp.APIKey, nil, &del, http.StatusOK)
+    doPostAuthJSON(t, r, "/rooms/deletion/vote", aResp.APIKey, nil, &del, http.StatusOK)
+    doPostAuthJSON(t, r, "/rooms/deletion/vote", bResp.APIKey, nil, &del, http.StatusOK)
     if !del.Deleted { t.Fatalf("expected deleted true on second vote") }
 }
 
-// Helpers
-func postJSON[T any](t *testing.T, url string, body any, out *T, want int) {
+// Helpers using in-process router.ServeHTTP (no network)
+func doPostJSON[T any](t *testing.T, h http.Handler, path string, body any, out *T, want int) {
     t.Helper()
     var buf bytes.Buffer
     if body != nil { _ = json.NewEncoder(&buf).Encode(body) }
-    req, _ := http.NewRequest("POST", url, &buf)
+    req, _ := http.NewRequest("POST", path, &buf)
     req.Header.Set("Content-Type", "application/json")
-    resp, err := http.DefaultClient.Do(req)
-    if err != nil { t.Fatalf("post %s: %v", url, err) }
-    defer resp.Body.Close()
-    if resp.StatusCode != want { t.Fatalf("want %d got %d", want, resp.StatusCode) }
-    if out != nil { _ = json.NewDecoder(resp.Body).Decode(out) }
+    rr := httptest.NewRecorder()
+    h.ServeHTTP(rr, req)
+    if rr.Code != want { t.Fatalf("%s %s: want %d got %d", req.Method, path, want, rr.Code) }
+    if out != nil { _ = json.NewDecoder(rr.Body).Decode(out) }
 }
 
-func postAuthJSON[T any](t *testing.T, url string, apiKey string, body any, out *T, want int) {
+func doPostAuthJSON[T any](t *testing.T, h http.Handler, path, apiKey string, body any, out *T, want int) {
     t.Helper()
     var buf bytes.Buffer
     if body != nil { _ = json.NewEncoder(&buf).Encode(body) }
-    req, _ := http.NewRequest("POST", url, &buf)
+    req, _ := http.NewRequest("POST", path, &buf)
     req.Header.Set("Content-Type", "application/json")
     req.Header.Set("Authorization", "Bearer "+apiKey)
-    resp, err := http.DefaultClient.Do(req)
-    if err != nil { t.Fatalf("post %s: %v", url, err) }
-    defer resp.Body.Close()
-    if resp.StatusCode != want { t.Fatalf("want %d got %d", want, resp.StatusCode) }
-    if out != nil { _ = json.NewDecoder(resp.Body).Decode(out) }
+    rr := httptest.NewRecorder()
+    h.ServeHTTP(rr, req)
+    if rr.Code != want { t.Fatalf("%s %s: want %d got %d", req.Method, path, want, rr.Code) }
+    if out != nil { _ = json.NewDecoder(rr.Body).Decode(out) }
 }
 
-func getAuthJSON[T any](t *testing.T, url, apiKey string, out *T, want int) {
+func doGetAuthJSON[T any](t *testing.T, h http.Handler, path, apiKey string, out *T, want int) {
     t.Helper()
-    req, _ := http.NewRequest("GET", url, nil)
+    req, _ := http.NewRequest("GET", path, nil)
     req.Header.Set("Authorization", "Bearer "+apiKey)
-    resp, err := http.DefaultClient.Do(req)
-    if err != nil { t.Fatalf("get %s: %v", url, err) }
-    defer resp.Body.Close()
-    if resp.StatusCode != want { t.Fatalf("want %d got %d", want, resp.StatusCode) }
-    if out != nil { _ = json.NewDecoder(resp.Body).Decode(out) }
+    rr := httptest.NewRecorder()
+    h.ServeHTTP(rr, req)
+    if rr.Code != want { t.Fatalf("%s %s: want %d got %d", req.Method, path, want, rr.Code) }
+    if out != nil { _ = json.NewDecoder(rr.Body).Decode(out) }
 }

@@ -6,20 +6,14 @@ import (
     "time"
 
     derr "github.com/janvillarosa/gracie-app/backend/internal/errors"
-    "github.com/janvillarosa/gracie-app/backend/internal/store/dynamo"
-    "github.com/janvillarosa/gracie-app/backend/internal/testutil"
+    "github.com/janvillarosa/gracie-app/backend/internal/testutil/memstore"
 )
 
 func setupSvc(t *testing.T) (*UserService, *RoomService, func()) {
-    db, usersTable, roomsTable, listsTable, listItemsTable, cleanup := testutil.SetupDynamoWithListsOrSkip(t)
-    client := &dynamo.Client{DB: db, Tables: dynamo.Tables{Users: usersTable, Rooms: roomsTable, Lists: listsTable, ListItems: listItemsTable}}
-    users := dynamo.NewUserRepo(client)
-    rooms := dynamo.NewRoomRepo(client)
-    lists := dynamo.NewListRepo(client)
-    items := dynamo.NewListItemRepo(client)
-    rs := NewRoomService(client, users, rooms)
+    tx, users, rooms, lists, items := memstore.Compose()
+    rs := NewRoomService(users, rooms, tx)
     rs.UseListRepos(lists, items)
-    return NewUserService(client, users), rs, cleanup
+    return NewUserService(users, rooms, tx), rs, func() {}
 }
 
 func TestUserSignupAndSoloRoom(t *testing.T) {
@@ -54,8 +48,9 @@ func TestShareJoinAndDeleteFlow(t *testing.T) {
     // Vote delete: first vote should not delete
     deleted, err := rs.VoteDeletion(ctx, a.User)
     if err != nil || deleted { t.Fatalf("first vote should not delete: %v %v", deleted, err) }
-    // Second vote should delete
-    deleted, err = rs.VoteDeletion(ctx, b.User)
+    // Second vote should delete (use fresh user with updated RoomID after join)
+    bRef, _ := us.GetMe(ctx, b.User.UserID)
+    deleted, err = rs.VoteDeletion(ctx, bRef)
     if err != nil || !deleted { t.Fatalf("second vote should delete: %v %v", deleted, err) }
 
     // After deletion, both users have no room

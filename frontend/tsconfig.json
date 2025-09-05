@@ -23,7 +23,8 @@
       "@pages/*": ["src/pages/*"],
       "@routes/*": ["src/routes/*"],
       "@lib/*": ["src/lib/*"]
-    }
+    },
+    "types": ["vitest/globals", "node"]
   },
   "include": ["src"]
 }

@@ -115,6 +115,27 @@ How integration tests work (to be updated for Mongo)
 - Tests cover CRUD and the main business flows using the Mongo repositories.
 - Where transactions are required, tests assume a replica set; otherwise they’re skipped.
 
+### Testing Policy (Required)
+- Write or extend unit tests for every new feature or change (backend and frontend).
+- Always run unit tests locally immediately after making changes (before commit/push), not just when opening a PR.
+- Run all existing tests locally before opening a PR.
+- Do not merge changes if any tests fail; fix or update tests alongside code changes.
+
+### Commands
+- Backend unit tests:
+  - `cd backend && go test ./...`
+- Backend integration (with Docker or local DB if available):
+  - `cd backend && go test -tags=integration ./...`
+- Frontend tests and coverage (pnpm preferred):
+  - `cd frontend && pnpm install && pnpm test`
+  - CI mode with coverage: `cd frontend && pnpm test:ci`
+  - Use Node 20.x locally for Vitest stability; newer Node versions can have worker pool issues.
+  - Run `nvm use` at repo root to select the pinned Node version from `.nvmrc`.
+
+### CI Gate
+- GitHub Actions runs backend and frontend tests on PRs and main pushes.
+- Make `tests` workflow a required status check in GitHub branch protection so deployments only proceed after passing tests.
+
 ## Known Limitations / Future Work
 - No OpenAPI/Swagger spec yet.
 - Share tokens do not expire; consider adding TTL/expiry mechanics.

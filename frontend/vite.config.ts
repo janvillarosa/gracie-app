@@ -26,4 +26,20 @@ export default defineConfig({
       },
     },
   },
+  test: {
+    environment: 'jsdom',
+    setupFiles: ['src/setupTests.ts'],
+    css: false,
+    globals: true,
+    pool: 'forks',
+    maxWorkers: 1,
+    minWorkers: 1,
+    poolOptions: { forks: { singleFork: true } },
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'lcov'],
+      reportsDirectory: 'coverage',
+      thresholds: { lines: 0.6, branches: 0.5, functions: 0.6, statements: 0.6 },
+    },
+  },
 })

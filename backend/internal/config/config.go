@@ -48,9 +48,9 @@ func Load() (*Config, error) {
         AvatarSalt:  getEnv("AVATAR_SALT", "local-avatar-salt"),
     }
 
-    // If DDB_ENDPOINT is explicitly set to empty or "aws", use AWS-managed DynamoDB (no custom endpoint)
+    // If DDB_ENDPOINT is explicitly set to "aws", use AWS-managed DynamoDB (no custom endpoint)
     if v, ok := os.LookupEnv("DDB_ENDPOINT"); ok {
-        if v == "" || v == "aws" {
+        if v == "aws" {
             cfg.DDBEndpoint = ""
         }
     }
