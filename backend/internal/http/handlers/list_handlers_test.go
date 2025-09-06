@@ -49,8 +49,8 @@ func TestListsFlow(t *testing.T) {
     if list.ListID == "" { t.Fatalf("expected list created") }
 
     // Create two items
-    item1 := struct{ ItemID string `json:"item_id"` }{}
-    item2 := struct{ ItemID string `json:"item_id"` }{}
+    item1 := struct{ ItemID string `json:"item_id"`; Order float64 `json:"order"` }{}
+    item2 := struct{ ItemID string `json:"item_id"`; Order float64 `json:"order"` }{}
     postAuthJSONLocal(t, r, "/rooms/"+roomID+"/lists/"+list.ListID+"/items", aResp.APIKey, map[string]string{"description": "Milk"}, &item1, http.StatusCreated)
     postAuthJSONLocal(t, r, "/rooms/"+roomID+"/lists/"+list.ListID+"/items", aResp.APIKey, map[string]string{"description": "Bread"}, &item2, http.StatusCreated)
 
@@ -75,6 +75,26 @@ func TestListsFlow(t *testing.T) {
     items = nil
     getAuthJSONLocal(t, r, "/rooms/"+roomID+"/lists/"+list.ListID+"/items?include_completed=true", aResp.APIKey, &items, http.StatusOK)
     if len(items) != 1 { t.Fatalf("expected 1 item after deletion, got %d", len(items)) }
+
+    // Recreate two more to test reordering
+    var a, b, c struct{ ItemID string `json:"item_id"` }
+    postAuthJSONLocal(t, r, "/rooms/"+roomID+"/lists/"+list.ListID+"/items", aResp.APIKey, map[string]string{"description": "Eggs"}, &a, http.StatusCreated)
+    postAuthJSONLocal(t, r, "/rooms/"+roomID+"/lists/"+list.ListID+"/items", aResp.APIKey, map[string]string{"description": "Butter"}, &b, http.StatusCreated)
+    postAuthJSONLocal(t, r, "/rooms/"+roomID+"/lists/"+list.ListID+"/items", aResp.APIKey, map[string]string{"description": "Cheese"}, &c, http.StatusCreated)
+    // Move c between a and b
+    posReq := map[string]any{"prev_id": a.ItemID, "next_id": b.ItemID}
+    var posResp struct{ ItemID string `json:"item_id"`; Order float64 `json:"order"` }
+    patchAuthJSONLocal(t, r, "/rooms/"+roomID+"/lists/"+list.ListID+"/items/"+c.ItemID+"/position", aResp.APIKey, posReq, &posResp, http.StatusOK)
+    // Verify order a, c, b
+    items = nil
+    getAuthJSONLocal(t, r, "/rooms/"+roomID+"/lists/"+list.ListID+"/items?include_completed=true", aResp.APIKey, &items, http.StatusOK)
+    if len(items) < 3 { t.Fatalf("expected at least 3 items, got %d", len(items)) }
+    // Extract the last three entries in order
+    n := len(items)
+    ids := []string{items[n-3]["item_id"].(string), items[n-2]["item_id"].(string), items[n-1]["item_id"].(string)}
+    if !(ids[0] == a.ItemID && ids[1] == c.ItemID && ids[2] == b.ItemID) {
+        t.Fatalf("unexpected order %v, want [a,c,b]", ids)
+    }
 
     // Vote list deletion by both members
     var ldel struct{ Deleted bool }

@@ -3,6 +3,7 @@ package dynamo
 import (
     "context"
     "errors"
+    "strconv"
     "time"
 
     "github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
@@ -84,6 +85,24 @@ func (r *ListItemRepo) UpdateDescription(ctx context.Context, itemID, descriptio
     return err
 }
 
+func (r *ListItemRepo) UpdateOrder(ctx context.Context, itemID string, order float64, updatedAt time.Time) error {
+    _, err := r.c.DB.UpdateItem(ctx, &dynamodb.UpdateItemInput{
+        TableName:        &r.c.Tables.ListItems,
+        Key:              map[string]types.AttributeValue{"item_id": &types.AttributeValueMemberS{Value: itemID}},
+        UpdateExpression: strPtr("SET #ord = :o, updated_at = :ua"),
+        ExpressionAttributeNames: map[string]string{
+            "#ord": "order",
+        },
+        ExpressionAttributeValues: map[string]types.AttributeValue{
+            ":o":  &types.AttributeValueMemberN{Value: strconv.FormatFloat(order, 'f', -1, 64)},
+            ":ua": &types.AttributeValueMemberS{Value: updatedAt.UTC().Format(time.RFC3339)},
+        },
+        ConditionExpression: strPtr("attribute_exists(item_id)"),
+    })
+    return err
+}
+
+
 func (r *ListItemRepo) Delete(ctx context.Context, itemID string) error {
     _, err := r.c.DB.DeleteItem(ctx, &dynamodb.DeleteItemInput{
         TableName: &r.c.Tables.ListItems,
@@ -97,4 +116,3 @@ func (r *ListItemRepo) Delete(ctx context.Context, itemID string) error {
     }
     return nil
 }
-

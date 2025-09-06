@@ -139,3 +139,17 @@ export async function updateListItem(
 export async function deleteListItem(apiKey: string, roomId: string, listId: string, itemId: string): Promise<void> {
   return apiFetch<void>(`/rooms/${roomId}/lists/${listId}/items/${itemId}`, { method: 'DELETE', apiKey })
 }
+
+export async function reorderListItem(
+  apiKey: string,
+  roomId: string,
+  listId: string,
+  itemId: string,
+  params: { prev_id?: string; next_id?: string }
+): Promise<ListItem> {
+  return apiFetch<ListItem>(`/rooms/${roomId}/lists/${listId}/items/${itemId}/position`, {
+    method: 'PATCH',
+    apiKey,
+    body: JSON.stringify(params),
+  })
+}

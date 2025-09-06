@@ -160,6 +160,27 @@ func (h *ListHandler) DeleteItem(w http.ResponseWriter, r *http.Request) {
     w.WriteHeader(http.StatusNoContent)
 }
 
+// Reorder endpoint
+type updateItemPositionReq struct {
+    PrevID *string `json:"prev_id"`
+    NextID *string `json:"next_id"`
+}
+
+func (h *ListHandler) UpdateItemPosition(w http.ResponseWriter, r *http.Request) {
+    u, ok := api.UserFrom(r.Context())
+    if !ok { api.WriteJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"}); return }
+    roomID := chi.URLParam(r, "room_id")
+    listID := chi.URLParam(r, "list_id")
+    itemID := chi.URLParam(r, "item_id")
+    var req updateItemPositionReq
+    if err := api.DecodeJSON(r, &req); err != nil {
+        api.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request"}); return
+    }
+    it, err := h.Lists.UpdateItemPosition(r.Context(), u, roomID, listID, itemID, req.PrevID, req.NextID)
+    if err != nil { api.WriteJSON(w, statusFromErr(err), map[string]string{"error": err.Error()}); return }
+    api.WriteJSON(w, http.StatusOK, it)
+}
+
 func statusFromErr(err error) int {
     switch err {
     case derr.ErrUnauthorized:

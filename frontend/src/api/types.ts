@@ -43,6 +43,7 @@ export type ListItem = {
   room_id: string
   description: string
   completed: boolean
+  order?: number
   created_at: string
   updated_at: string
 }

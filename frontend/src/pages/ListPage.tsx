@@ -2,11 +2,14 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '@auth/AuthProvider'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { getMe, getListItems, getLists, createListItem, updateListItem, deleteListItem, voteListDeletion, cancelListDeletion } from '@api/endpoints'
+import { getMe, getListItems, getLists, createListItem, updateListItem, deleteListItem, voteListDeletion, cancelListDeletion, reorderListItem } from '@api/endpoints'
 import type { List, ListItem } from '@api/types'
 import { useLiveQueryOpts } from '@lib/liveQuery'
 import { Card, Typography, Space, Button, Input, Checkbox, List as AntList, Grid, Dropdown, message, Skeleton, Alert } from 'antd'
-import { ArrowLeft, Trash, Plus, Eye, EyeSlash, DotsThreeVertical } from '@phosphor-icons/react'
+import { ArrowLeft, Trash, Plus, Eye, EyeSlash, DotsThreeVertical, DotsSixVertical } from '@phosphor-icons/react'
+import { DndContext, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core'
+import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { toEmoji } from '../icons'
 import { confettiAt } from '@lib/confetti'
 import { InlineEditText } from '@components/InlineEditText'
@@ -83,6 +86,56 @@ export const ListPage: React.FC = () => {
   }, [items])
   const incompleteItems = useMemo(() => sortedItems.filter(it => !it.completed), [sortedItems])
   const completedItems = useMemo(() => sortedItems.filter(it => it.completed), [sortedItems])
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { delay: 180, tolerance: 8 } }))
+
+  const onDragEnd = async (e: DragEndEvent) => {
+    const activeId = e.active.id as string
+    const overId = (e.over?.id as string) || null
+    if (!overId || activeId === overId) return
+    const order = incompleteItems.map(it => it.item_id)
+    const from = order.indexOf(activeId)
+    const to = order.indexOf(overId)
+    if (from < 0 || to < 0) return
+    // Compute new array after drag
+    const nextOrder = [...order]
+    nextOrder.splice(from, 1)
+    nextOrder.splice(to, 0, activeId)
+    // Derive prev/next ids for active item in new order
+    const idx = nextOrder.indexOf(activeId)
+    const prev_id = idx > 0 ? nextOrder[idx - 1] : undefined
+    const next_id = idx < nextOrder.length - 1 ? nextOrder[idx + 1] : undefined
+    // Optimistic reorder: update query cache immediately
+    const key = ['list-items', listId, includeCompleted]
+    const prevData = qc.getQueryData<ListItem[]>(key)
+    if (prevData) {
+      const map = new Map(prevData.map(it => [it.item_id, it]))
+      const nextIncomplete = nextOrder.map(id => map.get(id)!).filter(Boolean) as ListItem[]
+      const nextCompleted = prevData.filter(it => it.completed)
+      qc.setQueryData<ListItem[]>(key, [...nextIncomplete, ...nextCompleted])
+    }
+    try {
+      await reorderListItem(apiKey!, roomId!, listId, activeId, { prev_id, next_id })
+      await qc.invalidateQueries({ queryKey: ['list-items', listId] })
+    } catch (err: any) {
+      // Revert on failure
+      if (prevData) qc.setQueryData<ListItem[]>(key, prevData)
+      msgApi.error(err?.message || 'Failed to reorder item')
+    }
+  }
+
+  const SortableRow: React.FC<{ it: ListItem; children: React.ReactNode }> = ({ it, children }) => {
+    const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: it.item_id })
+    const style = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+    } as React.CSSProperties
+    return (
+      <div ref={setNodeRef} style={style} className="sortable-row">
+        <span className="drag-handle" {...attributes} {...listeners} aria-label="Drag to reorder"><DotsSixVertical /></span>
+        <div style={{ flex: 1, minWidth: 0 }}>{children}</div>
+      </div>
+    )
+  }
 
   // If the list disappears due to partner's vote while viewing, navigate home (avoid firing during refetch/errors)
   const hadListRef = useRef(false)
@@ -284,45 +337,51 @@ export const ListPage: React.FC = () => {
             ) : (
               <>
                 {incompleteItems.length > 0 && (
-                  <AntList
-                    itemLayout="horizontal"
-                    className="items-list"
-                    dataSource={incompleteItems}
-                    renderItem={(it) => (
-                      <AntList.Item
-                        actions={[
-                          <Button
-                            key="del"
-                            type="text"
-                            danger
-                            icon={<Trash />}
-                            aria-label="Delete item"
-                            title="Delete item"
-                            onClick={() => onDeleteItem(it)}
-                            style={{ paddingInline: 8 }}
-                            disabled={savingItemId === it.item_id || editingItemId === it.item_id}
-                          />
-                        ]}
-                      >
-                        <div className="item-row">
-                          <span ref={setCheckboxRef(it.item_id)} className="checkbox-anchor">
-                            <Checkbox checked={it.completed} onChange={() => onToggleComplete(it)} disabled={savingItemId === it.item_id || editingItemId === it.item_id} />
-                          </span>
-                          <div className="item-text" onClick={(e) => { e.stopPropagation(); startEdit(it) }}>
-                            {editingItemId === it.item_id ? (
-                              <InlineEditText
-                                value={it.description}
-                                onSubmit={(val) => submitEdit(it, val)}
-                                disabled={savingItemId === it.item_id}
+                  <DndContext sensors={sensors} onDragEnd={onDragEnd}>
+                    <SortableContext items={incompleteItems.map(it => it.item_id)} strategy={verticalListSortingStrategy}>
+                      <AntList
+                        itemLayout="horizontal"
+                        className="items-list"
+                        dataSource={incompleteItems}
+                        renderItem={(it) => (
+                          <AntList.Item
+                            actions={[
+                              <Button
+                                key="del"
+                                type="text"
+                                danger
+                                icon={<Trash />}
+                                aria-label="Delete item"
+                                title="Delete item"
+                                onClick={() => onDeleteItem(it)}
+                                style={{ paddingInline: 8 }}
+                                disabled={savingItemId === it.item_id || editingItemId === it.item_id}
                               />
-                            ) : (
-                              <span style={{ textDecoration: it.completed ? 'line-through' : 'none' }}>{it.description}</span>
-                            )}
-                          </div>
-                        </div>
-                      </AntList.Item>
-                    )}
-                  />
+                            ]}
+                          >
+                            <SortableRow it={it}>
+                              <div className="item-row">
+                                <span ref={setCheckboxRef(it.item_id)} className="checkbox-anchor">
+                                  <Checkbox checked={it.completed} onChange={() => onToggleComplete(it)} disabled={savingItemId === it.item_id || editingItemId === it.item_id} />
+                                </span>
+                                <div className="item-text" onClick={(e) => { e.stopPropagation(); startEdit(it) }}>
+                                  {editingItemId === it.item_id ? (
+                                    <InlineEditText
+                                      value={it.description}
+                                      onSubmit={(val) => submitEdit(it, val)}
+                                      disabled={savingItemId === it.item_id}
+                                    />
+                                  ) : (
+                                    <span style={{ textDecoration: it.completed ? 'line-through' : 'none' }}>{it.description}</span>
+                                  )}
+                                </div>
+                              </div>
+                            </SortableRow>
+                          </AntList.Item>
+                        )}
+                      />
+                    </SortableContext>
+                  </DndContext>
                 )}
                 {includeCompleted && completedItems.length > 0 && (
                   <>

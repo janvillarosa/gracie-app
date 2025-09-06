@@ -326,6 +326,13 @@ func (r *ListItemRepo) ListByList(_ context.Context, listID string) ([]models.Li
     r.st.mu.RLock(); defer r.st.mu.RUnlock()
     out := []models.ListItem{}
     for _, it := range r.st.items { if it.ListID == listID { cp := *it; out = append(out, cp) } }
+    // Sort by Order ascending, then CreatedAt as fallback
+    sort.SliceStable(out, func(i, j int) bool {
+        oi, oj := out[i].Order, out[j].Order
+        if oi == 0 && oj == 0 { return out[i].CreatedAt.Before(out[j].CreatedAt) }
+        if oi == oj { return out[i].CreatedAt.Before(out[j].CreatedAt) }
+        return oi < oj
+    })
     return out, nil
 }
 func (r *ListItemRepo) UpdateCompletion(_ context.Context, itemID string, completed bool, updatedAt time.Time) error {
@@ -341,6 +348,14 @@ func (r *ListItemRepo) UpdateDescription(_ context.Context, itemID string, descr
     it, ok := r.st.items[itemID]
     if !ok { return derr.ErrNotFound }
     it.Description = description
+    it.UpdatedAt = updatedAt
+    return nil
+}
+func (r *ListItemRepo) UpdateOrder(_ context.Context, itemID string, order float64, updatedAt time.Time) error {
+    r.st.mu.Lock(); defer r.st.mu.Unlock()
+    it, ok := r.st.items[itemID]
+    if !ok { return derr.ErrNotFound }
+    it.Order = order
     it.UpdatedAt = updatedAt
     return nil
 }

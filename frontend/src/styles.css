@@ -432,6 +432,11 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
   transform-origin: center;
 }
 
+/* Drag handle and sortable row */
+.sortable-row { display: flex; gap: 10px; align-items: flex-start; width: 100%; }
+.drag-handle { cursor: grab; display: inline-flex; align-items: center; color: var(--muted); padding: 6px 2px; }
+.drag-handle:active { cursor: grabbing; }
+
 /* Empty state */
 .empty-state {
   display: flex;

@@ -137,6 +137,7 @@ List Items
 - POST `/rooms/{room_id}/lists/{list_id}/items`: `{ description }` → add item.
 - GET `/rooms/{room_id}/lists/{list_id}/items?include_completed=false`: list items. Defaults to hiding completed items.
 - PATCH `/rooms/{room_id}/lists/{list_id}/items/{item_id}`: `{ description?, completed? }` → edit description and/or toggle completion.
+- PATCH `/rooms/{room_id}/lists/{list_id}/items/{item_id}/position`: `{ prev_id?: string, next_id?: string }` → reorder item relative to neighbors. Server computes a new order value.
 - DELETE `/rooms/{room_id}/lists/{list_id}/items/{item_id}`: delete item (any member). Deletion differs from completion.
 
 ## Notes

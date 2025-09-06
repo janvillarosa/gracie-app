@@ -59,5 +59,6 @@ type ListItemRepository interface {
     ListByList(ctx context.Context, listID string) ([]models.ListItem, error)
     UpdateCompletion(ctx context.Context, itemID string, completed bool, updatedAt time.Time) error
     UpdateDescription(ctx context.Context, itemID string, description string, updatedAt time.Time) error
+    UpdateOrder(ctx context.Context, itemID string, order float64, updatedAt time.Time) error
     Delete(ctx context.Context, itemID string) error
 }
