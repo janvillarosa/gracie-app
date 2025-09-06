@@ -412,7 +412,7 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
 .item-row {
   display: flex;
   gap: 8px;
-  align-items: flex-start;
+  align-items: center; /* center checkbox and text vertically */
   flex-wrap: wrap;
   width: 100%;
 }
@@ -433,8 +433,22 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
 }
 
 /* Drag handle and sortable row */
-.sortable-row { display: flex; gap: 10px; align-items: flex-start; width: 100%; }
-.drag-handle { cursor: grab; display: inline-flex; align-items: center; color: var(--muted); padding: 6px 2px; }
+.sortable-row { display: flex; gap: 10px; align-items: center; width: 100%; touch-action: auto; }
+.drag-handle {
+  cursor: grab;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  padding: 10px 6px; /* larger tap target */
+  min-width: 36px;
+  min-height: 36px;
+  user-select: none;
+  -webkit-user-select: none;
+  /* Allow native scrolling and gestures to pass through */
+  touch-action: auto;
+  -webkit-touch-callout: none;
+}
 .drag-handle:active { cursor: grabbing; }
 
 /* Empty state */

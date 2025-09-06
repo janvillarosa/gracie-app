@@ -7,8 +7,8 @@ import type { List, ListItem } from '@api/types'
 import { useLiveQueryOpts } from '@lib/liveQuery'
 import { Card, Typography, Space, Button, Input, Checkbox, List as AntList, Grid, Dropdown, message, Skeleton, Alert } from 'antd'
 import { ArrowLeft, Trash, Plus, Eye, EyeSlash, DotsThreeVertical, DotsSixVertical } from '@phosphor-icons/react'
-import { DndContext, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core'
-import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable'
+import { DndContext, TouchSensor, MouseSensor, KeyboardSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core'
+import { SortableContext, verticalListSortingStrategy, useSortable, sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { toEmoji } from '../icons'
 import { confettiAt } from '@lib/confetti'
@@ -86,7 +86,12 @@ export const ListPage: React.FC = () => {
   }, [items])
   const incompleteItems = useMemo(() => sortedItems.filter(it => !it.completed), [sortedItems])
   const completedItems = useMemo(() => sortedItems.filter(it => it.completed), [sortedItems])
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { delay: 180, tolerance: 8 } }))
+  // Sensors: touch (mobile long-press), mouse (desktop), keyboard (a11y)
+  const sensors = useSensors(
+    useSensor(TouchSensor, { activationConstraint: { delay: 300, tolerance: 10 } }),
+    useSensor(MouseSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  )
 
   const onDragEnd = async (e: DragEndEvent) => {
     const activeId = e.active.id as string
