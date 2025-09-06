@@ -19,6 +19,7 @@ export const ListPage: React.FC = () => {
   const { listId = '' } = useParams()
   const [includeCompleted, setIncludeCompleted] = useState(false)
   const [newDesc, setNewDesc] = useState('')
+  const addRef = useRef<HTMLTextAreaElement | null>(null)
   
   const [editingItemId, setEditingItemId] = useState<string | null>(null)
   const [savingItemId, setSavingItemId] = useState<string | null>(null)
@@ -94,13 +95,24 @@ export const ListPage: React.FC = () => {
     }
   }, [listsQuery.isSuccess, listsQuery.isFetching, listMeta, navigate])
 
-  const onCreateItem = async () => {
-    if (!newDesc.trim()) return
-    try {
-      await createListItem(apiKey!, roomId!, listId, newDesc.trim())
-      setNewDesc('')
-      await qc.invalidateQueries({ queryKey: ['list-items', listId] })
-    } catch (e: any) { msgApi.error(e?.message || 'Failed to add item') }
+  const onCreateItem = () => {
+    const desc = newDesc.trim()
+    if (!desc) return
+    // Optimistic UX: clear input immediately and keep focus for rapid entry
+    setNewDesc('')
+    // Keep focus so user can continue typing
+    requestAnimationFrame(() => {
+      addRef.current?.focus()
+    })
+    // Fire-and-forget create; reconcile via invalidate
+    createListItem(apiKey!, roomId!, listId, desc)
+      .then(() => qc.invalidateQueries({ queryKey: ['list-items', listId] }))
+      .catch((e: any) => {
+        // Restore text so the user can retry
+        setNewDesc(desc)
+        addRef.current?.focus()
+        msgApi.error(e?.message || 'Failed to add item')
+      })
   }
 
   const onToggleComplete = async (it: ListItem) => {
@@ -260,36 +272,14 @@ export const ListPage: React.FC = () => {
           )}
         </Card>
 
-        {/* Top sheet: input + list items */}
+        {/* Top sheet: list items; sticky add bar is rendered at the bottom */}
         <Card className="paper-card paper-list">
           <Space direction="vertical" style={{ width: '100%' }} size="large">
-            <div className="add-bar">
-              <div className="add-row">
-                <Input
-                  className="add-input"
-                  placeholder="Add an item"
-                  value={newDesc}
-                  onChange={(e) => setNewDesc(e.target.value)}
-                  size="large"
-                  onPressEnter={onCreateItem}
-                />
-                <Button
-                  className="add-btn"
-                  type="primary"
-                  shape="circle"
-                  onClick={onCreateItem}
-                  disabled={!newDesc.trim()}
-                  icon={<Plus />}
-                  size="large"
-                  aria-label="Add item"
-                />
-              </div>
-            </div>
             {itemsQuery.isLoading ? (
               <Skeleton active paragraph={{ rows: 4 }} />
             ) : items.length === 0 ? (
               <div className="empty-state"><Plus size={20} style={{ color: 'var(--color-primary)' }} />
-                <Typography.Text type="secondary">No items yet. Add your first item above.</Typography.Text>
+                <Typography.Text type="secondary">No items yet. Add your first item below.</Typography.Text>
               </div>
             ) : (
               <>
@@ -382,7 +372,42 @@ export const ListPage: React.FC = () => {
                 )}
               </>
             )}
-            
+            {/* Sticky Add Bar at bottom */}
+            <div className="add-bar" role="region" aria-label="Add new item">
+              <div className="add-row">
+                <Input.TextArea
+                  ref={addRef}
+                  className="add-input"
+                  placeholder="Add an item"
+                  value={newDesc}
+                  onChange={(e) => setNewDesc(e.target.value)}
+                  autoSize={{ minRows: 1, maxRows: 3 }}
+                  onKeyDown={(e) => {
+                    const ne = e as unknown as { key: string; shiftKey: boolean; nativeEvent?: any; isComposing?: boolean; preventDefault: () => void }
+                    const composing = (
+                      (ne.nativeEvent && (ne.nativeEvent.isComposing || ne.nativeEvent.keyCode === 229)) ||
+                      (!!(ne as any).isComposing)
+                    )
+                    if (ne.key === 'Enter' && !ne.shiftKey && !composing) {
+                      e.preventDefault()
+                      onCreateItem()
+                    }
+                  }}
+                  aria-label="Add item input"
+                />
+                <Button
+                  className="add-btn"
+                  type="primary"
+                  shape="circle"
+                  onClick={onCreateItem}
+                  disabled={!newDesc.trim()}
+                  icon={<Plus />}
+                  size="large"
+                  aria-label="Add item"
+                />
+              </div>
+            </div>
+          
           </Space>
         </Card>
       </div>

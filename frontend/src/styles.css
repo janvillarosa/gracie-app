@@ -347,17 +347,17 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
 .list-meta { color: var(--text-secondary); }
 .list-description { color: var(--text-secondary); margin-top: 4px; }
 
-/* Add bar: sticky at the very top of the list sheet; seamless, no top shadows */
+/* Add bar: sticky at the very bottom of the list sheet */
 .add-bar {
   position: sticky;
-  top: -1px; /* ensures flush with rounded edge */
+  bottom: -1px; /* ensures flush with rounded edge */
   background: var(--panel);
   padding: 12px 0; /* align with list items (uses Card's own padding) */
-  border-top: none;
+  border-top: 1px solid var(--border);
   box-shadow: none;
   z-index: 1;
-  border-top-left-radius: var(--radius-squircle);
-  border-top-right-radius: var(--radius-squircle);
+  border-bottom-left-radius: var(--radius-squircle);
+  border-bottom-right-radius: var(--radius-squircle);
 }
 
 /* Add row layout: input expands; button stays on right */
@@ -509,7 +509,6 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
 
 /* Add bar elements */
 .add-input { flex: 1 1 auto; }
-.add-btn { min-width: 84px; }
 
 /* Confetti animation */
 .confetti-root { position: fixed; inset: 0; pointer-events: none; z-index: 9999; }
