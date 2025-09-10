@@ -11,13 +11,13 @@ import type { MenuProps } from 'antd'
 import { IconPicker } from '@components/IconPicker'
 import { AvatarBadge } from '@components/AvatarBadge'
 import { ShareCodeModal } from '@components/ShareCodeModal'
-import { BrandLogo } from '@components/BrandLogo'
+import { TopNav } from '@components/TopNav'
 import { toEmoji } from '../icons'
 import type { ListIcon } from '@api/types'
 import { useDocumentTitle } from '@lib/useDocumentTitle'
 
 export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string }> = ({ room, roomId, userId }) => {
-  const { apiKey, setApiKey } = useAuth()
+  const { apiKey } = useAuth()
   const navigate = useNavigate()
   useDocumentTitle(room.display_name || 'House')
   const [shareOpen, setShareOpen] = useState(false)
@@ -114,21 +114,16 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
 
   return (
     <div className="container">
-      <BrandLogo />
+      <TopNav />
       <div className="paper-stack">
         {/* Bottom meta sheet: title/description/share */}
         <Card className="paper-card paper-meta">
           {(() => {
             const menu: MenuProps['items'] = [
               { key: 'settings', label: 'House Settings' },
-              { key: 'account', label: 'Account Settings' },
-              { type: 'divider' as const },
-              { key: 'logout', label: 'Logout' },
             ]
             const onMenuClick: MenuProps['onClick'] = ({ key }) => {
               if (key === 'settings') navigate('/app/settings')
-              if (key === 'account') navigate('/app/account')
-              if (key === 'logout') setApiKey(null)
             }
             return isMobile ? (
               <Space direction="vertical" style={{ width: '100%' }} size="small">

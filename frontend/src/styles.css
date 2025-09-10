@@ -210,6 +210,27 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
   filter: drop-shadow(0 2px 6px rgba(0,0,0,0.12));
 }
 
+/* Top navigation: logo left, avatar right */
+.topnav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 10px 0;
+}
+.topnav .brand-logo { margin: 0; }
+.topnav-right { display: flex; align-items: center; gap: 10px; }
+.avatar-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+}
+.avatar-button:focus { outline: 2px solid var(--border-strong); outline-offset: 2px; border-radius: 999px; }
+
 /* Wordmark next to logo on auth screen */
 .brand-banner {
   margin: 0 0 10px var(--radius-squircle);

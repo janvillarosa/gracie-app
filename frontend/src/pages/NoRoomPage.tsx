@@ -2,16 +2,16 @@ import React, { useMemo, useState } from 'react'
 import { useAuth } from '@auth/AuthProvider'
 import { createRoom, updateRoomSettings, isConflict, isForbidden, joinRoomByToken } from '@api/endpoints'
 import { Card, Typography, Form, Input, Button, Space, Grid, Divider, message } from 'antd'
-import { SignOut, Plus, UsersThree } from '@phosphor-icons/react'
+import { Plus, UsersThree } from '@phosphor-icons/react'
 import { CreateHouseModal } from '@components/CreateHouseModal'
 import { useNavigate } from 'react-router-dom'
 import { useDocumentTitle } from '@lib/useDocumentTitle'
-import { BrandLogo } from '@components/BrandLogo'
+import { TopNav } from '@components/TopNav'
 
 const TOKEN_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ0123456789' // no I, O, L
 
 export const NoRoomPage: React.FC = () => {
-  const { apiKey, setApiKey } = useAuth()
+  const { apiKey } = useAuth()
   const navigate = useNavigate()
   useDocumentTitle('Join or Create a House')
   const [token, setToken] = useState('')
@@ -58,20 +58,16 @@ export const NoRoomPage: React.FC = () => {
 
   return (
     <div className="container">
-      <BrandLogo />
+      <TopNav />
       <Card className="no-room-card">
         <Space direction="vertical" style={{ width: '100%' }} size="large">
           {isMobile ? (
             <Space direction="vertical" style={{ width: '100%' }} size="small">
               <Typography.Title level={2} style={{ margin: 0 }}>You are not in a house yet</Typography.Title>
-              <Space wrap>
-                <Button onClick={() => setApiKey(null)} icon={<SignOut />}>Logout</Button>
-              </Space>
             </Space>
           ) : (
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Typography.Title level={2} style={{ margin: 0 }}>You are not in a house yet</Typography.Title>
-              <Button onClick={() => setApiKey(null)} icon={<SignOut />}>Logout</Button>
             </div>
           )}
           <div className="section">

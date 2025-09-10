@@ -8,7 +8,7 @@ import { Card, Typography, Space, Button, Input, Form, Modal, Grid, Divider, mes
 import { Avatar } from '@components/Avatar'
 import { ArrowLeft, FloppyDisk, Trash } from '@phosphor-icons/react'
 import { useDocumentTitle } from '@lib/useDocumentTitle'
-import { BrandLogo } from '@components/BrandLogo'
+import { TopNav } from '@components/TopNav'
 
 function isEmail(v: string) {
   return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)
@@ -103,7 +103,7 @@ export const UserSettings: React.FC = () => {
 
   return (
     <div className="container">
-      <BrandLogo />
+      <TopNav />
       <Card>
         <Space direction="vertical" style={{ width: '100%' }} size="large">
           {isMobile ? (

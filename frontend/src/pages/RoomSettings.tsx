@@ -8,7 +8,7 @@ import { ArrowLeft, FloppyDisk, ShareNetwork, Trash, XCircle } from '@phosphor-i
 import { isValidDisplayName, MAX_DESCRIPTION } from '@lib/validation'
 import { ShareCodeModal } from '@components/ShareCodeModal'
 import { useDocumentTitle } from '@lib/useDocumentTitle'
-import { BrandLogo } from '@components/BrandLogo'
+import { TopNav } from '@components/TopNav'
 
 const NAME_RE = /^[A-Za-z0-9 ]+$/ // kept for backwards compatibility if referenced; prefer lib/validation
 
@@ -104,7 +104,7 @@ export const RoomSettings: React.FC = () => {
 
   return (
     <div className="container">
-      <BrandLogo />
+      <TopNav />
       <Card>
         <Space direction="vertical" style={{ width: '100%' }} size="large">
           {isMobile ? (
