@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getMe, getListItems, getLists, createListItem, updateListItem, deleteListItem, voteListDeletion, cancelListDeletion, reorderListItem, updateList } from '@api/endpoints'
 import type { List, ListItem } from '@api/types'
 import { Card, Typography, Space, Button, Input, Checkbox, List as AntList, Grid, Dropdown, message, Skeleton, Alert, Tabs } from 'antd'
-import { ArrowLeft, Trash, Plus, Eye, EyeSlash, DotsThreeVertical, DotsSixVertical, FloppyDisk } from '@phosphor-icons/react'
+import { ArrowLeft, Trash, Plus, Eye, EyeSlash, DotsThreeVertical, DotsSixVertical, FloppyDisk, X } from '@phosphor-icons/react'
 import { DndContext, TouchSensor, MouseSensor, KeyboardSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy, useSortable, sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -541,7 +541,7 @@ export const ListPage: React.FC = () => {
                       autoSize={{ minRows: 10, maxRows: 30 }}
                     />
                     <div className="notes-actions">
-                      <Button onClick={() => setNotesText(listMeta?.notes || '')} disabled={!notesDirty}>Reset</Button>
+                      <Button danger onClick={() => setNotesText('')} disabled={!notesText.trim()} icon={<X />}>Clear all</Button>
                       <Button type="primary" onClick={onSaveNotes} disabled={!notesDirty || notesSaving} icon={<FloppyDisk />}>Save</Button>
                     </div>
                   </Space>

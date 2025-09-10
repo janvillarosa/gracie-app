@@ -152,13 +152,13 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
 }
 
 /* Default (non-primary) danger buttons */
-.ant-btn-dangerous:not(.ant-btn-primary) {
+.ant-btn-dangerous:not(.ant-btn-primary):not(.ant-btn-text):not(.ant-btn-link) {
   color: #BE1E2D !important;
   border-color: #BE1E2D !important;
 }
-.ant-btn-dangerous:not(.ant-btn-primary):hover,
-.ant-btn-dangerous:not(.ant-btn-primary):focus,
-.ant-btn-dangerous:not(.ant-btn-primary):active {
+.ant-btn-dangerous:not(.ant-btn-primary):not(.ant-btn-text):not(.ant-btn-link):hover,
+.ant-btn-dangerous:not(.ant-btn-primary):not(.ant-btn-text):not(.ant-btn-link):focus,
+.ant-btn-dangerous:not(.ant-btn-primary):not(.ant-btn-text):not(.ant-btn-link):active {
   color: #BE1E2D !important;
   border-color: #BE1E2D !important;
   background: rgba(190, 30, 45, 0.08) !important; /* subtle tint */
@@ -593,6 +593,32 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
   display: flex;
   justify-content: flex-end;
   gap: 8px;
+}
+
+/* Items list action buttons: keep trash red and borderless, even when disabled */
+.items-list .ant-btn.ant-btn-text { border: none !important; background: transparent !important; box-shadow: none !important; }
+.items-list .ant-btn.ant-btn-text.ant-btn-dangerous { color: #BE1E2D !important; }
+.items-list .ant-btn.ant-btn-text.ant-btn-dangerous:hover,
+.items-list .ant-btn.ant-btn-text.ant-btn-dangerous:focus,
+.items-list .ant-btn.ant-btn-text.ant-btn-dangerous:active { color: #BE1E2D !important; background: transparent !important; }
+.items-list .ant-btn.ant-btn-text.ant-btn-dangerous[disabled],
+.items-list .ant-btn.ant-btn-text.ant-btn-dangerous[aria-disabled='true'] {
+  color: #BE1E2D !important;
+  background: transparent !important;
+  border: none !important;
+  opacity: 1 !important;
+}
+.items-list .ant-btn.ant-btn-text.ant-btn-dangerous[disabled] .ant-btn-icon,
+.items-list .ant-btn.ant-btn-text.ant-btn-dangerous[disabled] .anticon,
+.items-list .ant-btn.ant-btn-text.ant-btn-dangerous[aria-disabled='true'] .ant-btn-icon,
+.items-list .ant-btn.ant-btn-text.ant-btn-dangerous[aria-disabled='true'] .anticon {
+  color: #BE1E2D !important;
+}
+.items-list .ant-btn.ant-btn-text.ant-btn-dangerous[disabled] .ant-btn-icon svg,
+.items-list .ant-btn.ant-btn-text.ant-btn-dangerous[aria-disabled='true'] .ant-btn-icon svg {
+  color: #BE1E2D !important;
+  fill: currentColor !important;
+  stroke: currentColor !important;
 }
 
 
