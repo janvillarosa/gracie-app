@@ -2,10 +2,10 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '@auth/AuthProvider'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { getMe, getListItems, getLists, createListItem, updateListItem, deleteListItem, voteListDeletion, cancelListDeletion, reorderListItem } from '@api/endpoints'
+import { getMe, getListItems, getLists, createListItem, updateListItem, deleteListItem, voteListDeletion, cancelListDeletion, reorderListItem, updateList } from '@api/endpoints'
 import type { List, ListItem } from '@api/types'
-import { Card, Typography, Space, Button, Input, Checkbox, List as AntList, Grid, Dropdown, message, Skeleton, Alert } from 'antd'
-import { ArrowLeft, Trash, Plus, Eye, EyeSlash, DotsThreeVertical, DotsSixVertical } from '@phosphor-icons/react'
+import { Card, Typography, Space, Button, Input, Checkbox, List as AntList, Grid, Dropdown, message, Skeleton, Alert, Tabs } from 'antd'
+import { ArrowLeft, Trash, Plus, Eye, EyeSlash, DotsThreeVertical, DotsSixVertical, FloppyDisk } from '@phosphor-icons/react'
 import { DndContext, TouchSensor, MouseSensor, KeyboardSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy, useSortable, sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -35,6 +35,11 @@ export const ListPage: React.FC = () => {
   const [msgApi, contextHolder] = message.useMessage()
   const show = (msg: string) => { msgApi.info(msg) }
   const [redirecting, setRedirecting] = useState(false)
+  const [activeTab, setActiveTab] = useState<'items' | 'notes'>('items')
+  const [notesText, setNotesText] = useState('')
+  const [notesSaving, setNotesSaving] = useState(false)
+  const tabsWrapRef = useRef<HTMLDivElement | null>(null)
+  const [tabVars, setTabVars] = useState<React.CSSProperties>({})
 
   const timeAgo = (iso: string | Date | undefined) => {
     if (!iso) return 'less than a minute ago'
@@ -238,6 +243,45 @@ export const ListPage: React.FC = () => {
 
   // Set the document title unconditionally (before any early returns)
   useDocumentTitle(listMeta?.name || 'List')
+  // Sync local notes buffer with server when loading or switching lists
+  useEffect(() => {
+    if (listMeta) setNotesText(listMeta.notes || '')
+  }, [listMeta?.list_id, listMeta?.notes])
+
+  const notesDirty = (listMeta?.notes || '') !== notesText
+  const onSaveNotes = async () => {
+    if (!roomId || !listId || !notesDirty) return
+    try {
+      setNotesSaving(true)
+      await updateList(apiKey!, roomId, listId, { notes: notesText })
+      await qc.invalidateQueries({ queryKey: ['lists', roomId] })
+      msgApi.success('Notes saved')
+    } catch (e: any) {
+      msgApi.error(e?.message || 'Failed to save notes')
+    } finally {
+      setNotesSaving(false)
+    }
+  }
+
+  // Animate sliding pill indicator for tabs by updating CSS variables
+  useEffect(() => {
+    const update = () => {
+      const wrap = tabsWrapRef.current
+      if (!wrap) return
+      const list = wrap.querySelector('.ant-tabs-nav .ant-tabs-nav-list') as HTMLElement | null
+      const active = wrap.querySelector('.ant-tabs-nav .ant-tabs-tab-active') as HTMLElement | null
+      if (!list || !active) return
+      const lr = list.getBoundingClientRect()
+      const ar = active.getBoundingClientRect()
+      const left = Math.max(0, ar.left - lr.left)
+      const width = Math.max(0, ar.width)
+      setTabVars({ ['--tab-x' as any]: `${left}px`, ['--tab-w' as any]: `${width}px` })
+    }
+    const id = requestAnimationFrame(update)
+    const onResize = () => update()
+    window.addEventListener('resize', onResize)
+    return () => { cancelAnimationFrame(id); window.removeEventListener('resize', onResize) }
+  }, [activeTab, screens.md])
 
   if (meQuery.isLoading || listsQuery.isLoading || itemsQuery.isLoading) {
     return <div className="container"><Card>Loading…</Card></div>
@@ -272,11 +316,11 @@ export const ListPage: React.FC = () => {
                     <Typography.Text className="list-description">{listMeta.description}</Typography.Text>
                   )}
                 </div>
-                <div className="list-actions">
-                  <Button onClick={() => setIncludeCompleted((v) => !v)} icon={includeCompleted ? <EyeSlash /> : <Eye />}>
-                    {includeCompleted ? 'Hide' : 'Show'} completed
-                  </Button>
-                  <Button onClick={() => navigate('/app')} icon={<ArrowLeft />}>Back</Button>
+              <div className="list-actions">
+                <Button onClick={() => setIncludeCompleted((v) => !v)} icon={includeCompleted ? <EyeSlash /> : <Eye />}>
+                  {includeCompleted ? 'Hide' : 'Show'} completed
+                </Button>
+                <Button onClick={() => navigate('/app')} icon={<ArrowLeft />}>Back</Button>
                   <Dropdown
                     trigger={["click"]}
                     menu={{
@@ -330,149 +374,182 @@ export const ListPage: React.FC = () => {
           )}
         </Card>
 
-        {/* Top sheet: list items; sticky add bar is rendered at the bottom */}
+        {/* Top sheet: tabs over list content */}
         <Card className="paper-card paper-list">
-          <Space direction="vertical" style={{ width: '100%' }} size="large">
-            {itemsQuery.isLoading ? (
-              <Skeleton active paragraph={{ rows: 4 }} />
-            ) : items.length === 0 ? (
-              <div className="empty-state"><Plus size={20} style={{ color: 'var(--color-primary)' }} />
-                <Typography.Text type="secondary">No items yet. Add your first item below.</Typography.Text>
-              </div>
-            ) : (
-              <>
-                {incompleteItems.length > 0 && (
-                  <DndContext sensors={sensors} onDragEnd={onDragEnd}>
-                    <SortableContext items={incompleteItems.map(it => it.item_id)} strategy={verticalListSortingStrategy}>
-                      <AntList
-                        itemLayout="horizontal"
-                        className="items-list"
-                        dataSource={incompleteItems}
-                        renderItem={(it) => (
-                          <AntList.Item
-                            actions={[
-                              <Button
-                                key="del"
-                                type="text"
-                                danger
-                                icon={<Trash />}
-                                aria-label="Delete item"
-                                title="Delete item"
-                                onClick={() => onDeleteItem(it)}
-                                style={{ paddingInline: 8 }}
-                                disabled={savingItemId === it.item_id || editingItemId === it.item_id}
+          <div ref={tabsWrapRef}>
+          <Tabs
+            className="list-tabs"
+            style={tabVars}
+            activeKey={activeTab}
+            onChange={(k) => setActiveTab(k as 'items' | 'notes')}
+            items={[
+              {
+                key: 'items',
+                label: 'Items',
+                children: (
+                  <Space direction="vertical" style={{ width: '100%' }} size="large">
+                    {itemsQuery.isLoading ? (
+                      <Skeleton active paragraph={{ rows: 4 }} />
+                    ) : items.length === 0 ? (
+                      <div className="empty-state"><Plus size={20} style={{ color: 'var(--color-primary)' }} />
+                        <Typography.Text type="secondary">No items yet. Add your first item below.</Typography.Text>
+                      </div>
+                    ) : (
+                      <>
+                        {incompleteItems.length > 0 && (
+                          <DndContext sensors={sensors} onDragEnd={onDragEnd}>
+                            <SortableContext items={incompleteItems.map(it => it.item_id)} strategy={verticalListSortingStrategy}>
+                              <AntList
+                                itemLayout="horizontal"
+                                className="items-list"
+                                dataSource={incompleteItems}
+                                renderItem={(it) => (
+                                  <AntList.Item
+                                    actions={[
+                                      <Button
+                                        key="del"
+                                        type="text"
+                                        danger
+                                        icon={<Trash />}
+                                        aria-label="Delete item"
+                                        title="Delete item"
+                                        onClick={() => onDeleteItem(it)}
+                                        style={{ paddingInline: 8 }}
+                                        disabled={savingItemId === it.item_id || editingItemId === it.item_id}
+                                      />
+                                    ]}
+                                  >
+                                    <SortableRow it={it}>
+                                      <div className="item-row">
+                                        <span ref={setCheckboxRef(it.item_id)} className="checkbox-anchor">
+                                          <Checkbox checked={it.completed} onChange={() => onToggleComplete(it)} disabled={savingItemId === it.item_id || editingItemId === it.item_id} />
+                                        </span>
+                                        <div className="item-text" onClick={(e) => { e.stopPropagation(); startEdit(it) }}>
+                                          {editingItemId === it.item_id ? (
+                                            <InlineEditText
+                                              value={it.description}
+                                              onSubmit={(val) => submitEdit(it, val)}
+                                              disabled={savingItemId === it.item_id}
+                                            />
+                                          ) : (
+                                            <span style={{ textDecoration: it.completed ? 'line-through' : 'none' }}>{it.description}</span>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </SortableRow>
+                                  </AntList.Item>
+                                )}
                               />
-                            ]}
-                          >
-                            <SortableRow it={it}>
-                              <div className="item-row">
-                                <span ref={setCheckboxRef(it.item_id)} className="checkbox-anchor">
-                                  <Checkbox checked={it.completed} onChange={() => onToggleComplete(it)} disabled={savingItemId === it.item_id || editingItemId === it.item_id} />
-                                </span>
-                                <div className="item-text" onClick={(e) => { e.stopPropagation(); startEdit(it) }}>
-                                  {editingItemId === it.item_id ? (
-                                    <InlineEditText
-                                      value={it.description}
-                                      onSubmit={(val) => submitEdit(it, val)}
-                                      disabled={savingItemId === it.item_id}
-                                    />
-                                  ) : (
-                                    <span style={{ textDecoration: it.completed ? 'line-through' : 'none' }}>{it.description}</span>
-                                  )}
-                                </div>
-                              </div>
-                            </SortableRow>
-                          </AntList.Item>
+                            </SortableContext>
+                          </DndContext>
                         )}
-                      />
-                    </SortableContext>
-                  </DndContext>
-                )}
-                {includeCompleted && completedItems.length > 0 && (
-                  <>
-                    <div className="completed-header">
-                      <span>Completed ({completedItems.length})</span>
-                    </div>
-                    <AntList
-                      itemLayout="horizontal"
-                      className="items-list"
-                      dataSource={completedItems}
-                      renderItem={(it) => (
-                        <AntList.Item
-                          actions={[
-                            <Button
-                              key="del"
-                              type="text"
-                              danger
-                              icon={<Trash />}
-                              aria-label="Delete item"
-                              title="Delete item"
-                              onClick={() => onDeleteItem(it)}
-                              style={{ paddingInline: 8 }}
-                              disabled={savingItemId === it.item_id || editingItemId === it.item_id}
-                            />
-                          ]}
-                        >
-                          <div className="item-row item-row-completed">
-                            <span ref={setCheckboxRef(it.item_id)} className="checkbox-anchor">
-                              <Checkbox checked={it.completed} onChange={() => onToggleComplete(it)} disabled={savingItemId === it.item_id || editingItemId === it.item_id} />
-                            </span>
-                            <div className="item-text" onClick={(e) => { e.stopPropagation(); startEdit(it) }}>
-                              {editingItemId === it.item_id ? (
-                                <InlineEditText
-                                  value={it.description}
-                                  onSubmit={(val) => submitEdit(it, val)}
-                                  disabled={savingItemId === it.item_id}
-                                />
-                              ) : (
-                                <span style={{ textDecoration: it.completed ? 'line-through' : 'none' }}>{it.description}</span>
-                              )}
+                        {includeCompleted && completedItems.length > 0 && (
+                          <>
+                            <div className="completed-header">
+                              <span>Completed ({completedItems.length})</span>
                             </div>
+                            <AntList
+                              itemLayout="horizontal"
+                              className="items-list"
+                              dataSource={completedItems}
+                              renderItem={(it) => (
+                                <AntList.Item
+                                  actions={[
+                                    <Button
+                                      key="del"
+                                      type="text"
+                                      danger
+                                      icon={<Trash />}
+                                      aria-label="Delete item"
+                                      title="Delete item"
+                                      onClick={() => onDeleteItem(it)}
+                                      style={{ paddingInline: 8 }}
+                                      disabled={savingItemId === it.item_id || editingItemId === it.item_id}
+                                    />
+                                  ]}
+                                >
+                                  <div className="item-row item-row-completed">
+                                    <span ref={setCheckboxRef(it.item_id)} className="checkbox-anchor">
+                                      <Checkbox checked={it.completed} onChange={() => onToggleComplete(it)} disabled={savingItemId === it.item_id || editingItemId === it.item_id} />
+                                    </span>
+                                    <div className="item-text" onClick={(e) => { e.stopPropagation(); startEdit(it) }}>
+                                      {editingItemId === it.item_id ? (
+                                        <InlineEditText
+                                          value={it.description}
+                                          onSubmit={(val) => submitEdit(it, val)}
+                                          disabled={savingItemId === it.item_id}
+                                        />
+                                      ) : (
+                                        <span style={{ textDecoration: it.completed ? 'line-through' : 'none' }}>{it.description}</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </AntList.Item>
+                              )}
+                            />
+                          </>
+                        )}
+                        {/* Sticky Add Bar at bottom */}
+                        <div className="add-bar" role="region" aria-label="Add new item">
+                          <div className="add-row">
+                            <Input.TextArea
+                              ref={addRef}
+                              className="add-input"
+                              placeholder="Add an item"
+                              value={newDesc}
+                              onChange={(e) => setNewDesc(e.target.value)}
+                              autoSize={{ minRows: 1, maxRows: 3 }}
+                              onKeyDown={(e) => {
+                                const ne = e as unknown as { key: string; shiftKey: boolean; nativeEvent?: any; isComposing?: boolean; preventDefault: () => void }
+                                const composing = (
+                                  (ne.nativeEvent && (ne.nativeEvent.isComposing || ne.nativeEvent.keyCode === 229)) ||
+                                  (!!(ne as any).isComposing)
+                                )
+                                if (ne.key === 'Enter' && !ne.shiftKey && !composing) {
+                                  e.preventDefault()
+                                  onCreateItem()
+                                }
+                              }}
+                              aria-label="Add item input"
+                            />
+                            <Button
+                              className="add-btn"
+                              type="primary"
+                              shape="circle"
+                              onClick={onCreateItem}
+                              disabled={!newDesc.trim()}
+                              icon={<Plus />}
+                              size="large"
+                              aria-label="Add item"
+                            />
                           </div>
-                        </AntList.Item>
-                      )}
+                        </div>
+                      </>
+                    )}
+                  </Space>
+                ),
+              },
+              {
+                key: 'notes',
+                label: 'Notes',
+                children: (
+                  <Space direction="vertical" style={{ width: '100%' }} size="large">
+                    <Input.TextArea
+                      value={notesText}
+                      onChange={(e) => setNotesText(e.target.value)}
+                      placeholder="Write notes for this list"
+                      autoSize={{ minRows: 10, maxRows: 30 }}
                     />
-                  </>
-                )}
-              </>
-            )}
-            {/* Sticky Add Bar at bottom */}
-            <div className="add-bar" role="region" aria-label="Add new item">
-              <div className="add-row">
-                <Input.TextArea
-                  ref={addRef}
-                  className="add-input"
-                  placeholder="Add an item"
-                  value={newDesc}
-                  onChange={(e) => setNewDesc(e.target.value)}
-                  autoSize={{ minRows: 1, maxRows: 3 }}
-                  onKeyDown={(e) => {
-                    const ne = e as unknown as { key: string; shiftKey: boolean; nativeEvent?: any; isComposing?: boolean; preventDefault: () => void }
-                    const composing = (
-                      (ne.nativeEvent && (ne.nativeEvent.isComposing || ne.nativeEvent.keyCode === 229)) ||
-                      (!!(ne as any).isComposing)
-                    )
-                    if (ne.key === 'Enter' && !ne.shiftKey && !composing) {
-                      e.preventDefault()
-                      onCreateItem()
-                    }
-                  }}
-                  aria-label="Add item input"
-                />
-                <Button
-                  className="add-btn"
-                  type="primary"
-                  shape="circle"
-                  onClick={onCreateItem}
-                  disabled={!newDesc.trim()}
-                  icon={<Plus />}
-                  size="large"
-                  aria-label="Add item"
-                />
-              </div>
-            </div>
-          
-          </Space>
+                    <div className="notes-actions">
+                      <Button onClick={() => setNotesText(listMeta?.notes || '')} disabled={!notesDirty}>Reset</Button>
+                      <Button type="primary" onClick={onSaveNotes} disabled={!notesDirty || notesSaving} icon={<FloppyDisk />}>Save</Button>
+                    </div>
+                  </Space>
+                ),
+              },
+            ]}
+          />
+          </div>
         </Card>
       </div>
     </div>

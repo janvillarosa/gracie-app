@@ -82,12 +82,12 @@ func (s *ListService) CancelListDeletionVote(ctx context.Context, user *models.U
 }
 
 // UpdateList updates the list's name and/or description.
-func (s *ListService) UpdateList(ctx context.Context, user *models.User, roomID, listID string, name *string, description *string, icon *string) (*models.List, error) {
+func (s *ListService) UpdateList(ctx context.Context, user *models.User, roomID, listID string, name *string, description *string, icon *string, notes *string) (*models.List, error) {
     if err := s.ensureRoomMembership(ctx, user, roomID); err != nil { return nil, err }
     l, err := s.lists.GetByID(ctx, listID)
     if err != nil { return nil, err }
     if l.RoomID != roomID || l.IsDeleted { return nil, derr.ErrForbidden }
-    if name == nil && description == nil && icon == nil { return l, nil }
+    if name == nil && description == nil && icon == nil && notes == nil { return l, nil }
     now := time.Now().UTC()
     if name != nil {
         if *name == "" { return nil, derr.ErrBadRequest }
@@ -103,6 +103,11 @@ func (s *ListService) UpdateList(ctx context.Context, user *models.User, roomID,
             if !models.IsValidListIcon(*icon) { return nil, derr.ErrBadRequest }
             if err := s.lists.UpdateIcon(ctx, listID, *icon, now); err != nil { return nil, err }
         }
+    }
+    if notes != nil {
+        // Cap notes length to prevent abuse (64KB)
+        if len(*notes) > 65535 { return nil, derr.ErrBadRequest }
+        if err := s.lists.UpdateNotes(ctx, listID, *notes, now); err != nil { return nil, err }
     }
     return s.lists.GetByID(ctx, listID)
 }

@@ -129,7 +129,7 @@ Uses API key issued at signup. Send header `Authorization: Bearer <api_key>` on 
 Lists (per Room)
 - POST `/rooms/{room_id}/lists`: `{ name, description?, icon? }` → create a list. `icon` is an optional enum: HOUSE|CAR|PLANE|PENCIL|APPLE|BROCCOLI|TV|SUNFLOWER.
 - GET `/rooms/{room_id}/lists`: list all non-deleted lists for the room.
-- PATCH `/rooms/{room_id}/lists/{list_id}`: `{ name?, description?, icon? }` → update list details. To clear an icon, send `icon: ""`.
+- PATCH `/rooms/{room_id}/lists/{list_id}`: `{ name?, description?, icon?, notes? }` → update list details and freeform notes. To clear an icon, send `icon: ""`. To clear notes, send `notes: ""`.
 - POST `/rooms/{room_id}/lists/{list_id}/deletion/vote`: record caller’s vote; when all current room members have voted, soft-deletes the list. `{ deleted: true|false }`.
 - POST `/rooms/{room_id}/lists/{list_id}/deletion/cancel`: cancel caller’s vote.
 

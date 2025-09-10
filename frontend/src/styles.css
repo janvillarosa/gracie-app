@@ -547,6 +547,54 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
   box-shadow: 0 10px 22px rgba(0,0,0,0.08);
 }
 
+/* Centered, pill-styled tabs for ListPage */
+.list-tabs .ant-tabs-nav { margin: 0 0 8px 0; }
+.list-tabs .ant-tabs-nav::before { border-bottom: none !important; }
+.list-tabs .ant-tabs-ink-bar { display: none !important; }
+.list-tabs .ant-tabs-nav .ant-tabs-nav-wrap { justify-content: center; }
+.list-tabs .ant-tabs-nav .ant-tabs-nav-list {
+  position: relative;
+  background: var(--panel-subtle);
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  padding: 4px;
+  gap: 6px;
+}
+/* Sliding pill indicator */
+.list-tabs .ant-tabs-nav .ant-tabs-nav-list::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: var(--tab-x, 4px);
+  width: var(--tab-w, 60px);
+  height: calc(100% - 8px);
+  border-radius: 999px;
+  background: var(--panel);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  transition: left 220ms cubic-bezier(0.2, 0.8, 0.2, 1), width 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  z-index: 0;
+}
+.list-tabs .ant-tabs-tab {
+  position: relative;
+  z-index: 1;
+  margin: 0 !important;
+  padding: 4px 14px !important;
+  border-radius: 999px !important;
+  background: transparent !important;
+  transition: color 160ms ease;
+}
+.list-tabs .ant-tabs-tab:hover { background: transparent; }
+.list-tabs .ant-tabs-tab .ant-tabs-tab-btn { color: var(--text-secondary); font-weight: 600; }
+.list-tabs .ant-tabs-tab-active .ant-tabs-tab-btn { color: var(--text); }
+.list-tabs .ant-tabs-content-holder { padding-top: 8px; }
+
+/* Notes actions: right-aligned with Save on the far right */
+.notes-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 
 @media (min-width: 768px) {
   .paper-card.paper-list { margin-top: -20px; }

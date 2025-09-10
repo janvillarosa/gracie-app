@@ -73,6 +73,7 @@ type updateListReq struct {
     Name        *string `json:"name"`
     Description *string `json:"description"`
     Icon        *string `json:"icon"`
+    Notes       *string `json:"notes"`
 }
 
 func (h *ListHandler) UpdateList(w http.ResponseWriter, r *http.Request) {
@@ -84,11 +85,11 @@ func (h *ListHandler) UpdateList(w http.ResponseWriter, r *http.Request) {
     if err := api.DecodeJSON(r, &req); err != nil {
         api.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request"}); return
     }
-    if req.Name == nil && req.Description == nil && req.Icon == nil {
+    if req.Name == nil && req.Description == nil && req.Icon == nil && req.Notes == nil {
         w.WriteHeader(http.StatusNoContent)
         return
     }
-    l, err := h.Lists.UpdateList(r.Context(), u, roomID, listID, req.Name, req.Description, req.Icon)
+    l, err := h.Lists.UpdateList(r.Context(), u, roomID, listID, req.Name, req.Description, req.Icon, req.Notes)
     if err != nil { api.WriteJSON(w, statusFromErr(err), map[string]string{"error": err.Error()}); return }
     api.WriteJSON(w, http.StatusOK, l)
 }

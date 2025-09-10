@@ -99,7 +99,7 @@ export async function updateList(
   apiKey: string,
   roomId: string,
   listId: string,
-  params: { name?: string; description?: string; icon?: ListIcon | '' }
+  params: { name?: string; description?: string; icon?: ListIcon | ''; notes?: string }
 ): Promise<List> {
   return apiFetch<List>(`/rooms/${roomId}/lists/${listId}`, { method: 'PATCH', apiKey, body: JSON.stringify(params) })
 }

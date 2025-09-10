@@ -268,6 +268,14 @@ func (r *ListRepo) UpdateDescription(_ context.Context, listID string, descripti
     l.UpdatedAt = updatedAt
     return nil
 }
+func (r *ListRepo) UpdateNotes(_ context.Context, listID string, notes string, updatedAt time.Time) error {
+    r.st.mu.Lock(); defer r.st.mu.Unlock()
+    l, ok := r.st.lists[listID]
+    if !ok { return derr.ErrNotFound }
+    l.Notes = notes
+    l.UpdatedAt = updatedAt
+    return nil
+}
 func (r *ListRepo) UpdateIcon(_ context.Context, listID string, icon string, updatedAt time.Time) error {
     r.st.mu.Lock(); defer r.st.mu.Unlock()
     l, ok := r.st.lists[listID]

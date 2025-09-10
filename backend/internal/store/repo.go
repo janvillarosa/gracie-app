@@ -46,6 +46,7 @@ type ListRepository interface {
     ListByRoom(ctx context.Context, roomID string) ([]models.List, error)
     UpdateName(ctx context.Context, listID string, name string, updatedAt time.Time) error
     UpdateDescription(ctx context.Context, listID string, description string, updatedAt time.Time) error
+    UpdateNotes(ctx context.Context, listID string, notes string, updatedAt time.Time) error
     UpdateIcon(ctx context.Context, listID string, icon string, updatedAt time.Time) error
     AddDeletionVote(ctx context.Context, listID string, userID string, ts time.Time) error
     RemoveDeletionVote(ctx context.Context, listID string, userID string) error

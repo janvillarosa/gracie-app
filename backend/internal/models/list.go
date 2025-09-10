@@ -9,6 +9,7 @@ type List struct {
     RoomID        string            `bson:"room_id"        dynamodbav:"room_id"        json:"room_id"`
     Name          string            `bson:"name"           dynamodbav:"name"           json:"name"`
     Description   string            `bson:"description,omitempty" dynamodbav:"description,omitempty" json:"description,omitempty"`
+    Notes         string            `bson:"notes,omitempty" dynamodbav:"notes,omitempty" json:"notes,omitempty"`
     Icon          string            `bson:"icon,omitempty"  dynamodbav:"icon,omitempty"  json:"icon,omitempty"`
     DeletionVotes map[string]string `bson:"deletion_votes,omitempty" dynamodbav:"deletion_votes,omitempty" json:"deletion_votes,omitempty"`
     IsDeleted     bool              `bson:"is_deleted,omitempty"   dynamodbav:"is_deleted,omitempty"   json:"is_deleted"`

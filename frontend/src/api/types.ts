@@ -30,6 +30,7 @@ export type List = {
   room_id: string
   name: string
   description?: string
+  notes?: string
   icon?: ListIcon
   deletion_votes?: Record<string, string>
   is_deleted: boolean

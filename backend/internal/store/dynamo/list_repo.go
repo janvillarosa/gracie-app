@@ -148,6 +148,32 @@ func (r *ListRepo) UpdateDescription(ctx context.Context, listID string, descrip
     return err
 }
 
+func (r *ListRepo) UpdateNotes(ctx context.Context, listID string, notes string, updatedAt time.Time) error {
+    if notes == "" {
+        _, err := r.c.DB.UpdateItem(ctx, &dynamodb.UpdateItemInput{
+            TableName:        &r.c.Tables.Lists,
+            Key:              map[string]types.AttributeValue{"list_id": &types.AttributeValueMemberS{Value: listID}},
+            UpdateExpression: strPtr("REMOVE notes SET updated_at = :ua"),
+            ExpressionAttributeValues: map[string]types.AttributeValue{
+                ":ua": &types.AttributeValueMemberS{Value: updatedAt.UTC().Format(time.RFC3339)},
+            },
+            ConditionExpression: strPtr("attribute_exists(list_id) AND attribute_not_exists(is_deleted)"),
+        })
+        return err
+    }
+    _, err := r.c.DB.UpdateItem(ctx, &dynamodb.UpdateItemInput{
+        TableName:        &r.c.Tables.Lists,
+        Key:              map[string]types.AttributeValue{"list_id": &types.AttributeValueMemberS{Value: listID}},
+        UpdateExpression: strPtr("SET notes = :nv, updated_at = :ua"),
+        ExpressionAttributeValues: map[string]types.AttributeValue{
+            ":nv": &types.AttributeValueMemberS{Value: notes},
+            ":ua": &types.AttributeValueMemberS{Value: updatedAt.UTC().Format(time.RFC3339)},
+        },
+        ConditionExpression: strPtr("attribute_exists(list_id) AND attribute_not_exists(is_deleted)"),
+    })
+    return err
+}
+
 func (r *ListRepo) UpdateIcon(ctx context.Context, listID string, icon string, updatedAt time.Time) error {
     if icon == "" {
         _, err := r.c.DB.UpdateItem(ctx, &dynamodb.UpdateItemInput{
