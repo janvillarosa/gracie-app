@@ -4,7 +4,6 @@ import { useAuth } from '@auth/AuthProvider'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getMe, getListItems, getLists, createListItem, updateListItem, deleteListItem, voteListDeletion, cancelListDeletion, reorderListItem } from '@api/endpoints'
 import type { List, ListItem } from '@api/types'
-import { useLiveQueryOpts } from '@lib/liveQuery'
 import { Card, Typography, Space, Button, Input, Checkbox, List as AntList, Grid, Dropdown, message, Skeleton, Alert } from 'antd'
 import { ArrowLeft, Trash, Plus, Eye, EyeSlash, DotsThreeVertical, DotsSixVertical } from '@phosphor-icons/react'
 import { DndContext, TouchSensor, MouseSensor, KeyboardSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core'
@@ -58,23 +57,24 @@ export const ListPage: React.FC = () => {
   const userId = meQuery.data?.user_id as string | undefined
 
   const parseMs = (v: any, def: number) => { const n = Number(v); return Number.isFinite(n) && n > 0 ? n : def }
-  const listsMs = parseMs((import.meta as any).env?.VITE_LIVE_QUERY_LISTS_MS, 4000)
-  const itemsMs = parseMs((import.meta as any).env?.VITE_LIVE_QUERY_ITEMS_MS, 2000)
-  const listsLive = useLiveQueryOpts(listsMs)
   const listsQuery = useQuery({
     queryKey: ['lists', roomId],
     queryFn: () => getLists(apiKey!, roomId!),
     enabled: !!roomId,
-    ...listsLive,
+    refetchInterval: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    staleTime: 5_000,
   })
   const listMeta: List | undefined = useMemo(() => listsQuery.data?.find(l => l.list_id === listId), [listsQuery.data, listId])
-
-  const itemsLive = useLiveQueryOpts(itemsMs)
   const itemsQuery = useQuery({
     queryKey: ['list-items', listId, includeCompleted],
     queryFn: () => getListItems(apiKey!, roomId!, listId, includeCompleted),
     enabled: !!roomId && !!listId,
-    ...itemsLive,
+    refetchInterval: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    staleTime: 5_000,
   })
 
   // Always derive items and sorted views before any early returns to keep hook order stable
