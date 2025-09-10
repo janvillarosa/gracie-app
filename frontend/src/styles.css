@@ -441,8 +441,12 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
   justify-content: center;
   color: var(--muted);
   padding: 10px 6px; /* larger tap target */
+  /* keep a consistent handle column width */
+  width: 36px;
   min-width: 36px;
   min-height: 36px;
+  /* modestly larger icon by default */
+  font-size: 18px;
   user-select: none;
   -webkit-user-select: none;
   /* Allow native scrolling and gestures to pass through */
@@ -450,6 +454,19 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
   -webkit-touch-callout: none;
 }
 .drag-handle:active { cursor: grabbing; }
+
+/* Mobile: larger handle, bigger icon, tighter row gap */
+@media (max-width: 767px) {
+  .sortable-row { gap: 8px; }
+  .drag-handle {
+    width: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 12px 10px;
+    font-size: 22px;
+  }
+  .drag-handle svg { width: 22px; height: 22px; }
+}
 
 /* Empty state */
 .empty-state {
