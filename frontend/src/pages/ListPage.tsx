@@ -489,43 +489,43 @@ export const ListPage: React.FC = () => {
                             />
                           </>
                         )}
-                        {/* Sticky Add Bar at bottom */}
-                        <div className="add-bar" role="region" aria-label="Add new item">
-                          <div className="add-row">
-                            <Input.TextArea
-                              ref={addRef}
-                              className="add-input"
-                              placeholder="Add an item"
-                              value={newDesc}
-                              onChange={(e) => setNewDesc(e.target.value)}
-                              autoSize={{ minRows: 1, maxRows: 3 }}
-                              onKeyDown={(e) => {
-                                const ne = e as unknown as { key: string; shiftKey: boolean; nativeEvent?: any; isComposing?: boolean; preventDefault: () => void }
-                                const composing = (
-                                  (ne.nativeEvent && (ne.nativeEvent.isComposing || ne.nativeEvent.keyCode === 229)) ||
-                                  (!!(ne as any).isComposing)
-                                )
-                                if (ne.key === 'Enter' && !ne.shiftKey && !composing) {
-                                  e.preventDefault()
-                                  onCreateItem()
-                                }
-                              }}
-                              aria-label="Add item input"
-                            />
-                            <Button
-                              className="add-btn"
-                              type="primary"
-                              shape="circle"
-                              onClick={onCreateItem}
-                              disabled={!newDesc.trim()}
-                              icon={<Plus />}
-                              size="large"
-                              aria-label="Add item"
-                            />
-                          </div>
-                        </div>
                       </>
                     )}
+                    {/* Sticky Add Bar at bottom (always visible) */}
+                    <div className="add-bar" role="region" aria-label="Add new item">
+                      <div className="add-row">
+                        <Input.TextArea
+                          ref={addRef}
+                          className="add-input"
+                          placeholder="Add an item"
+                          value={newDesc}
+                          onChange={(e) => setNewDesc(e.target.value)}
+                          autoSize={{ minRows: 1, maxRows: 3 }}
+                          onKeyDown={(e) => {
+                            const ne = e as unknown as { key: string; shiftKey: boolean; nativeEvent?: any; isComposing?: boolean; preventDefault: () => void }
+                            const composing = (
+                              (ne.nativeEvent && (ne.nativeEvent.isComposing || ne.nativeEvent.keyCode === 229)) ||
+                              (!!(ne as any).isComposing)
+                            )
+                            if (ne.key === 'Enter' && !ne.shiftKey && !composing) {
+                              e.preventDefault()
+                              onCreateItem()
+                            }
+                          }}
+                          aria-label="Add item input"
+                        />
+                        <Button
+                          className="add-btn"
+                          type="primary"
+                          shape="circle"
+                          onClick={onCreateItem}
+                          disabled={!newDesc.trim()}
+                          icon={<Plus />}
+                          size="large"
+                          aria-label="Add item"
+                        />
+                      </div>
+                    </div>
                   </Space>
                 ),
               },

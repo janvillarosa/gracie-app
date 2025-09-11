@@ -32,7 +32,7 @@ func TestListValidationsAndFilters(t *testing.T) {
     if err != nil { t.Fatalf("create list: %v", err) }
 
     // Update list invalid icon
-    _, err = ls.UpdateList(ctx, cu.User, roomID, l.ListID, nil, nil, strPtr("BAD"))
+    _, err = ls.UpdateList(ctx, cu.User, roomID, l.ListID, nil, nil, strPtr("BAD"), nil)
     if err != derr.ErrBadRequest { t.Fatalf("want bad request on invalid update icon") }
 
     // Create items
@@ -48,4 +48,3 @@ func TestListValidationsAndFilters(t *testing.T) {
 
 func strPtr(s string) *string { return &s }
 func boolPtr(b bool) *bool { return &b }
-
