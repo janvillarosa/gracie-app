@@ -19,7 +19,7 @@ RUN adduser -D -h /app app && apk add --no-cache ca-certificates
 WORKDIR /app
 COPY --from=builder /out/gracie-server /usr/local/bin/gracie-server
 COPY --from=builder /out/setup-ddb /usr/local/bin/setup-ddb
-COPY backend/docker-entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY --from=builder /app/backend/docker-entrypoint.sh /usr/local/bin/entrypoint.sh
 # Ensure entrypoint is executable before switching to non-root user
 RUN chmod +x /usr/local/bin/entrypoint.sh
 USER app
