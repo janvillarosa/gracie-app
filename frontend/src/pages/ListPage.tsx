@@ -90,6 +90,7 @@ export const ListPage: React.FC = () => {
     return copy
   }, [items])
   const incompleteItems = useMemo(() => sortedItems.filter(it => !it.completed), [sortedItems])
+  const incompleteCount = incompleteItems.length
   const completedItems = useMemo(() => sortedItems.filter(it => it.completed), [sortedItems])
   // Sensors: touch (mobile long-press), mouse (desktop), keyboard (a11y)
   const sensors = useSensors(
@@ -312,6 +313,11 @@ export const ListPage: React.FC = () => {
                     {listMeta.name}
                   </Typography.Title>
                   <Typography.Text className="list-meta">Updated {timeAgo(listMeta.updated_at)}</Typography.Text>
+                  {incompleteCount > 0 && (
+                    <Typography.Text className="list-meta">
+                      {incompleteCount === 1 ? '1 unchecked item' : `${incompleteCount} unchecked items`}
+                    </Typography.Text>
+                  )}
                   {listMeta.description && (
                     <Typography.Text className="list-description">{listMeta.description}</Typography.Text>
                   )}
@@ -346,6 +352,11 @@ export const ListPage: React.FC = () => {
                   {listMeta.name}
                 </Typography.Title>
                 <Typography.Text className="list-meta">Updated {timeAgo(listMeta.updated_at)}</Typography.Text>
+                {incompleteCount > 0 && (
+                  <Typography.Text className="list-meta">
+                    {incompleteCount === 1 ? '1 unchecked item' : `${incompleteCount} unchecked items`}
+                  </Typography.Text>
+                )}
                 {listMeta.description && (
                   <Typography.Text className="list-description">{listMeta.description}</Typography.Text>
                 )}

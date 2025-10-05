@@ -8,7 +8,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider } from '@auth/AuthProvider'
 import { ListPage } from '@pages/ListPage'
 
-const setup = async () => {
+const setup = async (listItems: any[] = []) => {
   // Set an API key to be considered authed
   localStorage.setItem('gracie_api_key', 'test-key')
 
@@ -36,8 +36,8 @@ const setup = async () => {
       if (!url.searchParams.has('include_completed')) {
         return new Response(null, { status: 400 })
       }
-      // Start with empty list by default
-      return new Response(JSON.stringify([]), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      // Start with provided list items (default empty)
+      return new Response(JSON.stringify(listItems), { status: 200, headers: { 'Content-Type': 'application/json' } })
     })
   )
 
@@ -122,5 +122,16 @@ describe('ListPage add bar', () => {
     fireEvent.keyDown(input, { key: 'Enter', isComposing: true, keyCode: 229 })
     await new Promise((r) => setTimeout(r, 20))
     expect(created).toBe(0)
+  })
+
+  it('shows unchecked item count when present', async () => {
+    const updatedAt = new Date().toISOString()
+    const listItems = [
+      { item_id: 'a', list_id: 'list-1', room_id: 'room-1', description: 'Milk', completed: false, created_at: updatedAt, updated_at: updatedAt },
+      { item_id: 'b', list_id: 'list-1', room_id: 'room-1', description: 'Eggs', completed: true, created_at: updatedAt, updated_at: updatedAt },
+      { item_id: 'c', list_id: 'list-1', room_id: 'room-1', description: 'Bread', completed: false, created_at: updatedAt, updated_at: updatedAt },
+    ]
+    await setup(listItems)
+    expect(await screen.findByText('2 unchecked items')).toBeInTheDocument()
   })
 })
