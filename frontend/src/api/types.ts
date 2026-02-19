@@ -43,10 +43,21 @@ export type ListItem = {
   list_id: string
   room_id: string
   description: string
+  quantity?: string
+  unit?: string
+  category?: string
+  is_starred?: boolean
+  is_archived?: boolean
   completed: boolean
   order?: number
   created_at: string
   updated_at: string
+}
+
+export type PantryItem = {
+  description: string
+  category: string
+  unit: string
 }
 
 export type ListIcon =

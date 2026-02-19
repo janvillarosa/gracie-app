@@ -3,29 +3,58 @@
 /* Theme tokens via CSS variables (Adobe UI/UX palette) */
 :root {
   /* Light pastel theme (default) */
-  --bg: #F7F7F7;            /* slightly softer page background */
-  --panel: #FFFFFF;         /* container background */
-  --text: #3B3B3B;          /* non-black primary text */
+  --bg: #F7F7F7;
+  /* slightly softer page background */
+  --panel: #FFFFFF;
+  /* container background */
+  --text: #3B3B3B;
+  /* non-black primary text */
   --text-secondary: rgba(59, 59, 59, 0.70);
-  --muted: #7A828E;         /* supplemental muted */
+  --muted: #7A828E;
+  /* supplemental muted */
   /* Brand palette */
-  --brand-yellow: #FFD417;          /* primary actions */
-  --brand-yellow-deep: #E6BE00;     /* hover/active shade */
-  --brand-red: #BE1E2D;             /* danger */
-  --brand-blue: #2348A6;            /* primary links */
+  --brand-yellow: #FFD417;
+  /* primary actions */
+  --brand-yellow-deep: #E6BE00;
+  /* hover/active shade */
+  --brand-red: #BE1E2D;
+  /* danger */
+  --brand-blue: #2348A6;
+  /* primary links */
 
   /* Mapped theme tokens for compatibility */
   --color-primary: var(--brand-yellow);
   --color-primary-deep: var(--brand-yellow-deep);
-  --color-secondary: #C7B090;       /* pastel tan */
-  --color-warning: #FFE766;         /* soft light yellow */
-  --color-danger: var(--brand-red); /* brand danger */
-  --border: #E6E6E6;                /* lighter borders */
-  --border-strong: #D2D2D2;         /* stronger border for list items */
-  --panel-subtle: #FAFAFA;          /* soft panel background for inline sections */
+  --color-secondary: #C7B090;
+  /* pastel tan */
+  --color-warning: #FFE766;
+  /* soft light yellow */
+  --color-danger: var(--brand-red);
+  /* brand danger */
+  --border: #E6E6E6;
+  /* lighter borders */
+  --border-strong: #D2D2D2;
+  /* stronger border for list items */
+  --panel-subtle: #FAFAFA;
+  /* soft panel background for inline sections */
   --font-headings: 'Outfit', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-  --radius-squircle: 16px;          /* unified rounded shape */
-  --ant-modal-footer-margin-top: 25px; /* app-wide modal footer spacing */
+  --radius-squircle: 16px;
+  /* unified rounded shape */
+  --ant-modal-footer-margin-top: 25px;
+  /* app-wide modal footer spacing */
+
+  /* Category Colors */
+  --cat-produce: #4CAF50;
+  --cat-dairy: #2196F3;
+  --cat-bakery: #FF9800;
+  --cat-meat: #F44336;
+  --cat-frozen: #00BCD4;
+  --cat-plant: #9C27B0;
+  --cat-grains: #795548;
+  --cat-pantry: #607D8B;
+  --cat-beverages: #E91E63;
+  --cat-household: #78909C;
+  --cat-general: #9E9E9E;
 }
 
 /* Optional dark theme hook if needed later */
@@ -42,8 +71,16 @@
   --border: #22303c;
 }
 
-* { box-sizing: border-box; }
-html, body, #root { height: 100%; }
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
 body {
   margin: 0;
   background: var(--bg);
@@ -59,7 +96,11 @@ body {
   display: flex;
   align-items: flex-start;
 }
-.login-page .container { width: 100%; max-width: 520px; }
+
+.login-page .container {
+  width: 100%;
+  max-width: 520px;
+}
 
 /* Make login panel shadow a touch more prominent */
 .login-page .paper-card {
@@ -67,42 +108,111 @@ body {
 }
 
 /* Primary link color (brand blue) */
-.link-primary { color: var(--brand-blue) !important; }
-.link-primary:hover { color: color-mix(in srgb, var(--brand-blue) 86%, black) !important; }
+.link-primary {
+  color: var(--brand-blue) !important;
+}
+
+.link-primary:hover {
+  color: color-mix(in srgb, var(--brand-blue) 86%, black) !important;
+}
 
 /* Headings: use Outfit only for titles across the app */
-h1, h2, h3, h4, h5,
-h1.ant-typography, h2.ant-typography, h3.ant-typography, h4.ant-typography, h5.ant-typography {
+h1,
+h2,
+h3,
+h4,
+h5,
+h1.ant-typography,
+h2.ant-typography,
+h3.ant-typography,
+h4.ant-typography,
+h5.ant-typography {
   font-family: var(--font-headings) !important;
   line-height: 1.2;
 }
+
 /* Responsive, slightly larger titles (mobile-first with clamp) */
-h1, h1.ant-typography { font-size: clamp(32px, 4.2vw, 45px); font-weight: 700; }
-h2, h2.ant-typography { font-size: clamp(26px, 3.2vw, 38px); font-weight: 700; }
-h3, h3.ant-typography { font-size: clamp(18px, 2.6vw, 26px); font-weight: 600; }
-h4, h4.ant-typography { font-size: clamp(16px, 2.2vw, 22px); font-weight: 600; }
-h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
+h1,
+h1.ant-typography {
+  font-size: clamp(32px, 4.2vw, 45px);
+  font-weight: 700;
+}
+
+h2,
+h2.ant-typography {
+  font-size: clamp(26px, 3.2vw, 38px);
+  font-weight: 700;
+}
+
+h3,
+h3.ant-typography {
+  font-size: clamp(18px, 2.6vw, 26px);
+  font-weight: 600;
+}
+
+h4,
+h4.ant-typography {
+  font-size: clamp(16px, 2.2vw, 22px);
+  font-weight: 600;
+}
+
+h5,
+h5.ant-typography {
+  font-size: clamp(14px, 2.0vw, 18px);
+  font-weight: 600;
+}
 
 /* On mobile, bump main headers ~15%, subheadings (~h3) ~10% */
 @media (max-width: 767px) {
-  h1, h1.ant-typography { font-size: clamp(42px, 4.8vw, 56px); }
-  h2, h2.ant-typography { font-size: clamp(35px, 3.68vw, 46px); }
+
+  h1,
+  h1.ant-typography {
+    font-size: clamp(42px, 4.8vw, 56px);
+  }
+
+  h2,
+  h2.ant-typography {
+    font-size: clamp(35px, 3.68vw, 46px);
+  }
+
   /* Subheadings */
-  h3, h3.ant-typography { font-size: clamp(20px, 2.86vw, 28px); }
-  h4, h4.ant-typography { font-size: clamp(18px, 2.53vw, 25px); }
-  h5, h5.ant-typography { font-size: clamp(16px, 2.30vw, 21px); }
+  h3,
+  h3.ant-typography {
+    font-size: clamp(20px, 2.86vw, 28px);
+  }
+
+  h4,
+  h4.ant-typography {
+    font-size: clamp(18px, 2.53vw, 25px);
+  }
+
+  h5,
+  h5.ant-typography {
+    font-size: clamp(16px, 2.30vw, 21px);
+  }
 }
 
 /* Ensure Ant overlays inherit the light palette */
-.ant-dropdown, .ant-popover, .ant-tooltip, .ant-modal .ant-modal-content, .ant-drawer .ant-drawer-content {
+.ant-dropdown,
+.ant-popover,
+.ant-tooltip,
+.ant-modal .ant-modal-content,
+.ant-drawer .ant-drawer-content {
   background: var(--panel);
   color: var(--text);
 }
-.ant-modal .ant-modal-header, .ant-popover .ant-popover-inner, .ant-dropdown-menu, .ant-drawer .ant-drawer-header {
+
+.ant-modal .ant-modal-header,
+.ant-popover .ant-popover-inner,
+.ant-dropdown-menu,
+.ant-drawer .ant-drawer-header {
   background: var(--panel);
 }
+
 /* Hard override: ensure modal footer spacing applies */
-.ant-modal .ant-modal-footer { margin-top: 25px !important; }
+.ant-modal .ant-modal-footer {
+  margin-top: 25px !important;
+}
 
 /* Buttons: smooth color transitions */
 .ant-btn {
@@ -116,38 +226,43 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
   background-image: none !important;
   color: #111 !important;
   transition: transform 120ms cubic-bezier(0.2, 0.8, 0.2, 1),
-              box-shadow 200ms ease,
-              background-color 180ms ease,
-              color 180ms ease,
-              border-color 180ms ease,
-              filter 180ms ease,
-              opacity 180ms ease;
+    box-shadow 200ms ease,
+    background-color 180ms ease,
+    color 180ms ease,
+    border-color 180ms ease,
+    filter 180ms ease,
+    opacity 180ms ease;
   will-change: transform, background-position;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
   border-radius: var(--radius-squircle) !important;
 }
+
 .ant-btn-primary:hover,
 .ant-btn-primary:focus {
   background: color-mix(in srgb, var(--brand-yellow) 88%, black) !important;
-  box-shadow: 0 6px 14px rgba(0,0,0,0.12);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
   transform: translateY(-1px) scale(1.03);
 }
+
 .ant-btn-primary:active {
   background: color-mix(in srgb, var(--brand-yellow) 80%, black) !important;
   transform: translateY(0) scale(0.98);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.10);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.10);
 }
 
 /* Ensure danger primary buttons use brand red */
 .ant-btn-primary.ant-btn-dangerous {
-  background: #BE1E2D !important; /* exact brand red */
+  background: #BE1E2D !important;
+  /* exact brand red */
   border-color: #BE1E2D !important;
   color: #fff !important;
 }
+
 .ant-btn-primary.ant-btn-dangerous:hover,
 .ant-btn-primary.ant-btn-dangerous:focus,
 .ant-btn-primary.ant-btn-dangerous:active {
-  background: #BE1E2D !important; /* keep exact shade */
+  background: #BE1E2D !important;
+  /* keep exact shade */
   border-color: #BE1E2D !important;
 }
 
@@ -156,13 +271,16 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
   color: #BE1E2D !important;
   border-color: #BE1E2D !important;
 }
+
 .ant-btn-dangerous:not(.ant-btn-primary):not(.ant-btn-text):not(.ant-btn-link):hover,
 .ant-btn-dangerous:not(.ant-btn-primary):not(.ant-btn-text):not(.ant-btn-link):focus,
 .ant-btn-dangerous:not(.ant-btn-primary):not(.ant-btn-text):not(.ant-btn-link):active {
   color: #BE1E2D !important;
   border-color: #BE1E2D !important;
-  background: rgba(190, 30, 45, 0.08) !important; /* subtle tint */
+  background: rgba(190, 30, 45, 0.08) !important;
+  /* subtle tint */
 }
+
 /* Disabled buttons: neutral grey, no purple gradient */
 .ant-btn[disabled],
 .ant-btn:disabled,
@@ -170,10 +288,11 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
 .ant-btn[aria-disabled='true'] {
   background: #F2F3F5 !important;
   border-color: var(--border-strong, #D2D2D2) !important;
-  color: var(--text-secondary, rgba(59,59,59,0.7)) !important;
+  color: var(--text-secondary, rgba(59, 59, 59, 0.7)) !important;
   box-shadow: none !important;
   background-image: none !important;
 }
+
 .ant-btn-primary[disabled],
 .ant-btn-primary:disabled,
 .ant-btn-primary.ant-btn-disabled,
@@ -187,9 +306,17 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
   filter: grayscale(0.12) saturate(0.6) brightness(0.98);
   opacity: 0.9;
 }
+
 @media (prefers-reduced-motion: reduce) {
-  .ant-btn-primary { transition: box-shadow 200ms ease; }
-  .ant-btn-primary:hover, .ant-btn-primary:focus, .ant-btn-primary:active { transform: none; }
+  .ant-btn-primary {
+    transition: box-shadow 200ms ease;
+  }
+
+  .ant-btn-primary:hover,
+  .ant-btn-primary:focus,
+  .ant-btn-primary:active {
+    transform: none;
+  }
 }
 
 .container {
@@ -204,10 +331,11 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
   /* Offset to start after the card's curved corner */
   margin: 0 0 10px var(--radius-squircle);
 }
+
 .brand-logo-img {
   display: block;
   height: auto;
-  filter: drop-shadow(0 2px 6px rgba(0,0,0,0.12));
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.12));
 }
 
 /* Top navigation: logo left, avatar right */
@@ -218,8 +346,17 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
   gap: 12px;
   margin: 0 0 10px 0;
 }
-.topnav .brand-logo { margin: 0; }
-.topnav-right { display: flex; align-items: center; gap: 10px; }
+
+.topnav .brand-logo {
+  margin: 0;
+}
+
+.topnav-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .avatar-button {
   display: inline-flex;
   align-items: center;
@@ -229,18 +366,29 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
   padding: 0;
   cursor: pointer;
 }
-.avatar-button:focus { outline: 2px solid var(--border-strong); outline-offset: 2px; border-radius: 999px; }
+
+.avatar-button:focus {
+  outline: 2px solid var(--border-strong);
+  outline-offset: 2px;
+  border-radius: 999px;
+}
 
 /* Wordmark next to logo on auth screen */
 .brand-banner {
   margin: 0 0 10px var(--radius-squircle);
 }
+
 .brand-banner .brand-row {
   display: flex;
-  align-items: center; /* align text bottom with logo bottom */
+  align-items: center;
+  /* align text bottom with logo bottom */
   gap: 12px;
 }
-.brand-banner .brand-logo { margin: 0; }
+
+.brand-banner .brand-logo {
+  margin: 0;
+}
+
 .brand-wordmark {
   padding-top: 28px;
   margin-left: -12px;
@@ -254,37 +402,65 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
 }
 
 /* Keep legacy layout wrappers; inner content now uses Ant components */
-.panel { padding: 0; border: none; background: transparent; }
+.panel {
+  padding: 0;
+  border: none;
+  background: transparent;
+}
 
-.row { display: flex; gap: 12px; align-items: center; }
-.col { display: flex; flex-direction: column; gap: 8px; }
+.row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
 
 /* Controls now come from Ant Design */
 
-.muted { color: var(--muted); }
-.spacer { height: 16px; }
-.title { font-size: 20px; font-weight: 600; }
+.muted {
+  color: var(--muted);
+}
 
-.error { color: var(--color-danger); font-size: 14px; }
+.spacer {
+  height: 16px;
+}
+
+.title {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.error {
+  color: var(--color-danger);
+  font-size: 14px;
+}
 
 /* Modal */
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.6);
+  background: rgba(0, 0, 0, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 50;
 }
+
 .modal {
   width: min(560px, 92%);
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
 }
-.modal-header, .modal-footer {
+
+.modal-header,
+.modal-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -292,8 +468,15 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
   padding: 16px 20px;
   border-bottom: 1px solid var(--border);
 }
-.modal-footer { border-top: 1px solid var(--border); border-bottom: none; }
-.modal-body { padding: 20px; }
+
+.modal-footer {
+  border-top: 1px solid var(--border);
+  border-bottom: none;
+}
+
+.modal-body {
+  padding: 20px;
+}
 
 /* Toast */
 .toast-container {
@@ -305,13 +488,14 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
   gap: 8px;
   z-index: 60;
 }
+
 .toast {
   background: #0f1317;
   border: 1px solid var(--border);
   color: var(--text);
   padding: 10px 12px;
   border-radius: 8px;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.3);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
 }
 
 /* Stronger borders for list items within list page */
@@ -323,15 +507,20 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
   align-items: center;
   column-gap: 10px;
 }
+
 .items-list .ant-list-item:last-child {
   border-bottom: none !important;
 }
+
 .items-list .ant-list-item-action {
   margin-left: 12px !important;
   white-space: nowrap;
   justify-self: end;
 }
-.items-list .ant-list-item-action > li { padding: 0 !important; }
+
+.items-list .ant-list-item-action>li {
+  padding: 0 !important;
+}
 
 /* Stronger borders for lists on RoomPage */
 .lists-list .ant-list-item {
@@ -339,6 +528,7 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
   font-weight: 600;
   align-items: center;
 }
+
 .lists-list .ant-list-item:last-child {
   border-bottom: none !important;
 }
@@ -352,6 +542,7 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
     "actions";
   gap: 12px;
 }
+
 .list-actions {
   grid-area: actions;
   display: flex;
@@ -360,20 +551,30 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
   align-items: center;
   justify-content: flex-start;
 }
+
 .list-header-title {
   display: flex;
   flex-direction: column;
   min-width: 0;
 }
-.list-meta { color: var(--text-secondary); }
-.list-description { color: var(--text-secondary); margin-top: 4px; }
+
+.list-meta {
+  color: var(--text-secondary);
+}
+
+.list-description {
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
 
 /* Add bar: sticky at the very bottom of the list sheet */
 .add-bar {
   position: sticky;
-  bottom: -1px; /* ensures flush with rounded edge */
+  bottom: -1px;
+  /* ensures flush with rounded edge */
   background: var(--panel);
-  padding: 12px 0; /* align with list items (uses Card's own padding) */
+  padding: 12px 0;
+  /* align with list items (uses Card's own padding) */
   border-top: 1px solid var(--border);
   box-shadow: none;
   z-index: 1;
@@ -388,7 +589,12 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
   align-items: center;
   flex-wrap: nowrap;
 }
-.add-input { flex: 1 1 auto; min-width: 0; }
+
+.add-input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .add-btn {
   width: 44px !important;
   height: 44px !important;
@@ -397,22 +603,29 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-  border-radius: 50% !important; /* ensure perfect circle over primary radius */
+  border-radius: 50% !important;
+  /* ensure perfect circle over primary radius */
   aspect-ratio: 1 / 1 !important;
   line-height: 1 !important;
 }
 
 /* Ensure any Ant circle buttons remain perfectly circular despite global primary radius */
-.ant-btn-circle, .ant-btn-icon-only.ant-btn-round {
+.ant-btn-circle,
+.ant-btn-icon-only.ant-btn-round {
   border-radius: 50% !important;
 }
+
 @media (min-width: 768px) {
   .list-header-grid {
     grid-template-columns: 1fr auto;
     grid-template-areas: "title actions";
     align-items: center;
   }
-  .list-actions { justify-content: flex-end; }
+
+  .list-actions {
+    justify-content: flex-end;
+  }
+
   .add-bar {
     background: var(--panel);
   }
@@ -433,12 +646,17 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
 .item-row {
   display: flex;
   gap: 8px;
-  align-items: center; /* center checkbox and text vertically */
+  align-items: center;
+  /* center checkbox and text vertically */
   flex-wrap: wrap;
   width: 100%;
 }
+
 /* Add a bit more spacing between checkbox and text in list items */
-.items-list .item-row { gap: 14px; }
+.items-list .item-row {
+  gap: 14px;
+}
+
 .item-row .item-text {
   flex: 1;
   min-width: 0;
@@ -447,21 +665,34 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
 }
 
 /* Slightly larger checkbox in list items */
-.items-list .checkbox-anchor { display: inline-flex; align-items: center; justify-content: center; }
+.items-list .checkbox-anchor {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .items-list .checkbox-anchor .ant-checkbox {
   transform: scale(1.2);
   transform-origin: center;
 }
 
 /* Drag handle and sortable row */
-.sortable-row { display: flex; gap: 10px; align-items: center; width: 100%; touch-action: auto; }
+.sortable-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  touch-action: auto;
+}
+
 .drag-handle {
   cursor: grab;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   color: var(--muted);
-  padding: 10px 6px; /* larger tap target */
+  padding: 10px 6px;
+  /* larger tap target */
   /* keep a consistent handle column width */
   width: 36px;
   min-width: 36px;
@@ -474,11 +705,17 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
   touch-action: auto;
   -webkit-touch-callout: none;
 }
-.drag-handle:active { cursor: grabbing; }
+
+.drag-handle:active {
+  cursor: grabbing;
+}
 
 /* Mobile: larger handle, bigger icon, tighter row gap */
 @media (max-width: 767px) {
-  .sortable-row { gap: 8px; }
+  .sortable-row {
+    gap: 8px;
+  }
+
   .drag-handle {
     width: 44px;
     min-width: 44px;
@@ -486,7 +723,11 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
     padding: 12px 10px;
     font-size: 22px;
   }
-  .drag-handle svg { width: 22px; height: 22px; }
+
+  .drag-handle svg {
+    width: 22px;
+    height: 22px;
+  }
 }
 
 /* Empty state */
@@ -501,37 +742,68 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
 }
 
 /* Card/page border color adjustments */
-.ant-card-bordered, .ant-card {
+.ant-card-bordered,
+.ant-card {
   border-color: var(--border-strong) !important;
   border-radius: var(--radius-squircle) !important;
 }
 
 /* No-room page sections and divider */
-.no-room-card .section { padding: 8px 0; }
-.no-room-divider { border-block-start: 1px solid var(--border-strong) !important; margin: 12px 0 !important; }
-.settings-divider { border-block-start: 1px solid var(--border-strong) !important; margin: 12px 0 !important; }
-.no-room-card .ant-btn { width: auto; }
-@media (max-width: 767px) {
-  .no-room-card .ant-btn { width: 100%; }
+.no-room-card .section {
+  padding: 8px 0;
 }
 
-.no-room-subtitle { color: var(--text-secondary); display: block; margin: 4px 0 12px; }
+.no-room-divider {
+  border-block-start: 1px solid var(--border-strong) !important;
+  margin: 12px 0 !important;
+}
+
+.settings-divider {
+  border-block-start: 1px solid var(--border-strong) !important;
+  margin: 12px 0 !important;
+}
+
+.no-room-card .ant-btn {
+  width: auto;
+}
+
+@media (max-width: 767px) {
+  .no-room-card .ant-btn {
+    width: 100%;
+  }
+}
+
+.no-room-subtitle {
+  color: var(--text-secondary);
+  display: block;
+  margin: 4px 0 12px;
+}
 
 @media (min-width: 768px) {
-  .join-row { display: flex; gap: 8px; align-items: center; }
-  .join-row .ant-input { flex: 1; min-width: 260px; }
+  .join-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .join-row .ant-input {
+    flex: 1;
+    min-width: 260px;
+  }
 }
 
 /* Paper stack layout for ListPage */
 .paper-stack {
   position: relative;
 }
+
 .paper-card {
   background: var(--panel);
   border: 1px solid var(--border-strong) !important;
   border-radius: var(--radius-squircle) !important;
-  box-shadow: 0 4px 14px rgba(0,0,0,0.06);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
 }
+
 .paper-card.paper-meta {
   /* Extend downward so side edges flow behind the top sheet */
   padding-bottom: 10px;
@@ -540,18 +812,32 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
   border-bottom-left-radius: 0 !important;
   border-bottom-right-radius: 0 !important;
 }
+
 .paper-card.paper-list {
   position: relative;
   z-index: 2;
-  margin-top: -20px; /* ~5px overlap */
-  box-shadow: 0 10px 22px rgba(0,0,0,0.08);
+  margin-top: -20px;
+  /* ~5px overlap */
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.08);
 }
 
 /* Centered, pill-styled tabs for ListPage */
-.list-tabs .ant-tabs-nav { margin: 0 0 8px 0; }
-.list-tabs .ant-tabs-nav::before { border-bottom: none !important; }
-.list-tabs .ant-tabs-ink-bar { display: none !important; }
-.list-tabs .ant-tabs-nav .ant-tabs-nav-wrap { justify-content: center; }
+.list-tabs .ant-tabs-nav {
+  margin: 0 0 8px 0;
+}
+
+.list-tabs .ant-tabs-nav::before {
+  border-bottom: none !important;
+}
+
+.list-tabs .ant-tabs-ink-bar {
+  display: none !important;
+}
+
+.list-tabs .ant-tabs-nav .ant-tabs-nav-wrap {
+  justify-content: center;
+}
+
 .list-tabs .ant-tabs-nav .ant-tabs-nav-list {
   position: relative;
   background: var(--panel-subtle);
@@ -560,6 +846,7 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
   padding: 4px;
   gap: 6px;
 }
+
 /* Sliding pill indicator */
 .list-tabs .ant-tabs-nav .ant-tabs-nav-list::after {
   content: '';
@@ -570,10 +857,11 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
   height: calc(100% - 8px);
   border-radius: 999px;
   background: var(--panel);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   transition: left 220ms cubic-bezier(0.2, 0.8, 0.2, 1), width 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
   z-index: 0;
 }
+
 .list-tabs .ant-tabs-tab {
   position: relative;
   z-index: 1;
@@ -583,10 +871,23 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
   background: transparent !important;
   transition: color 160ms ease;
 }
-.list-tabs .ant-tabs-tab:hover { background: transparent; }
-.list-tabs .ant-tabs-tab .ant-tabs-tab-btn { color: var(--text-secondary); font-weight: 600; }
-.list-tabs .ant-tabs-tab-active .ant-tabs-tab-btn { color: var(--text); }
-.list-tabs .ant-tabs-content-holder { padding-top: 8px; }
+
+.list-tabs .ant-tabs-tab:hover {
+  background: transparent;
+}
+
+.list-tabs .ant-tabs-tab .ant-tabs-tab-btn {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.list-tabs .ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: var(--text);
+}
+
+.list-tabs .ant-tabs-content-holder {
+  padding-top: 8px;
+}
 
 /* Notes actions: right-aligned with Save on the far right */
 .notes-actions {
@@ -596,11 +897,23 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
 }
 
 /* Items list action buttons: keep trash red and borderless, even when disabled */
-.items-list .ant-btn.ant-btn-text { border: none !important; background: transparent !important; box-shadow: none !important; }
-.items-list .ant-btn.ant-btn-text.ant-btn-dangerous { color: #BE1E2D !important; }
+.items-list .ant-btn.ant-btn-text {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.items-list .ant-btn.ant-btn-text.ant-btn-dangerous {
+  color: #BE1E2D !important;
+}
+
 .items-list .ant-btn.ant-btn-text.ant-btn-dangerous:hover,
 .items-list .ant-btn.ant-btn-text.ant-btn-dangerous:focus,
-.items-list .ant-btn.ant-btn-text.ant-btn-dangerous:active { color: #BE1E2D !important; background: transparent !important; }
+.items-list .ant-btn.ant-btn-text.ant-btn-dangerous:active {
+  color: #BE1E2D !important;
+  background: transparent !important;
+}
+
 .items-list .ant-btn.ant-btn-text.ant-btn-dangerous[disabled],
 .items-list .ant-btn.ant-btn-text.ant-btn-dangerous[aria-disabled='true'] {
   color: #BE1E2D !important;
@@ -608,12 +921,14 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
   border: none !important;
   opacity: 1 !important;
 }
+
 .items-list .ant-btn.ant-btn-text.ant-btn-dangerous[disabled] .ant-btn-icon,
 .items-list .ant-btn.ant-btn-text.ant-btn-dangerous[disabled] .anticon,
 .items-list .ant-btn.ant-btn-text.ant-btn-dangerous[aria-disabled='true'] .ant-btn-icon,
 .items-list .ant-btn.ant-btn-text.ant-btn-dangerous[aria-disabled='true'] .anticon {
   color: #BE1E2D !important;
 }
+
 .items-list .ant-btn.ant-btn-text.ant-btn-dangerous[disabled] .ant-btn-icon svg,
 .items-list .ant-btn.ant-btn-text.ant-btn-dangerous[aria-disabled='true'] .ant-btn-icon svg {
   color: #BE1E2D !important;
@@ -623,26 +938,153 @@ h5, h5.ant-typography { font-size: clamp(14px, 2.0vw, 18px); font-weight: 600; }
 
 
 @media (min-width: 768px) {
-  .paper-card.paper-list { margin-top: -20px; }
+  .paper-card.paper-list {
+    margin-top: -20px;
+  }
 }
 
 /* Inputs and other controls: unified squircle radius */
-.ant-input, .ant-input-affix-wrapper, .ant-select-selector, .ant-input-number,
-.ant-modal .ant-modal-content, .ant-popover .ant-popover-inner, .ant-dropdown-menu,
-.ant-drawer .ant-drawer-content, .ant-message-notice-content {
+.ant-input,
+.ant-input-affix-wrapper,
+.ant-select-selector,
+.ant-input-number,
+.ant-modal .ant-modal-content,
+.ant-popover .ant-popover-inner,
+.ant-dropdown-menu,
+.ant-drawer .ant-drawer-content,
+.ant-message-notice-content {
   border-radius: var(--radius-squircle) !important;
 }
 
 /* Ensure non-Ant icon components (e.g., Phosphor) render correctly inside Ant buttons */
-.ant-btn .ant-btn-icon { font-size: 18px; display: inline-flex; align-items: center; justify-content: center; }
-.ant-btn-lg .ant-btn-icon { font-size: 20px; }
-.ant-btn .ant-btn-icon svg { width: 1em; height: 1em; }
+.ant-btn .ant-btn-icon {
+  font-size: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ant-btn-lg .ant-btn-icon {
+  font-size: 20px;
+}
+
+.ant-btn .ant-btn-icon svg {
+  width: 1em;
+  height: 1em;
+}
+
+/* Pantry autocomplete dropdown styles */
+.ant-select-dropdown .ant-select-item-option-content {
+  font-weight: 500;
+}
+
+/* Search bar refinement */
+.ant-input-affix-wrapper .ant-input-prefix {
+  margin-right: 8px;
+  color: var(--muted);
+  font-size: 16px;
+}
+
+/* Progress bar transition */
+.ant-progress-bg {
+  transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+}
+
+/* Category Tag Refinement */
+.category-tag {
+  border: none !important;
+  font-weight: 600 !important;
+  font-size: 10px !important;
+  padding: 1px 6px !important;
+  border-radius: 4px !important;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.cat-produce {
+  background: color-mix(in srgb, var(--cat-produce) 12%, white) !important;
+  color: var(--cat-produce) !important;
+}
+
+.cat-dairy {
+  background: color-mix(in srgb, var(--cat-dairy) 12%, white) !important;
+  color: var(--cat-dairy) !important;
+}
+
+.cat-bakery {
+  background: color-mix(in srgb, var(--cat-bakery) 12%, white) !important;
+  color: var(--cat-bakery) !important;
+}
+
+.cat-meat {
+  background: color-mix(in srgb, var(--cat-meat) 12%, white) !important;
+  color: var(--cat-meat) !important;
+}
+
+.cat-frozen {
+  background: color-mix(in srgb, var(--cat-frozen) 12%, white) !important;
+  color: var(--cat-frozen) !important;
+}
+
+.cat-plant {
+  background: color-mix(in srgb, var(--cat-plant) 12%, white) !important;
+  color: var(--cat-plant) !important;
+}
+
+.cat-grains {
+  background: color-mix(in srgb, var(--cat-grains) 12%, white) !important;
+  color: var(--cat-grains) !important;
+}
+
+.cat-pantry {
+  background: color-mix(in srgb, var(--cat-pantry) 12%, white) !important;
+  color: var(--cat-pantry) !important;
+}
+
+.cat-beverages {
+  background: color-mix(in srgb, var(--cat-beverages) 12%, white) !important;
+  color: var(--cat-beverages) !important;
+}
+
+.cat-household {
+  background: color-mix(in srgb, var(--cat-household) 12%, white) !important;
+  color: var(--cat-household) !important;
+}
+
+.cat-general {
+  background: #f0f0f0 !important;
+  color: #666 !important;
+}
+
+/* Quantity/Unit Badge */
+.qty-unit-line {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.qty-label {
+  font-weight: 600;
+  color: var(--muted);
+  font-size: 12px;
+}
 
 /* Add bar elements */
-.add-input { flex: 1 1 auto; }
+.add-input {
+  flex: 1 1 auto;
+}
 
 /* Confetti animation */
-.confetti-root { position: fixed; inset: 0; pointer-events: none; z-index: 9999; }
+.confetti-root {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+}
+
 .confetti-piece {
   position: fixed;
   width: 6px;

@@ -2,10 +2,10 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '@auth/AuthProvider'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { getMe, getListItems, getLists, createListItem, updateListItem, deleteListItem, voteListDeletion, cancelListDeletion, reorderListItem, updateList } from '@api/endpoints'
-import type { List, ListItem } from '@api/types'
-import { Card, Typography, Space, Button, Input, Checkbox, List as AntList, Grid, Dropdown, message, Skeleton, Alert, Tabs } from 'antd'
-import { ArrowLeft, Trash, Plus, Eye, EyeSlash, DotsThreeVertical, DotsSixVertical, FloppyDisk, X } from '@phosphor-icons/react'
+import { getMe, getListItems, getLists, createListItem, updateListItem, deleteListItem, voteListDeletion, cancelListDeletion, reorderListItem, updateList, clearListItems, getRoomPantry } from '@api/endpoints'
+import type { List, ListItem, PantryItem } from '@api/types'
+import { Card, Typography, Space, Button, Input, Checkbox, List as AntList, Grid, Dropdown, message, Skeleton, Alert, Tabs, Tag } from 'antd'
+import { ArrowLeft, Trash, Plus, Eye, EyeSlash, DotsThreeVertical, DotsSixVertical, FloppyDisk, X, Broom } from '@phosphor-icons/react'
 import { DndContext, TouchSensor, MouseSensor, KeyboardSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy, useSortable, sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -21,8 +21,17 @@ export const ListPage: React.FC = () => {
   const { listId = '' } = useParams()
   const [includeCompleted, setIncludeCompleted] = useState(false)
   const [newDesc, setNewDesc] = useState('')
-  const addRef = useRef<HTMLTextAreaElement | null>(null)
-  
+  const [groupByCat, setGroupByCat] = useState(() => {
+    const saved = localStorage.getItem('gracie_group_by_cat')
+    return saved === 'true'
+  })
+
+  useEffect(() => {
+    localStorage.setItem('gracie_group_by_cat', String(groupByCat))
+  }, [groupByCat])
+
+  const addRef = useRef<any>(null)
+
   const [editingItemId, setEditingItemId] = useState<string | null>(null)
   const [savingItemId, setSavingItemId] = useState<string | null>(null)
   const checkboxRefs = useRef<Record<string, HTMLElement | null>>({})
@@ -82,16 +91,37 @@ export const ListPage: React.FC = () => {
     staleTime: 5_000,
   })
 
+
   // Always derive items and sorted views before any early returns to keep hook order stable
   const items = itemsQuery.data ?? []
   const sortedItems = useMemo(() => {
     const copy = [...items]
-    copy.sort((a, b) => (a.completed === b.completed ? 0 : a.completed ? 1 : -1))
+    // Filter by completion, then by order
+    copy.sort((a, b) => {
+      if (a.completed !== b.completed) return a.completed ? 1 : -1
+      return (a.order || 0) - (b.order || 0)
+    })
     return copy
   }, [items])
+
+
   const incompleteItems = useMemo(() => sortedItems.filter(it => !it.completed), [sortedItems])
-  const incompleteCount = incompleteItems.length
+
+  const incompleteGrouped = useMemo(() => {
+    if (!groupByCat) return null
+    const groups: Record<string, ListItem[]> = {}
+    incompleteItems.forEach(it => {
+      const cat = it.category || 'Uncategorized'
+      if (!groups[cat]) groups[cat] = []
+      groups[cat].push(it)
+    })
+    return groups
+  }, [incompleteItems, groupByCat])
+
   const completedItems = useMemo(() => sortedItems.filter(it => it.completed), [sortedItems])
+  const totalCount = items.length
+  const completedCount = items.filter(it => it.completed).length
+  const incompleteCount = items.filter(it => !it.completed).length
   // Sensors: touch (mobile long-press), mouse (desktop), keyboard (a11y)
   const sensors = useSensors(
     useSensor(TouchSensor, { activationConstraint: { delay: 300, tolerance: 10 } }),
@@ -159,25 +189,55 @@ export const ListPage: React.FC = () => {
     }
   }, [listsQuery.isSuccess, listsQuery.isFetching, listMeta, navigate])
 
-  const onCreateItem = () => {
-    const desc = newDesc.trim()
-    if (!desc) return
-    // Optimistic UX: clear input immediately and keep focus for rapid entry
+  const parseInput = (input: string) => {
+    // Simple regex for quantity and unit parsing
+    // Examples: "3 bags Milk", "1.5kg Beef", "2 Bottles Water", "Milk"
+    const regex = /^([\d.]+)?\s*([a-zA-Z]+)?\s+(.+)$/
+    const match = input.match(regex)
+    if (match) {
+      const quantity = match[1] || ""
+      const unit = match[2] || ""
+      const description = match[3] || ""
+      // If we found a unit but it looks like a common non-unit word, maybe it's part of description
+      const units = ['kg', 'g', 'lb', 'oz', 'bag', 'bags', 'bottle', 'bottles', 'box', 'boxes', 'pack', 'packs', 'can', 'cans']
+      if (unit && !units.includes(unit.toLowerCase()) && !quantity) {
+        return { description: input.trim(), quantity: "", unit: "" }
+      }
+      return { description, quantity, unit }
+    }
+    return { description: input.trim(), quantity: "", unit: "" }
+  }
+
+  const onCreateItem = (val?: string) => {
+    const text = (val || newDesc).trim()
+    if (!text) return
+    const { description, quantity, unit } = parseInput(text)
+    if (!description) return
+
     setNewDesc('')
-    // Keep focus so user can continue typing
     requestAnimationFrame(() => {
       addRef.current?.focus()
     })
-    // Fire-and-forget create; reconcile via invalidate
-    createListItem(apiKey!, roomId!, listId, desc)
-      .then(() => qc.invalidateQueries({ queryKey: ['list-items', listId] }))
+
+    createListItem(apiKey!, roomId!, listId, { description, quantity, unit })
+      .then(() => {
+        qc.invalidateQueries({ queryKey: ['list-items', listId] })
+      })
       .catch((e: any) => {
-        // Restore text so the user can retry
-        setNewDesc(desc)
+        setNewDesc(text)
         addRef.current?.focus()
         msgApi.error(e?.message || 'Failed to add item')
       })
   }
+
+  const onClearCompleted = async () => {
+    try {
+      await clearListItems(apiKey!, roomId!, listId)
+      await qc.invalidateQueries({ queryKey: ['list-items', listId] })
+      msgApi.success('Completed items cleared to pantry')
+    } catch (e: any) { msgApi.error(e?.message || 'Failed to clear items') }
+  }
+
 
   const onToggleComplete = async (it: ListItem) => {
     if (savingItemId === it.item_id || editingItemId === it.item_id) return
@@ -210,10 +270,24 @@ export const ListPage: React.FC = () => {
 
   const submitEdit = async (it: ListItem, next: string) => {
     const trimmed = next.trim()
-    if (trimmed === it.description.trim()) { setEditingItemId(null); return }
+    if (!trimmed) return
+
+    // Smart parsing on edit
+    const { description, quantity, unit } = parseInput(trimmed)
+
+    const isSame = description === it.description &&
+      quantity === (it.quantity || "") &&
+      unit === (it.unit || "")
+
+    if (isSame) { setEditingItemId(null); return }
+
     try {
       setSavingItemId(it.item_id)
-      await updateListItem(apiKey!, roomId!, listId, it.item_id, { description: trimmed })
+      await updateListItem(apiKey!, roomId!, listId, it.item_id, {
+        description,
+        quantity,
+        unit
+      })
       setEditingItemId(null)
       await qc.invalidateQueries({ queryKey: ['list-items', listId] })
     } catch (e: any) {
@@ -248,6 +322,26 @@ export const ListPage: React.FC = () => {
   useEffect(() => {
     if (listMeta) setNotesText(listMeta.notes || '')
   }, [listMeta?.list_id, listMeta?.notes])
+
+  const isGroceryList = useMemo(() => {
+    const name = listMeta?.name.toLowerCase() || ''
+    return name.includes('grocer') || name.includes('shop') || name.includes('pantry') || name.includes('market') || name.includes('food')
+  }, [listMeta?.name])
+
+  const getCategoryClass = (cat?: string) => {
+    if (!cat) return 'cat-general'
+    const c = cat.toLowerCase()
+    if (c.includes('produce')) return 'cat-produce'
+    if (c.includes('dairy') || c.includes('egg')) return 'cat-dairy'
+    if (c.includes('bakery') || c.includes('grain')) return 'cat-bakery' // Bakery exists as Grains & Bakery
+    if (c.includes('meat') || c.includes('seafood')) return 'cat-meat'
+    if (c.includes('frozen')) return 'cat-frozen'
+    if (c.includes('plant')) return 'cat-plant'
+    if (c.includes('pantry')) return 'cat-pantry'
+    if (c.includes('beverage')) return 'cat-beverages'
+    if (c.includes('household')) return 'cat-household'
+    return 'cat-general'
+  }
 
   const notesDirty = (listMeta?.notes || '') !== notesText
   const onSaveNotes = async () => {
@@ -322,18 +416,38 @@ export const ListPage: React.FC = () => {
                     <Typography.Text className="list-description">{listMeta.description}</Typography.Text>
                   )}
                 </div>
-              <div className="list-actions">
-                <Button onClick={() => setIncludeCompleted((v) => !v)} icon={includeCompleted ? <EyeSlash /> : <Eye />}>
-                  {includeCompleted ? 'Hide' : 'Show'} completed
-                </Button>
-                <Button onClick={() => navigate('/app')} icon={<ArrowLeft />}>Back</Button>
+                <div className="list-actions">
+                  {isGroceryList && (
+                    <Button
+                      type={groupByCat ? 'primary' : 'default'}
+                      onClick={() => setGroupByCat(!groupByCat)}
+                    >
+                      {groupByCat ? 'Ungroup' : 'Group'}
+                    </Button>
+                  )}
+                  <Button onClick={() => navigate('/app')} icon={<ArrowLeft />}>Back</Button>
                   <Dropdown
                     trigger={["click"]}
                     menu={{
-                      items: myVote(listMeta)
-                        ? [{ key: 'cancel', label: 'Cancel delete vote' }]
-                        : [{ key: 'vote', label: 'Vote to delete' }],
+                      items: [
+                        {
+                          key: 'toggle-completed',
+                          label: includeCompleted ? 'Hide completed' : 'Show completed',
+                          icon: includeCompleted ? <EyeSlash size={18} /> : <Eye size={18} />
+                        },
+                        {
+                          key: 'clear-completed',
+                          label: 'Clear completed',
+                          icon: <Broom size={18} />
+                        },
+                        { type: 'divider' },
+                        ...(myVote(listMeta)
+                          ? [{ key: 'cancel', label: 'Cancel delete vote', danger: true }]
+                          : [{ key: 'vote', label: 'Vote to delete', danger: true }]),
+                      ],
                       onClick: ({ key }) => {
+                        if (key === 'toggle-completed') setIncludeCompleted(!includeCompleted);
+                        if (key === 'clear-completed') onClearCompleted();
                         if (key === 'vote') { onVoteDelete(); show('Vote recorded'); }
                         if (key === 'cancel') { onCancelVote(); show('Vote canceled'); }
                       },
@@ -362,17 +476,37 @@ export const ListPage: React.FC = () => {
                 )}
               </div>
               <div className="list-actions">
-                <Button onClick={() => setIncludeCompleted((v) => !v)} icon={includeCompleted ? <EyeSlash /> : <Eye />}>
-                  {includeCompleted ? 'Hide' : 'Show'} completed
-                </Button>
+                {isGroceryList && (
+                  <Button
+                    type={groupByCat ? 'primary' : 'default'}
+                    onClick={() => setGroupByCat(!groupByCat)}
+                  >
+                    {groupByCat ? 'Ungroup categories' : 'Group by category'}
+                  </Button>
+                )}
                 <Button onClick={() => navigate('/app')} icon={<ArrowLeft />}>Back</Button>
                 <Dropdown
                   trigger={["click"]}
                   menu={{
-                    items: myVote(listMeta)
-                      ? [{ key: 'cancel', label: 'Cancel delete vote' }]
-                      : [{ key: 'vote', label: 'Vote to delete' }],
+                    items: [
+                      {
+                        key: 'toggle-completed',
+                        label: includeCompleted ? 'Hide completed' : 'Show completed',
+                        icon: includeCompleted ? <EyeSlash size={18} /> : <Eye size={18} />
+                      },
+                      {
+                        key: 'clear-completed',
+                        label: 'Clear completed',
+                        icon: <Broom size={18} />
+                      },
+                      { type: 'divider' },
+                      ...(myVote(listMeta)
+                        ? [{ key: 'cancel', label: 'Cancel delete vote', danger: true }]
+                        : [{ key: 'vote', label: 'Vote to delete', danger: true }]),
+                    ],
                     onClick: ({ key }) => {
+                      if (key === 'toggle-completed') setIncludeCompleted(!includeCompleted);
+                      if (key === 'clear-completed') onClearCompleted();
                       if (key === 'vote') { onVoteDelete(); show('Vote recorded'); }
                       if (key === 'cancel') { onCancelVote(); show('Vote canceled'); }
                     },
@@ -388,32 +522,157 @@ export const ListPage: React.FC = () => {
         {/* Top sheet: tabs over list content */}
         <Card className="paper-card paper-list">
           <div ref={tabsWrapRef}>
-          <Tabs
-            className="list-tabs"
-            style={tabVars}
-            activeKey={activeTab}
-            onChange={(k) => setActiveTab(k as 'items' | 'notes')}
-            items={[
-              {
-                key: 'items',
-                label: 'Items',
-                children: (
-                  <Space direction="vertical" style={{ width: '100%' }} size="large">
-                    {itemsQuery.isLoading ? (
-                      <Skeleton active paragraph={{ rows: 4 }} />
-                    ) : items.length === 0 ? (
-                      <div className="empty-state"><Plus size={20} style={{ color: 'var(--color-primary)' }} />
-                        <Typography.Text type="secondary">No items yet. Add your first item below.</Typography.Text>
-                      </div>
-                    ) : (
-                      <>
-                        {incompleteItems.length > 0 && (
-                          <DndContext sensors={sensors} onDragEnd={onDragEnd}>
-                            <SortableContext items={incompleteItems.map(it => it.item_id)} strategy={verticalListSortingStrategy}>
+            <Tabs
+              className="list-tabs"
+              style={tabVars}
+              activeKey={activeTab}
+              onChange={(k) => setActiveTab(k as 'items' | 'notes')}
+              items={[
+                {
+                  key: 'items',
+                  label: 'Items',
+                  children: (
+                    <Space direction="vertical" style={{ width: '100%' }} size="large">
+                      {itemsQuery.isLoading ? (
+                        <Skeleton active paragraph={{ rows: 4 }} />
+                      ) : items.length === 0 ? (
+                        <div className="empty-state"><Plus size={20} style={{ color: 'var(--color-primary)' }} />
+                          <Typography.Text type="secondary">No items yet. Add your first item below.</Typography.Text>
+                        </div>
+                      ) : (
+                        <>
+                          {incompleteItems.length > 0 && (
+                            groupByCat && incompleteGrouped ? (
+                              <div className="grouped-sections">
+                                {Object.entries(incompleteGrouped).map(([cat, items]) => (
+                                  <div key={cat} className="category-section" style={{ marginBottom: 24 }}>
+                                    <div className="category-section-header" style={{ marginBottom: 8 }}>
+                                      <Tag className={`category-tag ${getCategoryClass(cat)}`} style={{ fontSize: '12px', padding: '2px 10px', fontWeight: 600 }}>
+                                        {cat.toUpperCase()}
+                                      </Tag>
+                                    </div>
+                                    <AntList
+                                      itemLayout="horizontal"
+                                      className="items-list"
+                                      dataSource={items}
+                                      renderItem={(it) => (
+                                        <AntList.Item
+                                          actions={[
+                                            <Button
+                                              key="del"
+                                              type="text"
+                                              danger
+                                              icon={<Trash />}
+                                              onClick={() => onDeleteItem(it)}
+                                              style={{ paddingInline: 8 }}
+                                              disabled={savingItemId === it.item_id || editingItemId === it.item_id}
+                                            />
+                                          ]}
+                                        >
+                                          <div className="item-row">
+                                            <span ref={setCheckboxRef(it.item_id)} className="checkbox-anchor">
+                                              <Checkbox checked={it.completed} onChange={() => onToggleComplete(it)} disabled={savingItemId === it.item_id || editingItemId === it.item_id} />
+                                            </span>
+                                            <div className="item-text" onClick={(e) => { e.stopPropagation(); startEdit(it) }}>
+                                              {editingItemId === it.item_id ? (
+                                                <InlineEditText
+                                                  value={`${it.quantity ? it.quantity + (it.unit ? ' ' + it.unit : '') + ' ' : (it.unit ? it.unit + ' ' : '')}${it.description}`}
+                                                  onSubmit={(val) => submitEdit(it, val)}
+                                                  disabled={savingItemId === it.item_id}
+                                                />
+                                              ) : (
+                                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                  <div style={{ textDecoration: it.completed ? 'line-through' : 'none', fontWeight: 400, fontSize: '15px' }}>
+                                                    {it.description}
+                                                  </div>
+                                                  {(it.quantity || it.unit) && (
+                                                    <div className="qty-unit-line">
+                                                      <span className="qty-label">Quantity:</span> {it.quantity} {it.unit}
+                                                    </div>
+                                                  )}
+                                                </div>
+                                              )}
+                                            </div>
+                                          </div>
+                                        </AntList.Item>
+                                      )}
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <DndContext sensors={sensors} onDragEnd={onDragEnd}>
+                                <SortableContext items={incompleteItems.map(it => it.item_id)} strategy={verticalListSortingStrategy}>
+                                  <AntList
+                                    itemLayout="horizontal"
+                                    className="items-list"
+                                    dataSource={incompleteItems}
+                                    renderItem={(it) => (
+                                      <AntList.Item
+                                        actions={[
+                                          <Button
+                                            key="del"
+                                            type="text"
+                                            danger
+                                            icon={<Trash />}
+                                            aria-label="Delete item"
+                                            title="Delete item"
+                                            onClick={() => onDeleteItem(it)}
+                                            style={{ paddingInline: 8 }}
+                                            disabled={savingItemId === it.item_id || editingItemId === it.item_id}
+                                          />
+                                        ]}
+                                      >
+                                        <SortableRow it={it}>
+                                          <div className="item-row">
+                                            <span ref={setCheckboxRef(it.item_id)} className="checkbox-anchor">
+                                              <Checkbox checked={it.completed} onChange={() => onToggleComplete(it)} disabled={savingItemId === it.item_id || editingItemId === it.item_id} />
+                                            </span>
+                                            <div className="item-text" onClick={(e) => { e.stopPropagation(); startEdit(it) }}>
+                                              {editingItemId === it.item_id ? (
+                                                <InlineEditText
+                                                  value={`${it.quantity ? it.quantity + (it.unit ? ' ' + it.unit : '') + ' ' : (it.unit ? it.unit + ' ' : '')}${it.description}`}
+                                                  onSubmit={(val) => submitEdit(it, val)}
+                                                  disabled={savingItemId === it.item_id}
+                                                />
+                                              ) : (
+                                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                    <div style={{ textDecoration: it.completed ? 'line-through' : 'none', fontWeight: 400, fontSize: '15px' }}>
+                                                      {it.description}
+                                                    </div>
+                                                    {(it.quantity || it.unit) && (
+                                                      <div className="qty-unit-line">
+                                                        <span className="qty-label">Quantity:</span> {it.quantity} {it.unit}
+                                                      </div>
+                                                    )}
+                                                  </div>
+                                                  {isGroceryList && it.category && (
+                                                    <div style={{ marginTop: 2 }}>
+                                                      <Tag className={`category-tag ${getCategoryClass(it.category)}`}>{it.category}</Tag>
+                                                    </div>
+                                                  )}
+                                                </div>
+                                              )}
+                                            </div>
+                                          </div>
+                                        </SortableRow>
+                                      </AntList.Item>
+                                    )}
+                                  />
+                                </SortableContext>
+                              </DndContext>
+                            )
+                          )}
+                          {includeCompleted && completedItems.length > 0 && (
+                            <>
+                              <div className="completed-header">
+                                <span>Completed ({completedItems.length})</span>
+                              </div>
                               <AntList
                                 itemLayout="horizontal"
                                 className="items-list"
-                                dataSource={incompleteItems}
+                                dataSource={completedItems}
                                 renderItem={(it) => (
                                   <AntList.Item
                                     actions={[
@@ -430,136 +689,103 @@ export const ListPage: React.FC = () => {
                                       />
                                     ]}
                                   >
-                                    <SortableRow it={it}>
-                                      <div className="item-row">
-                                        <span ref={setCheckboxRef(it.item_id)} className="checkbox-anchor">
-                                          <Checkbox checked={it.completed} onChange={() => onToggleComplete(it)} disabled={savingItemId === it.item_id || editingItemId === it.item_id} />
-                                        </span>
-                                        <div className="item-text" onClick={(e) => { e.stopPropagation(); startEdit(it) }}>
-                                          {editingItemId === it.item_id ? (
-                                            <InlineEditText
-                                              value={it.description}
-                                              onSubmit={(val) => submitEdit(it, val)}
-                                              disabled={savingItemId === it.item_id}
-                                            />
-                                          ) : (
-                                            <span style={{ textDecoration: it.completed ? 'line-through' : 'none' }}>{it.description}</span>
-                                          )}
-                                        </div>
+                                    <div className="item-row item-row-completed">
+                                      <span ref={setCheckboxRef(it.item_id)} className="checkbox-anchor">
+                                        <Checkbox checked={it.completed} onChange={() => onToggleComplete(it)} disabled={savingItemId === it.item_id || editingItemId === it.item_id} />
+                                      </span>
+                                      <div className="item-text" onClick={(e) => { e.stopPropagation(); startEdit(it) }}>
+                                        {editingItemId === it.item_id ? (
+                                          <InlineEditText
+                                            value={`${it.quantity ? it.quantity + (it.unit ? ' ' + it.unit : '') + ' ' : (it.unit ? it.unit + ' ' : '')}${it.description}`}
+                                            onSubmit={(val) => submitEdit(it, val)}
+                                            disabled={savingItemId === it.item_id}
+                                          />
+                                        ) : (
+                                          <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                              <div style={{ textDecoration: 'line-through', opacity: 0.6, fontWeight: 400, fontSize: '15px' }}>
+                                                {it.description}
+                                              </div>
+                                              {(it.quantity || it.unit) && (
+                                                <div className="qty-unit-line" style={{ opacity: 0.6 }}>
+                                                  <span className="qty-label">Quantity:</span> {it.quantity} {it.unit}
+                                                </div>
+                                              )}
+                                            </div>
+                                            {isGroceryList && it.category && (
+                                              <div style={{ marginTop: 2, opacity: 0.6 }}>
+                                                <Tag className={`category-tag ${getCategoryClass(it.category)}`}>{it.category}</Tag>
+                                              </div>
+                                            )}
+                                          </div>
+                                        )}
                                       </div>
-                                    </SortableRow>
+                                    </div>
                                   </AntList.Item>
                                 )}
                               />
-                            </SortableContext>
-                          </DndContext>
-                        )}
-                        {includeCompleted && completedItems.length > 0 && (
-                          <>
-                            <div className="completed-header">
-                              <span>Completed ({completedItems.length})</span>
-                            </div>
-                            <AntList
-                              itemLayout="horizontal"
-                              className="items-list"
-                              dataSource={completedItems}
-                              renderItem={(it) => (
-                                <AntList.Item
-                                  actions={[
-                                    <Button
-                                      key="del"
-                                      type="text"
-                                      danger
-                                      icon={<Trash />}
-                                      aria-label="Delete item"
-                                      title="Delete item"
-                                      onClick={() => onDeleteItem(it)}
-                                      style={{ paddingInline: 8 }}
-                                      disabled={savingItemId === it.item_id || editingItemId === it.item_id}
-                                    />
-                                  ]}
-                                >
-                                  <div className="item-row item-row-completed">
-                                    <span ref={setCheckboxRef(it.item_id)} className="checkbox-anchor">
-                                      <Checkbox checked={it.completed} onChange={() => onToggleComplete(it)} disabled={savingItemId === it.item_id || editingItemId === it.item_id} />
-                                    </span>
-                                    <div className="item-text" onClick={(e) => { e.stopPropagation(); startEdit(it) }}>
-                                      {editingItemId === it.item_id ? (
-                                        <InlineEditText
-                                          value={it.description}
-                                          onSubmit={(val) => submitEdit(it, val)}
-                                          disabled={savingItemId === it.item_id}
-                                        />
-                                      ) : (
-                                        <span style={{ textDecoration: it.completed ? 'line-through' : 'none' }}>{it.description}</span>
-                                      )}
-                                    </div>
-                                  </div>
-                                </AntList.Item>
-                              )}
-                            />
-                          </>
-                        )}
-                      </>
-                    )}
-                    {/* Sticky Add Bar at bottom (always visible) */}
-                    <div className="add-bar" role="region" aria-label="Add new item">
-                      <div className="add-row">
-                        <Input.TextArea
-                          ref={addRef}
-                          className="add-input"
-                          placeholder="Add an item"
-                          value={newDesc}
-                          onChange={(e) => setNewDesc(e.target.value)}
-                          autoSize={{ minRows: 1, maxRows: 3 }}
-                          onKeyDown={(e) => {
-                            const ne = e as unknown as { key: string; shiftKey: boolean; nativeEvent?: any; isComposing?: boolean; preventDefault: () => void }
-                            const composing = (
-                              (ne.nativeEvent && (ne.nativeEvent.isComposing || ne.nativeEvent.keyCode === 229)) ||
-                              (!!(ne as any).isComposing)
-                            )
-                            if (ne.key === 'Enter' && !ne.shiftKey && !composing) {
-                              e.preventDefault()
-                              onCreateItem()
-                            }
-                          }}
-                          aria-label="Add item input"
-                        />
-                        <Button
-                          className="add-btn"
-                          type="primary"
-                          shape="circle"
-                          onClick={onCreateItem}
-                          disabled={!newDesc.trim()}
-                          icon={<Plus />}
-                          size="large"
-                          aria-label="Add item"
-                        />
+                            </>
+                          )}
+                        </>
+                      )}
+                      {/* Sticky Add Bar at bottom (always visible) */}
+                      <div className="add-bar" role="region" aria-label="Add new item">
+                        <div className="add-row">
+                          <Input.TextArea
+                            ref={addRef}
+                            className="add-input"
+                            value={newDesc}
+                            onChange={(e) => setNewDesc(e.target.value)}
+                            placeholder="Add an item (e.g. '3 bags Apples')"
+                            autoSize={{ minRows: 1, maxRows: 3 }}
+                            onKeyDown={(e) => {
+                              const ne = e as unknown as { key: string; shiftKey: boolean; nativeEvent?: any; isComposing?: boolean; preventDefault: () => void }
+                              const composing = (
+                                (ne.nativeEvent && (ne.nativeEvent.isComposing || ne.nativeEvent.keyCode === 229)) ||
+                                (!!(ne as any).isComposing)
+                              )
+                              if (ne.key === 'Enter' && !ne.shiftKey && !composing) {
+                                e.preventDefault()
+                                onCreateItem()
+                              }
+                            }}
+                            aria-label="Add item input"
+                          />
+                          <Button
+                            className="add-btn"
+                            type="primary"
+                            shape="circle"
+                            onClick={() => onCreateItem()}
+                            disabled={!newDesc.trim()}
+                            icon={<Plus />}
+                            size="large"
+                            aria-label="Add item"
+                          />
+                        </div>
                       </div>
-                    </div>
-                  </Space>
-                ),
-              },
-              {
-                key: 'notes',
-                label: 'Notes',
-                children: (
-                  <Space direction="vertical" style={{ width: '100%' }} size="large">
-                    <Input.TextArea
-                      value={notesText}
-                      onChange={(e) => setNotesText(e.target.value)}
-                      placeholder="Write notes for this list"
-                      autoSize={{ minRows: 10, maxRows: 30 }}
-                    />
-                    <div className="notes-actions">
-                      <Button danger onClick={() => setNotesText('')} disabled={!notesText.trim()} icon={<X />}>Clear all</Button>
-                      <Button type="primary" onClick={onSaveNotes} disabled={!notesDirty || notesSaving} icon={<FloppyDisk />}>Save</Button>
-                    </div>
-                  </Space>
-                ),
-              },
-            ]}
-          />
+                    </Space>
+                  ),
+                },
+                {
+                  key: 'notes',
+                  label: 'Notes',
+                  children: (
+                    <Space direction="vertical" style={{ width: '100%' }} size="large">
+                      <Input.TextArea
+                        value={notesText}
+                        onChange={(e) => setNotesText(e.target.value)}
+                        placeholder="Write notes for this list"
+                        autoSize={{ minRows: 10, maxRows: 30 }}
+                      />
+                      <div className="notes-actions">
+                        <Button danger onClick={() => setNotesText('')} disabled={!notesText.trim()} icon={<X />}>Clear all</Button>
+                        <Button type="primary" onClick={onSaveNotes} disabled={!notesDirty || notesSaving} icon={<FloppyDisk />}>Save</Button>
+                      </div>
+                    </Space>
+                  ),
+                },
+              ]}
+            />
           </div>
         </Card>
       </div>

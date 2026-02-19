@@ -12,6 +12,11 @@ type ListItem struct {
     // Float64 allows midpoint insertion without immediate renumbering.
     Order       float64   `bson:"order,omitempty"      dynamodbav:"order"      json:"order,omitempty"`
     Description string    `bson:"description"  dynamodbav:"description"  json:"description"`
+    Quantity    string    `bson:"quantity,omitempty"   dynamodbav:"quantity,omitempty"  json:"quantity,omitempty"`
+    Unit        string    `bson:"unit,omitempty"       dynamodbav:"unit,omitempty"      json:"unit,omitempty"`
+    Category    string    `bson:"category,omitempty"   dynamodbav:"category,omitempty"  json:"category,omitempty"`
+    IsStarred   bool      `bson:"is_starred,omitempty" dynamodbav:"is_starred,omitempty" json:"is_starred"`
+    IsArchived  bool      `bson:"is_archived,omitempty" dynamodbav:"is_archived,omitempty" json:"is_archived"`
     Completed   bool      `bson:"completed"    dynamodbav:"completed"    json:"completed"`
     CreatedAt   time.Time `bson:"created_at"   dynamodbav:"created_at"   json:"created_at"`
     UpdatedAt   time.Time `bson:"updated_at"   dynamodbav:"updated_at"   json:"updated_at"`
