@@ -736,7 +736,7 @@ export const ListPage: React.FC = () => {
                             className="add-input"
                             value={newDesc}
                             onChange={(e) => setNewDesc(e.target.value)}
-                            placeholder="Add an item (e.g. '3 bags Apples')"
+                            placeholder="Add an item"
                             autoSize={{ minRows: 1, maxRows: 3 }}
                             onKeyDown={(e) => {
                               const ne = e as unknown as { key: string; shiftKey: boolean; nativeEvent?: any; isComposing?: boolean; preventDefault: () => void }
