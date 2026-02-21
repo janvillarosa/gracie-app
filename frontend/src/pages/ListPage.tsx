@@ -137,26 +137,36 @@ export const ListPage: React.FC = () => {
     const from = order.indexOf(activeId)
     const to = order.indexOf(overId)
     if (from < 0 || to < 0) return
+
     // Compute new array after drag
     const nextOrder = [...order]
     nextOrder.splice(from, 1)
     nextOrder.splice(to, 0, activeId)
+
     // Derive prev/next ids for active item in new order
     const idx = nextOrder.indexOf(activeId)
     const prev_id = idx > 0 ? nextOrder[idx - 1] : undefined
     const next_id = idx < nextOrder.length - 1 ? nextOrder[idx + 1] : undefined
-    // Optimistic reorder: update query cache immediately
+
+    // Optimistic reorder: cancel any current fetches, update query cache immediately
     const key = ['list-items', listId, includeCompleted]
+    await qc.cancelQueries({ queryKey: ['list-items', listId] })
+
     const prevData = qc.getQueryData<ListItem[]>(key)
     if (prevData) {
       const map = new Map(prevData.map(it => [it.item_id, it]))
-      const nextIncomplete = nextOrder.map(id => map.get(id)!).filter(Boolean) as ListItem[]
+      // Map new order to index so the local `sortedItems` derivation keeps them stable
+      const nextIncomplete = nextOrder.map((id, index) => {
+        const item = map.get(id)!
+        return { ...item, order: index }
+      }).filter(Boolean) as ListItem[]
       const nextCompleted = prevData.filter(it => it.completed)
       qc.setQueryData<ListItem[]>(key, [...nextIncomplete, ...nextCompleted])
     }
+
     try {
       await reorderListItem(apiKey!, roomId!, listId, activeId, { prev_id, next_id })
-      await qc.invalidateQueries({ queryKey: ['list-items', listId] })
+      qc.invalidateQueries({ queryKey: ['list-items', listId] })
     } catch (err: any) {
       // Revert on failure
       if (prevData) qc.setQueryData<ListItem[]>(key, prevData)
