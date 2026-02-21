@@ -541,7 +541,7 @@ h5.ant-typography {
   padding: 0 !important;
 }
 
-/* Stronger borders for lists on RoomPage */
+/* Stronger borders for lists on RoomPage and hover effects */
 .lists-list .ant-list-item {
   border-bottom: 1px solid var(--border-strong) !important;
   font-weight: 600;

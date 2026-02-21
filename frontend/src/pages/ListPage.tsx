@@ -412,8 +412,12 @@ export const ListPage: React.FC = () => {
             <Space direction="vertical" style={{ width: '100%' }} size="small">
               <div className="list-header-grid">
                 <div className="list-header-title">
-                  <Typography.Title level={2} style={{ margin: 0, lineHeight: 1.2 }}>
-                    {listMeta.icon ? <span style={{ marginRight: 10 }}>{toEmoji(listMeta.icon)}</span> : null}
+                  <Typography.Title level={2} style={{ margin: 0, lineHeight: 1.2, display: 'flex', alignItems: 'center' }}>
+                    {listMeta.icon ? (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 44, height: 44, background: 'var(--panel-subtle)', border: '1px solid var(--border)', borderRadius: '50%', fontSize: 22, flexShrink: 0, marginRight: 12 }}>
+                        {toEmoji(listMeta.icon)}
+                      </div>
+                    ) : null}
                     {listMeta.name}
                   </Typography.Title>
                   <Typography.Text className="list-meta">Updated {timeAgo(listMeta.updated_at)}</Typography.Text>
@@ -430,12 +434,13 @@ export const ListPage: React.FC = () => {
                   {isGroceryList && (
                     <Button
                       type={groupByCat ? 'primary' : 'default'}
+                      shape="round"
                       onClick={() => setGroupByCat(!groupByCat)}
                     >
                       {groupByCat ? 'Ungroup' : 'Group'}
                     </Button>
                   )}
-                  <Button onClick={() => navigate('/app')} icon={<ArrowLeft />}>Back</Button>
+                  <Button onClick={() => navigate('/app')} icon={<ArrowLeft />} shape="round">Back</Button>
                   <Dropdown
                     trigger={["click"]}
                     menu={{
@@ -463,7 +468,7 @@ export const ListPage: React.FC = () => {
                       },
                     }}
                   >
-                    <Button icon={<DotsThreeVertical />} aria-label="More" />
+                    <Button icon={<DotsThreeVertical />} type="text" shape="circle" aria-label="More" />
                   </Dropdown>
                 </div>
               </div>
@@ -471,8 +476,12 @@ export const ListPage: React.FC = () => {
           ) : (
             <div className="list-header-grid">
               <div className="list-header-title">
-                <Typography.Title level={2} style={{ margin: 0, lineHeight: 1.2 }}>
-                  {listMeta.icon ? <span style={{ marginRight: 10 }}>{toEmoji(listMeta.icon)}</span> : null}
+                <Typography.Title level={2} style={{ margin: 0, lineHeight: 1.2, display: 'flex', alignItems: 'center' }}>
+                  {listMeta.icon ? (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 44, height: 44, background: 'var(--panel-subtle)', border: '1px solid var(--border)', borderRadius: '50%', fontSize: 22, flexShrink: 0, marginRight: 12 }}>
+                      {toEmoji(listMeta.icon)}
+                    </div>
+                  ) : null}
                   {listMeta.name}
                 </Typography.Title>
                 <Typography.Text className="list-meta">Updated {timeAgo(listMeta.updated_at)}</Typography.Text>
@@ -489,12 +498,13 @@ export const ListPage: React.FC = () => {
                 {isGroceryList && (
                   <Button
                     type={groupByCat ? 'primary' : 'default'}
+                    shape="round"
                     onClick={() => setGroupByCat(!groupByCat)}
                   >
                     {groupByCat ? 'Ungroup categories' : 'Group by category'}
                   </Button>
                 )}
-                <Button onClick={() => navigate('/app')} icon={<ArrowLeft />}>Back</Button>
+                <Button onClick={() => navigate('/app')} icon={<ArrowLeft />} shape="round">Back</Button>
                 <Dropdown
                   trigger={["click"]}
                   menu={{
@@ -522,7 +532,7 @@ export const ListPage: React.FC = () => {
                     },
                   }}
                 >
-                  <Button icon={<DotsThreeVertical />} aria-label="More" />
+                  <Button icon={<DotsThreeVertical />} type="text" shape="circle" aria-label="More" />
                 </Dropdown>
               </div>
             </div>
@@ -788,8 +798,8 @@ export const ListPage: React.FC = () => {
                         autoSize={{ minRows: 10, maxRows: 30 }}
                       />
                       <div className="notes-actions">
-                        <Button danger onClick={() => setNotesText('')} disabled={!notesText.trim()} icon={<X />}>Clear all</Button>
-                        <Button type="primary" onClick={onSaveNotes} disabled={!notesDirty || notesSaving} icon={<FloppyDisk />}>Save</Button>
+                        <Button danger onClick={() => setNotesText('')} disabled={!notesText.trim()} icon={<X />} shape="round">Clear all</Button>
+                        <Button type="primary" onClick={onSaveNotes} disabled={!notesDirty || notesSaving} icon={<FloppyDisk />} shape="round">Save</Button>
                       </div>
                     </Space>
                   ),

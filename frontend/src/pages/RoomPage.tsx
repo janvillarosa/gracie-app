@@ -22,7 +22,7 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
   useDocumentTitle(room.display_name || 'House')
   const [shareOpen, setShareOpen] = useState(false)
   const [shareToken, setShareToken] = useState<string | null>(null)
-  
+
   const [creating, setCreating] = useState(false)
   const [newName, setNewName] = useState('')
   const [newDesc, setNewDesc] = useState('')
@@ -118,49 +118,33 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
       <div className="paper-stack">
         {/* Bottom meta sheet: title/description/share */}
         <Card className="paper-card paper-meta">
-          {(() => {
-            const menu: MenuProps['items'] = [
-              { key: 'settings', label: 'House Settings' },
-            ]
-            const onMenuClick: MenuProps['onClick'] = ({ key }) => {
-              if (key === 'settings') navigate('/app/settings')
-            }
-            return isMobile ? (
-              <Space direction="vertical" style={{ width: '100%' }} size="small">
-                <Typography.Title level={2} style={{ margin: 0 }}>{room.display_name || 'House'}</Typography.Title>
-                <Space wrap>
-                  <Button type="primary" onClick={onShare} icon={<ShareNetwork />}>Share Code</Button>
-                  <Dropdown menu={{ items: menu, onClick: onMenuClick }} trigger={['click']}>
-                    <Button icon={<DotsThreeVertical />} aria-label="More actions" />
-                  </Dropdown>
-                </Space>
-              </Space>
-            ) : (
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Typography.Title level={2} style={{ margin: 0 }}>{room.display_name || 'House'}</Typography.Title>
-                <Space>
-                  <Button type="primary" onClick={onShare} icon={<ShareNetwork />}>Share Code</Button>
-                  <Dropdown menu={{ items: menu, onClick: onMenuClick }} trigger={['click']}>
-                    <Button icon={<DotsThreeVertical />} aria-label="More actions" />
-                  </Dropdown>
-                </Space>
-              </div>
-            )
-          })()}
+          <Typography.Title level={2} style={{ margin: 0 }}>{room.display_name || 'House'}</Typography.Title>
 
           {room.description && (
-            <Typography.Text type="secondary">{room.description}</Typography.Text>
+            <div style={{ marginTop: 8 }}>
+              <Typography.Text type="secondary">{room.description}</Typography.Text>
+            </div>
           )}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 15 }}>
-            <Typography.Text type="secondary">Members:</Typography.Text>
-            <Space size={8} wrap>
-              {(room as any).members_meta?.length ? (
-                (room as any).members_meta.map((m: any, idx: number) => (
-                  <AvatarBadge key={idx} seed={m.avatar_key} name={m.name} size={35} style="miniavs" />
-                ))
-              ) : (
-                <span>{room.members?.join(', ') || '—'}</span>
-              )}
+
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, paddingTop: 15 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Typography.Text type="secondary">Members:</Typography.Text>
+              <Space size={8} wrap>
+                {(room as any).members_meta?.length ? (
+                  (room as any).members_meta.map((m: any, idx: number) => (
+                    <AvatarBadge key={idx} seed={m.avatar_key} name={m.name} size={35} style="miniavs" />
+                  ))
+                ) : (
+                  <span>{room.members?.join(', ') || '—'}</span>
+                )}
+              </Space>
+            </div>
+
+            <Space>
+              <Button onClick={onShare} icon={<ShareNetwork />} shape="round">Share Code</Button>
+              <Dropdown menu={{ items: [{ key: 'settings', label: 'House Settings' }], onClick: ({ key }) => { if (key === 'settings') navigate('/app/settings') } }} trigger={['click']}>
+                <Button icon={<DotsThreeVertical />} shape="circle" type="text" aria-label="More actions" />
+              </Dropdown>
             </Space>
           </div>
         </Card>
@@ -170,7 +154,7 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
           <Space direction="vertical" style={{ width: '100%' }} size="large">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
               <Typography.Title level={3} style={{ marginTop: 0, marginBottom: 0 }}>Our Lists</Typography.Title>
-              <Button type="primary" onClick={() => setCreateOpen(true)} icon={<Plus />}>New List</Button>
+              <Button type="primary" shape="round" onClick={() => setCreateOpen(true)} icon={<Plus />}>New List</Button>
             </div>
 
             {listsQuery.isLoading ? (
@@ -196,16 +180,22 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
                     }}
                   >
                     <div style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                      <div>
-                        <Typography.Link style={{ fontSize: 16 }}>
-                          {l.icon ? <span style={{ marginRight: 8 }}>{toEmoji(l.icon)}</span> : null}
-                          {l.name}
-                        </Typography.Link>
-                        {l.description && (
-                          <div>
-                            <Typography.Text type="secondary">{l.description}</Typography.Text>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        {l.icon ? (
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 44, height: 44, background: 'var(--panel-subtle)', border: '1px solid var(--border)', borderRadius: '50%', fontSize: 22, flexShrink: 0 }}>
+                            {toEmoji(l.icon)}
                           </div>
-                        )}
+                        ) : null}
+                        <div>
+                          <Typography.Link style={{ fontSize: 16 }}>
+                            {l.name}
+                          </Typography.Link>
+                          {l.description && (
+                            <div>
+                              <Typography.Text type="secondary">{l.description}</Typography.Text>
+                            </div>
+                          )}
+                        </div>
                       </div>
                       <Space>
                         <span onClick={(e) => e.stopPropagation()}>
@@ -225,7 +215,7 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
                               },
                             }}
                           >
-                            <Button icon={<DotsThreeVertical />} aria-label="List actions" />
+                            <Button icon={<DotsThreeVertical />} type="text" shape="circle" aria-label="List actions" />
                           </Dropdown>
                         </span>
                         <CaretRight style={{ color: 'var(--color-primary)' }} />
@@ -243,7 +233,7 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
         open={shareOpen}
         token={shareToken}
         onClose={() => setShareOpen(false)}
-        onRotate={async () => { try { const r = await rotateShare(apiKey!); setShareToken(r.token) } catch(e:any){ message.error(e?.message||'Failed to rotate code') } }}
+        onRotate={async () => { try { const r = await rotateShare(apiKey!); setShareToken(r.token) } catch (e: any) { message.error(e?.message || 'Failed to rotate code') } }}
       />
 
       {/* Create List Modal */}
