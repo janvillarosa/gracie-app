@@ -11,6 +11,7 @@ import { SortableContext, verticalListSortingStrategy, useSortable, sortableKeyb
 import { CSS } from '@dnd-kit/utilities'
 import { toEmoji } from '../icons'
 import { confettiAt } from '@lib/confetti'
+import { parseInput } from '@lib/parseInput'
 import { InlineEditText } from '@components/InlineEditText'
 import { useDocumentTitle } from '@lib/useDocumentTitle'
 import { TopNav } from '@components/TopNav'
@@ -199,24 +200,6 @@ export const ListPage: React.FC = () => {
     }
   }, [listsQuery.isSuccess, listsQuery.isFetching, listMeta, navigate])
 
-  const parseInput = (input: string) => {
-    // Simple regex for quantity and unit parsing
-    // Examples: "3 bags Milk", "1.5kg Beef", "2 Bottles Water", "Milk"
-    const regex = /^([\d.]+)?\s*([a-zA-Z]+)?\s+(.+)$/
-    const match = input.match(regex)
-    if (match) {
-      const quantity = match[1] || ""
-      const unit = match[2] || ""
-      const description = match[3] || ""
-      // If we found a unit but it looks like a common non-unit word, maybe it's part of description
-      const units = ['kg', 'g', 'lb', 'oz', 'bag', 'bags', 'bottle', 'bottles', 'box', 'boxes', 'pack', 'packs', 'can', 'cans']
-      if (unit && !units.includes(unit.toLowerCase()) && !quantity) {
-        return { description: input.trim(), quantity: "", unit: "" }
-      }
-      return { description, quantity, unit }
-    }
-    return { description: input.trim(), quantity: "", unit: "" }
-  }
 
   const onCreateItem = (val?: string) => {
     const text = (val || newDesc).trim()
