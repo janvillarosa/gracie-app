@@ -361,11 +361,34 @@ func (s *ListService) autoCategorize(desc string) string {
 	}
 	// Ordered slice for prioritized matching (longest phrases first)
 	rules := []rule{
-		// Household & Personal (Specific exceptions first)
+		// Specific Exceptions (Highest Priority to avoid substring collisions)
+		{k: "butternut squash", v: "Produce"},
+		{k: "winter squash", v: "Produce"},
+		{k: "banana ketchup", v: "Pantry"},
+		{k: "peanut butter", v: "Pantry"},
+		{k: "almond butter", v: "Pantry"},
+		{k: "milkfish", v: "Meat & Seafood"},
+		{k: "tenderstem broccoli", v: "Produce"},
+
+		// Household & Personal (Moved up to avoid "ham" in "shampoo", etc.)
 		{k: "shaving cream", v: "Household"}, {k: "shaving", v: "Household"},
 		{k: "toilet paper", v: "Household"}, {k: "kitchen roll", v: "Household"},
 		{k: "paper towel", v: "Household"}, {k: "trash bag", v: "Household"},
 		{k: "garbage bag", v: "Household"}, {k: "bin bag", v: "Household"},
+		{k: "soap", v: "Household"}, {k: "hand wash", v: "Household"},
+		{k: "shower gel", v: "Household"}, {k: "shampoo", v: "Household"},
+		{k: "conditioner", v: "Household"}, {k: "toothpaste", v: "Household"},
+		{k: "toothbrush", v: "Household"}, {k: "floss", v: "Household"},
+		{k: "mouthwash", v: "Household"}, {k: "deodorant", v: "Household"},
+		{k: "razor", v: "Household"}, {k: "laundry detergent", v: "Household"},
+		{k: "fabric softener", v: "Household"}, {k: "dish soap", v: "Household"},
+		{k: "dishwasher tablets", v: "Household"}, {k: "cleaning spray", v: "Household"},
+		{k: "bleach", v: "Household"}, {k: "sponge", v: "Household"},
+		{k: "scrubber", v: "Household"}, {k: "tissues", v: "Household"},
+		{k: "napkins", v: "Household"}, {k: "foil", v: "Household"},
+		{k: "cling film", v: "Household"}, {k: "plastic wrap", v: "Household"},
+		{k: "baking paper", v: "Household"}, {k: "parchment paper", v: "Household"},
+		{k: "cleaner", v: "Household"}, {k: "paste", v: "Household"},
 
 		// Frozen
 		{k: "frozen pizza", v: "Frozen"}, {k: "ice cream", v: "Frozen"},
@@ -377,24 +400,29 @@ func (s *ListService) autoCategorize(desc string) string {
 		{k: "tater tot", v: "Frozen"}, {k: "hash brown", v: "Frozen"},
 		{k: "waffle", v: "Frozen"}, {k: "frozen", v: "Frozen"},
 
-		// Eggs & Dairy & Alternatives
-		{k: "oat milk", v: "Eggs & Dairy"}, {k: "almond milk", v: "Eggs & Dairy"},
-		{k: "soy milk", v: "Eggs & Dairy"}, {k: "coconut milk", v: "Eggs & Dairy"},
-		{k: "sour cream", v: "Eggs & Dairy"}, {k: "heavy cream", v: "Eggs & Dairy"},
-		{k: "whipping cream", v: "Eggs & Dairy"}, {k: "double cream", v: "Eggs & Dairy"},
-		{k: "creme fraiche", v: "Eggs & Dairy"}, {k: "cottage cheese", v: "Eggs & Dairy"},
-		{k: "cream cheese", v: "Eggs & Dairy"}, {k: "mozzarella", v: "Eggs & Dairy"},
-		{k: "cheddar", v: "Eggs & Dairy"}, {k: "parmesan", v: "Eggs & Dairy"},
-		{k: "feta", v: "Eggs & Dairy"}, {k: "halloumi", v: "Eggs & Dairy"},
-		{k: "ricotta", v: "Eggs & Dairy"}, {k: "mascarpone", v: "Eggs & Dairy"},
-		{k: "milk", v: "Eggs & Dairy"}, {k: "cheese", v: "Eggs & Dairy"},
-		{k: "butter", v: "Eggs & Dairy"}, {k: "margarine", v: "Eggs & Dairy"},
-		{k: "yogurt", v: "Eggs & Dairy"}, {k: "jogurt", v: "Eggs & Dairy"},
-		{k: "kefir", v: "Eggs & Dairy"}, {k: "cream", v: "Eggs & Dairy"},
-		{k: "curd", v: "Eggs & Dairy"}, {k: "egg", v: "Eggs & Dairy"},
+		// Meat & Seafood
+		{k: "bangus", v: "Meat & Seafood"}, {k: "tilapia", v: "Meat & Seafood"},
+		{k: "galunggong", v: "Meat & Seafood"},
+		{k: "chicken breast", v: "Meat & Seafood"}, {k: "chicken thigh", v: "Meat & Seafood"},
+		{k: "minced beef", v: "Meat & Seafood"}, {k: "ground beef", v: "Meat & Seafood"},
+		{k: "steak", v: "Meat & Seafood"}, {k: "beef", v: "Meat & Seafood"},
+		{k: "pork", v: "Meat & Seafood"}, {k: "bacon", v: "Meat & Seafood"},
+		{k: "ham", v: "Meat & Seafood"}, {k: "sausage", v: "Meat & Seafood"},
+		{k: "salami", v: "Meat & Seafood"}, {k: "pepperoni", v: "Meat & Seafood"},
+		{k: "turkey", v: "Meat & Seafood"}, {k: "lamb", v: "Meat & Seafood"},
+		{k: "duck", v: "Meat & Seafood"}, {k: "venison", v: "Meat & Seafood"},
+		{k: "meatball", v: "Meat & Seafood"}, {k: "burger", v: "Meat & Seafood"},
+		{k: "salmon", v: "Meat & Seafood"}, {k: "cod", v: "Meat & Seafood"},
+		{k: "haddock", v: "Meat & Seafood"}, {k: "sea bass", v: "Meat & Seafood"},
+		{k: "trout", v: "Meat & Seafood"}, {k: "shrimp", v: "Meat & Seafood"},
+		{k: "prawn", v: "Meat & Seafood"}, {k: "crab", v: "Meat & Seafood"},
+		{k: "lobster", v: "Meat & Seafood"}, {k: "mussels", v: "Meat & Seafood"},
+		{k: "clams", v: "Meat & Seafood"}, {k: "scallops", v: "Meat & Seafood"},
+		{k: "tuna steak", v: "Meat & Seafood"}, {k: "fish", v: "Meat & Seafood"},
+		{k: "meat", v: "Meat & Seafood"},
 
 		// Produce (Vegetables & Herbs)
-		{k: "tenderstem broccoli", v: "Produce"}, {k: "pak choi", v: "Produce"},
+		{k: "pak choi", v: "Produce"},
 		{k: "bok choi", v: "Produce"}, {k: "mange tout", v: "Produce"},
 		{k: "sugar snap", v: "Produce"}, {k: "baby corn", v: "Produce"},
 		{k: "coriander", v: "Produce"}, {k: "cilantro", v: "Produce"},
@@ -420,8 +448,9 @@ func (s *ListService) autoCategorize(desc string) string {
 		{k: "cauliflower", v: "Produce"}, {k: "celery", v: "Produce"},
 		{k: "eggplant", v: "Produce"}, {k: "aubergine", v: "Produce"},
 		{k: "leek", v: "Produce"}, {k: "radish", v: "Produce"},
-		{k: "pea", v: "Produce"}, {k: "bean", v: "Produce"},
-		{k: "corn on the cob", v: "Produce"}, {k: "sweetcorn", v: "Produce"},
+		{k: "okra", v: "Produce"}, {k: "pea", v: "Produce"},
+		{k: "bean", v: "Produce"}, {k: "corn on the cob", v: "Produce"},
+		{k: "sweetcorn", v: "Produce"},
 
 		// Produce (Fruits)
 		{k: "pomegranate", v: "Produce"}, {k: "dragon fruit", v: "Produce"},
@@ -444,6 +473,22 @@ func (s *ListService) autoCategorize(desc string) string {
 		{k: "clementine", v: "Produce"}, {k: "satsuma", v: "Produce"},
 		{k: "mandarin", v: "Produce"}, {k: "grape", v: "Produce"},
 		{k: "berry", v: "Produce"}, {k: "avocado", v: "Produce"},
+
+		// Eggs & Dairy & Alternatives
+		{k: "oat milk", v: "Eggs & Dairy"}, {k: "almond milk", v: "Eggs & Dairy"},
+		{k: "soy milk", v: "Eggs & Dairy"}, {k: "coconut milk", v: "Eggs & Dairy"},
+		{k: "sour cream", v: "Eggs & Dairy"}, {k: "heavy cream", v: "Eggs & Dairy"},
+		{k: "whipping cream", v: "Eggs & Dairy"}, {k: "double cream", v: "Eggs & Dairy"},
+		{k: "creme fraiche", v: "Eggs & Dairy"}, {k: "cottage cheese", v: "Eggs & Dairy"},
+		{k: "cream cheese", v: "Eggs & Dairy"}, {k: "mozzarella", v: "Eggs & Dairy"},
+		{k: "cheddar", v: "Eggs & Dairy"}, {k: "parmesan", v: "Eggs & Dairy"},
+		{k: "feta", v: "Eggs & Dairy"}, {k: "halloumi", v: "Eggs & Dairy"},
+		{k: "ricotta", v: "Eggs & Dairy"}, {k: "mascarpone", v: "Eggs & Dairy"},
+		{k: "milk", v: "Eggs & Dairy"}, {k: "cheese", v: "Eggs & Dairy"},
+		{k: "butter", v: "Eggs & Dairy"}, {k: "margarine", v: "Eggs & Dairy"},
+		{k: "yogurt", v: "Eggs & Dairy"}, {k: "jogurt", v: "Eggs & Dairy"},
+		{k: "kefir", v: "Eggs & Dairy"}, {k: "cream", v: "Eggs & Dairy"},
+		{k: "curd", v: "Eggs & Dairy"}, {k: "egg", v: "Eggs & Dairy"},
 
 		// Plant-Based Protein
 		{k: "plant-based", v: "Plant-Based"}, {k: "meat-free", v: "Plant-Based"},
@@ -480,6 +525,8 @@ func (s *ListService) autoCategorize(desc string) string {
 		{k: "muesli", v: "Grains & Bakery"},
 
 		// Pantry & Spices
+		{k: "kimchi", v: "Pantry"},
+		{k: "bagoong", v: "Pantry"}, {k: "patis", v: "Pantry"},
 		{k: "black pepper", v: "Pantry"}, {k: "white pepper", v: "Pantry"},
 		{k: "cayenne", v: "Pantry"}, {k: "paprika", v: "Pantry"},
 		{k: "cinnamon", v: "Pantry"}, {k: "cumin", v: "Pantry"},
@@ -504,7 +551,6 @@ func (s *ListService) autoCategorize(desc string) string {
 		{k: "sugar", v: "Pantry"}, {k: "brown sugar", v: "Pantry"},
 		{k: "icing sugar", v: "Pantry"}, {k: "baking powder", v: "Pantry"},
 		{k: "baking soda", v: "Pantry"}, {k: "yeast", v: "Pantry"},
-		{k: "peanut butter", v: "Pantry"}, {k: "almond butter", v: "Pantry"},
 		{k: "nutella", v: "Pantry"}, {k: "jam", v: "Pantry"},
 		{k: "marmalade", v: "Pantry"}, {k: "oil", v: "Pantry"},
 		{k: "spice", v: "Pantry"}, {k: "sauce", v: "Pantry"},
@@ -518,41 +564,6 @@ func (s *ListService) autoCategorize(desc string) string {
 		{k: "crackers", v: "Pantry"}, {k: "biscuits", v: "Pantry"},
 		{k: "cookies", v: "Pantry"}, {k: "chocolate", v: "Pantry"},
 		{k: "candy", v: "Pantry"}, {k: "sweets", v: "Pantry"},
-
-		// Meat & Seafood
-		{k: "chicken breast", v: "Meat & Seafood"}, {k: "chicken thigh", v: "Meat & Seafood"},
-		{k: "minced beef", v: "Meat & Seafood"}, {k: "ground beef", v: "Meat & Seafood"},
-		{k: "steak", v: "Meat & Seafood"}, {k: "beef", v: "Meat & Seafood"},
-		{k: "pork", v: "Meat & Seafood"}, {k: "bacon", v: "Meat & Seafood"},
-		{k: "ham", v: "Meat & Seafood"}, {k: "sausage", v: "Meat & Seafood"},
-		{k: "salami", v: "Meat & Seafood"}, {k: "pepperoni", v: "Meat & Seafood"},
-		{k: "turkey", v: "Meat & Seafood"}, {k: "lamb", v: "Meat & Seafood"},
-		{k: "duck", v: "Meat & Seafood"}, {k: "venison", v: "Meat & Seafood"},
-		{k: "meatball", v: "Meat & Seafood"}, {k: "burger", v: "Meat & Seafood"},
-		{k: "salmon", v: "Meat & Seafood"}, {k: "cod", v: "Meat & Seafood"},
-		{k: "haddock", v: "Meat & Seafood"}, {k: "sea bass", v: "Meat & Seafood"},
-		{k: "trout", v: "Meat & Seafood"}, {k: "shrimp", v: "Meat & Seafood"},
-		{k: "prawn", v: "Meat & Seafood"}, {k: "crab", v: "Meat & Seafood"},
-		{k: "lobster", v: "Meat & Seafood"}, {k: "mussels", v: "Meat & Seafood"},
-		{k: "clams", v: "Meat & Seafood"}, {k: "scallops", v: "Meat & Seafood"},
-		{k: "tuna steak", v: "Meat & Seafood"}, {k: "fish", v: "Meat & Seafood"},
-		{k: "meat", v: "Meat & Seafood"},
-
-		// Household & Personal (General terms)
-		{k: "soap", v: "Household"}, {k: "hand wash", v: "Household"},
-		{k: "shower gel", v: "Household"}, {k: "shampoo", v: "Household"},
-		{k: "conditioner", v: "Household"}, {k: "toothpaste", v: "Household"},
-		{k: "toothbrush", v: "Household"}, {k: "floss", v: "Household"},
-		{k: "mouthwash", v: "Household"}, {k: "deodorant", v: "Household"},
-		{k: "razor", v: "Household"}, {k: "laundry detergent", v: "Household"},
-		{k: "fabric softener", v: "Household"}, {k: "dish soap", v: "Household"},
-		{k: "dishwasher tablets", v: "Household"}, {k: "cleaning spray", v: "Household"},
-		{k: "bleach", v: "Household"}, {k: "sponge", v: "Household"},
-		{k: "scrubber", v: "Household"}, {k: "tissues", v: "Household"},
-		{k: "napkins", v: "Household"}, {k: "foil", v: "Household"},
-		{k: "cling film", v: "Household"}, {k: "plastic wrap", v: "Household"},
-		{k: "baking paper", v: "Household"}, {k: "parchment paper", v: "Household"},
-		{k: "cleaner", v: "Household"}, {k: "paste", v: "Household"},
 
 		// Beverages
 		{k: "coffee beans", v: "Beverages"}, {k: "ground coffee", v: "Beverages"},
