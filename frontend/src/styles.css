@@ -908,6 +908,15 @@ h5.ant-typography {
   padding-top: 8px;
 }
 
+/* Notes textarea: fixed height to avoid Android autoSize repaint bug */
+.notes-textarea,
+.notes-textarea textarea.ant-input {
+  resize: vertical !important;
+  overflow-y: auto !important;
+  will-change: transform;
+  -webkit-overflow-scrolling: touch;
+}
+
 /* Notes actions: right-aligned with Save on the far right */
 .notes-actions {
   display: flex;

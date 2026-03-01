@@ -775,10 +775,11 @@ export const ListPage: React.FC = () => {
                   children: (
                     <Space direction="vertical" style={{ width: '100%' }} size="large">
                       <Input.TextArea
+                        className="notes-textarea"
                         value={notesText}
                         onChange={(e) => setNotesText(e.target.value)}
                         placeholder="Write notes for this list"
-                        autoSize={{ minRows: 10, maxRows: 30 }}
+                        rows={12}
                       />
                       <div className="notes-actions">
                         <Button danger onClick={() => setNotesText('')} disabled={!notesText.trim()} icon={<X />} shape="round">Clear all</Button>
