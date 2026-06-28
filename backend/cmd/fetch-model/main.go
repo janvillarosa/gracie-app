@@ -33,6 +33,10 @@ func main() {
 		opts.AuthToken = token
 	}
 
+	if err := os.MkdirAll(out, 0o755); err != nil {
+		log.Fatalf("create output dir %s: %v", out, err)
+	}
+
 	ctx := context.Background()
 	path, err := hugot.DownloadModel(ctx, modelID, out, opts)
 	if err != nil {
