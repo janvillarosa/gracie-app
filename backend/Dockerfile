@@ -2,7 +2,7 @@
 
 FROM golang:1.22-alpine AS builder
 WORKDIR /app/backend
-RUN apk add --no-cache git
+RUN apk add --no-cache git ca-certificates
 
 # Cache deps
 COPY backend/go.mod backend/go.sum ./
@@ -14,11 +14,15 @@ RUN mkdir -p /out && \
     CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /out/gracie-server ./cmd/gracie-server && \
     CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /out/setup-ddb ./cmd/setup-ddb
 
+# Download the embedding model into the image (no runtime network access needed)
+RUN go run ./cmd/fetch-model /out/models
+
 FROM alpine:3.20
 RUN adduser -D -h /app app && apk add --no-cache ca-certificates
 WORKDIR /app
 COPY --from=builder /out/gracie-server /usr/local/bin/gracie-server
 COPY --from=builder /out/setup-ddb /usr/local/bin/setup-ddb
+COPY --from=builder /out/models /app/models
 COPY --from=builder /app/backend/docker-entrypoint.sh /usr/local/bin/entrypoint.sh
 # Ensure entrypoint is executable before switching to non-root user
 RUN chmod +x /usr/local/bin/entrypoint.sh

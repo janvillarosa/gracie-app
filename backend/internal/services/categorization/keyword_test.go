@@ -1,11 +1,13 @@
-package services
+package categorization
 
 import (
+	"context"
 	"testing"
 )
 
-func TestAutoCategorize(t *testing.T) {
-	ls := &ListService{}
+func TestKeywordCategorizer(t *testing.T) {
+	kc := NewKeywordCategorizer(GroceryAnchors)
+	ctx := context.Background()
 
 	tests := []struct {
 		desc string
@@ -89,8 +91,15 @@ func TestAutoCategorize(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
-			if got := ls.autoCategorize(tt.desc); got != tt.want {
-				t.Errorf("autoCategorize(%q) = %q, want %q", tt.desc, got, tt.want)
+			cat, _, err := kc.Categorize(ctx, tt.desc)
+			if err != nil {
+				t.Fatalf("%q: unexpected error: %v", tt.desc, err)
+			}
+			if cat == "" {
+				cat = General
+			}
+			if cat != tt.want {
+				t.Errorf("Categorize(%q) = %q, want %q", tt.desc, cat, tt.want)
 			}
 		})
 	}

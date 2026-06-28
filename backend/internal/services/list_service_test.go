@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	derr "github.com/janvillarosa/gracie-app/backend/internal/errors"
+	"github.com/janvillarosa/gracie-app/backend/internal/services/categorization"
 	"github.com/janvillarosa/gracie-app/backend/internal/testutil/memstore"
 )
 
@@ -12,7 +13,7 @@ func TestListValidationsAndFilters(t *testing.T) {
 	tx, users, rooms, lists, items := memstore.Compose()
 	us := NewUserService(users, rooms, tx)
 	rs := NewRoomService(users, rooms, tx)
-	ls := NewListService(users, rooms, lists, items)
+	ls := NewListService(users, rooms, lists, items, categorization.NewKeywordCategorizer(categorization.GroceryAnchors))
 	rs.UseListRepos(lists, items)
 	ctx := context.Background()
 

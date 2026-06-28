@@ -22,6 +22,11 @@ type Config struct {
     MongoDB     string
     // AvatarSalt is used to derive deterministic avatar keys (HMAC of user_id).
     AvatarSalt  string
+    // Embedding categorization
+    EmbeddingEnabled   bool
+    EmbeddingModelPath string
+    EmbedThreshold     float64
+    EmbedTopK          int
 }
 
 func getEnv(key, def string) string {
@@ -48,6 +53,11 @@ func Load() (*Config, error) {
         AvatarSalt:  getEnv("AVATAR_SALT", "local-avatar-salt"),
     }
 
+    cfg.EmbeddingEnabled = getEnv("EMBEDDING_ENABLED", "false") == "true"
+    cfg.EmbeddingModelPath = getEnv("EMBEDDING_MODEL_PATH", "/app/models/minilm")
+    cfg.EmbedThreshold = getEnvFloat("EMBED_THRESHOLD", 0.45)
+    cfg.EmbedTopK = getEnvInt("EMBED_TOPK", 5)
+
     // If DDB_ENDPOINT is explicitly set to "aws", use AWS-managed DynamoDB (no custom endpoint)
     if v, ok := os.LookupEnv("DDB_ENDPOINT"); ok {
         if v == "aws" {
@@ -66,6 +76,16 @@ func getEnvInt(key string, def int) int {
         var n int
         _, _ = fmt.Sscanf(v, "%d", &n)
         if n > 0 { return n }
+    }
+    return def
+}
+
+func getEnvFloat(key string, def float64) float64 {
+    if v := os.Getenv(key); v != "" {
+        var f float64
+        if _, err := fmt.Sscanf(v, "%g", &f); err == nil && f > 0 {
+            return f
+        }
     }
     return def
 }

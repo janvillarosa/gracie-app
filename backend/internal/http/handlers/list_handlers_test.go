@@ -10,6 +10,7 @@ import (
     handlers "github.com/janvillarosa/gracie-app/backend/internal/http/handlers"
     "github.com/janvillarosa/gracie-app/backend/internal/http/router"
     "github.com/janvillarosa/gracie-app/backend/internal/services"
+    "github.com/janvillarosa/gracie-app/backend/internal/services/categorization"
     "github.com/janvillarosa/gracie-app/backend/internal/testutil/memstore"
 )
 
@@ -18,7 +19,7 @@ func TestListsFlow(t *testing.T) {
 
     userSvc := services.NewUserService(usersRepo, roomsRepo, tx)
     roomSvc := services.NewRoomService(usersRepo, roomsRepo, tx)
-    listSvc := services.NewListService(usersRepo, roomsRepo, listsRepo, itemsRepo)
+    listSvc := services.NewListService(usersRepo, roomsRepo, listsRepo, itemsRepo, categorization.NewKeywordCategorizer(categorization.GroceryAnchors))
     authSvc, err := services.NewAuthService(usersRepo, "/tmp/gracie-test-enc.key", 720)
     if err != nil { t.Fatalf("auth svc: %v", err) }
 
