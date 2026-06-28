@@ -2,24 +2,25 @@ package services
 
 import (
 	"context"
-	"strings"
 	"time"
 
 	derr "github.com/janvillarosa/gracie-app/backend/internal/errors"
 	"github.com/janvillarosa/gracie-app/backend/internal/models"
+	"github.com/janvillarosa/gracie-app/backend/internal/services/categorization"
 	"github.com/janvillarosa/gracie-app/backend/internal/store"
 	"github.com/janvillarosa/gracie-app/backend/pkg/ids"
 )
 
 type ListService struct {
-	users store.UserRepository
-	rooms store.RoomRepository
-	lists store.ListRepository
-	items store.ListItemRepository
+	users       store.UserRepository
+	rooms       store.RoomRepository
+	lists       store.ListRepository
+	items       store.ListItemRepository
+	categorizer categorization.Categorizer
 }
 
-func NewListService(users store.UserRepository, rooms store.RoomRepository, lists store.ListRepository, items store.ListItemRepository) *ListService {
-	return &ListService{users: users, rooms: rooms, lists: lists, items: items}
+func NewListService(users store.UserRepository, rooms store.RoomRepository, lists store.ListRepository, items store.ListItemRepository, categorizer categorization.Categorizer) *ListService {
+	return &ListService{users: users, rooms: rooms, lists: lists, items: items, categorizer: categorizer}
 }
 
 func (s *ListService) ensureRoomMembership(ctx context.Context, user *models.User, roomID string) error {
@@ -219,9 +220,14 @@ func (s *ListService) CreateItem(ctx context.Context, user *models.User, roomID,
 		CreatedAt:   now,
 		UpdatedAt:   now,
 	}
-	// Auto-categorize if not provided
+	// Auto-categorize if not provided. Errors degrade to General rather than
+	// failing item creation.
 	if it.Category == "" {
-		it.Category = s.autoCategorize(description)
+		cat, _, err := s.categorizer.Categorize(ctx, description)
+		if err != nil || cat == "" {
+			cat = categorization.General
+		}
+		it.Category = cat
 	}
 	if err := s.items.Put(ctx, it); err != nil {
 		return nil, err
@@ -354,263 +360,6 @@ func (s *ListService) GetPantry(ctx context.Context, user *models.User, roomID s
 	return out, nil
 }
 
-func (s *ListService) autoCategorize(desc string) string {
-	type rule struct {
-		k string
-		v string
-	}
-	// Ordered slice for prioritized matching (longest phrases first)
-	rules := []rule{
-		// Specific Exceptions (Highest Priority to avoid substring collisions)
-		{k: "butternut squash", v: "Produce"},
-		{k: "winter squash", v: "Produce"},
-		{k: "banana ketchup", v: "Pantry"},
-		{k: "peanut butter", v: "Pantry"},
-		{k: "almond butter", v: "Pantry"},
-		{k: "milkfish", v: "Meat & Seafood"},
-		{k: "tenderstem broccoli", v: "Produce"},
-		{k: "dinorado rice", v: "Grains & Bakery"},
-		{k: "arborio rice", v: "Grains & Bakery"},
-		{k: "canellini beans", v: "Pantry"},
-		{k: "purefoods hotdog", v: "Meat & Seafood"},
-		{k: "san marzano", v: "Produce"},
-		{k: "balsamic vinegar", v: "Pantry"},
-		{k: "truffle oil", v: "Pantry"},
-		{k: "extra virgin olive oil", v: "Pantry"},
-		{k: "pancit bihon", v: "Grains & Bakery"},
-		{k: "sinigang mix", v: "Pantry"},
-		{k: "mang tomas", v: "Pantry"},
-		{k: "ube halaya", v: "Pantry"},
-		{k: "blue cheese", v: "Eggs & Dairy"},
-		{k: "goat cheese", v: "Eggs & Dairy"},
-		{k: "grana padano", v: "Eggs & Dairy"},
-		{k: "eden cheese", v: "Eggs & Dairy"},
-
-		// Household & Personal (Moved up to avoid "ham" in "shampoo", etc.)
-		{k: "shaving cream", v: "Household"}, {k: "shaving", v: "Household"},
-		{k: "toilet paper", v: "Household"}, {k: "kitchen roll", v: "Household"},
-		{k: "paper towel", v: "Household"}, {k: "trash bag", v: "Household"},
-		{k: "garbage bag", v: "Household"}, {k: "bin bag", v: "Household"},
-		{k: "soap", v: "Household"}, {k: "hand wash", v: "Household"},
-		{k: "shower gel", v: "Household"}, {k: "shampoo", v: "Household"},
-		{k: "conditioner", v: "Household"}, {k: "toothpaste", v: "Household"},
-		{k: "toothbrush", v: "Household"}, {k: "floss", v: "Household"},
-		{k: "mouthwash", v: "Household"}, {k: "deodorant", v: "Household"},
-		{k: "razor", v: "Household"}, {k: "laundry detergent", v: "Household"},
-		{k: "fabric softener", v: "Household"}, {k: "dish soap", v: "Household"},
-		{k: "dishwasher tablets", v: "Household"}, {k: "cleaning spray", v: "Household"},
-		{k: "bleach", v: "Household"}, {k: "sponge", v: "Household"},
-		{k: "scrubber", v: "Household"}, {k: "tissues", v: "Household"},
-		{k: "napkins", v: "Household"}, {k: "foil", v: "Household"},
-		{k: "cling film", v: "Household"}, {k: "plastic wrap", v: "Household"},
-		{k: "baking paper", v: "Household"}, {k: "parchment paper", v: "Household"},
-		{k: "cleaner", v: "Household"}, {k: "paste", v: "Household"},
-
-		// Meat & Seafood
-		{k: "bangus", v: "Meat & Seafood"}, {k: "tilapia", v: "Meat & Seafood"},
-		{k: "galunggong", v: "Meat & Seafood"}, {k: "danggit", v: "Meat & Seafood"},
-		{k: "tuyo", v: "Meat & Seafood"}, {k: "longganisa", v: "Meat & Seafood"},
-		{k: "tocino", v: "Meat & Seafood"}, {k: "prosciutto", v: "Meat & Seafood"},
-		{k: "guanciale", v: "Meat & Seafood"}, {k: "mortadella", v: "Meat & Seafood"},
-		{k: "salami", v: "Meat & Seafood"}, {k: "pepperoni", v: "Meat & Seafood"},
-		{k: "hotdog", v: "Meat & Seafood"}, {k: "sausage", v: "Meat & Seafood"},
-		{k: "corned beef", v: "Meat & Seafood"}, {k: "spam", v: "Meat & Seafood"},
-		{k: "chicken breast", v: "Meat & Seafood"}, {k: "chicken thigh", v: "Meat & Seafood"},
-		{k: "minced beef", v: "Meat & Seafood"}, {k: "ground beef", v: "Meat & Seafood"},
-		{k: "steak", v: "Meat & Seafood"}, {k: "beef", v: "Meat & Seafood"},
-		{k: "pork", v: "Meat & Seafood"}, {k: "bacon", v: "Meat & Seafood"},
-		{k: "ham", v: "Meat & Seafood"}, {k: "turkey", v: "Meat & Seafood"},
-		{k: "lamb", v: "Meat & Seafood"}, {k: "duck", v: "Meat & Seafood"},
-		{k: "venison", v: "Meat & Seafood"}, {k: "meatball", v: "Meat & Seafood"},
-		{k: "burger", v: "Meat & Seafood"}, {k: "salmon", v: "Meat & Seafood"},
-		{k: "cod", v: "Meat & Seafood"}, {k: "haddock", v: "Meat & Seafood"},
-		{k: "sea bass", v: "Meat & Seafood"}, {k: "trout", v: "Meat & Seafood"},
-		{k: "shrimp", v: "Meat & Seafood"}, {k: "prawn", v: "Meat & Seafood"},
-		{k: "crab", v: "Meat & Seafood"}, {k: "lobster", v: "Meat & Seafood"},
-		{k: "mussels", v: "Meat & Seafood"}, {k: "clams", v: "Meat & Seafood"},
-		{k: "scallops", v: "Meat & Seafood"}, {k: "tuna steak", v: "Meat & Seafood"},
-		{k: "fish", v: "Meat & Seafood"}, {k: "meat", v: "Meat & Seafood"},
-
-		// Grains, Pasta & Bakery
-		{k: "piadina", v: "Grains & Bakery"}, {k: "focaccia", v: "Grains & Bakery"},
-		{k: "panettone", v: "Grains & Bakery"}, {k: "pandesal", v: "Grains & Bakery"},
-		{k: "pan de coco", v: "Grains & Bakery"}, {k: "gnocchi", v: "Grains & Bakery"},
-		{k: "pasta", v: "Grains & Bakery"}, {k: "noodle", v: "Grains & Bakery"},
-		{k: "rice", v: "Grains & Bakery"}, {k: "quinoa", v: "Grains & Bakery"},
-		{k: "spaghetti", v: "Grains & Bakery"}, {k: "penne", v: "Grains & Bakery"},
-		{k: "fusilli", v: "Grains & Bakery"}, {k: "tagliatelle", v: "Grains & Bakery"},
-		{k: "linguine", v: "Grains & Bakery"}, {k: "fettuccine", v: "Grains & Bakery"},
-		{k: "lasagna", v: "Grains & Bakery"}, {k: "lasagne", v: "Grains & Bakery"},
-		{k: "tortellini", v: "Grains & Bakery"}, {k: "ravioli", v: "Grains & Bakery"},
-		{k: "couscous", v: "Grains & Bakery"}, {k: "bulgur", v: "Grains & Bakery"},
-		{k: "oat", v: "Grains & Bakery"}, {k: "porridge", v: "Grains & Bakery"},
-		{k: "flour", v: "Grains & Bakery"}, {k: "bread", v: "Grains & Bakery"},
-		{k: "sourdough", v: "Grains & Bakery"}, {k: "baguette", v: "Grains & Bakery"},
-		{k: "ciabatta", v: "Grains & Bakery"}, {k: "bagel", v: "Grains & Bakery"},
-		{k: "tortilla", v: "Grains & Bakery"}, {k: "pita", v: "Grains & Bakery"},
-		{k: "naan", v: "Grains & Bakery"}, {k: "croissant", v: "Grains & Bakery"},
-		{k: "muffin", v: "Grains & Bakery"}, {k: "crumpet", v: "Grains & Bakery"},
-		{k: "cereal", v: "Grains & Bakery"}, {k: "granola", v: "Grains & Bakery"},
-		{k: "muesli", v: "Grains & Bakery"},
-
-		// Produce (Vegetables & Herbs)
-		{k: "calamansi", v: "Produce"}, {k: "artichoke", v: "Produce"},
-		{k: "okra", v: "Produce"}, {k: "pak choi", v: "Produce"},
-		{k: "bok choi", v: "Produce"}, {k: "mange tout", v: "Produce"},
-		{k: "sugar snap", v: "Produce"}, {k: "baby corn", v: "Produce"},
-		{k: "coriander", v: "Produce"}, {k: "cilantro", v: "Produce"},
-		{k: "parsley", v: "Produce"}, {k: "basil", v: "Produce"},
-		{k: "mint", v: "Produce"}, {k: "rosemary", v: "Produce"},
-		{k: "thyme", v: "Produce"}, {k: "chives", v: "Produce"},
-		{k: "dill", v: "Produce"}, {k: "sage", v: "Produce"},
-		{k: "oregano", v: "Produce"}, {k: "tarragon", v: "Produce"},
-		{k: "lemongrass", v: "Produce"}, {k: "ginger", v: "Produce"},
-		{k: "turmeric", v: "Produce"}, {k: "chili", v: "Produce"},
-		{k: "chilli", v: "Produce"}, {k: "jalapeno", v: "Produce"},
-		{k: "sweet potato", v: "Produce"}, {k: "bell pepper", v: "Produce"},
-		{k: "broccoli", v: "Produce"}, {k: "carrot", v: "Produce"},
-		{k: "onion", v: "Produce"}, {k: "scallion", v: "Produce"},
-		{k: "spring onion", v: "Produce"}, {k: "garlic", v: "Produce"},
-		{k: "kale", v: "Produce"}, {k: "spinach", v: "Produce"},
-		{k: "lettuce", v: "Produce"}, {k: "arugula", v: "Produce"},
-		{k: "rocket", v: "Produce"}, {k: "cucumber", v: "Produce"},
-		{k: "tomato", v: "Produce"}, {k: "pepper", v: "Produce"},
-		{k: "potato", v: "Produce"}, {k: "mushroom", v: "Produce"},
-		{k: "zucchini", v: "Produce"}, {k: "courgette", v: "Produce"},
-		{k: "asparagus", v: "Produce"}, {k: "cabbage", v: "Produce"},
-		{k: "cauliflower", v: "Produce"}, {k: "celery", v: "Produce"},
-		{k: "eggplant", v: "Produce"}, {k: "aubergine", v: "Produce"},
-		{k: "leek", v: "Produce"}, {k: "radish", v: "Produce"},
-		{k: "pea", v: "Produce"}, {k: "bean", v: "Produce"},
-		{k: "corn on the cob", v: "Produce"}, {k: "sweetcorn", v: "Produce"},
-
-		// Produce (Fruits)
-		{k: "pomegranate", v: "Produce"}, {k: "dragon fruit", v: "Produce"},
-		{k: "passion fruit", v: "Produce"}, {k: "pineapple", v: "Produce"},
-		{k: "coconut", v: "Produce"}, {k: "strawberry", v: "Produce"},
-		{k: "blueberry", v: "Produce"}, {k: "raspberry", v: "Produce"},
-		{k: "blackberry", v: "Produce"}, {k: "cranberry", v: "Produce"},
-		{k: "cherry", v: "Produce"}, {k: "apricot", v: "Produce"},
-		{k: "nectarine", v: "Produce"}, {k: "peach", v: "Produce"},
-		{k: "plum", v: "Produce"}, {k: "fig", v: "Produce"},
-		{k: "date", v: "Produce"}, {k: "papaya", v: "Produce"},
-		{k: "guava", v: "Produce"}, {k: "lychee", v: "Produce"},
-		{k: "mango", v: "Produce"}, {k: "kiwi", v: "Produce"},
-		{k: "melon", v: "Produce"}, {k: "watermelon", v: "Produce"},
-		{k: "cantaloupe", v: "Produce"}, {k: "honeydew", v: "Produce"},
-		{k: "pear", v: "Produce"}, {k: "apple", v: "Produce"},
-		{k: "banana", v: "Produce"}, {k: "lemon", v: "Produce"},
-		{k: "lime", v: "Produce"}, {k: "grapefruit", v: "Produce"},
-		{k: "orange", v: "Produce"}, {k: "tangerine", v: "Produce"},
-		{k: "clementine", v: "Produce"}, {k: "satsuma", v: "Produce"},
-		{k: "mandarin", v: "Produce"}, {k: "grape", v: "Produce"},
-		{k: "berry", v: "Produce"}, {k: "avocado", v: "Produce"},
-
-		// Eggs & Dairy & Alternatives
-		{k: "parmigiano", v: "Eggs & Dairy"}, {k: "pecorino", v: "Eggs & Dairy"},
-		{k: "burrata", v: "Eggs & Dairy"}, {k: "mozzarella", v: "Eggs & Dairy"},
-		{k: "ricotta", v: "Eggs & Dairy"}, {k: "mascarpone", v: "Eggs & Dairy"},
-		{k: "feta", v: "Eggs & Dairy"}, {k: "halloumi", v: "Eggs & Dairy"},
-		{k: "cheddar", v: "Eggs & Dairy"}, {k: "parmesan", v: "Eggs & Dairy"},
-		{k: "oat milk", v: "Eggs & Dairy"}, {k: "almond milk", v: "Eggs & Dairy"},
-		{k: "soy milk", v: "Eggs & Dairy"}, {k: "coconut milk", v: "Eggs & Dairy"},
-		{k: "sour cream", v: "Eggs & Dairy"}, {k: "heavy cream", v: "Eggs & Dairy"},
-		{k: "whipping cream", v: "Eggs & Dairy"}, {k: "double cream", v: "Eggs & Dairy"},
-		{k: "creme fraiche", v: "Eggs & Dairy"}, {k: "cottage cheese", v: "Eggs & Dairy"},
-		{k: "cream cheese", v: "Eggs & Dairy"}, {k: "milk", v: "Eggs & Dairy"},
-		{k: "cheese", v: "Eggs & Dairy"}, {k: "butter", v: "Eggs & Dairy"},
-		{k: "margarine", v: "Eggs & Dairy"}, {k: "yogurt", v: "Eggs & Dairy"},
-		{k: "jogurt", v: "Eggs & Dairy"}, {k: "kefir", v: "Eggs & Dairy"},
-		{k: "cream", v: "Eggs & Dairy"}, {k: "curd", v: "Eggs & Dairy"},
-		{k: "egg", v: "Eggs & Dairy"},
-
-		// Frozen
-		{k: "frozen pizza", v: "Frozen"}, {k: "ice cream", v: "Frozen"},
-		{k: "sorbet", v: "Frozen"}, {k: "gelato", v: "Frozen"},
-		{k: "frozen peas", v: "Frozen"}, {k: "frozen berries", v: "Frozen"},
-		{k: "frozen fruit", v: "Frozen"}, {k: "frozen veg", v: "Frozen"},
-		{k: "frozen corn", v: "Frozen"}, {k: "chicken nugget", v: "Frozen"},
-		{k: "fish finger", v: "Frozen"}, {k: "fish stick", v: "Frozen"},
-		{k: "tater tot", v: "Frozen"}, {k: "hash brown", v: "Frozen"},
-		{k: "waffle", v: "Frozen"}, {k: "frozen", v: "Frozen"},
-
-		// Plant-Based Protein
-		{k: "plant-based", v: "Plant-Based"}, {k: "meat-free", v: "Plant-Based"},
-		{k: "tofu", v: "Plant-Based"}, {k: "tempeh", v: "Plant-Based"},
-		{k: "seitan", v: "Plant-Based"}, {k: "vegan", v: "Plant-Based"},
-		{k: "beyond meat", v: "Plant-Based"}, {k: "impossible burger", v: "Plant-Based"},
-		{k: "nutritional yeast", v: "Plant-Based"}, {k: "quorn", v: "Plant-Based"},
-		{k: "hummus", v: "Plant-Based"}, {k: "falafel", v: "Plant-Based"},
-
-		// Pantry & Spices
-		{k: "kimchi", v: "Pantry"}, {k: "lupini", v: "Pantry"},
-		{k: "pesto", v: "Pantry"}, {k: "bagoong", v: "Pantry"},
-		{k: "patis", v: "Pantry"}, {k: "black pepper", v: "Pantry"},
-		{k: "white pepper", v: "Pantry"}, {k: "cayenne", v: "Pantry"},
-		{k: "paprika", v: "Pantry"}, {k: "cinnamon", v: "Pantry"},
-		{k: "cumin", v: "Pantry"}, {k: "coriander seeds", v: "Pantry"},
-		{k: "turmeric powder", v: "Pantry"}, {k: "maple syrup", v: "Pantry"},
-		{k: "honey", v: "Pantry"}, {k: "agave", v: "Pantry"},
-		{k: "soy sauce", v: "Pantry"}, {k: "tamari", v: "Pantry"},
-		{k: "fish sauce", v: "Pantry"}, {k: "olive oil", v: "Pantry"},
-		{k: "canola oil", v: "Pantry"}, {k: "vegetable oil", v: "Pantry"},
-		{k: "coconut oil", v: "Pantry"}, {k: "sesame oil", v: "Pantry"},
-		{k: "vinegar", v: "Pantry"}, {k: "balsamic", v: "Pantry"},
-		{k: "ketchup", v: "Pantry"}, {k: "mayo", v: "Pantry"},
-		{k: "mustard", v: "Pantry"}, {k: "hot sauce", v: "Pantry"},
-		{k: "sriracha", v: "Pantry"}, {k: "pasta sauce", v: "Pantry"},
-		{k: "tomato paste", v: "Pantry"}, {k: "canned tomato", v: "Pantry"},
-		{k: "tinned tomato", v: "Pantry"}, {k: "baked beans", v: "Pantry"},
-		{k: "chickpeas", v: "Pantry"}, {k: "lentils", v: "Pantry"},
-		{k: "kidney beans", v: "Pantry"}, {k: "tuna", v: "Pantry"},
-		{k: "sardines", v: "Pantry"}, {k: "soup", v: "Pantry"},
-		{k: "stock cube", v: "Pantry"}, {k: "bouillon", v: "Pantry"},
-		{k: "salt", v: "Pantry"}, {k: "sugar", v: "Pantry"},
-		{k: "brown sugar", v: "Pantry"}, {k: "icing sugar", v: "Pantry"},
-		{k: "baking powder", v: "Pantry"}, {k: "baking soda", v: "Pantry"},
-		{k: "yeast", v: "Pantry"}, {k: "nutella", v: "Pantry"},
-		{k: "jam", v: "Pantry"}, {k: "marmalade", v: "Pantry"},
-		{k: "oil", v: "Pantry"}, {k: "spice", v: "Pantry"},
-		{k: "sauce", v: "Pantry"}, {k: "syrup", v: "Pantry"},
-		{k: "nut", v: "Pantry"}, {k: "walnut", v: "Pantry"},
-		{k: "almond", v: "Pantry"}, {k: "cashew", v: "Pantry"},
-		{k: "peanut", v: "Pantry"}, {k: "seed", v: "Pantry"},
-		{k: "chia", v: "Pantry"}, {k: "pumpkin seed", v: "Pantry"},
-		{k: "sunflower seed", v: "Pantry"}, {k: "chips", v: "Pantry"},
-		{k: "crisps", v: "Pantry"}, {k: "popcorn", v: "Pantry"},
-		{k: "pretzels", v: "Pantry"}, {k: "crackers", v: "Pantry"},
-		{k: "biscuits", v: "Pantry"}, {k: "cookies", v: "Pantry"},
-		{k: "chocolate", v: "Pantry"}, {k: "candy", v: "Pantry"},
-		{k: "sweets", v: "Pantry"},
-
-		// Beverages
-		{k: "coffee beans", v: "Beverages"}, {k: "ground coffee", v: "Beverages"},
-		{k: "instant coffee", v: "Beverages"}, {k: "tea bags", v: "Beverages"},
-		{k: "green tea", v: "Beverages"}, {k: "herbal tea", v: "Beverages"},
-		{k: "orange juice", v: "Beverages"}, {k: "apple juice", v: "Beverages"},
-		{k: "juice", v: "Beverages"}, {k: "soda", v: "Beverages"},
-		{k: "pop", v: "Beverages"}, {k: "coke", v: "Beverages"},
-		{k: "pepsi", v: "Beverages"}, {k: "lemonade", v: "Beverages"},
-		{k: "sparkling water", v: "Beverages"}, {k: "tonic water", v: "Beverages"},
-		{k: "mineral water", v: "Beverages"}, {k: "energy drink", v: "Beverages"},
-		{k: "kombucha", v: "Beverages"}, {k: "smoothie", v: "Beverages"},
-		{k: "wine", v: "Beverages"}, {k: "beer", v: "Beverages"},
-		{k: "ale", v: "Beverages"}, {k: "lager", v: "Beverages"},
-		{k: "cider", v: "Beverages"}, {k: "spirits", v: "Beverages"},
-		{k: "vodka", v: "Beverages"}, {k: "gin", v: "Beverages"},
-		{k: "whisky", v: "Beverages"}, {k: "rum", v: "Beverages"},
-		{k: "water", v: "Beverages"}, {k: "coffee", v: "Beverages"},
-		{k: "tea", v: "Beverages"}, {k: "drink", v: "Beverages"},
-	}
-
-	d := strings.ToLower(desc)
-	for _, r := range rules {
-		if strings.Contains(d, r.k) {
-			return r.v
-		}
-	}
-	return "General"
-}
 
 func (s *ListService) DeleteItem(ctx context.Context, user *models.User, roomID, listID, itemID string) error {
 	if err := s.ensureRoomMembership(ctx, user, roomID); err != nil {

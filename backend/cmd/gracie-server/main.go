@@ -13,6 +13,7 @@ import (
     "github.com/janvillarosa/gracie-app/backend/internal/http/handlers"
     "github.com/janvillarosa/gracie-app/backend/internal/http/router"
     "github.com/janvillarosa/gracie-app/backend/internal/services"
+    "github.com/janvillarosa/gracie-app/backend/internal/services/categorization"
     mongostore "github.com/janvillarosa/gracie-app/backend/internal/store/mongo"
 )
 
@@ -39,7 +40,7 @@ func main() {
     roomSvc := services.NewRoomService(usersRepo, roomsRepo, tx)
     roomSvc.UseListRepos(listsRepo, itemsRepo)
     userSvc.UseListRepos(listsRepo, itemsRepo)
-    listSvc := services.NewListService(usersRepo, roomsRepo, listsRepo, itemsRepo)
+    listSvc := services.NewListService(usersRepo, roomsRepo, listsRepo, itemsRepo, categorization.NewKeywordCategorizer(categorization.GroceryAnchors))
     authSvc, err := services.NewAuthService(usersRepo, cfg.EncKeyFile, cfg.APIKeyTTLHours)
     if err != nil { log.Fatalf("auth service: %v", err) }
 
