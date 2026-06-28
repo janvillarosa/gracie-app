@@ -16,9 +16,21 @@ The spec (`docs/superpowers/specs/2026-06-28-embedding-categorization-design.md`
 
 1. **Pure-Go hugot backend instead of CGO + `libonnxruntime.so`.** hugot's `NewGoSession` runs ONNX inference and tokenization in pure Go. This keeps the existing `CGO_ENABLED=0` Alpine Docker build, removes the native shared-library/glibc/debian-slim work, and removes the cross-compile caveat. The ORT backend (faster, CGO) remains a documented upgrade path. Everything stays **in-process**, honoring the spec's decision.
 
-2. **Anchors stay a Go slice (`DefaultRules`), not `anchors.json`.** The keyword matcher and the embedding anchor set are the *same* list. Keeping one in-memory slice as the single source of truth is DRY and type-safe. Since anchors are baked into the image either way (no external storage), a JSON file would add file/embed plumbing with no deploy-time benefit. Adding an item is still a one-line declarative data edit.
+2. **Anchors stay a Go slice (`GroceryAnchors`), not `anchors.json`.** The keyword matcher and the embedding anchor set are the *same* list. Keeping one in-memory slice as the single source of truth is DRY and type-safe. Since anchors are baked into the image either way (no external storage), a JSON file would add file/embed plumbing with no deploy-time benefit. Adding an item is still a one-line declarative data edit.
 
 Everything else follows the spec: kNN vote, exact-match short-circuit, threshold→General, feature-flagged rollout, keyword fallback, accuracy benchmark.
+
+## Multi-Domain Readiness (added)
+
+The categorizer must be reusable for non-food domains (e.g. suggesting a list *type* from a list *name*), so the engine is built domain-agnostic from the start. Concretely:
+
+- The `Anchor` type and the `Categorizer`/`Embedder`/`Chain` machinery carry **no food assumptions**. A "domain" is just an anchor set + threshold + fallback label fed to the same engine.
+- `GroceryAnchors` is one named anchor set; adding a domain later means adding another set (e.g. `ListTypeAnchors`) and registering a categorizer for it — no engine changes.
+- The `KeywordCategorizer` takes its anchors as a constructor parameter (not a hardcoded global).
+- The `Chain`'s fallback label is configurable (grocery uses `General`; another domain might use `""`/`Custom`).
+- The expensive `HugotEmbedder` (the model) is built **once** and shared across every domain's categorizer via a small registry in `main.go`.
+
+Building the actual list-type suggestion feature (its anchor set, an API endpoint, frontend wiring) is **out of scope** here — it becomes a small follow-up that adds data + an endpoint on top of this engine.
 
 ---
 
@@ -26,8 +38,8 @@ Everything else follows the spec: kNN vote, exact-match short-circuit, threshold
 
 **New package `backend/internal/services/categorization/`:**
 - `categorizer.go` — `Categorizer` interface and shared doc.
-- `rules.go` — `Rule` type and `DefaultRules` (the term→category list, moved verbatim from `list_service.go`). Single source of truth.
-- `keyword.go` — `KeywordCategorizer` (substring matching over `DefaultRules`).
+- `anchors.go` — `Anchor` type and `GroceryAnchors` (the term→category list, moved verbatim from `list_service.go`). Domain-neutral type; one named set per domain.
+- `keyword.go` — `KeywordCategorizer` (substring matching over an injected anchor set).
 - `keyword_test.go` — migrated 97-case regression suite.
 - `vector.go` — `cosine`, `normalize`, and kNN vote pure functions.
 - `vector_test.go` — pure-math unit tests (no model).
@@ -68,7 +80,7 @@ type Categorizer interface {
 Semantics every implementer must honor:
 - `KeywordCategorizer`: never errors. Returns `(category, 1.0, nil)` on a substring match, else `("", 0, nil)`.
 - `EmbeddingCategorizer`: returns `("", 0, err)` on model error; `(category, confidence, nil)` when top-1 cosine ≥ threshold; `("", confidence, nil)` when below threshold (declines).
-- `Chain`: tries members in order; first non-empty category wins; if all decline, returns `("General", 0, nil)`.
+- `Chain`: tries members in order; first non-empty category wins; if all decline, returns its **configured fallback** label (grocery passes `General`).
 
 ---
 
@@ -76,7 +88,7 @@ Semantics every implementer must honor:
 
 **Files:**
 - Create: `backend/internal/services/categorization/categorizer.go`
-- Create: `backend/internal/services/categorization/rules.go`
+- Create: `backend/internal/services/categorization/anchors.go`
 
 - [ ] **Step 1: Create the interface file**
 
@@ -100,24 +112,26 @@ type Categorizer interface {
 const General = "General"
 ```
 
-- [ ] **Step 2: Move the rule list verbatim into `rules.go`**
+- [ ] **Step 2: Move the rule list verbatim into `anchors.go`**
 
-Create `backend/internal/services/categorization/rules.go`. Define the type, then copy **every** `{k: ..., v: ...}` entry from the `rules` slice currently in `list_service.go` (lines 363–604) into `DefaultRules`, renaming fields `k→Term`, `v→Category`. **Preserve the exact order** — the keyword matcher depends on specific-before-generic ordering.
+Create `backend/internal/services/categorization/anchors.go`. Define the type, then copy **every** `{k: ..., v: ...}` entry from the `rules` slice currently in `list_service.go` (lines 363–604) into `GroceryAnchors`, renaming fields `k→Term`, `v→Category`. **Preserve the exact order** — the keyword matcher depends on specific-before-generic ordering.
 
 ```go
 package categorization
 
-// Rule maps a lowercase keyword/phrase to a category. The ordering of
-// DefaultRules matters for substring matching (specific phrases first),
-// and the same list doubles as the anchor set for embedding kNN.
-type Rule struct {
+// Anchor maps a lowercase keyword/phrase to a category label. It carries no
+// domain assumptions — the same type is reused for any categorization domain.
+// The ordering of an anchor set matters for substring matching (specific
+// phrases first), and the same set doubles as the anchor set for embedding kNN.
+type Anchor struct {
 	Term     string
 	Category string
 }
 
-// DefaultRules is the single source of truth for both keyword matching and
-// embedding anchors. Add new items here (data, not logic).
-var DefaultRules = []Rule{
+// GroceryAnchors is the grocery domain's anchor set — the single source of
+// truth for both keyword matching and embedding anchors. Add new items here
+// (data, not logic). Other domains define their own sets (e.g. ListTypeAnchors).
+var GroceryAnchors = []Anchor{
 	// --- paste all entries from list_service.go rules slice here, in order ---
 	{Term: "butternut squash", Category: "Produce"},
 	{Term: "winter squash", Category: "Produce"},
@@ -134,8 +148,8 @@ Expected: builds with no errors.
 - [ ] **Step 4: Commit**
 
 ```bash
-cd backend && git add internal/services/categorization/categorizer.go internal/services/categorization/rules.go
-git commit -m "feat(categorization): scaffold package and move rule list to single source"
+cd backend && git add internal/services/categorization/categorizer.go internal/services/categorization/anchors.go
+git commit -m "feat(categorization): scaffold package and move anchor set to single source"
 ```
 
 ---
@@ -159,7 +173,7 @@ import (
 )
 
 func TestKeywordCategorizer(t *testing.T) {
-	kc := NewKeywordCategorizer()
+	kc := NewKeywordCategorizer(GroceryAnchors)
 	ctx := context.Background()
 
 	tests := []struct {
@@ -206,22 +220,24 @@ import (
 	"strings"
 )
 
-// KeywordCategorizer matches a lowercased description against DefaultRules
-// using ordered substring matching. It is the permanent fallback strategy.
+// KeywordCategorizer matches a lowercased description against an injected
+// anchor set using ordered substring matching. It is domain-neutral and serves
+// as the permanent fallback strategy for any domain.
 type KeywordCategorizer struct {
-	rules []Rule
+	anchors []Anchor
 }
 
-// NewKeywordCategorizer builds a matcher over DefaultRules.
-func NewKeywordCategorizer() *KeywordCategorizer {
-	return &KeywordCategorizer{rules: DefaultRules}
+// NewKeywordCategorizer builds a matcher over the given anchor set (e.g.
+// GroceryAnchors).
+func NewKeywordCategorizer(anchors []Anchor) *KeywordCategorizer {
+	return &KeywordCategorizer{anchors: anchors}
 }
 
 // Categorize returns (category, 1.0, nil) on the first substring match, or
-// ("", 0, nil) when nothing matches (declines; the Chain applies General).
+// ("", 0, nil) when nothing matches (declines; the Chain applies its fallback).
 func (k *KeywordCategorizer) Categorize(_ context.Context, description string) (string, float64, error) {
 	d := strings.ToLower(description)
-	for _, r := range k.rules {
+	for _, r := range k.anchors {
 		if strings.Contains(d, r.Term) {
 			return r.Category, 1.0, nil
 		}
@@ -233,7 +249,7 @@ func (k *KeywordCategorizer) Categorize(_ context.Context, description string) (
 - [ ] **Step 4: Run the test to verify it passes**
 
 Run: `cd backend && go test ./internal/services/categorization/ -run TestKeywordCategorizer -v`
-Expected: PASS for all cases. If any case fails, the rule list in Task 1 was pasted incompletely or out of order — fix `rules.go`.
+Expected: PASS for all cases. If any case fails, the anchor list in Task 1 was pasted incompletely or out of order — fix `anchors.go`.
 
 - [ ] **Step 5: Commit**
 
@@ -466,7 +482,7 @@ func (fakeEmbedder) Embed(_ context.Context, texts []string) ([][]float32, error
 
 func newTestCategorizer(t *testing.T) *EmbeddingCategorizer {
 	t.Helper()
-	anchors := []Rule{
+	anchors := []Anchor{
 		{Term: "milk", Category: "Eggs & Dairy"},
 		{Term: "cheddar", Category: "Eggs & Dairy"},
 	}
@@ -532,8 +548,9 @@ import (
 	"strings"
 )
 
-// EmbeddingCategorizer assigns categories by embedding the description and
-// finding the nearest anchors among DefaultRules (kNN, similarity-weighted).
+// EmbeddingCategorizer assigns categories by embedding the input text and
+// finding the nearest anchors in its injected anchor set (kNN,
+// similarity-weighted). It is domain-neutral — grocery items, list names, etc.
 type EmbeddingCategorizer struct {
 	embedder  Embedder
 	anchorVec [][]float32 // normalized anchor embeddings, aligned with anchorCat
@@ -546,7 +563,7 @@ type EmbeddingCategorizer struct {
 // NewEmbeddingCategorizerWithEmbedder builds the categorizer from an explicit
 // Embedder and anchor list, embedding all anchors once. Used in tests and by
 // NewEmbeddingCategorizer.
-func NewEmbeddingCategorizerWithEmbedder(ctx context.Context, e Embedder, anchors []Rule, threshold float64, topK int) (*EmbeddingCategorizer, error) {
+func NewEmbeddingCategorizerWithEmbedder(ctx context.Context, e Embedder, anchors []Anchor, threshold float64, topK int) (*EmbeddingCategorizer, error) {
 	terms := make([]string, len(anchors))
 	cats := make([]string, len(anchors))
 	exact := make(map[string]string, len(anchors))
@@ -653,7 +670,7 @@ func (s stub) Categorize(context.Context, string) (string, float64, error) {
 }
 
 func TestChainUsesFirstNonEmpty(t *testing.T) {
-	c := NewChain(stub{cat: "Produce", conf: 0.8}, stub{cat: "Pantry", conf: 1.0})
+	c := NewChain(General, stub{cat: "Produce", conf: 0.8}, stub{cat: "Pantry", conf: 1.0})
 	cat, _, _ := c.Categorize(context.Background(), "x")
 	if cat != "Produce" {
 		t.Errorf("got %q, want Produce", cat)
@@ -661,7 +678,7 @@ func TestChainUsesFirstNonEmpty(t *testing.T) {
 }
 
 func TestChainFallsBackOnDecline(t *testing.T) {
-	c := NewChain(stub{cat: ""}, stub{cat: "Pantry", conf: 1.0})
+	c := NewChain(General, stub{cat: ""}, stub{cat: "Pantry", conf: 1.0})
 	cat, _, _ := c.Categorize(context.Background(), "x")
 	if cat != "Pantry" {
 		t.Errorf("got %q, want Pantry", cat)
@@ -669,7 +686,7 @@ func TestChainFallsBackOnDecline(t *testing.T) {
 }
 
 func TestChainFallsBackOnError(t *testing.T) {
-	c := NewChain(stub{err: errors.New("model down")}, stub{cat: "Pantry", conf: 1.0})
+	c := NewChain(General, stub{err: errors.New("model down")}, stub{cat: "Pantry", conf: 1.0})
 	cat, _, err := c.Categorize(context.Background(), "x")
 	if err != nil {
 		t.Fatalf("chain should swallow member error, got %v", err)
@@ -679,11 +696,11 @@ func TestChainFallsBackOnError(t *testing.T) {
 	}
 }
 
-func TestChainAllDeclineReturnsGeneral(t *testing.T) {
-	c := NewChain(stub{cat: ""}, stub{cat: ""})
+func TestChainAllDeclineReturnsConfiguredFallback(t *testing.T) {
+	c := NewChain("Custom", stub{cat: ""}, stub{cat: ""})
 	cat, _, _ := c.Categorize(context.Background(), "x")
-	if cat != General {
-		t.Errorf("got %q, want General", cat)
+	if cat != "Custom" {
+		t.Errorf("got %q, want Custom (configured fallback)", cat)
 	}
 }
 ```
@@ -705,14 +722,16 @@ import "context"
 // Chain tries each member in order and returns the first non-empty category.
 // A member that errors or declines ("") is skipped, giving graceful
 // degradation (e.g. embedding model down -> keyword matcher). If every member
-// declines, Chain returns the General fallback.
+// declines, Chain returns its configured fallback label. The fallback is
+// per-domain (grocery uses General; another domain might use "" or "Custom").
 type Chain struct {
-	members []Categorizer
+	fallback string
+	members  []Categorizer
 }
 
-// NewChain builds a Chain from the given strategies, in priority order.
-func NewChain(members ...Categorizer) *Chain {
-	return &Chain{members: members}
+// NewChain builds a Chain with a fallback label and strategies in priority order.
+func NewChain(fallback string, members ...Categorizer) *Chain {
+	return &Chain{fallback: fallback, members: members}
 }
 
 func (c *Chain) Categorize(ctx context.Context, description string) (string, float64, error) {
@@ -723,7 +742,7 @@ func (c *Chain) Categorize(ctx context.Context, description string) (string, flo
 		}
 		return cat, conf, nil
 	}
-	return General, 0, nil
+	return c.fallback, 0, nil
 }
 ```
 
@@ -811,7 +830,7 @@ cd backend && git rm internal/services/categorization_test.go
 In `backend/cmd/gracie-server/main.go`, temporarily pass a keyword-only categorizer so the build stays green (full wiring comes in Task 9). Change line 38:
 
 ```go
-	listSvc := services.NewListService(usersRepo, roomsRepo, listsRepo, itemsRepo, categorization.NewKeywordCategorizer())
+	listSvc := services.NewListService(usersRepo, roomsRepo, listsRepo, itemsRepo, categorization.NewKeywordCategorizer(categorization.GroceryAnchors))
 ```
 
 Add the import to main.go:
@@ -823,7 +842,7 @@ Add the import to main.go:
 - [ ] **Step 5: Verify the whole backend builds and tests pass**
 
 Run: `cd backend && go build ./... && go test ./internal/services/...`
-Expected: build succeeds; categorization package tests pass; no references to the deleted `autoCategorize` remain. If `go vet`/build reports other `NewListService` callers, update each to pass `categorization.NewKeywordCategorizer()`.
+Expected: build succeeds; categorization package tests pass; no references to the deleted `autoCategorize` remain. If `go vet`/build reports other `NewListService` callers, update each to pass `categorization.NewKeywordCategorizer(categorization.GroceryAnchors)`.
 
 - [ ] **Step 6: Commit**
 
@@ -1056,11 +1075,11 @@ func TestEmbeddingCategorizerRealModel(t *testing.T) {
 	}
 	defer emb.Close()
 
-	ec, err := NewEmbeddingCategorizerWithEmbedder(ctx, emb, DefaultRules, 0.45, 5)
+	ec, err := NewEmbeddingCategorizerWithEmbedder(ctx, emb, GroceryAnchors, 0.45, 5)
 	if err != nil {
 		t.Fatalf("build categorizer: %v", err)
 	}
-	// A novel item absent from DefaultRules should land in a sensible category.
+	// A novel item absent from GroceryAnchors should land in a sensible category.
 	cat, conf, err := ec.Categorize(ctx, "ribeye steak")
 	if err != nil {
 		t.Fatal(err)
@@ -1140,50 +1159,71 @@ git commit -m "feat(categorization): add HugotEmbedder and build-time model fetc
 **Files:**
 - Modify: `backend/cmd/gracie-server/main.go`
 
-- [ ] **Step 1: Build the categorizer from config with startup fallback**
+- [ ] **Step 1: Build a per-domain categorizer registry sharing one embedder**
 
 In `backend/cmd/gracie-server/main.go`, replace the temporary line from Task 6:
 
 ```go
-	listSvc := services.NewListService(usersRepo, roomsRepo, listsRepo, itemsRepo, categorization.NewKeywordCategorizer())
+	listSvc := services.NewListService(usersRepo, roomsRepo, listsRepo, itemsRepo, categorization.NewKeywordCategorizer(categorization.GroceryAnchors))
 ```
 
 with:
 
 ```go
-	categorizer := buildCategorizer(ctx, cfg)
-	listSvc := services.NewListService(usersRepo, roomsRepo, listsRepo, itemsRepo, categorizer)
+	categorizers := buildCategorizers(ctx, cfg)
+	listSvc := services.NewListService(usersRepo, roomsRepo, listsRepo, itemsRepo, categorizers["grocery"])
 ```
 
-Add this helper function at the bottom of `main.go`:
+Add these helpers at the bottom of `main.go`. The model is loaded **once** and shared across every domain; adding a domain later is one line in `buildCategorizers`.
 
 ```go
-// buildCategorizer returns the keyword categorizer by default, or an
-// embedding+keyword Chain when EMBEDDING_ENABLED=true and the model loads.
-// A model load failure logs and degrades to keyword-only so the app still boots.
-func buildCategorizer(ctx context.Context, cfg *config.Config) categorization.Categorizer {
-	keyword := categorization.NewKeywordCategorizer()
+// buildEmbedder loads the shared embedding model once, or returns nil when
+// embeddings are disabled or the model fails to load (callers then degrade to
+// keyword-only). One embedder instance is reused across all domains.
+func buildEmbedder(ctx context.Context, cfg *config.Config) categorization.Embedder {
 	if !cfg.EmbeddingEnabled {
-		log.Printf("categorization: keyword mode (embedding disabled)")
-		return keyword
+		log.Printf("categorization: embedding disabled (keyword mode)")
+		return nil
 	}
 	emb, err := categorization.NewHugotEmbedder(ctx, cfg.EmbeddingModelPath)
 	if err != nil {
-		log.Printf("categorization: embedding init failed (%v); using keyword fallback", err)
-		return keyword
+		log.Printf("categorization: embedding init failed (%v); keyword fallback for all domains", err)
+		return nil
 	}
-	ec, err := categorization.NewEmbeddingCategorizerWithEmbedder(ctx, emb, categorization.DefaultRules, cfg.EmbedThreshold, cfg.EmbedTopK)
+	log.Printf("categorization: embedding model loaded (model=%s, threshold=%.2f, topK=%d)", cfg.EmbeddingModelPath, cfg.EmbedThreshold, cfg.EmbedTopK)
+	return emb
+}
+
+// domainCategorizer builds one domain's Chain: embedding (when the shared
+// embedder is available) backed by keyword matching over the same anchor set,
+// with a per-domain fallback label. Anchor embedding failure degrades to
+// keyword-only for that domain.
+func domainCategorizer(ctx context.Context, emb categorization.Embedder, anchors []categorization.Anchor, fallback string, cfg *config.Config) categorization.Categorizer {
+	keyword := categorization.NewKeywordCategorizer(anchors)
+	if emb == nil {
+		return categorization.NewChain(fallback, keyword)
+	}
+	ec, err := categorization.NewEmbeddingCategorizerWithEmbedder(ctx, emb, anchors, cfg.EmbedThreshold, cfg.EmbedTopK)
 	if err != nil {
-		log.Printf("categorization: anchor embedding failed (%v); using keyword fallback", err)
-		_ = emb.Close()
-		return keyword
+		log.Printf("categorization: anchor embedding failed (%v); keyword-only for this domain", err)
+		return categorization.NewChain(fallback, keyword)
 	}
-	log.Printf("categorization: embedding mode (model=%s, threshold=%.2f, topK=%d)", cfg.EmbeddingModelPath, cfg.EmbedThreshold, cfg.EmbedTopK)
-	return categorization.NewChain(ec, keyword)
+	return categorization.NewChain(fallback, ec, keyword)
+}
+
+// buildCategorizers returns the per-domain registry. Add a new domain (e.g.
+// list-type suggestion) by adding one line with its anchor set + fallback;
+// the embedding model is shared, not reloaded.
+func buildCategorizers(ctx context.Context, cfg *config.Config) map[string]categorization.Categorizer {
+	emb := buildEmbedder(ctx, cfg)
+	return map[string]categorization.Categorizer{
+		"grocery": domainCategorizer(ctx, emb, categorization.GroceryAnchors, categorization.General, cfg),
+		// Future: "list_type": domainCategorizer(ctx, emb, categorization.ListTypeAnchors, "", cfg),
+	}
 }
 ```
 
-Ensure `config` is imported in main.go (it already is) and that `categorization` import added in Task 6 remains.
+Ensure `config` is imported in main.go (it already is) and that the `categorization` import added in Task 6 remains.
 
 - [ ] **Step 2: Verify build**
 
@@ -1197,14 +1237,14 @@ Run (keyword mode, no model needed):
 cd backend && EMBEDDING_ENABLED=false go run ./cmd/gracie-server &
 sleep 2 && kill %1
 ```
-Expected log line: `categorization: keyword mode (embedding disabled)`.
+Expected log line: `categorization: embedding disabled (keyword mode)`.
 
 Run (embedding mode against the downloaded model):
 ```bash
 cd backend && EMBEDDING_ENABLED=true EMBEDDING_MODEL_PATH=$(ls -d ./models/*/ | head -1) go run ./cmd/gracie-server &
 sleep 6 && kill %1
 ```
-Expected log line: `categorization: embedding mode (...)` with no fallback warning.
+Expected log line: `categorization: embedding model loaded (...)` with no fallback warning.
 
 - [ ] **Step 4: Commit**
 
@@ -1271,13 +1311,13 @@ func TestChainAccuracyNoRegression(t *testing.T) {
 		t.Fatalf("load model: %v", err)
 	}
 	defer emb.Close()
-	ec, err := NewEmbeddingCategorizerWithEmbedder(ctx, emb, DefaultRules, 0.45, 5)
+	ec, err := NewEmbeddingCategorizerWithEmbedder(ctx, emb, GroceryAnchors, 0.45, 5)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	keyword := NewKeywordCategorizer()
-	chain := NewChain(ec, keyword)
+	keyword := NewKeywordCategorizer(GroceryAnchors)
+	chain := NewChain(General, ec, keyword)
 
 	baseline := accuracy(t, keyword)
 	embOnly := accuracy(t, ec)
