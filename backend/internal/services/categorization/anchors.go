@@ -23,7 +23,7 @@ var GroceryAnchors = []Anchor{
 	{Term: "tenderstem broccoli", Category: "Produce"},
 	{Term: "dinorado rice", Category: "Grains & Bakery"},
 	{Term: "arborio rice", Category: "Grains & Bakery"},
-	{Term: "canellini beans", Category: "Pantry"},
+	{Term: "cannellini beans", Category: "Pantry"},
 	{Term: "purefoods hotdog", Category: "Meat & Seafood"},
 	{Term: "san marzano", Category: "Produce"},
 	{Term: "balsamic vinegar", Category: "Pantry"},
@@ -37,6 +37,18 @@ var GroceryAnchors = []Anchor{
 	{Term: "goat cheese", Category: "Eggs & Dairy"},
 	{Term: "grana padano", Category: "Eggs & Dairy"},
 	{Term: "eden cheese", Category: "Eggs & Dairy"},
+	// Ordering-conflict exceptions (specific phrases that would be swallowed by
+	// a generic term appearing earlier in the list)
+	{Term: "tomato paste", Category: "Pantry"},
+	{Term: "black pepper", Category: "Pantry"},
+	{Term: "white pepper", Category: "Pantry"},
+	{Term: "coriander seeds", Category: "Pantry"},
+	{Term: "turmeric powder", Category: "Pantry"},
+	{Term: "coconut oil", Category: "Pantry"},
+	{Term: "baked beans", Category: "Pantry"},
+	{Term: "kidney beans", Category: "Pantry"},
+	{Term: "apple juice", Category: "Beverages"},
+	{Term: "orange juice", Category: "Beverages"},
 
 	// Household & Personal (Moved up to avoid "ham" in "shampoo", etc.)
 	{Term: "shaving cream", Category: "Household"},
