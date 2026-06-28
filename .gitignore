@@ -70,3 +70,6 @@ frontend/dist/
 
 # Local secrets
 .secrets/
+
+# Downloaded ONNX models (fetched at build time by cmd/fetch-model)
+backend/models/
