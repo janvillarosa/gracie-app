@@ -140,6 +140,31 @@ List Items
 - PATCH `/rooms/{room_id}/lists/{list_id}/items/{item_id}/position`: `{ prev_id?: string, next_id?: string }` → reorder item relative to neighbors. Server computes a new order value.
 - DELETE `/rooms/{room_id}/lists/{list_id}/items/{item_id}`: delete item (any member). Deletion differs from completion.
 
+## Categorization
+
+Items added to lists are automatically assigned a category. The system uses a two-stage chain:
+
+1. **Embedding (when enabled)** — a local `all-MiniLM-L6-v2` ONNX model embeds the item description and finds the nearest anchor examples by cosine similarity (kNN). The model runs in-process with no external API calls. The model is baked into the Docker image at build time.
+2. **Keyword fallback** — if the embedding declines (below confidence threshold) or is disabled, the item is matched by substring against the anchor list. This is the same logic as before the embedding layer was added.
+
+### Environment variables
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `EMBEDDING_ENABLED` | `false` | Set to `true` to enable the embedding layer. Default off for safe rollout. |
+| `EMBEDDING_MODEL_PATH` | `/app/models/minilm` | Path inside the container to the downloaded model directory. Set to `/app/models/KnightsAnalytics_all-MiniLM-L6-v2` when using the baked image. |
+| `EMBED_THRESHOLD` | `0.45` | Cosine similarity floor; below this the embedding declines to keyword fallback. |
+| `EMBED_TOPK` | `5` | Number of nearest anchors to consider in the kNN vote. |
+
+### Railway deployment
+
+1. Set the service to build from `Dockerfile.railway` (not nixpacks).
+2. Add the variables above to the service's **Variables** panel.
+3. Ensure the plan provides **≥ 512 MB RAM** (1 GB recommended) — the ONNX model raises the memory floor.
+4. Deploy with `EMBEDDING_ENABLED=false` first; confirm categorization still works (keyword mode).
+5. Set `EMBEDDING_ENABLED=true` and redeploy. Logs should show `categorization: embedding model loaded (...)`. Test a few novel items to validate.
+6. To instantly revert: set `EMBEDDING_ENABLED=false` — no code redeploy needed.
+
 ## Notes
 
 - After deletion, users are left without a room (must call `POST /rooms` to create a new solo room).
