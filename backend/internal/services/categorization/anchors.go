@@ -24,6 +24,7 @@ var GroceryAnchors = []Anchor{
 	{Term: "dinorado rice", Category: "Grains & Bakery"},
 	{Term: "arborio rice", Category: "Grains & Bakery"},
 	{Term: "cannellini beans", Category: "Pantry"},
+	{Term: "canellini beans", Category: "Pantry"}, // common single-n misspelling
 	{Term: "purefoods hotdog", Category: "Meat & Seafood"},
 	{Term: "san marzano", Category: "Produce"},
 	{Term: "balsamic vinegar", Category: "Pantry"},
