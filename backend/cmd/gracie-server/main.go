@@ -40,7 +40,8 @@ func main() {
     roomSvc := services.NewRoomService(usersRepo, roomsRepo, tx)
     roomSvc.UseListRepos(listsRepo, itemsRepo)
     userSvc.UseListRepos(listsRepo, itemsRepo)
-    listSvc := services.NewListService(usersRepo, roomsRepo, listsRepo, itemsRepo, categorization.NewKeywordCategorizer(categorization.GroceryAnchors))
+    categorizers := buildCategorizers(ctx, cfg)
+    listSvc := services.NewListService(usersRepo, roomsRepo, listsRepo, itemsRepo, categorizers["grocery"])
     authSvc, err := services.NewAuthService(usersRepo, cfg.EncKeyFile, cfg.APIKeyTTLHours)
     if err != nil { log.Fatalf("auth service: %v", err) }
 
@@ -74,4 +75,49 @@ func main() {
     ctxTimeout, cancel := context.WithTimeout(context.Background(), 10*time.Second)
     defer cancel()
     _ = srv.Shutdown(ctxTimeout)
+}
+
+// buildEmbedder loads the shared embedding model once, or returns nil when
+// embeddings are disabled or the model fails to load (callers then degrade to
+// keyword-only). One embedder instance is reused across all domains.
+func buildEmbedder(ctx context.Context, cfg *config.Config) categorization.Embedder {
+	if !cfg.EmbeddingEnabled {
+		log.Printf("categorization: embedding disabled (keyword mode)")
+		return nil
+	}
+	emb, err := categorization.NewHugotEmbedder(ctx, cfg.EmbeddingModelPath)
+	if err != nil {
+		log.Printf("categorization: embedding init failed (%v); keyword fallback for all domains", err)
+		return nil
+	}
+	log.Printf("categorization: embedding model loaded (model=%s, threshold=%.2f, topK=%d)", cfg.EmbeddingModelPath, cfg.EmbedThreshold, cfg.EmbedTopK)
+	return emb
+}
+
+// domainCategorizer builds one domain's Chain: embedding (when the shared
+// embedder is available) backed by keyword matching over the same anchor set,
+// with a per-domain fallback label. Anchor embedding failure degrades to
+// keyword-only for that domain.
+func domainCategorizer(ctx context.Context, emb categorization.Embedder, anchors []categorization.Anchor, fallback string, cfg *config.Config) categorization.Categorizer {
+	keyword := categorization.NewKeywordCategorizer(anchors)
+	if emb == nil {
+		return categorization.NewChain(fallback, keyword)
+	}
+	ec, err := categorization.NewEmbeddingCategorizerWithEmbedder(ctx, emb, anchors, cfg.EmbedThreshold, cfg.EmbedTopK)
+	if err != nil {
+		log.Printf("categorization: anchor embedding failed (%v); keyword-only for this domain", err)
+		return categorization.NewChain(fallback, keyword)
+	}
+	return categorization.NewChain(fallback, ec, keyword)
+}
+
+// buildCategorizers returns the per-domain registry. Add a new domain (e.g.
+// list-type suggestion) by adding one line with its anchor set + fallback;
+// the embedding model is shared, not reloaded.
+func buildCategorizers(ctx context.Context, cfg *config.Config) map[string]categorization.Categorizer {
+	emb := buildEmbedder(ctx, cfg)
+	return map[string]categorization.Categorizer{
+		"grocery": domainCategorizer(ctx, emb, categorization.GroceryAnchors, categorization.General, cfg),
+		// Future: "list_type": domainCategorizer(ctx, emb, categorization.ListTypeAnchors, "", cfg),
+	}
 }
