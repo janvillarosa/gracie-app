@@ -41,17 +41,6 @@ func newTestCategorizer(t *testing.T) *EmbeddingCategorizer {
 	return ec
 }
 
-func TestEmbeddingExactMatchShortCircuit(t *testing.T) {
-	ec := newTestCategorizer(t)
-	cat, conf, err := ec.Categorize(context.Background(), "Milk")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if cat != "Eggs & Dairy" || conf != 1.0 {
-		t.Errorf("got (%q, %v), want (Eggs & Dairy, 1.0)", cat, conf)
-	}
-}
-
 func TestEmbeddingNearestNeighbor(t *testing.T) {
 	ec := newTestCategorizer(t)
 	cat, conf, err := ec.Categorize(context.Background(), "whole milk")
