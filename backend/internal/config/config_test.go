@@ -1,6 +1,9 @@
 package config
 
-import "testing"
+import (
+	"os"
+	"testing"
+)
 
 func TestLoadDefaults(t *testing.T) {
     // Clear relevant env to force defaults
@@ -29,5 +32,27 @@ func TestLoadEnvOverrides(t *testing.T) {
     if err != nil { t.Fatalf("load: %v", err) }
     if cfg.Port != "9999" || cfg.AWSRegion != "local-1" || cfg.DDBEndpoint != "http://ddb:8000" { t.Fatalf("env not applied") }
     if cfg.UsersTable != "U" || cfg.RoomsTable != "R" { t.Fatalf("tables not applied") }
+}
+
+func TestEmbeddingDefaults(t *testing.T) {
+	for _, k := range []string{"EMBEDDING_ENABLED", "EMBEDDING_MODEL_PATH", "EMBED_THRESHOLD", "EMBED_TOPK"} {
+		os.Unsetenv(k)
+	}
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.EmbeddingEnabled {
+		t.Errorf("EmbeddingEnabled default = true, want false")
+	}
+	if cfg.EmbeddingModelPath != "/app/models/minilm" {
+		t.Errorf("EmbeddingModelPath = %q", cfg.EmbeddingModelPath)
+	}
+	if cfg.EmbedThreshold != 0.45 {
+		t.Errorf("EmbedThreshold = %v, want 0.45", cfg.EmbedThreshold)
+	}
+	if cfg.EmbedTopK != 5 {
+		t.Errorf("EmbedTopK = %v, want 5", cfg.EmbedTopK)
+	}
 }
 
