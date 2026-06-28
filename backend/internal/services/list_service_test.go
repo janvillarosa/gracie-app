@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	derr "github.com/janvillarosa/gracie-app/backend/internal/errors"
+	"github.com/janvillarosa/gracie-app/backend/internal/models"
 	"github.com/janvillarosa/gracie-app/backend/internal/services/categorization"
 	"github.com/janvillarosa/gracie-app/backend/internal/testutil/memstore"
 )
@@ -55,3 +56,26 @@ func TestListValidationsAndFilters(t *testing.T) {
 
 func strPtr(s string) *string { return &s }
 func boolPtr(b bool) *bool    { return &b }
+
+func TestNormalizeLegacyItemForRead(t *testing.T) {
+	// Legacy row: quantity baked into description, empty Quantity field.
+	legacy := models.ListItem{Description: "2 lbs chicken breast", Quantity: "", Unit: ""}
+	got := normalizeItemForRead(legacy)
+	if got.Description != "chicken breast" || got.Quantity != "2" || got.Unit != "lbs" {
+		t.Fatalf("legacy normalize = (%q,%q,%q), want (chicken breast,2,lbs)", got.Description, got.Quantity, got.Unit)
+	}
+
+	// Already-split row: must be left untouched (no double-strip).
+	split := models.ListItem{Description: "chicken breast", Quantity: "2", Unit: "lbs"}
+	got2 := normalizeItemForRead(split)
+	if got2.Description != "chicken breast" || got2.Quantity != "2" || got2.Unit != "lbs" {
+		t.Fatalf("split normalize changed item: (%q,%q,%q)", got2.Description, got2.Quantity, got2.Unit)
+	}
+
+	// Plain description, no quantity: unchanged.
+	plain := models.ListItem{Description: "bell peppers", Quantity: "", Unit: ""}
+	got3 := normalizeItemForRead(plain)
+	if got3.Description != "bell peppers" || got3.Quantity != "" || got3.Unit != "" {
+		t.Fatalf("plain normalize changed item: (%q,%q,%q)", got3.Description, got3.Quantity, got3.Unit)
+	}
+}
