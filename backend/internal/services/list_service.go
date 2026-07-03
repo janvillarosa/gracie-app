@@ -360,7 +360,6 @@ func (s *ListService) GetPantry(ctx context.Context, user *models.User, roomID s
 	return out, nil
 }
 
-
 func (s *ListService) DeleteItem(ctx context.Context, user *models.User, roomID, listID, itemID string) error {
 	if err := s.ensureRoomMembership(ctx, user, roomID); err != nil {
 		return err

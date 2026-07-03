@@ -1,62 +1,80 @@
 package services
 
 import (
-    "context"
-    "testing"
-    "time"
+	"context"
+	"testing"
+	"time"
 
-    derr "github.com/janvillarosa/gracie-app/backend/internal/errors"
-    "github.com/janvillarosa/gracie-app/backend/internal/testutil/memstore"
+	derr "github.com/janvillarosa/gracie-app/backend/internal/errors"
+	"github.com/janvillarosa/gracie-app/backend/internal/testutil/memstore"
 )
 
 func setupSvc(t *testing.T) (*UserService, *RoomService, func()) {
-    tx, users, rooms, lists, items := memstore.Compose()
-    rs := NewRoomService(users, rooms, tx)
-    rs.UseListRepos(lists, items)
-    return NewUserService(users, rooms, tx), rs, func() {}
+	tx, users, rooms, lists, items := memstore.Compose()
+	rs := NewRoomService(users, rooms, tx)
+	rs.UseListRepos(lists, items)
+	return NewUserService(users, rooms, tx), rs, func() {}
 }
 
 func TestUserSignupAndSoloRoom(t *testing.T) {
-    us, _, cleanup := setupSvc(t)
-    defer cleanup()
-    cu, err := us.CreateUserWithSoloRoom(context.Background(), "Alice")
-    if err != nil { t.Fatalf("create: %v", err) }
-    if cu.APIKey == "" || cu.User.RoomID == nil || *cu.User.RoomID == "" { t.Fatalf("expected key and room id") }
+	us, _, cleanup := setupSvc(t)
+	defer cleanup()
+	cu, err := us.CreateUserWithSoloRoom(context.Background(), "Alice")
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	if cu.APIKey == "" || cu.User.RoomID == nil || *cu.User.RoomID == "" {
+		t.Fatalf("expected key and room id")
+	}
 }
 
 func TestShareJoinAndDeleteFlow(t *testing.T) {
-    us, rs, cleanup := setupSvc(t)
-    defer cleanup()
-    ctx := context.Background()
+	us, rs, cleanup := setupSvc(t)
+	defer cleanup()
+	ctx := context.Background()
 
-    a, _ := us.CreateUserWithSoloRoom(ctx, "A")
-    b, _ := us.CreateUserWithSoloRoom(ctx, "B")
+	a, _ := us.CreateUserWithSoloRoom(ctx, "A")
+	b, _ := us.CreateUserWithSoloRoom(ctx, "B")
 
-    tok, err := rs.RotateShareToken(ctx, a.User)
-    if err != nil { t.Fatalf("rotate: %v", err) }
+	tok, err := rs.RotateShareToken(ctx, a.User)
+	if err != nil {
+		t.Fatalf("rotate: %v", err)
+	}
 
-    // Join B into A's room
-    room, err := rs.JoinRoom(ctx, b.User, *a.User.RoomID, tok)
-    if err != nil { t.Fatalf("join: %v", err) }
-    if len(room.MemberIDs) != 2 { t.Fatalf("expected 2 members, got %d", len(room.MemberIDs)) }
+	// Join B into A's room
+	room, err := rs.JoinRoom(ctx, b.User, *a.User.RoomID, tok)
+	if err != nil {
+		t.Fatalf("join: %v", err)
+	}
+	if len(room.MemberIDs) != 2 {
+		t.Fatalf("expected 2 members, got %d", len(room.MemberIDs))
+	}
 
-    // Second join attempt should fail (room full)
-    if _, err := rs.JoinRoom(ctx, a.User, room.RoomID, tok); err == nil {
-        t.Fatalf("expected conflict on joining full room")
-    }
+	// Second join attempt should fail (room full)
+	if _, err := rs.JoinRoom(ctx, a.User, room.RoomID, tok); err == nil {
+		t.Fatalf("expected conflict on joining full room")
+	}
 
-    // Vote delete: first vote should not delete
-    deleted, err := rs.VoteDeletion(ctx, a.User)
-    if err != nil || deleted { t.Fatalf("first vote should not delete: %v %v", deleted, err) }
-    // Second vote should delete (use fresh user with updated RoomID after join)
-    bRef, _ := us.GetMe(ctx, b.User.UserID)
-    deleted, err = rs.VoteDeletion(ctx, bRef)
-    if err != nil || !deleted { t.Fatalf("second vote should delete: %v %v", deleted, err) }
+	// Vote delete: first vote should not delete
+	deleted, err := rs.VoteDeletion(ctx, a.User)
+	if err != nil || deleted {
+		t.Fatalf("first vote should not delete: %v %v", deleted, err)
+	}
+	// Second vote should delete (use fresh user with updated RoomID after join)
+	bRef, _ := us.GetMe(ctx, b.User.UserID)
+	deleted, err = rs.VoteDeletion(ctx, bRef)
+	if err != nil || !deleted {
+		t.Fatalf("second vote should delete: %v %v", deleted, err)
+	}
 
-    // After deletion, both users have no room
-    // Fetching their room should be not found
-    if _, err := rs.GetMyRoom(ctx, a.User); err == nil || err != derr.ErrNotFound { t.Fatalf("expected not found for A") }
-    if _, err := rs.GetMyRoom(ctx, b.User); err == nil || err != derr.ErrNotFound { t.Fatalf("expected not found for B") }
+	// After deletion, both users have no room
+	// Fetching their room should be not found
+	if _, err := rs.GetMyRoom(ctx, a.User); err == nil || err != derr.ErrNotFound {
+		t.Fatalf("expected not found for A")
+	}
+	if _, err := rs.GetMyRoom(ctx, b.User); err == nil || err != derr.ErrNotFound {
+		t.Fatalf("expected not found for B")
+	}
 
-    _ = time.Now() // silence unused import if any
+	_ = time.Now() // silence unused import if any
 }
