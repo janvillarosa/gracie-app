@@ -1,6 +1,6 @@
 import { http } from 'msw'
 import { server } from '../testServer'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { Login } from '@pages/Login'
 import React from 'react'
@@ -47,7 +47,6 @@ describe('Login page', () => {
     fireEvent.change(pwd, { target: { value: 'pw' } })
     expect(btn).not.toBeDisabled()
     fireEvent.click(btn)
-    await new Promise((r) => setTimeout(r, 50))
-    expect(setApiKeyMock).toHaveBeenCalledWith('k_123')
+    await waitFor(() => expect(setApiKeyMock).toHaveBeenCalledWith('k_123'))
   })
 })

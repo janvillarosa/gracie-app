@@ -1,7 +1,7 @@
 import React from 'react'
 import { http } from 'msw'
 import { server } from '../testServer'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -67,8 +67,7 @@ const setup = async (listItems: any[] = []) => {
     </MemoryRouter>,
   )
 
-  // Wait a tick for initial queries to settle in tests
-  await new Promise((r) => setTimeout(r, 30))
+  // Callers await visible elements (findBy*), so no arbitrary settle is needed.
   return { ui, roomId, listId }
 }
 
@@ -103,9 +102,7 @@ describe('ListPage add bar', () => {
     expect(input).toHaveValue('Milk')
     await userEvent.type(input, '{enter}')
 
-    // Allow microtasks to run
-    await new Promise((r) => setTimeout(r, 40))
-    expect(created).toBe(1)
+    await waitFor(() => expect(created).toBe(1))
     expect(input).toHaveValue('')
     expect(input).toHaveFocus()
   })
@@ -128,8 +125,7 @@ describe('ListPage add bar', () => {
     // Simulate Shift+Enter via userEvent to ensure jsdom updates value
     await userEvent.type(input, '{Shift>}{Enter}{/Shift}')
     expect(input).toHaveValue('Line1\n')
-    // No create call triggered
-    await new Promise((r) => setTimeout(r, 20))
+    // Shift+Enter returns before any request is initiated, so no create fires.
     expect(created).toBe(0)
   })
 
@@ -150,7 +146,7 @@ describe('ListPage add bar', () => {
     await userEvent.type(input, 'Test Item')
     // Compose Enter event; ensure isComposing is set at top-level as React Testing Library does
     fireEvent.keyDown(input, { key: 'Enter', isComposing: true, keyCode: 229 })
-    await new Promise((r) => setTimeout(r, 20))
+    // Composing Enter returns before any request is initiated, so no create fires.
     expect(created).toBe(0)
   })
 

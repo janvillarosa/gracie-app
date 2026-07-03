@@ -1,7 +1,7 @@
 import React from 'react'
 import { http } from 'msw'
 import { server } from '../testServer'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -63,7 +63,8 @@ const setup = async () => {
       </AuthProvider>
     </MemoryRouter>,
   )
-  await new Promise((r) => setTimeout(r, 30))
+  // The Notes tab only renders once the list has loaded; the test awaits it via
+  // findByRole, so no arbitrary sleep is needed here.
   return { roomId, listId }
 }
 
@@ -91,7 +92,6 @@ describe('ListPage notes', () => {
     const saveBtn = await screen.findByRole('button', { name: /save/i })
     await userEvent.click(saveBtn)
 
-    await new Promise((r) => setTimeout(r, 30))
-    expect(patched).toBe(true)
+    await waitFor(() => expect(patched).toBe(true))
   })
 })
