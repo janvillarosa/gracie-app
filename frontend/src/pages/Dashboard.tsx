@@ -23,7 +23,9 @@ export const Dashboard: React.FC = () => {
   if (meQuery.isLoading || roomQuery.isLoading) {
     return (
       <div className="container">
-        <Card><Spin /> Loading…</Card>
+        <Card>
+          <Spin /> Loading…
+        </Card>
       </div>
     )
   }
@@ -35,7 +37,9 @@ export const Dashboard: React.FC = () => {
           <Alert type="error" message="Session expired. Please log in again." showIcon />
           <div className="spacer" />
           <Space>
-            <Button type="primary" onClick={() => setApiKey(null)} icon={<SignIn />}>Go to login</Button>
+            <Button type="primary" onClick={() => setApiKey(null)} icon={<SignIn />}>
+              Go to login
+            </Button>
           </Space>
         </Card>
       </div>

@@ -1,0 +1,25 @@
+version: "2"
+
+run:
+  timeout: 5m
+
+linters:
+  default: none
+  enable:
+    - errcheck      # unchecked errors
+    - govet         # suspicious constructs
+    - ineffassign   # ineffectual assignments
+    - staticcheck   # bugs, simplifications, style (incl. gosimple + stylecheck)
+    - unused        # unused code
+    - misspell      # common misspellings in comments/strings
+  exclusions:
+    rules:
+      # staticcheck's QF ("quickfix") category is opinionated refactor
+      # suggestions, not correctness issues. Keep the high-signal SA/ST checks.
+      - linters:
+          - staticcheck
+        text: "QF1"
+
+formatters:
+  enable:
+    - gofmt

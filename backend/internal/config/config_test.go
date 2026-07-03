@@ -6,37 +6,49 @@ import (
 )
 
 func TestLoadDefaults(t *testing.T) {
-    // Clear relevant env to force defaults
-    t.Setenv("PORT", "")
-    t.Setenv("AWS_REGION", "")
-    t.Setenv("DDB_ENDPOINT", "")
-    t.Setenv("USERS_TABLE", "")
-    t.Setenv("ROOMS_TABLE", "")
+	// Clear relevant env to force defaults
+	t.Setenv("PORT", "")
+	t.Setenv("MONGODB_URI", "")
+	t.Setenv("MONGODB_DB", "")
 
-    cfg, err := Load()
-    if err != nil { t.Fatalf("load: %v", err) }
-    if cfg.Port != "8080" { t.Fatalf("port default: %s", cfg.Port) }
-    if cfg.AWSRegion != "us-east-1" { t.Fatalf("region default: %s", cfg.AWSRegion) }
-    if cfg.DDBEndpoint != "http://localhost:8000" { t.Fatalf("endpoint default: %s", cfg.DDBEndpoint) }
-    if cfg.UsersTable != "Users" || cfg.RoomsTable != "Rooms" { t.Fatalf("table defaults: %s %s", cfg.UsersTable, cfg.RoomsTable) }
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	if cfg.Port != "8080" {
+		t.Fatalf("port default: %s", cfg.Port)
+	}
+	if cfg.MongoURI != "mongodb://localhost:27017" {
+		t.Fatalf("mongo uri default: %s", cfg.MongoURI)
+	}
+	if cfg.MongoDB != "gracie" {
+		t.Fatalf("mongo db default: %s", cfg.MongoDB)
+	}
 }
 
 func TestLoadEnvOverrides(t *testing.T) {
-    t.Setenv("PORT", "9999")
-    t.Setenv("AWS_REGION", "local-1")
-    t.Setenv("DDB_ENDPOINT", "http://ddb:8000")
-    t.Setenv("USERS_TABLE", "U")
-    t.Setenv("ROOMS_TABLE", "R")
+	t.Setenv("PORT", "9999")
+	t.Setenv("MONGODB_URI", "mongodb://mongo:27017/?replicaSet=rs0")
+	t.Setenv("MONGODB_DB", "gracie_custom")
 
-    cfg, err := Load()
-    if err != nil { t.Fatalf("load: %v", err) }
-    if cfg.Port != "9999" || cfg.AWSRegion != "local-1" || cfg.DDBEndpoint != "http://ddb:8000" { t.Fatalf("env not applied") }
-    if cfg.UsersTable != "U" || cfg.RoomsTable != "R" { t.Fatalf("tables not applied") }
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	if cfg.Port != "9999" {
+		t.Fatalf("port not applied: %s", cfg.Port)
+	}
+	if cfg.MongoURI != "mongodb://mongo:27017/?replicaSet=rs0" {
+		t.Fatalf("mongo uri not applied: %s", cfg.MongoURI)
+	}
+	if cfg.MongoDB != "gracie_custom" {
+		t.Fatalf("mongo db not applied: %s", cfg.MongoDB)
+	}
 }
 
 func TestEmbeddingDefaults(t *testing.T) {
 	for _, k := range []string{"EMBEDDING_ENABLED", "EMBEDDING_MODEL_PATH", "EMBED_THRESHOLD", "EMBED_TOPK", "CATEGORY_INDEX_ENABLED"} {
-		os.Unsetenv(k)
+		_ = os.Unsetenv(k)
 	}
 	cfg, err := Load()
 	if err != nil {
@@ -58,4 +70,3 @@ func TestEmbeddingDefaults(t *testing.T) {
 		t.Errorf("CategoryIndexEnabled default = false, want true")
 	}
 }
-

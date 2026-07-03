@@ -43,7 +43,6 @@ services:
     environment:
       PORT: 8080
       ENC_KEY_FILE: /app/secrets/enc.key
-      DATA_STORE: mongo
       MONGODB_URI: mongodb://mongo:27017/?replicaSet=rs0
       MONGODB_DB: gracie
     ports:

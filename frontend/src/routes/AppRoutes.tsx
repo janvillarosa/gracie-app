@@ -29,8 +29,22 @@ const RequireGuest: React.FC<React.PropsWithChildren> = ({ children }) => {
 export const AppRoutes: React.FC = () => {
   return (
     <Routes>
-      <Route path="/login" element={<RequireGuest><Login /></RequireGuest>} />
-      <Route path="/register" element={<RequireGuest><Register /></RequireGuest>} />
+      <Route
+        path="/login"
+        element={
+          <RequireGuest>
+            <Login />
+          </RequireGuest>
+        }
+      />
+      <Route
+        path="/register"
+        element={
+          <RequireGuest>
+            <Register />
+          </RequireGuest>
+        }
+      />
       <Route
         path="/app"
         element={

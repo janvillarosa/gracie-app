@@ -5,4 +5,3 @@ export const MAX_DESCRIPTION = 512
 export function isValidDisplayName(name: string): boolean {
   return name.length > 0 && name.length <= MAX_DISPLAY_NAME && NAME_RE.test(name)
 }
-

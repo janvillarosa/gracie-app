@@ -1,7 +1,7 @@
 import React from 'react'
 import { http } from 'msw'
 import { server } from '../testServer'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -17,17 +17,27 @@ const setup = async (listItems: any[] = []) => {
   const listId = 'list-1'
   server.use(
     http.get('/api/me', () => {
-      return new Response(
-        JSON.stringify({ user_id: 'u1', name: 'Alice', room_id: roomId }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } }
-      )
+      return new Response(JSON.stringify({ user_id: 'u1', name: 'Alice', room_id: roomId }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
     }),
     http.get(`/api/rooms/${roomId}/lists`, () => {
       return new Response(
         JSON.stringify([
-          { list_id: listId, room_id: roomId, name: 'Groceries', description: '', icon: 'APPLE', deletion_votes: {}, is_deleted: false, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+          {
+            list_id: listId,
+            room_id: roomId,
+            name: 'Groceries',
+            description: '',
+            icon: 'APPLE',
+            deletion_votes: {},
+            is_deleted: false,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
         ]),
-        { status: 200, headers: { 'Content-Type': 'application/json' } }
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
       )
     }),
     http.get(`/api/rooms/${roomId}/lists/${listId}/items`, ({ request }) => {
@@ -37,8 +47,11 @@ const setup = async (listItems: any[] = []) => {
         return new Response(null, { status: 400 })
       }
       // Start with provided list items (default empty)
-      return new Response(JSON.stringify(listItems), { status: 200, headers: { 'Content-Type': 'application/json' } })
-    })
+      return new Response(JSON.stringify(listItems), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }),
   )
 
   const qc = new QueryClient()
@@ -51,11 +64,10 @@ const setup = async (listItems: any[] = []) => {
           </Routes>
         </QueryClientProvider>
       </AuthProvider>
-    </MemoryRouter>
+    </MemoryRouter>,
   )
 
-  // Wait a tick for initial queries to settle in tests
-  await new Promise((r) => setTimeout(r, 30))
+  // Callers await visible elements (findBy*), so no arbitrary settle is needed.
   return { ui, roomId, listId }
 }
 
@@ -67,9 +79,20 @@ describe('ListPage add bar', () => {
       http.post(`/api/rooms/${roomId}/lists/${listId}/items`, async ({ request }) => {
         created += 1
         const body = (await request.json()) as any
-        const payload = { item_id: 'it-' + created, list_id: listId, room_id: roomId, description: body.description, completed: false, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
-        return new Response(JSON.stringify(payload), { status: 201, headers: { 'Content-Type': 'application/json' } })
-      })
+        const payload = {
+          item_id: 'it-' + created,
+          list_id: listId,
+          room_id: roomId,
+          description: body.description,
+          completed: false,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }
+        return new Response(JSON.stringify(payload), {
+          status: 201,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }),
     )
 
     const input = await screen.findByPlaceholderText('Add an item')
@@ -79,9 +102,7 @@ describe('ListPage add bar', () => {
     expect(input).toHaveValue('Milk')
     await userEvent.type(input, '{enter}')
 
-    // Allow microtasks to run
-    await new Promise((r) => setTimeout(r, 40))
-    expect(created).toBe(1)
+    await waitFor(() => expect(created).toBe(1))
     expect(input).toHaveValue('')
     expect(input).toHaveFocus()
   })
@@ -92,8 +113,11 @@ describe('ListPage add bar', () => {
     server.use(
       http.post(`/api/rooms/${roomId}/lists/${listId}/items`, () => {
         created += 1
-        return new Response(JSON.stringify({}), { status: 201, headers: { 'Content-Type': 'application/json' } })
-      })
+        return new Response(JSON.stringify({}), {
+          status: 201,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }),
     )
 
     const input = await screen.findByPlaceholderText('Add an item')
@@ -101,8 +125,7 @@ describe('ListPage add bar', () => {
     // Simulate Shift+Enter via userEvent to ensure jsdom updates value
     await userEvent.type(input, '{Shift>}{Enter}{/Shift}')
     expect(input).toHaveValue('Line1\n')
-    // No create call triggered
-    await new Promise((r) => setTimeout(r, 20))
+    // Shift+Enter returns before any request is initiated, so no create fires.
     expect(created).toBe(0)
   })
 
@@ -112,24 +135,51 @@ describe('ListPage add bar', () => {
     server.use(
       http.post(`/api/rooms/${roomId}/lists/${listId}/items`, () => {
         created += 1
-        return new Response(JSON.stringify({}), { status: 201, headers: { 'Content-Type': 'application/json' } })
-      })
+        return new Response(JSON.stringify({}), {
+          status: 201,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }),
     )
 
     const input = await screen.findByPlaceholderText('Add an item')
     await userEvent.type(input, 'Test Item')
     // Compose Enter event; ensure isComposing is set at top-level as React Testing Library does
     fireEvent.keyDown(input, { key: 'Enter', isComposing: true, keyCode: 229 })
-    await new Promise((r) => setTimeout(r, 20))
+    // Composing Enter returns before any request is initiated, so no create fires.
     expect(created).toBe(0)
   })
 
   it('shows unchecked item count when present', async () => {
     const updatedAt = new Date().toISOString()
     const listItems = [
-      { item_id: 'a', list_id: 'list-1', room_id: 'room-1', description: 'Milk', completed: false, created_at: updatedAt, updated_at: updatedAt },
-      { item_id: 'b', list_id: 'list-1', room_id: 'room-1', description: 'Eggs', completed: true, created_at: updatedAt, updated_at: updatedAt },
-      { item_id: 'c', list_id: 'list-1', room_id: 'room-1', description: 'Bread', completed: false, created_at: updatedAt, updated_at: updatedAt },
+      {
+        item_id: 'a',
+        list_id: 'list-1',
+        room_id: 'room-1',
+        description: 'Milk',
+        completed: false,
+        created_at: updatedAt,
+        updated_at: updatedAt,
+      },
+      {
+        item_id: 'b',
+        list_id: 'list-1',
+        room_id: 'room-1',
+        description: 'Eggs',
+        completed: true,
+        created_at: updatedAt,
+        updated_at: updatedAt,
+      },
+      {
+        item_id: 'c',
+        list_id: 'list-1',
+        room_id: 'room-1',
+        description: 'Bread',
+        completed: false,
+        created_at: updatedAt,
+        updated_at: updatedAt,
+      },
     ]
     await setup(listItems)
     expect(await screen.findByText('2 unchecked items')).toBeInTheDocument()

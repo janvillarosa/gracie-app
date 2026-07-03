@@ -52,7 +52,10 @@ export const UserSettings: React.FC = () => {
 
   async function onSaveProfile(e: React.FormEvent) {
     e.preventDefault()
-    if (email && !isEmail(email)) { message.error('Invalid email'); return }
+    if (email && !isEmail(email)) {
+      message.error('Invalid email')
+      return
+    }
     setProfileSaving(true)
     try {
       const body: any = {}
@@ -76,7 +79,10 @@ export const UserSettings: React.FC = () => {
     if (!canSavePwd) return
     setPwdSaving(true)
     try {
-      const res = await changeMyPassword(apiKey!, { current_password: curPwd || undefined, new_password: newPwd })
+      const res = await changeMyPassword(apiKey!, {
+        current_password: curPwd || undefined,
+        new_password: newPwd,
+      })
       setApiKey(res.api_key)
       setCurPwd('')
       setNewPwd('')
@@ -108,32 +114,61 @@ export const UserSettings: React.FC = () => {
         <Space direction="vertical" style={{ width: '100%' }} size="large">
           {isMobile ? (
             <Space direction="vertical" style={{ width: '100%' }} size="small">
-              <Typography.Title level={2} style={{ margin: 0 }}>Account Settings</Typography.Title>
+              <Typography.Title level={2} style={{ margin: 0 }}>
+                Account Settings
+              </Typography.Title>
               <Space wrap>
-                <Button onClick={() => navigate('/app')} icon={<ArrowLeft />}>Back</Button>
+                <Button onClick={() => navigate('/app')} icon={<ArrowLeft />}>
+                  Back
+                </Button>
               </Space>
             </Space>
           ) : (
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography.Title level={2} style={{ margin: 0 }}>Account Settings</Typography.Title>
-              <Button onClick={() => navigate('/app')} icon={<ArrowLeft />}>Back</Button>
+              <Typography.Title level={2} style={{ margin: 0 }}>
+                Account Settings
+              </Typography.Title>
+              <Button onClick={() => navigate('/app')} icon={<ArrowLeft />}>
+                Back
+              </Button>
             </div>
           )}
 
           <Form layout="vertical" onSubmitCapture={onSaveProfile}>
-            <Typography.Title level={4} style={{ marginTop: 0 }}>Profile</Typography.Title>
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: isMobile ? 'wrap' as const : 'nowrap' as const }}>
+            <Typography.Title level={4} style={{ marginTop: 0 }}>
+              Profile
+            </Typography.Title>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                justifyContent: 'space-between',
+                gap: 16,
+                flexWrap: isMobile ? ('wrap' as const) : ('nowrap' as const),
+              }}
+            >
               <div style={{ flex: 1, minWidth: 280 }}>
                 <Form.Item label="Display name">
                   <Input value={name} onChange={(e) => setName(e.target.value)} />
                 </Form.Item>
                 <Form.Item label="Email">
-                  <Input value={email} onChange={(e) => setEmail(e.target.value)} inputMode="email" />
+                  <Input
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    inputMode="email"
+                  />
                 </Form.Item>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+              <div
+                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}
+              >
                 {meQuery.data?.avatar_key && (
-                  <Avatar seed={meQuery.data.avatar_key} size={96} style={'miniavs'} alt={`${name || email || 'User'} avatar`} />
+                  <Avatar
+                    seed={meQuery.data.avatar_key}
+                    size={96}
+                    style={'miniavs'}
+                    alt={`${name || email || 'User'} avatar`}
+                  />
                 )}
                 <Typography.Text type="secondary" style={{ textAlign: 'center', maxWidth: 220 }}>
                   This avatar is auto‑generated. Changing it isn’t supported yet.
@@ -141,35 +176,66 @@ export const UserSettings: React.FC = () => {
               </div>
             </div>
             <div style={{ paddingTop: 8 }}>
-              <Button type="primary" htmlType="submit" disabled={!canSaveProfile || profileSaving} icon={<FloppyDisk />}>Save Profile</Button>
+              <Button
+                type="primary"
+                htmlType="submit"
+                disabled={!canSaveProfile || profileSaving}
+                icon={<FloppyDisk />}
+              >
+                Save Profile
+              </Button>
             </div>
           </Form>
 
           <Divider className="settings-divider" />
 
           <Form layout="vertical" onSubmitCapture={onSavePassword}>
-            <Typography.Title level={4} style={{ marginTop: 0 }}>Password</Typography.Title>
+            <Typography.Title level={4} style={{ marginTop: 0 }}>
+              Password
+            </Typography.Title>
             {needsCurrent && (
               <Form.Item label="Current password">
-                <Input.Password value={curPwd} onChange={(e) => setCurPwd(e.target.value)} autoComplete="current-password" />
+                <Input.Password
+                  value={curPwd}
+                  onChange={(e) => setCurPwd(e.target.value)}
+                  autoComplete="current-password"
+                />
               </Form.Item>
             )}
             <Form.Item label="New password (mininum of 8 characters)">
-              <Input.Password value={newPwd} onChange={(e) => setNewPwd(e.target.value)} autoComplete="new-password" />
+              <Input.Password
+                value={newPwd}
+                onChange={(e) => setNewPwd(e.target.value)}
+                autoComplete="new-password"
+              />
             </Form.Item>
             <Form.Item label="Confirm new password">
-              <Input.Password value={newPwd2} onChange={(e) => setNewPwd2(e.target.value)} autoComplete="new-password" />
+              <Input.Password
+                value={newPwd2}
+                onChange={(e) => setNewPwd2(e.target.value)}
+                autoComplete="new-password"
+              />
             </Form.Item>
-            <Button type="primary" htmlType="submit" disabled={!canSavePwd || pwdSaving} icon={<FloppyDisk />}>Save Password</Button>
+            <Button
+              type="primary"
+              htmlType="submit"
+              disabled={!canSavePwd || pwdSaving}
+              icon={<FloppyDisk />}
+            >
+              Save Password
+            </Button>
           </Form>
 
           <Divider className="settings-divider" />
 
           <div>
-            <Typography.Title level={4} style={{ marginTop: 0 }}>Danger Zone</Typography.Title>
-            <Button danger icon={<Trash />} onClick={() => setConfirmOpen(true)}>Permanently delete my account</Button>
+            <Typography.Title level={4} style={{ marginTop: 0 }}>
+              Danger Zone
+            </Typography.Title>
+            <Button danger icon={<Trash />} onClick={() => setConfirmOpen(true)}>
+              Permanently delete my account
+            </Button>
           </div>
-
         </Space>
       </Card>
 
@@ -185,18 +251,29 @@ export const UserSettings: React.FC = () => {
   )
 }
 
-const DeleteConfirm: React.FC<{ onConfirm: () => void; onCancel: () => void }> = ({ onConfirm, onCancel }) => {
+const DeleteConfirm: React.FC<{ onConfirm: () => void; onCancel: () => void }> = ({
+  onConfirm,
+  onCancel,
+}) => {
   const [text, setText] = useState('')
   const can = text === 'DELETE'
   return (
     <Space direction="vertical" style={{ width: '100%' }}>
       <Typography.Paragraph>
-        This action will permanently remove your account. You will be removed from your House. If your House only has you as a member, it will be deleted along with its lists and items. This cannot be undone.
+        This action will permanently remove your account. You will be removed from your House. If
+        your House only has you as a member, it will be deleted along with its lists and items. This
+        cannot be undone.
       </Typography.Paragraph>
-      <Input value={text} onChange={(e) => setText(e.target.value)} placeholder="Type DELETE to confirm" />
+      <Input
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder="Type DELETE to confirm"
+      />
       <Space>
         <Button onClick={onCancel}>Cancel</Button>
-        <Button danger type="primary" disabled={!can} onClick={onConfirm}>Yes, delete my account</Button>
+        <Button danger type="primary" disabled={!can} onClick={onConfirm}>
+          Yes, delete my account
+        </Button>
       </Space>
     </Space>
   )

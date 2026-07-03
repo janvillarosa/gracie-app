@@ -39,11 +39,13 @@ export function setupPWAAssets() {
 
   // Favicons
   if (faviconSvg) upsertLink('icon-svg', 'icon', { type: 'image/svg+xml', href: faviconSvg })
-  if (faviconPng) upsertLink('icon-png', 'icon', { type: 'image/png', sizes: '96x96', href: faviconPng })
+  if (faviconPng)
+    upsertLink('icon-png', 'icon', { type: 'image/png', sizes: '96x96', href: faviconPng })
   if (faviconIco) upsertLink('icon-ico', 'shortcut icon', { href: faviconIco })
 
   // Apple Touch Icon
-  if (appleTouch) upsertLink('apple-touch-icon', 'apple-touch-icon', { sizes: '180x180', href: appleTouch })
+  if (appleTouch)
+    upsertLink('apple-touch-icon', 'apple-touch-icon', { sizes: '180x180', href: appleTouch })
 
   // theme colors
   upsertMeta('theme-color', themeColor)
@@ -58,8 +60,12 @@ export function setupPWAAssets() {
     background_color: base?.background_color ?? DEFAULT_THEME,
     display: base?.display ?? 'standalone',
     icons: [
-      icon192 ? { src: icon192, sizes: '192x192', type: 'image/png', purpose: 'maskable' } : undefined,
-      icon512 ? { src: icon512, sizes: '512x512', type: 'image/png', purpose: 'maskable' } : undefined,
+      icon192
+        ? { src: icon192, sizes: '192x192', type: 'image/png', purpose: 'maskable' }
+        : undefined,
+      icon512
+        ? { src: icon512, sizes: '512x512', type: 'image/png', purpose: 'maskable' }
+        : undefined,
     ].filter(Boolean),
   }
 

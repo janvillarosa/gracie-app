@@ -7,7 +7,7 @@ describe('BrandLogo', () => {
     render(
       <MemoryRouter>
         <BrandLogo to="/login" />
-      </MemoryRouter>
+      </MemoryRouter>,
     )
     const container = screen.getByLabelText('Bauhouse logo')
     const img = within(container).getByAltText('Bauhouse')

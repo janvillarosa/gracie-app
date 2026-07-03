@@ -30,9 +30,18 @@ export const TopNav: React.FC = () => {
     <div className="topnav">
       <BrandLogo />
       <div className="topnav-right">
-        <Dropdown menu={{ items, onClick: onMenuClick }} trigger={['click']} placement="bottomRight">
+        <Dropdown
+          menu={{ items, onClick: onMenuClick }}
+          trigger={['click']}
+          placement="bottomRight"
+        >
           <button className="avatar-button" aria-label="Open account menu">
-            <Avatar seed={seed} size={50} style={'miniavs'} alt={(me?.name || 'User') + ' avatar'} />
+            <Avatar
+              seed={seed}
+              size={50}
+              style={'miniavs'}
+              alt={(me?.name || 'User') + ' avatar'}
+            />
           </button>
         </Dropdown>
       </div>

@@ -1,5 +1,13 @@
 import { apiFetch, ApiError } from './client'
-import type { CreateUserResponse, RoomView, User, List, ListItem, ListIcon, PantryItem } from './types'
+import type {
+  CreateUserResponse,
+  RoomView,
+  User,
+  List,
+  ListItem,
+  ListIcon,
+  PantryItem,
+} from './types'
 
 export async function registerUser(name: string): Promise<CreateUserResponse> {
   return apiFetch<CreateUserResponse>('/users', {
@@ -8,14 +16,21 @@ export async function registerUser(name: string): Promise<CreateUserResponse> {
   })
 }
 
-export async function registerAuth(username: string, password: string, name: string): Promise<void> {
+export async function registerAuth(
+  username: string,
+  password: string,
+  name: string,
+): Promise<void> {
   await apiFetch<void>('/auth/register', {
     method: 'POST',
     body: JSON.stringify({ username, password, name }),
   })
 }
 
-export async function loginAuth(username: string, password: string): Promise<{ user: User; api_key: string }> {
+export async function loginAuth(
+  username: string,
+  password: string,
+): Promise<{ user: User; api_key: string }> {
   return apiFetch<{ user: User; api_key: string }>('/auth/login', {
     method: 'POST',
     body: JSON.stringify({ username, password }),
@@ -30,7 +45,10 @@ export async function updateMe(apiKey: string, name: string): Promise<User> {
   return apiFetch<User>('/me', { method: 'PUT', apiKey, body: JSON.stringify({ name }) })
 }
 
-export async function updateMyProfile(apiKey: string, params: { name?: string; username?: string }): Promise<void> {
+export async function updateMyProfile(
+  apiKey: string,
+  params: { name?: string; username?: string },
+): Promise<void> {
   await apiFetch<void>('/me', { method: 'PATCH', apiKey, body: JSON.stringify(params) })
 }
 
@@ -47,7 +65,11 @@ export async function rotateShare(apiKey: string): Promise<{ token: string }> {
 }
 
 export async function joinRoomByToken(apiKey: string, token: string): Promise<RoomView> {
-  return apiFetch<RoomView>(`/rooms/join`, { method: 'POST', apiKey, body: JSON.stringify({ token }) })
+  return apiFetch<RoomView>(`/rooms/join`, {
+    method: 'POST',
+    apiKey,
+    body: JSON.stringify({ token }),
+  })
 }
 
 export async function voteDeletion(apiKey: string): Promise<{ deleted: boolean }> {
@@ -58,20 +80,38 @@ export async function cancelDeletion(apiKey: string): Promise<void> {
   return apiFetch<void>(`/rooms/deletion/cancel`, { method: 'POST', apiKey })
 }
 
-export async function updateRoomSettings(apiKey: string, params: { display_name?: string; description?: string }): Promise<RoomView> {
-  return apiFetch<RoomView>(`/rooms/settings`, { method: 'PUT', apiKey, body: JSON.stringify(params) })
+export async function updateRoomSettings(
+  apiKey: string,
+  params: { display_name?: string; description?: string },
+): Promise<RoomView> {
+  return apiFetch<RoomView>(`/rooms/settings`, {
+    method: 'PUT',
+    apiKey,
+    body: JSON.stringify(params),
+  })
 }
 
 export async function getRoomPantry(apiKey: string, roomId: string): Promise<PantryItem[]> {
   return apiFetch<PantryItem[]>(`/rooms/${roomId}/pantry`, { apiKey })
 }
 
-export async function changeMyPassword(apiKey: string, params: { current_password?: string; new_password: string }): Promise<{ api_key: string }> {
-  return apiFetch<{ api_key: string }>(`/me/password`, { method: 'POST', apiKey, body: JSON.stringify(params) })
+export async function changeMyPassword(
+  apiKey: string,
+  params: { current_password?: string; new_password: string },
+): Promise<{ api_key: string }> {
+  return apiFetch<{ api_key: string }>(`/me/password`, {
+    method: 'POST',
+    apiKey,
+    body: JSON.stringify(params),
+  })
 }
 
 export async function deleteMyAccount(apiKey: string): Promise<void> {
-  await apiFetch<void>('/me', { method: 'DELETE', apiKey, body: JSON.stringify({ confirm: 'DELETE' }) })
+  await apiFetch<void>('/me', {
+    method: 'DELETE',
+    apiKey,
+    body: JSON.stringify({ confirm: 'DELETE' }),
+  })
 }
 
 export function isNotFound(err: unknown): err is ApiError {
@@ -94,29 +134,55 @@ export async function getLists(apiKey: string, roomId: string): Promise<List[]> 
 export async function createList(
   apiKey: string,
   roomId: string,
-  params: { name: string; description?: string; icon?: ListIcon }
+  params: { name: string; description?: string; icon?: ListIcon },
 ): Promise<List> {
-  return apiFetch<List>(`/rooms/${roomId}/lists`, { method: 'POST', apiKey, body: JSON.stringify(params) })
+  return apiFetch<List>(`/rooms/${roomId}/lists`, {
+    method: 'POST',
+    apiKey,
+    body: JSON.stringify(params),
+  })
 }
 
 export async function updateList(
   apiKey: string,
   roomId: string,
   listId: string,
-  params: { name?: string; description?: string; icon?: ListIcon | ''; notes?: string }
+  params: { name?: string; description?: string; icon?: ListIcon | ''; notes?: string },
 ): Promise<List> {
-  return apiFetch<List>(`/rooms/${roomId}/lists/${listId}`, { method: 'PATCH', apiKey, body: JSON.stringify(params) })
+  return apiFetch<List>(`/rooms/${roomId}/lists/${listId}`, {
+    method: 'PATCH',
+    apiKey,
+    body: JSON.stringify(params),
+  })
 }
 
-export async function voteListDeletion(apiKey: string, roomId: string, listId: string): Promise<{ deleted: boolean }> {
-  return apiFetch<{ deleted: boolean }>(`/rooms/${roomId}/lists/${listId}/deletion/vote`, { method: 'POST', apiKey })
+export async function voteListDeletion(
+  apiKey: string,
+  roomId: string,
+  listId: string,
+): Promise<{ deleted: boolean }> {
+  return apiFetch<{ deleted: boolean }>(`/rooms/${roomId}/lists/${listId}/deletion/vote`, {
+    method: 'POST',
+    apiKey,
+  })
 }
 
-export async function cancelListDeletion(apiKey: string, roomId: string, listId: string): Promise<void> {
-  return apiFetch<void>(`/rooms/${roomId}/lists/${listId}/deletion/cancel`, { method: 'POST', apiKey })
+export async function cancelListDeletion(
+  apiKey: string,
+  roomId: string,
+  listId: string,
+): Promise<void> {
+  return apiFetch<void>(`/rooms/${roomId}/lists/${listId}/deletion/cancel`, {
+    method: 'POST',
+    apiKey,
+  })
 }
 
-export async function clearListItems(apiKey: string, roomId: string, listId: string): Promise<void> {
+export async function clearListItems(
+  apiKey: string,
+  roomId: string,
+  listId: string,
+): Promise<void> {
   await apiFetch<void>(`/rooms/${roomId}/lists/${listId}/clear`, { method: 'POST', apiKey })
 }
 
@@ -124,14 +190,23 @@ export async function getListItems(
   apiKey: string,
   roomId: string,
   listId: string,
-  includeCompleted = false
+  includeCompleted = false,
 ): Promise<ListItem[]> {
   const q = includeCompleted ? '?include_completed=true' : '?include_completed=false'
   return apiFetch<ListItem[]>(`/rooms/${roomId}/lists/${listId}/items${q}`, { apiKey })
 }
 
-export async function createListItem(apiKey: string, roomId: string, listId: string, params: { description: string; quantity?: string; unit?: string; category?: string }): Promise<ListItem> {
-  return apiFetch<ListItem>(`/rooms/${roomId}/lists/${listId}/items`, { method: 'POST', apiKey, body: JSON.stringify(params) })
+export async function createListItem(
+  apiKey: string,
+  roomId: string,
+  listId: string,
+  params: { description: string; quantity?: string; unit?: string; category?: string },
+): Promise<ListItem> {
+  return apiFetch<ListItem>(`/rooms/${roomId}/lists/${listId}/items`, {
+    method: 'POST',
+    apiKey,
+    body: JSON.stringify(params),
+  })
 }
 
 export async function updateListItem(
@@ -139,13 +214,32 @@ export async function updateListItem(
   roomId: string,
   listId: string,
   itemId: string,
-  params: { description?: string; completed?: boolean; quantity?: string; unit?: string; category?: string; starred?: boolean }
+  params: {
+    description?: string
+    completed?: boolean
+    quantity?: string
+    unit?: string
+    category?: string
+    starred?: boolean
+  },
 ): Promise<ListItem> {
-  return apiFetch<ListItem>(`/rooms/${roomId}/lists/${listId}/items/${itemId}`, { method: 'PATCH', apiKey, body: JSON.stringify(params) })
+  return apiFetch<ListItem>(`/rooms/${roomId}/lists/${listId}/items/${itemId}`, {
+    method: 'PATCH',
+    apiKey,
+    body: JSON.stringify(params),
+  })
 }
 
-export async function deleteListItem(apiKey: string, roomId: string, listId: string, itemId: string): Promise<void> {
-  return apiFetch<void>(`/rooms/${roomId}/lists/${listId}/items/${itemId}`, { method: 'DELETE', apiKey })
+export async function deleteListItem(
+  apiKey: string,
+  roomId: string,
+  listId: string,
+  itemId: string,
+): Promise<void> {
+  return apiFetch<void>(`/rooms/${roomId}/lists/${listId}/items/${itemId}`, {
+    method: 'DELETE',
+    apiKey,
+  })
 }
 
 export async function reorderListItem(
@@ -153,7 +247,7 @@ export async function reorderListItem(
   roomId: string,
   listId: string,
   itemId: string,
-  params: { prev_id?: string; next_id?: string }
+  params: { prev_id?: string; next_id?: string },
 ): Promise<ListItem> {
   return apiFetch<ListItem>(`/rooms/${roomId}/lists/${listId}/items/${itemId}/position`, {
     method: 'PATCH',

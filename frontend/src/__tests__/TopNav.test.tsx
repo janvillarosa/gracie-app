@@ -12,10 +12,14 @@ describe('TopNav', () => {
   it('shows avatar dropdown with Account Settings and Logout', async () => {
     localStorage.setItem('gracie_api_key', 'k_test')
     server.use(
-      http.get('/api/me', () => new Response(
-        JSON.stringify({ user_id: 'u1', name: 'Alice', avatar_key: 'alice' }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } }
-      ))
+      http.get(
+        '/api/me',
+        () =>
+          new Response(JSON.stringify({ user_id: 'u1', name: 'Alice', avatar_key: 'alice' }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          }),
+      ),
     )
 
     const qc = new QueryClient()
@@ -26,7 +30,7 @@ describe('TopNav', () => {
             <TopNav />
           </QueryClientProvider>
         </AuthProvider>
-      </MemoryRouter>
+      </MemoryRouter>,
     )
 
     const trigger = await screen.findByRole('button', { name: /open account menu/i })
@@ -41,4 +45,3 @@ describe('TopNav', () => {
     expect(localStorage.getItem('gracie_api_key')).toBeNull()
   })
 })
-

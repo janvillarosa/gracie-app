@@ -1,6 +1,6 @@
 import { http } from 'msw'
 import { server } from '../testServer'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { Register } from '@pages/Register'
 
@@ -9,7 +9,7 @@ describe('Register page', () => {
     render(
       <MemoryRouter>
         <Register />
-      </MemoryRouter>
+      </MemoryRouter>,
     )
     const button = screen.getByRole('button', { name: /create account/i })
     expect(button).toBeDisabled()
@@ -28,12 +28,10 @@ describe('Register page', () => {
       http.post('/api/auth/register', () => {
         called = true
         return new Response(null, { status: 201 })
-      })
+      }),
     )
 
     fireEvent.click(button)
-    // Allow microtasks to run
-    await new Promise((r) => setTimeout(r, 50))
-    expect(called).toBe(true)
+    await waitFor(() => expect(called).toBe(true))
   })
 })

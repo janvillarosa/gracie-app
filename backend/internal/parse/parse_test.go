@@ -6,11 +6,11 @@ import (
 
 func TestParseInput(t *testing.T) {
 	tests := []struct {
-		name        string
-		input       string
-		wantDesc    string
-		wantQty     string
-		wantUnit    string
+		name     string
+		input    string
+		wantDesc string
+		wantQty  string
+		wantUnit string
 	}{
 		{
 			name:     "quantity with unit and description",
@@ -95,34 +95,34 @@ func TestParseInput(t *testing.T) {
 
 func TestNormalizeKey(t *testing.T) {
 	tests := []struct {
-		name string
+		name  string
 		input string
-		want string
+		want  string
 	}{
 		{
-			name: "quantity unit and description",
+			name:  "quantity unit and description",
 			input: "2 lbs Chicken Breast",
-			want: "chicken breast",
+			want:  "chicken breast",
 		},
 		{
-			name: "internal multiple spaces",
+			name:  "internal multiple spaces",
 			input: "Chicken   Breast",
-			want: "chicken breast",
+			want:  "chicken breast",
 		},
 		{
-			name: "decimal quantity no space",
+			name:  "decimal quantity no space",
 			input: "1.5kg Beef",
-			want: "beef",
+			want:  "beef",
 		},
 		{
-			name: "single word no quantity",
+			name:  "single word no quantity",
 			input: "Milk",
-			want: "milk",
+			want:  "milk",
 		},
 		{
-			name: "quantity non-unit word",
+			name:  "quantity non-unit word",
 			input: "2 bell peppers",
-			want: "bell peppers",
+			want:  "bell peppers",
 		},
 	}
 

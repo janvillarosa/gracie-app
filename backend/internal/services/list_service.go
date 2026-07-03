@@ -196,7 +196,7 @@ func (s *ListService) CreateItem(ctx context.Context, user *models.User, roomID,
 	if err != nil {
 		return nil, err
 	}
-	var nextOrder float64 = float64(time.Now().UTC().UnixNano())
+	nextOrder := float64(time.Now().UTC().UnixNano())
 	if len(items) > 0 {
 		max := items[0].Order
 		for _, x := range items {
@@ -377,7 +377,6 @@ func (s *ListService) GetPantry(ctx context.Context, user *models.User, roomID s
 	}
 	return out, nil
 }
-
 
 func (s *ListService) DeleteItem(ctx context.Context, user *models.User, roomID, listID, itemID string) error {
 	if err := s.ensureRoomMembership(ctx, user, roomID); err != nil {

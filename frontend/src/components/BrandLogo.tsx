@@ -3,7 +3,7 @@ import logoUrl from '@assets/logo.png'
 import { Link } from 'react-router-dom'
 
 // Default size bumped ~30% for stronger presence across pages
-export const BrandLogo: React.FC<{ size?: number; to?: string } > = ({ size = 56, to = '/app' }) => {
+export const BrandLogo: React.FC<{ size?: number; to?: string }> = ({ size = 56, to = '/app' }) => {
   const img = (
     <img
       src={logoUrl}
@@ -17,7 +17,13 @@ export const BrandLogo: React.FC<{ size?: number; to?: string } > = ({ size = 56
   )
   return (
     <div className="brand-logo" aria-label="Bauhouse logo">
-      {to ? <Link to={to} aria-label="Go to app home">{img}</Link> : img}
+      {to ? (
+        <Link to={to} aria-label="Go to app home">
+          {img}
+        </Link>
+      ) : (
+        img
+      )}
     </div>
   )
 }

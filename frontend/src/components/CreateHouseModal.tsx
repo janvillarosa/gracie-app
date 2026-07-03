@@ -14,7 +14,9 @@ export const CreateHouseModal: React.FC<Props> = ({ open, onClose, onSubmit, sub
   const [description, setDescription] = useState('')
   const nameError = useMemo(() => {
     if (!displayName) return undefined // optional
-    return isValidDisplayName(displayName) ? undefined : 'Name is up to 64 characters. Only letters, numbers and spaces'
+    return isValidDisplayName(displayName)
+      ? undefined
+      : 'Name is up to 64 characters. Only letters, numbers and spaces'
   }, [displayName])
   const descError = useMemo(() => {
     return description.length <= MAX_DESCRIPTION ? undefined : 'Description too long'
@@ -38,7 +40,16 @@ export const CreateHouseModal: React.FC<Props> = ({ open, onClose, onSubmit, sub
         <div style={{ paddingTop: 12 }}>
           <Space>
             <Button onClick={onClose}>Cancel</Button>
-            <Button type="primary" disabled={!canSubmit} onClick={() => onSubmit({ display_name: displayName || undefined, description: description || undefined })}>
+            <Button
+              type="primary"
+              disabled={!canSubmit}
+              onClick={() =>
+                onSubmit({
+                  display_name: displayName || undefined,
+                  description: description || undefined,
+                })
+              }
+            >
               Create
             </Button>
           </Space>
@@ -46,24 +57,23 @@ export const CreateHouseModal: React.FC<Props> = ({ open, onClose, onSubmit, sub
       }
     >
       <Form layout="vertical">
-        <Form.Item
-          label="Name"
-          validateStatus={nameError ? 'error' : ''}
-          help={nameError}
-        >
+        <Form.Item label="Name" validateStatus={nameError ? 'error' : ''} help={nameError}>
           <Input
             placeholder="e.g., Our Little Mansion"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
             autoFocus
-            onPressEnter={(e) => { e.preventDefault(); if (canSubmit) onSubmit({ display_name: displayName || undefined, description: description || undefined }) }}
+            onPressEnter={(e) => {
+              e.preventDefault()
+              if (canSubmit)
+                onSubmit({
+                  display_name: displayName || undefined,
+                  description: description || undefined,
+                })
+            }}
           />
         </Form.Item>
-        <Form.Item
-          label="Description"
-          validateStatus={descError ? 'error' : ''}
-          help={descError}
-        >
+        <Form.Item label="Description" validateStatus={descError ? 'error' : ''} help={descError}>
           <Input.TextArea
             rows={3}
             placeholder="Add a short description"
@@ -71,7 +81,9 @@ export const CreateHouseModal: React.FC<Props> = ({ open, onClose, onSubmit, sub
             onChange={(e) => setDescription(e.target.value)}
           />
         </Form.Item>
-        <Typography.Text type="secondary">You can change these later in House Settings.</Typography.Text>
+        <Typography.Text type="secondary">
+          You can change these later in House Settings.
+        </Typography.Text>
       </Form>
     </Modal>
   )

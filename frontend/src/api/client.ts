@@ -4,7 +4,7 @@ export type ApiError = Error & { status?: number }
 
 export async function apiFetch<T>(
   path: string,
-  options: RequestInit & { apiKey?: string | null } = {}
+  options: RequestInit & { apiKey?: string | null } = {},
 ): Promise<T> {
   // Prefer absolute URL in VITE_API_BASE_URL; otherwise always use '/api' so Vercel rewrite applies
   const envBase = (import.meta as any).env?.VITE_API_BASE_URL as string | undefined

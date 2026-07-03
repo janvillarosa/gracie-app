@@ -15,7 +15,7 @@ vi.mock('@api/endpoints', async () => {
 
 describe('AuthProvider', () => {
   it('clears invalid api key and navigates to /login', async () => {
-    const getMe = endpoints.getMe as unknown as vi.Mock
+    const getMe = endpoints.getMe as unknown as ReturnType<typeof vi.fn>
     getMe.mockRejectedValueOnce(Object.assign(new Error('unauthorized'), { status: 401 }))
     localStorage.setItem('gracie_api_key', 'bad')
     // import after mocks
@@ -26,7 +26,7 @@ describe('AuthProvider', () => {
         <Provider>
           <div data-testid="child" />
         </Provider>
-      </MemoryRouter>
+      </MemoryRouter>,
     )
     await waitFor(() => expect(localStorage.getItem('gracie_api_key')).toBeNull())
     expect(navigateMock).toHaveBeenCalledWith('/login', { replace: true })

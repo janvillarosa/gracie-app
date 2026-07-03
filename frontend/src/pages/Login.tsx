@@ -31,40 +31,51 @@ export const Login: React.FC = () => {
   return (
     <div className="login-page">
       <div className="container">
-      <div className="brand-banner">
-        <div className="brand-row">
-          <BrandLogo to="/login" size={80} />
-          <span className="brand-wordmark">Bauhouse</span>
+        <div className="brand-banner">
+          <div className="brand-row">
+            <BrandLogo to="/login" size={80} />
+            <span className="brand-wordmark">Bauhouse</span>
+          </div>
         </div>
-      </div>
-      <Card className="paper-card">
-        <Typography.Title level={2} style={{ marginTop: 0 }}>Log In</Typography.Title>
-        <Form layout="vertical" onSubmitCapture={onLogin}>
-          <Form.Item label="Email">
-            <Input
-              placeholder="you@example.com"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              autoComplete="email"
-              inputMode="email"
-            />
-          </Form.Item>
-          <Form.Item label="Password">
-            <Input.Password
-              placeholder="Your password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="current-password"
-            />
-          </Form.Item>
-          <Button type="primary" htmlType="submit" disabled={!username || !password || loading} size="large" block>
+        <Card className="paper-card">
+          <Typography.Title level={2} style={{ marginTop: 0 }}>
             Log In
-          </Button>
-        </Form>
-        <Typography.Text type="secondary" style={{ display: 'inline-block', paddingTop: 40 }}>
-          New here? <Link to="/register" className="link-primary">Create an account</Link>
-        </Typography.Text>
-      </Card>
+          </Typography.Title>
+          <Form layout="vertical" onSubmitCapture={onLogin}>
+            <Form.Item label="Email">
+              <Input
+                placeholder="you@example.com"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                autoComplete="email"
+                inputMode="email"
+              />
+            </Form.Item>
+            <Form.Item label="Password">
+              <Input.Password
+                placeholder="Your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
+              />
+            </Form.Item>
+            <Button
+              type="primary"
+              htmlType="submit"
+              disabled={!username || !password || loading}
+              size="large"
+              block
+            >
+              Log In
+            </Button>
+          </Form>
+          <Typography.Text type="secondary" style={{ display: 'inline-block', paddingTop: 40 }}>
+            New here?{' '}
+            <Link to="/register" className="link-primary">
+              Create an account
+            </Link>
+          </Typography.Text>
+        </Card>
       </div>
     </div>
   )

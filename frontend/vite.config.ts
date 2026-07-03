@@ -39,7 +39,10 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'lcov'],
       reportsDirectory: 'coverage',
-      thresholds: { lines: 0.6, branches: 0.5, functions: 0.6, statements: 0.6 },
+      // Ratchet floor set just below the current baseline (statements 38.2%,
+      // branches 75.6%, functions 64.0%, lines 38.2%). Vitest reads these as
+      // percentages (0-100). Raise them as coverage grows; never lower.
+      thresholds: { lines: 38, branches: 75, functions: 63, statements: 38 },
     },
   },
 })

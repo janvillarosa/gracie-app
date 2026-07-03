@@ -26,4 +26,3 @@ export function toEmoji(icon?: ListIcon): string | undefined {
   if (!icon) return undefined
   return ICON_EMOJI[icon]
 }
-
