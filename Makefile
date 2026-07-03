@@ -20,12 +20,16 @@ setup: ## Install backend + frontend dependencies
 check: fmt-check vet lint typecheck build test-unit ## Fast pre-commit gate (no external services)
 	@echo "✓ make check passed"
 
+# Exclude local Go cache/tmp/bin dirs (leading-dot dirs are skipped by `go`
+# tooling but not by a raw `gofmt` filesystem walk).
+BE_GOFILES = find . -name '*.go' -not -path './.gocache*' -not -path './.gotmp*' -not -path './bin/*'
+
 fmt: ## Auto-format: backend (gofmt) + frontend (biome)
-	cd $(BACKEND) && gofmt -w .
+	cd $(BACKEND) && gofmt -w $$($(BE_GOFILES))
 	cd $(FRONTEND) && pnpm format
 
 fmt-check: ## Verify formatting without writing (fails if unformatted)
-	@out=$$(cd $(BACKEND) && gofmt -l .); \
+	@out=$$(cd $(BACKEND) && gofmt -l $$($(BE_GOFILES))); \
 	  if [ -n "$$out" ]; then echo "gofmt needed for:"; echo "$$out"; exit 1; fi
 	cd $(FRONTEND) && pnpm format:check
 
