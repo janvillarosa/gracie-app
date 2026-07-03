@@ -3,7 +3,8 @@ package categorization
 import (
 	"context"
 	"sort"
-	"strings"
+
+	"github.com/janvillarosa/gracie-app/backend/internal/parse"
 )
 
 // EmbeddingCategorizer assigns categories by embedding the input text and
@@ -13,7 +14,6 @@ type EmbeddingCategorizer struct {
 	embedder  Embedder
 	anchorVec [][]float32 // normalized anchor embeddings, aligned with anchorCat
 	anchorCat []string
-	exact     map[string]string // lowercased term -> category
 	threshold float64
 	topK      int
 }
@@ -24,14 +24,9 @@ type EmbeddingCategorizer struct {
 func NewEmbeddingCategorizerWithEmbedder(ctx context.Context, e Embedder, anchors []Anchor, threshold float64, topK int) (*EmbeddingCategorizer, error) {
 	terms := make([]string, len(anchors))
 	cats := make([]string, len(anchors))
-	exact := make(map[string]string, len(anchors))
 	for i, a := range anchors {
 		terms[i] = a.Term
 		cats[i] = a.Category
-		// First rule wins on duplicate terms, matching ordered keyword priority.
-		if _, ok := exact[a.Term]; !ok {
-			exact[a.Term] = a.Category
-		}
 	}
 	raw, err := e.Embed(ctx, terms)
 	if err != nil {
@@ -48,18 +43,14 @@ func NewEmbeddingCategorizerWithEmbedder(ctx context.Context, e Embedder, anchor
 		embedder:  e,
 		anchorVec: vecs,
 		anchorCat: cats,
-		exact:     exact,
 		threshold: threshold,
 		topK:      topK,
 	}, nil
 }
 
-// Categorize: exact-match short-circuit, else embed + kNN vote + threshold.
+// Categorize: embed + kNN vote + threshold.
 func (ec *EmbeddingCategorizer) Categorize(ctx context.Context, description string) (string, float64, error) {
-	norm := strings.ToLower(strings.Join(strings.Fields(description), " "))
-	if cat, ok := ec.exact[norm]; ok {
-		return cat, 1.0, nil
-	}
+	norm := parse.NormalizeKey(description)
 	raw, err := ec.embedder.Embed(ctx, []string{norm})
 	if err != nil {
 		return "", 0, err
@@ -77,7 +68,7 @@ func (ec *EmbeddingCategorizer) Categorize(ctx context.Context, description stri
 
 	cat, top := knnVote(neighbors)
 	if float64(top) < ec.threshold {
-		return "", float64(top), nil // decline; Chain applies fallback
+		return "", float64(top), nil
 	}
 	return cat, float64(top), nil
 }

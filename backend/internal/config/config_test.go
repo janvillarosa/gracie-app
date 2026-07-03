@@ -35,7 +35,7 @@ func TestLoadEnvOverrides(t *testing.T) {
 }
 
 func TestEmbeddingDefaults(t *testing.T) {
-	for _, k := range []string{"EMBEDDING_ENABLED", "EMBEDDING_MODEL_PATH", "EMBED_THRESHOLD", "EMBED_TOPK"} {
+	for _, k := range []string{"EMBEDDING_ENABLED", "EMBEDDING_MODEL_PATH", "EMBED_THRESHOLD", "EMBED_TOPK", "CATEGORY_INDEX_ENABLED"} {
 		os.Unsetenv(k)
 	}
 	cfg, err := Load()
@@ -53,6 +53,9 @@ func TestEmbeddingDefaults(t *testing.T) {
 	}
 	if cfg.EmbedTopK != 5 {
 		t.Errorf("EmbedTopK = %v, want 5", cfg.EmbedTopK)
+	}
+	if !cfg.CategoryIndexEnabled {
+		t.Errorf("CategoryIndexEnabled default = false, want true")
 	}
 }
 

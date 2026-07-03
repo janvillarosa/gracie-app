@@ -12,6 +12,7 @@ import (
     "github.com/janvillarosa/gracie-app/backend/internal/config"
     "github.com/janvillarosa/gracie-app/backend/internal/http/handlers"
     "github.com/janvillarosa/gracie-app/backend/internal/http/router"
+    "github.com/janvillarosa/gracie-app/backend/internal/parse"
     "github.com/janvillarosa/gracie-app/backend/internal/services"
     "github.com/janvillarosa/gracie-app/backend/internal/services/categorization"
     mongostore "github.com/janvillarosa/gracie-app/backend/internal/store/mongo"
@@ -36,11 +37,33 @@ func main() {
     _ = itemsRepo.EnsureIndexes(ctx)
     tx := mongostore.NewTx(mcli)
 
+    var categoryIndex *mongostore.CategoryIndexRepo
+    if cfg.CategoryIndexEnabled {
+        categoryIndex = mongostore.NewCategoryIndexRepo(mcli)
+        if err := categoryIndex.EnsureIndexes(ctx); err != nil {
+            log.Printf("category_index: ensure indexes failed: %v (continuing without cache)", err)
+            categoryIndex = nil
+        } else {
+            seed := make([]mongostore.CategoryIndexEntry, 0, len(categorization.GroceryAnchors))
+            for _, a := range categorization.GroceryAnchors {
+                seed = append(seed, mongostore.CategoryIndexEntry{
+                    Key:      parse.NormalizeKey(a.Term),
+                    Category: a.Category,
+                })
+            }
+            if err := categoryIndex.Seed(ctx, seed); err != nil {
+                log.Printf("category_index: anchor seed failed: %v (continuing)", err)
+            } else {
+                log.Printf("category_index: seeded %d anchors", len(seed))
+            }
+        }
+    }
+
     userSvc := services.NewUserService(usersRepo, roomsRepo, tx)
     roomSvc := services.NewRoomService(usersRepo, roomsRepo, tx)
     roomSvc.UseListRepos(listsRepo, itemsRepo)
     userSvc.UseListRepos(listsRepo, itemsRepo)
-    categorizers := buildCategorizers(ctx, cfg)
+    categorizers := buildCategorizers(ctx, cfg, indexArg(categoryIndex))
     listSvc := services.NewListService(usersRepo, roomsRepo, listsRepo, itemsRepo, categorizers["grocery"])
     authSvc, err := services.NewAuthService(usersRepo, cfg.EncKeyFile, cfg.APIKeyTTLHours)
     if err != nil { log.Fatalf("auth service: %v", err) }
@@ -97,8 +120,9 @@ func buildEmbedder(ctx context.Context, cfg *config.Config) categorization.Embed
 // domainCategorizer builds one domain's Chain: embedding (when the shared
 // embedder is available) backed by keyword matching over the same anchor set,
 // with a per-domain fallback label. Anchor embedding failure degrades to
-// keyword-only for that domain.
-func domainCategorizer(ctx context.Context, emb categorization.Embedder, anchors []categorization.Anchor, fallback string, cfg *config.Config) categorization.Categorizer {
+// keyword-only for that domain. When an index is provided the embedding
+// categorizer is wrapped in a CachingCategorizer.
+func domainCategorizer(ctx context.Context, emb categorization.Embedder, anchors []categorization.Anchor, fallback string, cfg *config.Config, index categorization.CategoryIndex) categorization.Categorizer {
 	keyword := categorization.NewKeywordCategorizer(anchors)
 	if emb == nil {
 		return categorization.NewChain(fallback, keyword)
@@ -108,16 +132,30 @@ func domainCategorizer(ctx context.Context, emb categorization.Embedder, anchors
 		log.Printf("categorization: anchor embedding failed (%v); keyword-only for this domain", err)
 		return categorization.NewChain(fallback, keyword)
 	}
-	return categorization.NewChain(fallback, ec, keyword)
+	var embMember categorization.Categorizer = ec
+	if index != nil {
+		embMember = categorization.NewCachingCategorizer(ec, index)
+	}
+	return categorization.NewChain(fallback, embMember, keyword)
+}
+
+// indexArg converts a possibly-nil concrete repo pointer into a clean typed nil
+// interface, so domainCategorizer's `index != nil` check works correctly.
+// A non-nil interface wrapping a nil pointer would always pass the != nil check.
+func indexArg(r *mongostore.CategoryIndexRepo) categorization.CategoryIndex {
+	if r == nil {
+		return nil
+	}
+	return r
 }
 
 // buildCategorizers returns the per-domain registry. Add a new domain (e.g.
 // list-type suggestion) by adding one line with its anchor set + fallback;
 // the embedding model is shared, not reloaded.
-func buildCategorizers(ctx context.Context, cfg *config.Config) map[string]categorization.Categorizer {
+func buildCategorizers(ctx context.Context, cfg *config.Config, index categorization.CategoryIndex) map[string]categorization.Categorizer {
 	emb := buildEmbedder(ctx, cfg)
 	return map[string]categorization.Categorizer{
-		"grocery": domainCategorizer(ctx, emb, categorization.GroceryAnchors, categorization.General, cfg),
-		// Future: "list_type": domainCategorizer(ctx, emb, categorization.ListTypeAnchors, "", cfg),
+		"grocery": domainCategorizer(ctx, emb, categorization.GroceryAnchors, categorization.General, cfg, index),
+		// Future: "list_type": domainCategorizer(ctx, emb, categorization.ListTypeAnchors, "", cfg, index),
 	}
 }

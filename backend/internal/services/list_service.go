@@ -6,6 +6,7 @@ import (
 
 	derr "github.com/janvillarosa/gracie-app/backend/internal/errors"
 	"github.com/janvillarosa/gracie-app/backend/internal/models"
+	"github.com/janvillarosa/gracie-app/backend/internal/parse"
 	"github.com/janvillarosa/gracie-app/backend/internal/services/categorization"
 	"github.com/janvillarosa/gracie-app/backend/internal/store"
 	"github.com/janvillarosa/gracie-app/backend/pkg/ids"
@@ -235,6 +236,23 @@ func (s *ListService) CreateItem(ctx context.Context, user *models.User, roomID,
 	return it, nil
 }
 
+// normalizeItemForRead splits a legacy item whose quantity/unit is still baked
+// into the description. Only rewrites the returned copy — never touches the DB.
+// Skipped when Quantity is already populated (no double-strip).
+func normalizeItemForRead(it models.ListItem) models.ListItem {
+	if it.Quantity != "" {
+		return it
+	}
+	desc, qty, unit := parse.ParseInput(it.Description)
+	if qty == "" {
+		return it
+	}
+	it.Description = desc
+	it.Quantity = qty
+	it.Unit = unit
+	return it
+}
+
 func (s *ListService) ListItems(ctx context.Context, user *models.User, roomID, listID string, includeCompleted bool) ([]models.ListItem, error) {
 	if err := s.ensureRoomMembership(ctx, user, roomID); err != nil {
 		return nil, err
@@ -259,7 +277,7 @@ func (s *ListService) ListItems(ctx context.Context, user *models.User, roomID, 
 		if !includeCompleted && it.Completed {
 			continue
 		}
-		out = append(out, it)
+		out = append(out, normalizeItemForRead(it))
 	}
 	return out, nil
 }

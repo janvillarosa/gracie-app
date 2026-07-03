@@ -27,6 +27,7 @@ type Config struct {
     EmbeddingModelPath string
     EmbedThreshold     float64
     EmbedTopK          int
+    CategoryIndexEnabled bool
 }
 
 func getEnv(key, def string) string {
@@ -57,6 +58,7 @@ func Load() (*Config, error) {
     cfg.EmbeddingModelPath = getEnv("EMBEDDING_MODEL_PATH", "/app/models/minilm")
     cfg.EmbedThreshold = getEnvFloat("EMBED_THRESHOLD", 0.45)
     cfg.EmbedTopK = getEnvInt("EMBED_TOPK", 5)
+    cfg.CategoryIndexEnabled = getEnv("CATEGORY_INDEX_ENABLED", "true") == "true"
 
     // If DDB_ENDPOINT is explicitly set to "aws", use AWS-managed DynamoDB (no custom endpoint)
     if v, ok := os.LookupEnv("DDB_ENDPOINT"); ok {
