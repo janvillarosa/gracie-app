@@ -2,11 +2,36 @@ import React, { useMemo, useState } from 'react'
 import type { RoomView, List } from '@api/types'
 import { useAuth } from '@auth/AuthProvider'
 import { useNavigate, Link } from 'react-router-dom'
-import { createList, getLists, rotateShare, voteListDeletion, cancelListDeletion, updateList } from '@api/endpoints'
+import {
+  createList,
+  getLists,
+  rotateShare,
+  voteListDeletion,
+  cancelListDeletion,
+  updateList,
+} from '@api/endpoints'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useLiveQueryOpts } from '@lib/liveQuery'
-import { Card, Typography, Space, Button, Modal, Input, List as AntList, Grid, Dropdown, message } from 'antd'
-import { DotsThreeVertical, CaretRight, ShareNetwork, Plus, FloppyDisk, X } from '@phosphor-icons/react'
+import {
+  Card,
+  Typography,
+  Space,
+  Button,
+  Modal,
+  Input,
+  List as AntList,
+  Grid,
+  Dropdown,
+  message,
+} from 'antd'
+import {
+  DotsThreeVertical,
+  CaretRight,
+  ShareNetwork,
+  Plus,
+  FloppyDisk,
+  X,
+} from '@phosphor-icons/react'
 import type { MenuProps } from 'antd'
 import { IconPicker } from '@components/IconPicker'
 import { AvatarBadge } from '@components/AvatarBadge'
@@ -16,7 +41,11 @@ import { toEmoji } from '../icons'
 import type { ListIcon } from '@api/types'
 import { useDocumentTitle } from '@lib/useDocumentTitle'
 
-export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string }> = ({ room, roomId, userId }) => {
+export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string }> = ({
+  room,
+  roomId,
+  userId,
+}) => {
   const { apiKey } = useAuth()
   const navigate = useNavigate()
   useDocumentTitle(room.display_name || 'House')
@@ -49,10 +78,17 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
     }
   }
 
-  const parseMs = (v: any, def: number) => { const n = Number(v); return Number.isFinite(n) && n > 0 ? n : def }
+  const parseMs = (v: any, def: number) => {
+    const n = Number(v)
+    return Number.isFinite(n) && n > 0 ? n : def
+  }
   const listsMs = parseMs((import.meta as any).env?.VITE_LIVE_QUERY_LISTS_MS, 4000)
   const liveOpts = useLiveQueryOpts(listsMs)
-  const listsQuery = useQuery({ queryKey: ['lists', roomId], queryFn: () => getLists(apiKey!, roomId), ...liveOpts })
+  const listsQuery = useQuery({
+    queryKey: ['lists', roomId],
+    queryFn: () => getLists(apiKey!, roomId),
+    ...liveOpts,
+  })
   const lists = listsQuery.data ?? []
 
   // Deletion actions removed from dashboard; keep minimal helpers only if needed elsewhere
@@ -61,7 +97,11 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
     if (!newName.trim()) return
     setCreating(true)
     try {
-      await createList(apiKey!, roomId, { name: newName.trim(), description: newDesc.trim() || undefined, icon: newIcon })
+      await createList(apiKey!, roomId, {
+        name: newName.trim(),
+        description: newDesc.trim() || undefined,
+        icon: newIcon,
+      })
       setNewName('')
       setNewDesc('')
       setNewIcon(undefined)
@@ -69,7 +109,9 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
       await qc.invalidateQueries({ queryKey: ['lists', roomId] })
     } catch (e: any) {
       message.error(e?.message || 'Failed to create list')
-    } finally { setCreating(false) }
+    } finally {
+      setCreating(false)
+    }
   }
 
   const onOpenEdit = (l: List) => {
@@ -83,7 +125,10 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
 
   const onSaveEdit = async () => {
     if (!editTarget) return
-    if (!editName.trim()) { message.error('List name is required'); return }
+    if (!editName.trim()) {
+      message.error('List name is required')
+      return
+    }
     setEditing(true)
     try {
       const body: any = { name: editName.trim(), description: editDesc.trim() || undefined }
@@ -96,20 +141,26 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
       await qc.invalidateQueries({ queryKey: ['lists', roomId] })
     } catch (e: any) {
       message.error(e?.message || 'Failed to update list')
-    } finally { setEditing(false) }
+    } finally {
+      setEditing(false)
+    }
   }
 
   const onVoteList = async (l: List) => {
     try {
       await voteListDeletion(apiKey!, roomId, l.list_id)
       await qc.invalidateQueries({ queryKey: ['lists', roomId] })
-    } catch (e: any) { message.error(e?.message || 'Failed to vote') }
+    } catch (e: any) {
+      message.error(e?.message || 'Failed to vote')
+    }
   }
   const onCancelVoteList = async (l: List) => {
     try {
       await cancelListDeletion(apiKey!, roomId, l.list_id)
       await qc.invalidateQueries({ queryKey: ['lists', roomId] })
-    } catch (e: any) { message.error(e?.message || 'Failed to cancel vote') }
+    } catch (e: any) {
+      message.error(e?.message || 'Failed to cancel vote')
+    }
   }
 
   return (
@@ -118,7 +169,9 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
       <div className="paper-stack">
         {/* Bottom meta sheet: title/description/share */}
         <Card className="paper-card paper-meta">
-          <Typography.Title level={2} style={{ margin: 0 }}>{room.display_name || 'House'}</Typography.Title>
+          <Typography.Title level={2} style={{ margin: 0 }}>
+            {room.display_name || 'House'}
+          </Typography.Title>
 
           {room.description && (
             <div style={{ marginTop: 8 }}>
@@ -126,13 +179,28 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
             </div>
           )}
 
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, paddingTop: 15 }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: 12,
+              paddingTop: 15,
+            }}
+          >
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <Typography.Text type="secondary">Members:</Typography.Text>
               <Space size={8} wrap>
                 {(room as any).members_meta?.length ? (
                   (room as any).members_meta.map((m: any, idx: number) => (
-                    <AvatarBadge key={idx} seed={m.avatar_key} name={m.name} size={35} style="miniavs" />
+                    <AvatarBadge
+                      key={idx}
+                      seed={m.avatar_key}
+                      name={m.name}
+                      size={35}
+                      style="miniavs"
+                    />
                   ))
                 ) : (
                   <span>{room.members?.join(', ') || '—'}</span>
@@ -141,9 +209,24 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
             </div>
 
             <Space>
-              <Button onClick={onShare} icon={<ShareNetwork />} shape="round">Share Code</Button>
-              <Dropdown menu={{ items: [{ key: 'settings', label: 'House Settings' }], onClick: ({ key }) => { if (key === 'settings') navigate('/app/settings') } }} trigger={['click']}>
-                <Button icon={<DotsThreeVertical />} shape="circle" type="text" aria-label="More actions" />
+              <Button onClick={onShare} icon={<ShareNetwork />} shape="round">
+                Share Code
+              </Button>
+              <Dropdown
+                menu={{
+                  items: [{ key: 'settings', label: 'House Settings' }],
+                  onClick: ({ key }) => {
+                    if (key === 'settings') navigate('/app/settings')
+                  },
+                }}
+                trigger={['click']}
+              >
+                <Button
+                  icon={<DotsThreeVertical />}
+                  shape="circle"
+                  type="text"
+                  aria-label="More actions"
+                />
               </Dropdown>
             </Space>
           </div>
@@ -152,9 +235,25 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
         {/* Top list sheet: lists and actions */}
         <Card className="paper-card paper-list">
           <Space direction="vertical" style={{ width: '100%' }} size="large">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-              <Typography.Title level={3} style={{ marginTop: 0, marginBottom: 0 }}>Our Lists</Typography.Title>
-              <Button type="primary" shape="round" onClick={() => setCreateOpen(true)} icon={<Plus />}>New List</Button>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 12,
+              }}
+            >
+              <Typography.Title level={3} style={{ marginTop: 0, marginBottom: 0 }}>
+                Our Lists
+              </Typography.Title>
+              <Button
+                type="primary"
+                shape="round"
+                onClick={() => setCreateOpen(true)}
+                icon={<Plus />}
+              >
+                New List
+              </Button>
             </div>
 
             {listsQuery.isLoading ? (
@@ -179,17 +278,36 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
                       }
                     }}
                   >
-                    <div style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        width: '100%',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: 12,
+                      }}
+                    >
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                         {l.icon ? (
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 44, height: 44, background: 'var(--panel-subtle)', border: '1px solid var(--border)', borderRadius: '50%', fontSize: 22, flexShrink: 0 }}>
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              width: 44,
+                              height: 44,
+                              background: 'var(--panel-subtle)',
+                              border: '1px solid var(--border)',
+                              borderRadius: '50%',
+                              fontSize: 22,
+                              flexShrink: 0,
+                            }}
+                          >
                             {toEmoji(l.icon)}
                           </div>
                         ) : null}
                         <div>
-                          <Typography.Link style={{ fontSize: 16 }}>
-                            {l.name}
-                          </Typography.Link>
+                          <Typography.Link style={{ fontSize: 16 }}>{l.name}</Typography.Link>
                           {l.description && (
                             <div>
                               <Typography.Text type="secondary">{l.description}</Typography.Text>
@@ -200,7 +318,7 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
                       <Space>
                         <span onClick={(e) => e.stopPropagation()}>
                           <Dropdown
-                            trigger={["click"]}
+                            trigger={['click']}
                             menu={{
                               items: [
                                 { key: 'edit', label: 'Edit details' },
@@ -215,7 +333,12 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
                               },
                             }}
                           >
-                            <Button icon={<DotsThreeVertical />} type="text" shape="circle" aria-label="List actions" />
+                            <Button
+                              icon={<DotsThreeVertical />}
+                              type="text"
+                              shape="circle"
+                              aria-label="List actions"
+                            />
                           </Dropdown>
                         </span>
                         <CaretRight style={{ color: 'var(--color-primary)' }} />
@@ -233,7 +356,14 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
         open={shareOpen}
         token={shareToken}
         onClose={() => setShareOpen(false)}
-        onRotate={async () => { try { const r = await rotateShare(apiKey!); setShareToken(r.token) } catch (e: any) { message.error(e?.message || 'Failed to rotate code') } }}
+        onRotate={async () => {
+          try {
+            const r = await rotateShare(apiKey!)
+            setShareToken(r.token)
+          } catch (e: any) {
+            message.error(e?.message || 'Failed to rotate code')
+          }
+        }}
       />
 
       {/* Create List Modal */}
@@ -243,8 +373,17 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
         onCancel={() => setCreateOpen(false)}
         footer={
           <Space>
-            <Button onClick={() => setCreateOpen(false)} icon={<X />}>Cancel</Button>
-            <Button type="primary" disabled={creating || !newName.trim()} onClick={onCreateList} icon={<Plus />}>Create</Button>
+            <Button onClick={() => setCreateOpen(false)} icon={<X />}>
+              Cancel
+            </Button>
+            <Button
+              type="primary"
+              disabled={creating || !newName.trim()}
+              onClick={onCreateList}
+              icon={<Plus />}
+            >
+              Create
+            </Button>
           </Space>
         }
       >
@@ -274,8 +413,17 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
         onCancel={() => setEditOpen(false)}
         footer={
           <Space>
-            <Button onClick={() => setEditOpen(false)} icon={<X />}>Cancel</Button>
-            <Button type="primary" disabled={editing || !editName.trim()} onClick={onSaveEdit} icon={<FloppyDisk />}>Save</Button>
+            <Button onClick={() => setEditOpen(false)} icon={<X />}>
+              Cancel
+            </Button>
+            <Button
+              type="primary"
+              disabled={editing || !editName.trim()}
+              onClick={onSaveEdit}
+              icon={<FloppyDisk />}
+            >
+              Save
+            </Button>
           </Space>
         }
       >
@@ -295,7 +443,10 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
             <Typography.Text type="secondary">Icon</Typography.Text>
             <IconPicker
               value={editIcon}
-              onChange={(val) => { setEditIcon(val); setEditIconTouched(true) }}
+              onChange={(val) => {
+                setEditIcon(val)
+                setEditIconTouched(true)
+              }}
             />
           </div>
         </Space>

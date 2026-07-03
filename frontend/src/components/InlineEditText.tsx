@@ -14,10 +14,14 @@ export const InlineEditText: React.FC<Props> = ({ value, onSubmit, disabled, pla
   const [submitted, setSubmitted] = useState(false)
   const ref = useRef<any>(null)
 
-  useEffect(() => { setText(value) }, [value])
+  useEffect(() => {
+    setText(value)
+  }, [value])
   useEffect(() => {
     if (ref.current) {
-      try { ref.current.focus({ cursor: 'end' }) } catch {}
+      try {
+        ref.current.focus({ cursor: 'end' })
+      } catch {}
     }
   }, [])
 
@@ -27,7 +31,11 @@ export const InlineEditText: React.FC<Props> = ({ value, onSubmit, disabled, pla
     if (!next) {
       setError('Description can’t be empty')
       // re-focus to keep user in edit mode
-      setTimeout(() => { try { ref.current?.focus() } catch {} }, 0)
+      setTimeout(() => {
+        try {
+          ref.current?.focus()
+        } catch {}
+      }, 0)
       return
     }
     setError(null)
@@ -40,16 +48,21 @@ export const InlineEditText: React.FC<Props> = ({ value, onSubmit, disabled, pla
       <Input
         ref={ref}
         value={text}
-        onChange={(e) => { setText(e.target.value); if (error) setError(null) }}
+        onChange={(e) => {
+          setText(e.target.value)
+          if (error) setError(null)
+        }}
         onBlur={trySubmit}
         onPressEnter={trySubmit}
         disabled={disabled}
         placeholder={placeholder}
         aria-label="Edit item"
-        status={error ? 'error' : '' as any}
+        status={error ? 'error' : ('' as any)}
       />
       {error && (
-        <Typography.Text type="danger" style={{ fontSize: 12 }}>{error}</Typography.Text>
+        <Typography.Text type="danger" style={{ fontSize: 12 }}>
+          {error}
+        </Typography.Text>
       )}
     </div>
   )

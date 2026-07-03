@@ -8,7 +8,7 @@ import React from 'react'
 // Mock useAuth to capture setApiKey without needing full provider
 const setApiKeyMock = vi.fn()
 vi.mock('@auth/AuthProvider', () => ({
-  useAuth: () => ({ setApiKey: setApiKeyMock })
+  useAuth: () => ({ setApiKey: setApiKeyMock }),
 }))
 
 // Mock useNavigate to avoid actual navigation
@@ -24,20 +24,19 @@ describe('Login page', () => {
   it('logs in and stores api key', async () => {
     server.use(
       http.post('/api/auth/login', async ({ request }) => {
-        const body = await request.json() as any
-        if (!body?.username || !body?.password)
-          return new Response(null, { status: 400 })
+        const body = (await request.json()) as any
+        if (!body?.username || !body?.password) return new Response(null, { status: 400 })
         return new Response(JSON.stringify({ api_key: 'k_123', user: { user_id: 'usr_1' } }), {
           status: 200,
           headers: { 'Content-Type': 'application/json' },
         })
-      })
+      }),
     )
 
     render(
       <MemoryRouter>
         <Login />
-      </MemoryRouter>
+      </MemoryRouter>,
     )
 
     const email = screen.getByPlaceholderText('you@example.com')

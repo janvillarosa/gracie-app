@@ -23,42 +23,42 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           <IconContext.Provider value={{ weight: 'bold' }}>
             <ConfigProvider
               theme={{
-              cssVar: true,
-              algorithm: antdTheme.defaultAlgorithm,
-              token: {
-                colorPrimary: 'var(--color-primary, #FFD417)',
-                colorLink: 'var(--brand-blue, #2348A6)',
-                colorWarning: 'var(--color-warning, #F3F78A)',
-                colorInfo: 'var(--color-secondary, #C7B090)',
-                colorError: 'var(--color-danger, #BE1E2D)',
-                colorText: 'var(--text, #3B3B3B)',
-                colorTextSecondary: 'var(--text-secondary, rgba(59,59,59,0.7))',
-                colorBgBase: 'var(--bg, #F7F7F7)',
-                colorBgContainer: 'var(--panel, #FFFFFF)',
-                colorBgElevated: 'var(--panel, #FFFFFF)',
-                colorBorder: 'var(--border, #E6E6E6)',
-              },
-              components: {
-                Button: {
+                cssVar: true,
+                algorithm: antdTheme.defaultAlgorithm,
+                token: {
                   colorPrimary: 'var(--color-primary, #FFD417)',
+                  colorLink: 'var(--brand-blue, #2348A6)',
+                  colorWarning: 'var(--color-warning, #F3F78A)',
+                  colorInfo: 'var(--color-secondary, #C7B090)',
+                  colorError: 'var(--color-danger, #BE1E2D)',
+                  colorText: 'var(--text, #3B3B3B)',
+                  colorTextSecondary: 'var(--text-secondary, rgba(59,59,59,0.7))',
+                  colorBgBase: 'var(--bg, #F7F7F7)',
+                  colorBgContainer: 'var(--panel, #FFFFFF)',
+                  colorBgElevated: 'var(--panel, #FFFFFF)',
+                  colorBorder: 'var(--border, #E6E6E6)',
                 },
-                Modal: {
-                  colorBgElevated: 'var(--panel)',
-                  colorText: 'var(--text)'
+                components: {
+                  Button: {
+                    colorPrimary: 'var(--color-primary, #FFD417)',
+                  },
+                  Modal: {
+                    colorBgElevated: 'var(--panel)',
+                    colorText: 'var(--text)',
+                  },
+                  Drawer: {
+                    colorBgElevated: 'var(--panel)',
+                  },
+                  Dropdown: {
+                    colorBgElevated: 'var(--panel)',
+                  },
+                  Popover: {
+                    colorBgElevated: 'var(--panel)',
+                  },
+                  Tooltip: {
+                    colorBgElevated: 'var(--panel)',
+                  },
                 },
-                Drawer: {
-                  colorBgElevated: 'var(--panel)'
-                },
-                Dropdown: {
-                  colorBgElevated: 'var(--panel)'
-                },
-                Popover: {
-                  colorBgElevated: 'var(--panel)'
-                },
-                Tooltip: {
-                  colorBgElevated: 'var(--panel)'
-                },
-              },
               }}
             >
               <AppRoutes />
@@ -67,5 +67,5 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>
-  </React.StrictMode>
+  </React.StrictMode>,
 )

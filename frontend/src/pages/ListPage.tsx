@@ -2,12 +2,64 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '@auth/AuthProvider'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { getMe, getListItems, getLists, createListItem, updateListItem, deleteListItem, voteListDeletion, cancelListDeletion, reorderListItem, updateList, clearListItems, getRoomPantry } from '@api/endpoints'
+import {
+  getMe,
+  getListItems,
+  getLists,
+  createListItem,
+  updateListItem,
+  deleteListItem,
+  voteListDeletion,
+  cancelListDeletion,
+  reorderListItem,
+  updateList,
+  clearListItems,
+  getRoomPantry,
+} from '@api/endpoints'
 import type { List, ListItem, PantryItem } from '@api/types'
-import { Card, Typography, Space, Button, Input, Checkbox, List as AntList, Grid, Dropdown, message, Skeleton, Alert, Tabs, Tag } from 'antd'
-import { ArrowLeft, Trash, Plus, Eye, EyeSlash, DotsThreeVertical, DotsSixVertical, FloppyDisk, X, Broom } from '@phosphor-icons/react'
-import { DndContext, TouchSensor, MouseSensor, KeyboardSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core'
-import { SortableContext, verticalListSortingStrategy, useSortable, sortableKeyboardCoordinates } from '@dnd-kit/sortable'
+import {
+  Card,
+  Typography,
+  Space,
+  Button,
+  Input,
+  Checkbox,
+  List as AntList,
+  Grid,
+  Dropdown,
+  message,
+  Skeleton,
+  Alert,
+  Tabs,
+  Tag,
+} from 'antd'
+import {
+  ArrowLeft,
+  Trash,
+  Plus,
+  Eye,
+  EyeSlash,
+  DotsThreeVertical,
+  DotsSixVertical,
+  FloppyDisk,
+  X,
+  Broom,
+} from '@phosphor-icons/react'
+import {
+  DndContext,
+  TouchSensor,
+  MouseSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+  sortableKeyboardCoordinates,
+} from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { toEmoji } from '../icons'
 import { confettiAt } from '@lib/confetti'
@@ -36,14 +88,18 @@ export const ListPage: React.FC = () => {
   const [editingItemId, setEditingItemId] = useState<string | null>(null)
   const [savingItemId, setSavingItemId] = useState<string | null>(null)
   const checkboxRefs = useRef<Record<string, HTMLElement | null>>({})
-  const setCheckboxRef = (id: string) => (el: HTMLElement | null) => { checkboxRefs.current[id] = el }
+  const setCheckboxRef = (id: string) => (el: HTMLElement | null) => {
+    checkboxRefs.current[id] = el
+  }
   const qc = useQueryClient()
   // Breakpoints hook must be called before any early returns
   const screens = Grid.useBreakpoint()
   const isMobile = !screens.md
   // antd message for toasts
   const [msgApi, contextHolder] = message.useMessage()
-  const show = (msg: string) => { msgApi.info(msg) }
+  const show = (msg: string) => {
+    msgApi.info(msg)
+  }
   const [redirecting, setRedirecting] = useState(false)
   const [activeTab, setActiveTab] = useState<'items' | 'notes'>('items')
   const [notesText, setNotesText] = useState('')
@@ -71,7 +127,10 @@ export const ListPage: React.FC = () => {
   const roomId = meQuery.data?.room_id as string | undefined
   const userId = meQuery.data?.user_id as string | undefined
 
-  const parseMs = (v: any, def: number) => { const n = Number(v); return Number.isFinite(n) && n > 0 ? n : def }
+  const parseMs = (v: any, def: number) => {
+    const n = Number(v)
+    return Number.isFinite(n) && n > 0 ? n : def
+  }
   const listsQuery = useQuery({
     queryKey: ['lists', roomId],
     queryFn: () => getLists(apiKey!, roomId!),
@@ -81,7 +140,10 @@ export const ListPage: React.FC = () => {
     refetchOnReconnect: false,
     staleTime: 5_000,
   })
-  const listMeta: List | undefined = useMemo(() => listsQuery.data?.find(l => l.list_id === listId), [listsQuery.data, listId])
+  const listMeta: List | undefined = useMemo(
+    () => listsQuery.data?.find((l) => l.list_id === listId),
+    [listsQuery.data, listId],
+  )
   const itemsQuery = useQuery({
     queryKey: ['list-items', listId, includeCompleted],
     queryFn: () => getListItems(apiKey!, roomId!, listId, includeCompleted),
@@ -91,7 +153,6 @@ export const ListPage: React.FC = () => {
     refetchOnReconnect: false,
     staleTime: 5_000,
   })
-
 
   // Always derive items and sorted views before any early returns to keep hook order stable
   const items = itemsQuery.data ?? []
@@ -105,13 +166,12 @@ export const ListPage: React.FC = () => {
     return copy
   }, [items])
 
-
-  const incompleteItems = useMemo(() => sortedItems.filter(it => !it.completed), [sortedItems])
+  const incompleteItems = useMemo(() => sortedItems.filter((it) => !it.completed), [sortedItems])
 
   const incompleteGrouped = useMemo(() => {
     if (!groupByCat) return null
     const groups: Record<string, ListItem[]> = {}
-    incompleteItems.forEach(it => {
+    incompleteItems.forEach((it) => {
       const cat = it.category || 'Uncategorized'
       if (!groups[cat]) groups[cat] = []
       groups[cat].push(it)
@@ -119,22 +179,22 @@ export const ListPage: React.FC = () => {
     return groups
   }, [incompleteItems, groupByCat])
 
-  const completedItems = useMemo(() => sortedItems.filter(it => it.completed), [sortedItems])
+  const completedItems = useMemo(() => sortedItems.filter((it) => it.completed), [sortedItems])
   const totalCount = items.length
-  const completedCount = items.filter(it => it.completed).length
-  const incompleteCount = items.filter(it => !it.completed).length
+  const completedCount = items.filter((it) => it.completed).length
+  const incompleteCount = items.filter((it) => !it.completed).length
   // Sensors: touch (mobile long-press), mouse (desktop), keyboard (a11y)
   const sensors = useSensors(
     useSensor(TouchSensor, { activationConstraint: { delay: 300, tolerance: 10 } }),
     useSensor(MouseSensor, { activationConstraint: { distance: 4 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   )
 
   const onDragEnd = async (e: DragEndEvent) => {
     const activeId = e.active.id as string
     const overId = (e.over?.id as string) || null
     if (!overId || activeId === overId) return
-    const order = incompleteItems.map(it => it.item_id)
+    const order = incompleteItems.map((it) => it.item_id)
     const from = order.indexOf(activeId)
     const to = order.indexOf(overId)
     if (from < 0 || to < 0) return
@@ -155,13 +215,15 @@ export const ListPage: React.FC = () => {
 
     const prevData = qc.getQueryData<ListItem[]>(key)
     if (prevData) {
-      const map = new Map(prevData.map(it => [it.item_id, it]))
+      const map = new Map(prevData.map((it) => [it.item_id, it]))
       // Map new order to index so the local `sortedItems` derivation keeps them stable
-      const nextIncomplete = nextOrder.map((id, index) => {
-        const item = map.get(id)!
-        return { ...item, order: index }
-      }).filter(Boolean) as ListItem[]
-      const nextCompleted = prevData.filter(it => it.completed)
+      const nextIncomplete = nextOrder
+        .map((id, index) => {
+          const item = map.get(id)!
+          return { ...item, order: index }
+        })
+        .filter(Boolean) as ListItem[]
+      const nextCompleted = prevData.filter((it) => it.completed)
       qc.setQueryData<ListItem[]>(key, [...nextIncomplete, ...nextCompleted])
     }
 
@@ -176,14 +238,18 @@ export const ListPage: React.FC = () => {
   }
 
   const SortableRow: React.FC<{ it: ListItem; children: React.ReactNode }> = ({ it, children }) => {
-    const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: it.item_id })
+    const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
+      id: it.item_id,
+    })
     const style = {
       transform: CSS.Transform.toString(transform),
       transition,
     } as React.CSSProperties
     return (
       <div ref={setNodeRef} style={style} className="sortable-row">
-        <span className="drag-handle" {...attributes} {...listeners} aria-label="Drag to reorder"><DotsSixVertical /></span>
+        <span className="drag-handle" {...attributes} {...listeners} aria-label="Drag to reorder">
+          <DotsSixVertical />
+        </span>
         <div style={{ flex: 1, minWidth: 0 }}>{children}</div>
       </div>
     )
@@ -199,7 +265,6 @@ export const ListPage: React.FC = () => {
       navigate('/app', { replace: true })
     }
   }, [listsQuery.isSuccess, listsQuery.isFetching, listMeta, navigate])
-
 
   const onCreateItem = (val?: string) => {
     const text = (val || newDesc).trim()
@@ -228,9 +293,10 @@ export const ListPage: React.FC = () => {
       await clearListItems(apiKey!, roomId!, listId)
       await qc.invalidateQueries({ queryKey: ['list-items', listId] })
       msgApi.success('Completed items cleared to pantry')
-    } catch (e: any) { msgApi.error(e?.message || 'Failed to clear items') }
+    } catch (e: any) {
+      msgApi.error(e?.message || 'Failed to clear items')
+    }
   }
-
 
   const onToggleComplete = async (it: ListItem) => {
     if (savingItemId === it.item_id || editingItemId === it.item_id) return
@@ -245,7 +311,9 @@ export const ListPage: React.FC = () => {
         }
       }
       await qc.invalidateQueries({ queryKey: ['list-items', listId] })
-    } catch (e: any) { msgApi.error(e?.message || 'Failed to update item') }
+    } catch (e: any) {
+      msgApi.error(e?.message || 'Failed to update item')
+    }
   }
 
   const onDeleteItem = async (it: ListItem) => {
@@ -253,7 +321,9 @@ export const ListPage: React.FC = () => {
     try {
       await deleteListItem(apiKey!, roomId!, listId, it.item_id)
       await qc.invalidateQueries({ queryKey: ['list-items', listId] })
-    } catch (e: any) { msgApi.error(e?.message || 'Failed to delete item') }
+    } catch (e: any) {
+      msgApi.error(e?.message || 'Failed to delete item')
+    }
   }
 
   const startEdit = (it: ListItem) => {
@@ -268,18 +338,20 @@ export const ListPage: React.FC = () => {
     // Smart parsing on edit
     const { description, quantity, unit } = parseInput(trimmed)
 
-    const isSame = description === it.description &&
-      quantity === (it.quantity || "") &&
-      unit === (it.unit || "")
+    const isSame =
+      description === it.description && quantity === (it.quantity || '') && unit === (it.unit || '')
 
-    if (isSame) { setEditingItemId(null); return }
+    if (isSame) {
+      setEditingItemId(null)
+      return
+    }
 
     try {
       setSavingItemId(it.item_id)
       await updateListItem(apiKey!, roomId!, listId, it.item_id, {
         description,
         quantity,
-        unit
+        unit,
       })
       setEditingItemId(null)
       await qc.invalidateQueries({ queryKey: ['list-items', listId] })
@@ -300,13 +372,17 @@ export const ListPage: React.FC = () => {
         show('List is successfully deleted')
         navigate('/app')
       }
-    } catch (e: any) { msgApi.error(e?.message || 'Failed to vote deletion') }
+    } catch (e: any) {
+      msgApi.error(e?.message || 'Failed to vote deletion')
+    }
   }
   const onCancelVote = async () => {
     try {
       await cancelListDeletion(apiKey!, roomId!, listId)
       await qc.invalidateQueries({ queryKey: ['lists', roomId] })
-    } catch (e: any) { msgApi.error(e?.message || 'Failed to cancel vote') }
+    } catch (e: any) {
+      msgApi.error(e?.message || 'Failed to cancel vote')
+    }
   }
 
   // Set the document title unconditionally (before any early returns)
@@ -318,7 +394,13 @@ export const ListPage: React.FC = () => {
 
   const isGroceryList = useMemo(() => {
     const name = listMeta?.name.toLowerCase() || ''
-    return name.includes('grocer') || name.includes('shop') || name.includes('pantry') || name.includes('market') || name.includes('food')
+    return (
+      name.includes('grocer') ||
+      name.includes('shop') ||
+      name.includes('pantry') ||
+      name.includes('market') ||
+      name.includes('food')
+    )
   }, [listMeta?.name])
 
   const getCategoryClass = (cat?: string) => {
@@ -368,20 +450,51 @@ export const ListPage: React.FC = () => {
     const id = requestAnimationFrame(update)
     const onResize = () => update()
     window.addEventListener('resize', onResize)
-    return () => { cancelAnimationFrame(id); window.removeEventListener('resize', onResize) }
+    return () => {
+      cancelAnimationFrame(id)
+      window.removeEventListener('resize', onResize)
+    }
   }, [activeTab, screens.md])
 
   if (meQuery.isLoading || listsQuery.isLoading || itemsQuery.isLoading) {
-    return <div className="container"><Card>Loading…</Card></div>
+    return (
+      <div className="container">
+        <Card>Loading…</Card>
+      </div>
+    )
   }
   if (!roomId) {
-    return <div className="container"><Card><Alert type="error" message="List not found." showIcon /><div className="spacer" /><Button onClick={() => navigate('/app')} icon={<ArrowLeft />}>Back to House</Button></Card></div>
+    return (
+      <div className="container">
+        <Card>
+          <Alert type="error" message="List not found." showIcon />
+          <div className="spacer" />
+          <Button onClick={() => navigate('/app')} icon={<ArrowLeft />}>
+            Back to House
+          </Button>
+        </Card>
+      </div>
+    )
   }
   if (!listMeta) {
     if (redirecting || hadListRef.current) {
-      return <div className="container"><Card>Redirecting…</Card></div>
+      return (
+        <div className="container">
+          <Card>Redirecting…</Card>
+        </div>
+      )
     }
-    return <div className="container"><Card><Alert type="error" message="List not found." showIcon /><div className="spacer" /><Button onClick={() => navigate('/app')} icon={<ArrowLeft />}>Back to House</Button></Card></div>
+    return (
+      <div className="container">
+        <Card>
+          <Alert type="error" message="List not found." showIcon />
+          <div className="spacer" />
+          <Button onClick={() => navigate('/app')} icon={<ArrowLeft />}>
+            Back to House
+          </Button>
+        </Card>
+      </div>
+    )
   }
 
   return (
@@ -395,22 +508,45 @@ export const ListPage: React.FC = () => {
             <Space direction="vertical" style={{ width: '100%' }} size="small">
               <div className="list-header-grid">
                 <div className="list-header-title">
-                  <Typography.Title level={2} style={{ margin: 0, lineHeight: 1.2, display: 'flex', alignItems: 'center' }}>
+                  <Typography.Title
+                    level={2}
+                    style={{ margin: 0, lineHeight: 1.2, display: 'flex', alignItems: 'center' }}
+                  >
                     {listMeta.icon ? (
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 44, height: 44, background: 'var(--panel-subtle)', border: '1px solid var(--border)', borderRadius: '50%', fontSize: 22, flexShrink: 0, marginRight: 12 }}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: 44,
+                          height: 44,
+                          background: 'var(--panel-subtle)',
+                          border: '1px solid var(--border)',
+                          borderRadius: '50%',
+                          fontSize: 22,
+                          flexShrink: 0,
+                          marginRight: 12,
+                        }}
+                      >
                         {toEmoji(listMeta.icon)}
                       </div>
                     ) : null}
                     {listMeta.name}
                   </Typography.Title>
-                  <Typography.Text className="list-meta">Updated {timeAgo(listMeta.updated_at)}</Typography.Text>
+                  <Typography.Text className="list-meta">
+                    Updated {timeAgo(listMeta.updated_at)}
+                  </Typography.Text>
                   {incompleteCount > 0 && (
                     <Typography.Text className="list-meta">
-                      {incompleteCount === 1 ? '1 unchecked item' : `${incompleteCount} unchecked items`}
+                      {incompleteCount === 1
+                        ? '1 unchecked item'
+                        : `${incompleteCount} unchecked items`}
                     </Typography.Text>
                   )}
                   {listMeta.description && (
-                    <Typography.Text className="list-description">{listMeta.description}</Typography.Text>
+                    <Typography.Text className="list-description">
+                      {listMeta.description}
+                    </Typography.Text>
                   )}
                 </div>
                 <div className="list-actions">
@@ -423,20 +559,22 @@ export const ListPage: React.FC = () => {
                       {groupByCat ? 'Ungroup' : 'Group'}
                     </Button>
                   )}
-                  <Button onClick={() => navigate('/app')} icon={<ArrowLeft />} shape="round">Back</Button>
+                  <Button onClick={() => navigate('/app')} icon={<ArrowLeft />} shape="round">
+                    Back
+                  </Button>
                   <Dropdown
-                    trigger={["click"]}
+                    trigger={['click']}
                     menu={{
                       items: [
                         {
                           key: 'toggle-completed',
                           label: includeCompleted ? 'Hide completed' : 'Show completed',
-                          icon: includeCompleted ? <EyeSlash size={18} /> : <Eye size={18} />
+                          icon: includeCompleted ? <EyeSlash size={18} /> : <Eye size={18} />,
                         },
                         {
                           key: 'clear-completed',
                           label: 'Clear completed',
-                          icon: <Broom size={18} />
+                          icon: <Broom size={18} />,
                         },
                         { type: 'divider' },
                         ...(myVote(listMeta)
@@ -444,14 +582,25 @@ export const ListPage: React.FC = () => {
                           : [{ key: 'vote', label: 'Vote to delete', danger: true }]),
                       ],
                       onClick: ({ key }) => {
-                        if (key === 'toggle-completed') setIncludeCompleted(!includeCompleted);
-                        if (key === 'clear-completed') onClearCompleted();
-                        if (key === 'vote') { onVoteDelete(); show('Vote recorded'); }
-                        if (key === 'cancel') { onCancelVote(); show('Vote canceled'); }
+                        if (key === 'toggle-completed') setIncludeCompleted(!includeCompleted)
+                        if (key === 'clear-completed') onClearCompleted()
+                        if (key === 'vote') {
+                          onVoteDelete()
+                          show('Vote recorded')
+                        }
+                        if (key === 'cancel') {
+                          onCancelVote()
+                          show('Vote canceled')
+                        }
                       },
                     }}
                   >
-                    <Button icon={<DotsThreeVertical />} type="text" shape="circle" aria-label="More" />
+                    <Button
+                      icon={<DotsThreeVertical />}
+                      type="text"
+                      shape="circle"
+                      aria-label="More"
+                    />
                   </Dropdown>
                 </div>
               </div>
@@ -459,22 +608,45 @@ export const ListPage: React.FC = () => {
           ) : (
             <div className="list-header-grid">
               <div className="list-header-title">
-                <Typography.Title level={2} style={{ margin: 0, lineHeight: 1.2, display: 'flex', alignItems: 'center' }}>
+                <Typography.Title
+                  level={2}
+                  style={{ margin: 0, lineHeight: 1.2, display: 'flex', alignItems: 'center' }}
+                >
                   {listMeta.icon ? (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 44, height: 44, background: 'var(--panel-subtle)', border: '1px solid var(--border)', borderRadius: '50%', fontSize: 22, flexShrink: 0, marginRight: 12 }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: 44,
+                        height: 44,
+                        background: 'var(--panel-subtle)',
+                        border: '1px solid var(--border)',
+                        borderRadius: '50%',
+                        fontSize: 22,
+                        flexShrink: 0,
+                        marginRight: 12,
+                      }}
+                    >
                       {toEmoji(listMeta.icon)}
                     </div>
                   ) : null}
                   {listMeta.name}
                 </Typography.Title>
-                <Typography.Text className="list-meta">Updated {timeAgo(listMeta.updated_at)}</Typography.Text>
+                <Typography.Text className="list-meta">
+                  Updated {timeAgo(listMeta.updated_at)}
+                </Typography.Text>
                 {incompleteCount > 0 && (
                   <Typography.Text className="list-meta">
-                    {incompleteCount === 1 ? '1 unchecked item' : `${incompleteCount} unchecked items`}
+                    {incompleteCount === 1
+                      ? '1 unchecked item'
+                      : `${incompleteCount} unchecked items`}
                   </Typography.Text>
                 )}
                 {listMeta.description && (
-                  <Typography.Text className="list-description">{listMeta.description}</Typography.Text>
+                  <Typography.Text className="list-description">
+                    {listMeta.description}
+                  </Typography.Text>
                 )}
               </div>
               <div className="list-actions">
@@ -487,20 +659,22 @@ export const ListPage: React.FC = () => {
                     {groupByCat ? 'Ungroup categories' : 'Group by category'}
                   </Button>
                 )}
-                <Button onClick={() => navigate('/app')} icon={<ArrowLeft />} shape="round">Back</Button>
+                <Button onClick={() => navigate('/app')} icon={<ArrowLeft />} shape="round">
+                  Back
+                </Button>
                 <Dropdown
-                  trigger={["click"]}
+                  trigger={['click']}
                   menu={{
                     items: [
                       {
                         key: 'toggle-completed',
                         label: includeCompleted ? 'Hide completed' : 'Show completed',
-                        icon: includeCompleted ? <EyeSlash size={18} /> : <Eye size={18} />
+                        icon: includeCompleted ? <EyeSlash size={18} /> : <Eye size={18} />,
                       },
                       {
                         key: 'clear-completed',
                         label: 'Clear completed',
-                        icon: <Broom size={18} />
+                        icon: <Broom size={18} />,
                       },
                       { type: 'divider' },
                       ...(myVote(listMeta)
@@ -508,14 +682,25 @@ export const ListPage: React.FC = () => {
                         : [{ key: 'vote', label: 'Vote to delete', danger: true }]),
                     ],
                     onClick: ({ key }) => {
-                      if (key === 'toggle-completed') setIncludeCompleted(!includeCompleted);
-                      if (key === 'clear-completed') onClearCompleted();
-                      if (key === 'vote') { onVoteDelete(); show('Vote recorded'); }
-                      if (key === 'cancel') { onCancelVote(); show('Vote canceled'); }
+                      if (key === 'toggle-completed') setIncludeCompleted(!includeCompleted)
+                      if (key === 'clear-completed') onClearCompleted()
+                      if (key === 'vote') {
+                        onVoteDelete()
+                        show('Vote recorded')
+                      }
+                      if (key === 'cancel') {
+                        onCancelVote()
+                        show('Vote canceled')
+                      }
                     },
                   }}
                 >
-                  <Button icon={<DotsThreeVertical />} type="text" shape="circle" aria-label="More" />
+                  <Button
+                    icon={<DotsThreeVertical />}
+                    type="text"
+                    shape="circle"
+                    aria-label="More"
+                  />
                 </Dropdown>
               </div>
             </div>
@@ -539,18 +724,35 @@ export const ListPage: React.FC = () => {
                       {itemsQuery.isLoading ? (
                         <Skeleton active paragraph={{ rows: 4 }} />
                       ) : items.length === 0 ? (
-                        <div className="empty-state"><Plus size={20} style={{ color: 'var(--color-primary)' }} />
-                          <Typography.Text type="secondary">No items yet. Add your first item below.</Typography.Text>
+                        <div className="empty-state">
+                          <Plus size={20} style={{ color: 'var(--color-primary)' }} />
+                          <Typography.Text type="secondary">
+                            No items yet. Add your first item below.
+                          </Typography.Text>
                         </div>
                       ) : (
                         <>
-                          {incompleteItems.length > 0 && (
-                            groupByCat && incompleteGrouped ? (
+                          {incompleteItems.length > 0 &&
+                            (groupByCat && incompleteGrouped ? (
                               <div className="grouped-sections">
                                 {Object.entries(incompleteGrouped).map(([cat, items]) => (
-                                  <div key={cat} className="category-section" style={{ marginBottom: 24 }}>
-                                    <div className="category-section-header" style={{ marginBottom: 8 }}>
-                                      <Tag className={`category-tag ${getCategoryClass(cat)}`} style={{ fontSize: '12px', padding: '2px 10px', fontWeight: 600 }}>
+                                  <div
+                                    key={cat}
+                                    className="category-section"
+                                    style={{ marginBottom: 24 }}
+                                  >
+                                    <div
+                                      className="category-section-header"
+                                      style={{ marginBottom: 8 }}
+                                    >
+                                      <Tag
+                                        className={`category-tag ${getCategoryClass(cat)}`}
+                                        style={{
+                                          fontSize: '12px',
+                                          padding: '2px 10px',
+                                          fontWeight: 600,
+                                        }}
+                                      >
                                         {cat.toUpperCase()}
                                       </Tag>
                                     </div>
@@ -568,29 +770,62 @@ export const ListPage: React.FC = () => {
                                               icon={<Trash />}
                                               onClick={() => onDeleteItem(it)}
                                               style={{ paddingInline: 8 }}
-                                              disabled={savingItemId === it.item_id || editingItemId === it.item_id}
-                                            />
+                                              disabled={
+                                                savingItemId === it.item_id ||
+                                                editingItemId === it.item_id
+                                              }
+                                            />,
                                           ]}
                                         >
                                           <div className="item-row">
-                                            <span ref={setCheckboxRef(it.item_id)} className="checkbox-anchor">
-                                              <Checkbox checked={it.completed} onChange={() => onToggleComplete(it)} disabled={savingItemId === it.item_id || editingItemId === it.item_id} />
+                                            <span
+                                              ref={setCheckboxRef(it.item_id)}
+                                              className="checkbox-anchor"
+                                            >
+                                              <Checkbox
+                                                checked={it.completed}
+                                                onChange={() => onToggleComplete(it)}
+                                                disabled={
+                                                  savingItemId === it.item_id ||
+                                                  editingItemId === it.item_id
+                                                }
+                                              />
                                             </span>
-                                            <div className="item-text" onClick={(e) => { e.stopPropagation(); startEdit(it) }}>
+                                            <div
+                                              className="item-text"
+                                              onClick={(e) => {
+                                                e.stopPropagation()
+                                                startEdit(it)
+                                              }}
+                                            >
                                               {editingItemId === it.item_id ? (
                                                 <InlineEditText
-                                                  value={`${it.quantity ? it.quantity + (it.unit ? ' ' + it.unit : '') + ' ' : (it.unit ? it.unit + ' ' : '')}${it.description}`}
+                                                  value={`${it.quantity ? it.quantity + (it.unit ? ' ' + it.unit : '') + ' ' : it.unit ? it.unit + ' ' : ''}${it.description}`}
                                                   onSubmit={(val) => submitEdit(it, val)}
                                                   disabled={savingItemId === it.item_id}
                                                 />
                                               ) : (
-                                                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                                  <div style={{ textDecoration: it.completed ? 'line-through' : 'none', fontWeight: 400, fontSize: '15px' }}>
+                                                <div
+                                                  style={{
+                                                    display: 'flex',
+                                                    flexDirection: 'column',
+                                                  }}
+                                                >
+                                                  <div
+                                                    style={{
+                                                      textDecoration: it.completed
+                                                        ? 'line-through'
+                                                        : 'none',
+                                                      fontWeight: 400,
+                                                      fontSize: '15px',
+                                                    }}
+                                                  >
                                                     {it.description}
                                                   </div>
                                                   {(it.quantity || it.unit) && (
                                                     <div className="qty-unit-line">
-                                                      <span className="qty-label">Quantity:</span> {it.quantity} {it.unit}
+                                                      <span className="qty-label">Quantity:</span>{' '}
+                                                      {it.quantity} {it.unit}
                                                     </div>
                                                   )}
                                                 </div>
@@ -605,7 +840,10 @@ export const ListPage: React.FC = () => {
                               </div>
                             ) : (
                               <DndContext sensors={sensors} onDragEnd={onDragEnd}>
-                                <SortableContext items={incompleteItems.map(it => it.item_id)} strategy={verticalListSortingStrategy}>
+                                <SortableContext
+                                  items={incompleteItems.map((it) => it.item_id)}
+                                  strategy={verticalListSortingStrategy}
+                                >
                                   <AntList
                                     itemLayout="horizontal"
                                     className="items-list"
@@ -622,37 +860,79 @@ export const ListPage: React.FC = () => {
                                             title="Delete item"
                                             onClick={() => onDeleteItem(it)}
                                             style={{ paddingInline: 8 }}
-                                            disabled={savingItemId === it.item_id || editingItemId === it.item_id}
-                                          />
+                                            disabled={
+                                              savingItemId === it.item_id ||
+                                              editingItemId === it.item_id
+                                            }
+                                          />,
                                         ]}
                                       >
                                         <SortableRow it={it}>
                                           <div className="item-row">
-                                            <span ref={setCheckboxRef(it.item_id)} className="checkbox-anchor">
-                                              <Checkbox checked={it.completed} onChange={() => onToggleComplete(it)} disabled={savingItemId === it.item_id || editingItemId === it.item_id} />
+                                            <span
+                                              ref={setCheckboxRef(it.item_id)}
+                                              className="checkbox-anchor"
+                                            >
+                                              <Checkbox
+                                                checked={it.completed}
+                                                onChange={() => onToggleComplete(it)}
+                                                disabled={
+                                                  savingItemId === it.item_id ||
+                                                  editingItemId === it.item_id
+                                                }
+                                              />
                                             </span>
-                                            <div className="item-text" onClick={(e) => { e.stopPropagation(); startEdit(it) }}>
+                                            <div
+                                              className="item-text"
+                                              onClick={(e) => {
+                                                e.stopPropagation()
+                                                startEdit(it)
+                                              }}
+                                            >
                                               {editingItemId === it.item_id ? (
                                                 <InlineEditText
-                                                  value={`${it.quantity ? it.quantity + (it.unit ? ' ' + it.unit : '') + ' ' : (it.unit ? it.unit + ' ' : '')}${it.description}`}
+                                                  value={`${it.quantity ? it.quantity + (it.unit ? ' ' + it.unit : '') + ' ' : it.unit ? it.unit + ' ' : ''}${it.description}`}
                                                   onSubmit={(val) => submitEdit(it, val)}
                                                   disabled={savingItemId === it.item_id}
                                                 />
                                               ) : (
-                                                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                                  <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                                    <div style={{ textDecoration: it.completed ? 'line-through' : 'none', fontWeight: 400, fontSize: '15px' }}>
+                                                <div
+                                                  style={{
+                                                    display: 'flex',
+                                                    flexDirection: 'column',
+                                                  }}
+                                                >
+                                                  <div
+                                                    style={{
+                                                      display: 'flex',
+                                                      flexDirection: 'column',
+                                                    }}
+                                                  >
+                                                    <div
+                                                      style={{
+                                                        textDecoration: it.completed
+                                                          ? 'line-through'
+                                                          : 'none',
+                                                        fontWeight: 400,
+                                                        fontSize: '15px',
+                                                      }}
+                                                    >
                                                       {it.description}
                                                     </div>
                                                     {(it.quantity || it.unit) && (
                                                       <div className="qty-unit-line">
-                                                        <span className="qty-label">Quantity:</span> {it.quantity} {it.unit}
+                                                        <span className="qty-label">Quantity:</span>{' '}
+                                                        {it.quantity} {it.unit}
                                                       </div>
                                                     )}
                                                   </div>
                                                   {isGroceryList && it.category && (
                                                     <div style={{ marginTop: 2 }}>
-                                                      <Tag className={`category-tag ${getCategoryClass(it.category)}`}>{it.category}</Tag>
+                                                      <Tag
+                                                        className={`category-tag ${getCategoryClass(it.category)}`}
+                                                      >
+                                                        {it.category}
+                                                      </Tag>
                                                     </div>
                                                   )}
                                                 </div>
@@ -665,8 +945,7 @@ export const ListPage: React.FC = () => {
                                   />
                                 </SortableContext>
                               </DndContext>
-                            )
-                          )}
+                            ))}
                           {includeCompleted && completedItems.length > 0 && (
                             <>
                               <div className="completed-header">
@@ -688,36 +967,72 @@ export const ListPage: React.FC = () => {
                                         title="Delete item"
                                         onClick={() => onDeleteItem(it)}
                                         style={{ paddingInline: 8 }}
-                                        disabled={savingItemId === it.item_id || editingItemId === it.item_id}
-                                      />
+                                        disabled={
+                                          savingItemId === it.item_id ||
+                                          editingItemId === it.item_id
+                                        }
+                                      />,
                                     ]}
                                   >
                                     <div className="item-row item-row-completed">
-                                      <span ref={setCheckboxRef(it.item_id)} className="checkbox-anchor">
-                                        <Checkbox checked={it.completed} onChange={() => onToggleComplete(it)} disabled={savingItemId === it.item_id || editingItemId === it.item_id} />
+                                      <span
+                                        ref={setCheckboxRef(it.item_id)}
+                                        className="checkbox-anchor"
+                                      >
+                                        <Checkbox
+                                          checked={it.completed}
+                                          onChange={() => onToggleComplete(it)}
+                                          disabled={
+                                            savingItemId === it.item_id ||
+                                            editingItemId === it.item_id
+                                          }
+                                        />
                                       </span>
-                                      <div className="item-text" onClick={(e) => { e.stopPropagation(); startEdit(it) }}>
+                                      <div
+                                        className="item-text"
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          startEdit(it)
+                                        }}
+                                      >
                                         {editingItemId === it.item_id ? (
                                           <InlineEditText
-                                            value={`${it.quantity ? it.quantity + (it.unit ? ' ' + it.unit : '') + ' ' : (it.unit ? it.unit + ' ' : '')}${it.description}`}
+                                            value={`${it.quantity ? it.quantity + (it.unit ? ' ' + it.unit : '') + ' ' : it.unit ? it.unit + ' ' : ''}${it.description}`}
                                             onSubmit={(val) => submitEdit(it, val)}
                                             disabled={savingItemId === it.item_id}
                                           />
                                         ) : (
                                           <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                            <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                              <div style={{ textDecoration: 'line-through', opacity: 0.6, fontWeight: 400, fontSize: '15px' }}>
+                                            <div
+                                              style={{ display: 'flex', flexDirection: 'column' }}
+                                            >
+                                              <div
+                                                style={{
+                                                  textDecoration: 'line-through',
+                                                  opacity: 0.6,
+                                                  fontWeight: 400,
+                                                  fontSize: '15px',
+                                                }}
+                                              >
                                                 {it.description}
                                               </div>
                                               {(it.quantity || it.unit) && (
-                                                <div className="qty-unit-line" style={{ opacity: 0.6 }}>
-                                                  <span className="qty-label">Quantity:</span> {it.quantity} {it.unit}
+                                                <div
+                                                  className="qty-unit-line"
+                                                  style={{ opacity: 0.6 }}
+                                                >
+                                                  <span className="qty-label">Quantity:</span>{' '}
+                                                  {it.quantity} {it.unit}
                                                 </div>
                                               )}
                                             </div>
                                             {isGroceryList && it.category && (
                                               <div style={{ marginTop: 2, opacity: 0.6 }}>
-                                                <Tag className={`category-tag ${getCategoryClass(it.category)}`}>{it.category}</Tag>
+                                                <Tag
+                                                  className={`category-tag ${getCategoryClass(it.category)}`}
+                                                >
+                                                  {it.category}
+                                                </Tag>
                                               </div>
                                             )}
                                           </div>
@@ -742,11 +1057,17 @@ export const ListPage: React.FC = () => {
                             placeholder="Add an item"
                             autoSize={{ minRows: 1, maxRows: 3 }}
                             onKeyDown={(e) => {
-                              const ne = e as unknown as { key: string; shiftKey: boolean; nativeEvent?: any; isComposing?: boolean; preventDefault: () => void }
-                              const composing = (
-                                (ne.nativeEvent && (ne.nativeEvent.isComposing || ne.nativeEvent.keyCode === 229)) ||
-                                (!!(ne as any).isComposing)
-                              )
+                              const ne = e as unknown as {
+                                key: string
+                                shiftKey: boolean
+                                nativeEvent?: any
+                                isComposing?: boolean
+                                preventDefault: () => void
+                              }
+                              const composing =
+                                (ne.nativeEvent &&
+                                  (ne.nativeEvent.isComposing || ne.nativeEvent.keyCode === 229)) ||
+                                !!(ne as any).isComposing
                               if (ne.key === 'Enter' && !ne.shiftKey && !composing) {
                                 e.preventDefault()
                                 onCreateItem()
@@ -782,8 +1103,24 @@ export const ListPage: React.FC = () => {
                         rows={12}
                       />
                       <div className="notes-actions">
-                        <Button danger onClick={() => setNotesText('')} disabled={!notesText.trim()} icon={<X />} shape="round">Clear all</Button>
-                        <Button type="primary" onClick={onSaveNotes} disabled={!notesDirty || notesSaving} icon={<FloppyDisk />} shape="round">Save</Button>
+                        <Button
+                          danger
+                          onClick={() => setNotesText('')}
+                          disabled={!notesText.trim()}
+                          icon={<X />}
+                          shape="round"
+                        >
+                          Clear all
+                        </Button>
+                        <Button
+                          type="primary"
+                          onClick={onSaveNotes}
+                          disabled={!notesDirty || notesSaving}
+                          icon={<FloppyDisk />}
+                          shape="round"
+                        >
+                          Save
+                        </Button>
                       </div>
                     </Space>
                   ),

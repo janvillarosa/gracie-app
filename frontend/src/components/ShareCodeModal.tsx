@@ -10,10 +10,18 @@ type Props = {
   title?: string
 }
 
-export const ShareCodeModal: React.FC<Props> = ({ open, token, onClose, onRotate, title = 'Share Code' }) => {
+export const ShareCodeModal: React.FC<Props> = ({
+  open,
+  token,
+  onClose,
+  onRotate,
+  title = 'Share Code',
+}) => {
   const onCopy = async () => {
     if (!token) return
-    try { await navigator.clipboard.writeText(token) } catch {}
+    try {
+      await navigator.clipboard.writeText(token)
+    } catch {}
   }
 
   return (
@@ -23,8 +31,12 @@ export const ShareCodeModal: React.FC<Props> = ({ open, token, onClose, onRotate
       onCancel={onClose}
       footer={
         <Space>
-          <Button onClick={onClose} icon={<X />}>Close</Button>
-          <Button onClick={onRotate} icon={<ArrowClockwise />}>Get new code</Button>
+          <Button onClick={onClose} icon={<X />}>
+            Close
+          </Button>
+          <Button onClick={onRotate} icon={<ArrowClockwise />}>
+            Get new code
+          </Button>
         </Space>
       }
     >
@@ -34,7 +46,9 @@ export const ShareCodeModal: React.FC<Props> = ({ open, token, onClose, onRotate
         </Typography.Paragraph>
         <div style={{ display: 'flex', gap: 8 }}>
           <Input value={token ?? ''} readOnly aria-label="Share code" />
-          <Button onClick={onCopy} disabled={!token}>Copy</Button>
+          <Button onClick={onCopy} disabled={!token}>
+            Copy
+          </Button>
         </div>
       </Space>
     </Modal>
@@ -42,4 +56,3 @@ export const ShareCodeModal: React.FC<Props> = ({ open, token, onClose, onRotate
 }
 
 export default ShareCodeModal
-

@@ -32,7 +32,7 @@ func TestLoadEnvOverrides(t *testing.T) {
 
 func TestEmbeddingDefaults(t *testing.T) {
 	for _, k := range []string{"EMBEDDING_ENABLED", "EMBEDDING_MODEL_PATH", "EMBED_THRESHOLD", "EMBED_TOPK"} {
-		os.Unsetenv(k)
+		_ = os.Unsetenv(k)
 	}
 	cfg, err := Load()
 	if err != nil {

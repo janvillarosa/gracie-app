@@ -17,17 +17,27 @@ const setup = async (listItems: any[] = []) => {
   const listId = 'list-1'
   server.use(
     http.get('/api/me', () => {
-      return new Response(
-        JSON.stringify({ user_id: 'u1', name: 'Alice', room_id: roomId }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } }
-      )
+      return new Response(JSON.stringify({ user_id: 'u1', name: 'Alice', room_id: roomId }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
     }),
     http.get(`/api/rooms/${roomId}/lists`, () => {
       return new Response(
         JSON.stringify([
-          { list_id: listId, room_id: roomId, name: 'Groceries', description: '', icon: 'APPLE', deletion_votes: {}, is_deleted: false, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+          {
+            list_id: listId,
+            room_id: roomId,
+            name: 'Groceries',
+            description: '',
+            icon: 'APPLE',
+            deletion_votes: {},
+            is_deleted: false,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
         ]),
-        { status: 200, headers: { 'Content-Type': 'application/json' } }
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
       )
     }),
     http.get(`/api/rooms/${roomId}/lists/${listId}/items`, ({ request }) => {
@@ -37,8 +47,11 @@ const setup = async (listItems: any[] = []) => {
         return new Response(null, { status: 400 })
       }
       // Start with provided list items (default empty)
-      return new Response(JSON.stringify(listItems), { status: 200, headers: { 'Content-Type': 'application/json' } })
-    })
+      return new Response(JSON.stringify(listItems), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }),
   )
 
   const qc = new QueryClient()
@@ -51,7 +64,7 @@ const setup = async (listItems: any[] = []) => {
           </Routes>
         </QueryClientProvider>
       </AuthProvider>
-    </MemoryRouter>
+    </MemoryRouter>,
   )
 
   // Wait a tick for initial queries to settle in tests
@@ -67,9 +80,20 @@ describe('ListPage add bar', () => {
       http.post(`/api/rooms/${roomId}/lists/${listId}/items`, async ({ request }) => {
         created += 1
         const body = (await request.json()) as any
-        const payload = { item_id: 'it-' + created, list_id: listId, room_id: roomId, description: body.description, completed: false, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
-        return new Response(JSON.stringify(payload), { status: 201, headers: { 'Content-Type': 'application/json' } })
-      })
+        const payload = {
+          item_id: 'it-' + created,
+          list_id: listId,
+          room_id: roomId,
+          description: body.description,
+          completed: false,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }
+        return new Response(JSON.stringify(payload), {
+          status: 201,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }),
     )
 
     const input = await screen.findByPlaceholderText('Add an item')
@@ -92,8 +116,11 @@ describe('ListPage add bar', () => {
     server.use(
       http.post(`/api/rooms/${roomId}/lists/${listId}/items`, () => {
         created += 1
-        return new Response(JSON.stringify({}), { status: 201, headers: { 'Content-Type': 'application/json' } })
-      })
+        return new Response(JSON.stringify({}), {
+          status: 201,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }),
     )
 
     const input = await screen.findByPlaceholderText('Add an item')
@@ -112,8 +139,11 @@ describe('ListPage add bar', () => {
     server.use(
       http.post(`/api/rooms/${roomId}/lists/${listId}/items`, () => {
         created += 1
-        return new Response(JSON.stringify({}), { status: 201, headers: { 'Content-Type': 'application/json' } })
-      })
+        return new Response(JSON.stringify({}), {
+          status: 201,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }),
     )
 
     const input = await screen.findByPlaceholderText('Add an item')
@@ -127,9 +157,33 @@ describe('ListPage add bar', () => {
   it('shows unchecked item count when present', async () => {
     const updatedAt = new Date().toISOString()
     const listItems = [
-      { item_id: 'a', list_id: 'list-1', room_id: 'room-1', description: 'Milk', completed: false, created_at: updatedAt, updated_at: updatedAt },
-      { item_id: 'b', list_id: 'list-1', room_id: 'room-1', description: 'Eggs', completed: true, created_at: updatedAt, updated_at: updatedAt },
-      { item_id: 'c', list_id: 'list-1', room_id: 'room-1', description: 'Bread', completed: false, created_at: updatedAt, updated_at: updatedAt },
+      {
+        item_id: 'a',
+        list_id: 'list-1',
+        room_id: 'room-1',
+        description: 'Milk',
+        completed: false,
+        created_at: updatedAt,
+        updated_at: updatedAt,
+      },
+      {
+        item_id: 'b',
+        list_id: 'list-1',
+        room_id: 'room-1',
+        description: 'Eggs',
+        completed: true,
+        created_at: updatedAt,
+        updated_at: updatedAt,
+      },
+      {
+        item_id: 'c',
+        list_id: 'list-1',
+        room_id: 'room-1',
+        description: 'Bread',
+        completed: false,
+        created_at: updatedAt,
+        updated_at: updatedAt,
+      },
     ]
     await setup(listItems)
     expect(await screen.findByText('2 unchecked items')).toBeInTheDocument()

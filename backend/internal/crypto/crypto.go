@@ -20,9 +20,8 @@ func LoadOrCreateKey(path string) ([]byte, error) {
     if _, err := io.ReadFull(crand.Reader, key); err != nil {
         return nil, err
     }
-    if err := os.MkdirAll(dirOf(path), 0o700); err != nil && !errors.Is(err, os.ErrExist) {
-        // ignore if cannot create dir; try write anyway
-    }
+    // Best-effort: create the parent dir; if it fails, WriteFile below surfaces the real error.
+    _ = os.MkdirAll(dirOf(path), 0o700)
     if err := os.WriteFile(path, key, 0o600); err != nil {
         return nil, err
     }

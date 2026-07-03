@@ -22,4 +22,3 @@ describe('CreateHouseModal', () => {
     expect(onSubmit).toHaveBeenCalledWith({ display_name: 'My House', description: 'Cozy' })
   })
 })
-

@@ -109,12 +109,6 @@ func (h *UserHandler) UpdateMePartial(w http.ResponseWriter, r *http.Request) {
     w.WriteHeader(http.StatusNoContent)
 }
 
-type changePasswordReq struct {
-    Current string `json:"current_password"`
-    Next    string `json:"new_password"`
-}
-
-
 type deleteReq struct {
     Confirm string `json:"confirm"`
 }

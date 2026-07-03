@@ -2,7 +2,6 @@ package auth
 
 import (
     "crypto/sha256"
-    "crypto/subtle"
     "encoding/hex"
     "net/http"
     "strings"
@@ -45,13 +44,6 @@ func ExtractBearer(r *http.Request) (string, bool) {
         return "", false
     }
     return token, true
-}
-
-func constantTimeEqual(a, b string) bool {
-    if len(a) != len(b) {
-        return false
-    }
-    return subtle.ConstantTimeCompare([]byte(a), []byte(b)) == 1
 }
 
 // DeriveLookup computes a deterministic hex-encoded SHA-256 of the API key.

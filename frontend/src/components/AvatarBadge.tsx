@@ -11,7 +11,7 @@ type Props = {
 
 export const AvatarBadge: React.FC<Props> = ({ seed, name, size = 20, style = 'miniavs' }) => {
   return (
-    <Tooltip title={name} trigger={["hover", "focus", "click"]} placement="top">
+    <Tooltip title={name} trigger={['hover', 'focus', 'click']} placement="top">
       <span role="img" aria-label={name} tabIndex={0} style={{ display: 'inline-flex' }}>
         <Avatar seed={seed} size={size} style={style} />
       </span>

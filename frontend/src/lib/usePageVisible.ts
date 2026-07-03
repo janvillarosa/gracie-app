@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 
 export function usePageVisible(): boolean {
-  const [visible, setVisible] = useState(() => typeof document !== 'undefined' ? document.visibilityState === 'visible' : true)
+  const [visible, setVisible] = useState(() =>
+    typeof document !== 'undefined' ? document.visibilityState === 'visible' : true,
+  )
 
   useEffect(() => {
     const onChange = () => setVisible(document.visibilityState === 'visible')
@@ -11,4 +13,3 @@ export function usePageVisible(): boolean {
 
   return visible
 }
-

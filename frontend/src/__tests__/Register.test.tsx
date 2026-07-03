@@ -9,7 +9,7 @@ describe('Register page', () => {
     render(
       <MemoryRouter>
         <Register />
-      </MemoryRouter>
+      </MemoryRouter>,
     )
     const button = screen.getByRole('button', { name: /create account/i })
     expect(button).toBeDisabled()
@@ -28,7 +28,7 @@ describe('Register page', () => {
       http.post('/api/auth/register', () => {
         called = true
         return new Response(null, { status: 201 })
-      })
+      }),
     )
 
     fireEvent.click(button)

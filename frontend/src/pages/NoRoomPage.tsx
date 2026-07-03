@@ -1,6 +1,12 @@
 import React, { useMemo, useState } from 'react'
 import { useAuth } from '@auth/AuthProvider'
-import { createRoom, updateRoomSettings, isConflict, isForbidden, joinRoomByToken } from '@api/endpoints'
+import {
+  createRoom,
+  updateRoomSettings,
+  isConflict,
+  isForbidden,
+  joinRoomByToken,
+} from '@api/endpoints'
 import { Card, Typography, Form, Input, Button, Space, Grid, Divider, message } from 'antd'
 import { Plus, UsersThree } from '@phosphor-icons/react'
 import { CreateHouseModal } from '@components/CreateHouseModal'
@@ -15,19 +21,25 @@ export const NoRoomPage: React.FC = () => {
   const navigate = useNavigate()
   useDocumentTitle('Join or Create a House')
   const [token, setToken] = useState('')
-  
+
   const [loading, setLoading] = useState(false)
   const [createOpen, setCreateOpen] = useState(false)
   const [creating, setCreating] = useState(false)
 
-  const tokenValid = useMemo(() => token.length === 5 && [...token].every((c) => TOKEN_ALPHABET.includes(c)), [token])
+  const tokenValid = useMemo(
+    () => token.length === 5 && [...token].every((c) => TOKEN_ALPHABET.includes(c)),
+    [token],
+  )
 
   const onCreateWithDetails = async (vals: { display_name?: string; description?: string }) => {
     setCreating(true)
     try {
       await createRoom(apiKey!)
       if (vals.display_name || typeof vals.description === 'string') {
-        await updateRoomSettings(apiKey!, { display_name: vals.display_name, description: vals.description ?? '' })
+        await updateRoomSettings(apiKey!, {
+          display_name: vals.display_name,
+          description: vals.description ?? '',
+        })
       }
       setCreateOpen(false)
       navigate('/app', { replace: true })
@@ -63,17 +75,31 @@ export const NoRoomPage: React.FC = () => {
         <Space direction="vertical" style={{ width: '100%' }} size="large">
           {isMobile ? (
             <Space direction="vertical" style={{ width: '100%' }} size="small">
-              <Typography.Title level={2} style={{ margin: 0 }}>You are not in a house yet</Typography.Title>
+              <Typography.Title level={2} style={{ margin: 0 }}>
+                You are not in a house yet
+              </Typography.Title>
             </Space>
           ) : (
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography.Title level={2} style={{ margin: 0 }}>You are not in a house yet</Typography.Title>
+              <Typography.Title level={2} style={{ margin: 0 }}>
+                You are not in a house yet
+              </Typography.Title>
             </div>
           )}
           <div className="section">
-            <Typography.Title level={3} style={{ marginTop: 0 }}>Create a new house</Typography.Title>
-            <Typography.Text className="no-room-subtitle">You will be the only member until someone joins.</Typography.Text>
-            <Button type="primary" onClick={() => setCreateOpen(true)} disabled={loading} icon={<Plus />} block>
+            <Typography.Title level={3} style={{ marginTop: 0 }}>
+              Create a new house
+            </Typography.Title>
+            <Typography.Text className="no-room-subtitle">
+              You will be the only member until someone joins.
+            </Typography.Text>
+            <Button
+              type="primary"
+              onClick={() => setCreateOpen(true)}
+              disabled={loading}
+              icon={<Plus />}
+              block
+            >
               New House
             </Button>
           </div>
@@ -81,31 +107,52 @@ export const NoRoomPage: React.FC = () => {
           <Divider className="no-room-divider" />
 
           <div className="section">
-            <Typography.Title level={3} style={{ marginTop: 0 }}>Join an existing house</Typography.Title>
+            <Typography.Title level={3} style={{ marginTop: 0 }}>
+              Join an existing house
+            </Typography.Title>
             <Form layout="vertical" onSubmitCapture={onJoin}>
               <Form.Item label="5-character code">
                 <div className="join-row">
                   <Input
                     placeholder="5-character code"
                     value={token}
-                    onChange={(e) => setToken(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+                    onChange={(e) =>
+                      setToken(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))
+                    }
                     maxLength={5}
                   />
                   {!isMobile && (
-                    <Button type="primary" htmlType="submit" disabled={!tokenValid || loading} icon={<UsersThree />}>Join house</Button>
+                    <Button
+                      type="primary"
+                      htmlType="submit"
+                      disabled={!tokenValid || loading}
+                      icon={<UsersThree />}
+                    >
+                      Join house
+                    </Button>
                   )}
                 </div>
               </Form.Item>
               {isMobile && (
-                <Button type="primary" htmlType="submit" disabled={!tokenValid || loading} icon={<UsersThree />} block>
+                <Button
+                  type="primary"
+                  htmlType="submit"
+                  disabled={!tokenValid || loading}
+                  icon={<UsersThree />}
+                  block
+                >
                   Join house
                 </Button>
               )}
             </Form>
           </div>
-          
         </Space>
-        <CreateHouseModal open={createOpen} onClose={() => setCreateOpen(false)} onSubmit={onCreateWithDetails} submitting={creating} />
+        <CreateHouseModal
+          open={createOpen}
+          onClose={() => setCreateOpen(false)}
+          onSubmit={onCreateWithDetails}
+          submitting={creating}
+        />
       </Card>
     </div>
   )

@@ -8,4 +8,3 @@ describe('validation', () => {
     expect(isValidDisplayName('a'.repeat(65))).toBe(false)
   })
 })
-

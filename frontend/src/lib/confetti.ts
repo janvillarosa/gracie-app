@@ -1,4 +1,8 @@
-export function confettiAt(x: number, y: number, opts?: { colors?: string[]; count?: number; durationMs?: number }) {
+export function confettiAt(
+  x: number,
+  y: number,
+  opts?: { colors?: string[]; count?: number; durationMs?: number },
+) {
   if (typeof document === 'undefined') return
   const colors = opts?.colors || ['#A094F2', '#7D6EF0', '#F3F78A', '#C7B090', '#FF7A90', '#74E0A6']
   const count = opts?.count ?? 40 // denser burst
@@ -10,7 +14,16 @@ export function confettiAt(x: number, y: number, opts?: { colors?: string[]; cou
   root.className = 'confetti-root'
   document.body.appendChild(root)
 
-  type Part = { el: HTMLDivElement; x: number; y: number; vx: number; vy: number; rot: number; vrot: number; life: number }
+  type Part = {
+    el: HTMLDivElement
+    x: number
+    y: number
+    vx: number
+    vy: number
+    rot: number
+    vrot: number
+    life: number
+  }
   const parts: Part[] = []
 
   for (let i = 0; i < count; i++) {
@@ -61,7 +74,9 @@ export function confettiAt(x: number, y: number, opts?: { colors?: string[]; cou
     if (elapsedMs < duration) {
       raf = requestAnimationFrame(tick)
     } else {
-      try { document.body.removeChild(root) } catch {}
+      try {
+        document.body.removeChild(root)
+      } catch {}
     }
   }
   raf = requestAnimationFrame(tick)

@@ -30,7 +30,14 @@ export const IconPicker: React.FC<Props> = ({ value, onChange }) => {
               type={selected ? 'primary' : 'default'}
               onClick={() => onChange(ic)}
               aria-pressed={selected}
-              style={{ width: 40, height: 40, padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+              style={{
+                width: 40,
+                height: 40,
+                padding: 0,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
             >
               <span style={{ fontSize: 20, lineHeight: 1 }}>{ICON_EMOJI[ic]}</span>
             </Button>

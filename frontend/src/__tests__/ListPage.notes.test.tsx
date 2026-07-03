@@ -13,21 +13,43 @@ const setup = async () => {
   const roomId = 'room-1'
   const listId = 'list-1'
   server.use(
-    http.get('/api/me', () => new Response(
-      JSON.stringify({ user_id: 'u1', name: 'Alice', room_id: roomId }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
-    )),
-    http.get(`/api/rooms/${roomId}/lists`, () => new Response(
-      JSON.stringify([
-        { list_id: listId, room_id: roomId, name: 'Groceries', description: '', notes: '', icon: 'APPLE', deletion_votes: {}, is_deleted: false, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-      ]),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
-    )),
+    http.get(
+      '/api/me',
+      () =>
+        new Response(JSON.stringify({ user_id: 'u1', name: 'Alice', room_id: roomId }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+    ),
+    http.get(
+      `/api/rooms/${roomId}/lists`,
+      () =>
+        new Response(
+          JSON.stringify([
+            {
+              list_id: listId,
+              room_id: roomId,
+              name: 'Groceries',
+              description: '',
+              notes: '',
+              icon: 'APPLE',
+              deletion_votes: {},
+              is_deleted: false,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            },
+          ]),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        ),
+    ),
     http.get(`/api/rooms/${roomId}/lists/${listId}/items`, ({ request }) => {
       const url = new URL(request.url)
       if (!url.searchParams.has('include_completed')) return new Response(null, { status: 400 })
-      return new Response(JSON.stringify([]), { status: 200, headers: { 'Content-Type': 'application/json' } })
-    })
+      return new Response(JSON.stringify([]), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }),
   )
   const qc = new QueryClient()
   render(
@@ -39,7 +61,7 @@ const setup = async () => {
           </Routes>
         </QueryClientProvider>
       </AuthProvider>
-    </MemoryRouter>
+    </MemoryRouter>,
   )
   await new Promise((r) => setTimeout(r, 30))
   return { roomId, listId }
@@ -51,10 +73,13 @@ describe('ListPage notes', () => {
     let patched = false
     server.use(
       http.patch(`/api/rooms/${roomId}/lists/${listId}`, async ({ request }) => {
-        const body = await request.json() as any
+        const body = (await request.json()) as any
         if (typeof body.notes === 'string') patched = true
-        return new Response(JSON.stringify({ ok: true }), { status: 200, headers: { 'Content-Type': 'application/json' } })
-      })
+        return new Response(JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }),
     )
 
     // Switch to Notes tab

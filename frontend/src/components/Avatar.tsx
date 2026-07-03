@@ -9,7 +9,13 @@ type Props = {
   className?: string
 }
 
-export const Avatar: React.FC<Props> = ({ seed, style = 'miniavs', size = 32, alt = 'Avatar', className }) => {
+export const Avatar: React.FC<Props> = ({
+  seed,
+  style = 'miniavs',
+  size = 32,
+  alt = 'Avatar',
+  className,
+}) => {
   const src = dicebearUrl(style, seed, size)
   return (
     <img
