@@ -6,22 +6,14 @@ import (
 )
 
 type Config struct {
-    Port        string
-    AWSRegion   string
-    DDBEndpoint string
-    UsersTable  string
-    RoomsTable  string
-    ListsTable  string
-    ListItemsTable string
-    EncKeyFile  string
+    Port           string
+    EncKeyFile     string
     APIKeyTTLHours int
-    // Store selection: "dynamo" (default) or "mongo"
-    DataStore   string
-    // Mongo settings (used when DataStore == "mongo")
-    MongoURI    string
-    MongoDB     string
+    // Mongo settings (the only supported store)
+    MongoURI string
+    MongoDB  string
     // AvatarSalt is used to derive deterministic avatar keys (HMAC of user_id).
-    AvatarSalt  string
+    AvatarSalt string
     // Embedding categorization
     EmbeddingEnabled   bool
     EmbeddingModelPath string
@@ -38,19 +30,12 @@ func getEnv(key, def string) string {
 
 func Load() (*Config, error) {
     cfg := &Config{
-        Port:        getEnv("PORT", "8080"),
-        AWSRegion:   getEnv("AWS_REGION", "us-east-1"),
-        DDBEndpoint: getEnv("DDB_ENDPOINT", "http://localhost:8000"),
-        UsersTable:  getEnv("USERS_TABLE", "Users"),
-        RoomsTable:  getEnv("ROOMS_TABLE", "Rooms"),
-        ListsTable:  getEnv("LISTS_TABLE", "Lists"),
-        ListItemsTable: getEnv("LIST_ITEMS_TABLE", "ListItems"),
-        EncKeyFile:  getEnv("ENC_KEY_FILE", "/app/secrets/enc.key"),
+        Port:           getEnv("PORT", "8080"),
+        EncKeyFile:     getEnv("ENC_KEY_FILE", "/app/secrets/enc.key"),
         APIKeyTTLHours: getEnvInt("API_KEY_TTL_HOURS", 720),
-        DataStore:   getEnv("DATA_STORE", "mongo"),
-        MongoURI:    getEnv("MONGODB_URI", "mongodb://localhost:27017"),
-        MongoDB:     getEnv("MONGODB_DB", "gracie"),
-        AvatarSalt:  getEnv("AVATAR_SALT", "local-avatar-salt"),
+        MongoURI:       getEnv("MONGODB_URI", "mongodb://localhost:27017"),
+        MongoDB:        getEnv("MONGODB_DB", "gracie"),
+        AvatarSalt:     getEnv("AVATAR_SALT", "local-avatar-salt"),
     }
 
     cfg.EmbeddingEnabled = getEnv("EMBEDDING_ENABLED", "false") == "true"
@@ -58,15 +43,8 @@ func Load() (*Config, error) {
     cfg.EmbedThreshold = getEnvFloat("EMBED_THRESHOLD", 0.45)
     cfg.EmbedTopK = getEnvInt("EMBED_TOPK", 5)
 
-    // If DDB_ENDPOINT is explicitly set to "aws", use AWS-managed DynamoDB (no custom endpoint)
-    if v, ok := os.LookupEnv("DDB_ENDPOINT"); ok {
-        if v == "aws" {
-            cfg.DDBEndpoint = ""
-        }
-    }
-
-    if cfg.UsersTable == "" || cfg.RoomsTable == "" || cfg.ListsTable == "" || cfg.ListItemsTable == "" {
-        return nil, fmt.Errorf("missing table names")
+    if cfg.MongoURI == "" || cfg.MongoDB == "" {
+        return nil, fmt.Errorf("missing Mongo configuration (MONGODB_URI, MONGODB_DB)")
     }
     return cfg, nil
 }
