@@ -52,8 +52,13 @@ why the config forces a single fork.
   big pages. Define components at module scope, never inside another component.
 - **CSS:** no permanent `will-change`, no `filter` on always-visible images, hover
   effects behind `@media (hover: hover)`.
-- **Fonts** are self-hosted via `@fontsource/outfit` (latin subsets only); don't add
-  third-party font or script origins.
+- **Fonts** are self-hosted variable faces declared in `src/fonts.css` (latin subset
+  only): **Outfit** for headings (`--font-headings`) and **Figtree** for body/UI
+  (`--font-body`), from `@fontsource-variable/*`. Don't add third-party font or
+  script origins.
+- **Motion/shape tokens** live on `:root` in `styles.css` (`--ease-out`,
+  `--dur-*`, `--shadow-key`, `--focus-ring`). Reuse them; animations stay behind
+  `prefers-reduced-motion: no-preference`.
 
 ## Ratchets (raise over time; never lower)
 

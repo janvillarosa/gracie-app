@@ -6,10 +6,7 @@ import { AuthProvider } from '@auth/AuthProvider'
 import { AppRoutes } from '@routes/AppRoutes'
 import { ConfigProvider, theme as antdTheme } from 'antd'
 import { IconContext } from '@phosphor-icons/react'
-import '@fontsource/outfit/latin-500.css'
-import '@fontsource/outfit/latin-600.css'
-import '@fontsource/outfit/latin-700.css'
-import '@fontsource/outfit/latin-900.css'
+import './fonts.css'
 import 'antd/dist/reset.css'
 import './styles.css'
 import { setupPWAAssets } from '@lib/pwaAssets'
@@ -30,10 +27,26 @@ const antdThemeConfig = {
     colorBgContainer: 'var(--panel, #FFFFFF)',
     colorBgElevated: 'var(--panel, #FFFFFF)',
     colorBorder: 'var(--border, #E6E6E6)',
+    fontFamily: 'var(--font-body)',
+    fontSize: 15,
+    fontWeightStrong: 600,
+    controlHeight: 36,
+    controlHeightLG: 44,
+    controlHeightSM: 28,
+    borderRadius: 10,
+    motionEaseOut: 'cubic-bezier(0.22, 1, 0.36, 1)',
+    motionEaseInOut: 'cubic-bezier(0.65, 0, 0.35, 1)',
   },
   components: {
     Button: {
       colorPrimary: 'var(--color-primary, #FFD417)',
+      fontWeight: 600,
+      primaryShadow: 'none',
+      defaultShadow: 'none',
+      dangerShadow: 'none',
+    },
+    Checkbox: {
+      colorWhite: '#1A1A1A',
     },
     Modal: {
       colorBgElevated: 'var(--panel)',

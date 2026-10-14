@@ -10,7 +10,10 @@
   --text: #3B3B3B;
   /* non-black primary text */
   --text-secondary: rgba(59, 59, 59, 0.70);
-  --muted: #7A828E;
+  --muted: #656C78;
+  /* Ink: the darkest text, and the heading ink a step lighter */
+  --ink: #1A1A1A;
+  --ink-heading: #2B2B2B;
   /* supplemental muted */
   /* Brand palette */
   --brand-yellow: #FFD417;
@@ -37,7 +40,28 @@
   /* stronger border for list items */
   --panel-subtle: #FAFAFA;
   /* soft panel background for inline sections */
-  --font-headings: 'Outfit', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+  --font-headings: 'Outfit Variable', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+  --font-body: 'Figtree Variable', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  /* Focus ring: brand blue, visible on white and on yellow */
+  --focus-ring: 0 0 0 2px var(--panel), 0 0 0 4px color-mix(in srgb, var(--brand-blue) 70%, transparent);
+  /* Motion: exponential ease-out for arrivals, quick settle for presses */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-press: 90ms;
+  --dur-fast: 160ms;
+  --dur-base: 240ms;
+  --dur-slow: 420ms;
+  /* Yellow key: shadow tinted from the deep yellow instead of grey */
+  --shadow-key: inset 0 1px 0 rgba(255, 255, 255, 0.55), 0 1px 0 var(--brand-yellow-deep), 0 2px 6px -1px rgba(150, 115, 0, 0.28);
+  --shadow-key-hover: inset 0 1px 0 rgba(255, 255, 255, 0.55), 0 1px 0 var(--brand-yellow-deep), 0 6px 14px -4px rgba(150, 115, 0, 0.38);
+  --shadow-soft: 0 1px 2px rgba(20, 20, 20, 0.05);
+  /* Paper elevation: every surface is a sheet at one of these heights.
+     Each step = a tight contact shadow + a soft ambient one. */
+  --paper-edge: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  --lift-0: 0 1px 2px rgba(0, 0, 0, 0.04), 0 6px 18px -6px rgba(0, 0, 0, 0.08);
+  --lift-1: 0 -1px 0 rgba(0, 0, 0, 0.02), 0 12px 28px -8px rgba(0, 0, 0, 0.12);
+  --lift-2: 0 2px 4px rgba(0, 0, 0, 0.06), 0 18px 36px -10px rgba(0, 0, 0, 0.22);
+  --lift-3: 0 1px 2px rgba(0, 0, 0, 0.05), 0 12px 32px -8px rgba(0, 0, 0, 0.18);
+  --highlighter: color-mix(in srgb, var(--brand-yellow) 70%, transparent);
   --radius-squircle: 16px;
   /* unified rounded shape */
   --ant-modal-footer-margin-top: 25px;
@@ -85,7 +109,32 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  caret-color: var(--brand-blue);
+}
+
+::selection {
+  background: color-mix(in srgb, var(--brand-yellow) 55%, white);
+  color: var(--ink);
+}
+
+/* One keyboard focus treatment across native and Ant controls */
+:focus-visible {
+  outline: none;
+}
+
+a:focus-visible,
+button:focus-visible,
+[role='button']:focus-visible,
+[tabindex]:focus-visible,
+.ant-btn:focus-visible {
+  box-shadow: var(--focus-ring) !important;
+  outline: none !important;
 }
 
 /* Prevent iOS/Android auto-zoom on input focus */
@@ -108,22 +157,88 @@ a {
 }
 
 /* Auth pages */
+/* The whole viewport turns yellow (including overscroll and the transition snapshot),
+   not just the page box. */
+body:has(.login-page) {
+  background: var(--brand-yellow);
+}
+
 .login-page {
   min-height: 100vh;
-  /* Solid brand yellow background for auth screens */
+  min-height: 100dvh;
   background: var(--brand-yellow);
   display: flex;
-  align-items: flex-start;
+  /* Centered, with a slight upward bias so the card sits at optical center */
+  align-items: center;
+  justify-content: center;
+  padding-bottom: 6vh;
 }
 
-.login-page .container {
+.login-page .container.auth-container {
   width: 100%;
-  max-width: 520px;
+  max-width: 460px;
+  padding-inline: 20px;
 }
 
-/* Make login panel shadow a touch more prominent */
 .login-page .paper-card {
-  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--paper-edge), 0 2px 4px rgba(120, 90, 0, 0.12), 0 18px 40px -12px rgba(120, 90, 0, 0.35);
+}
+
+.auth-card.ant-card .ant-card-body {
+  padding: 28px 28px 0;
+}
+
+.auth-title.ant-typography {
+  margin: 0 0 20px;
+}
+
+.auth-card .ant-form-item {
+  margin-bottom: 18px;
+}
+
+.auth-card .ant-form-item-label > label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-heading);
+}
+
+.auth-card .ant-input-outlined,
+.auth-card .ant-input-affix-wrapper {
+  min-height: 44px;
+}
+
+.auth-card .ant-input-affix-wrapper > input.ant-input {
+  min-height: 0;
+}
+
+.auth-card .ant-btn-primary {
+  margin-top: 6px;
+}
+
+/* Footer sits on its own strip under a hairline, centered, so the form ends cleanly */
+.auth-footer {
+  margin: 24px -28px 0;
+  padding: 16px 28px 18px;
+  border-top: 1px solid var(--border);
+  background: var(--panel-subtle);
+  border-radius: 0 0 var(--radius-squircle) var(--radius-squircle);
+  text-align: center;
+  font-size: 14px;
+}
+
+.auth-footer .link-primary {
+  font-weight: 600;
+}
+
+/* The form arrives like paper set down on the yellow */
+@media (prefers-reduced-motion: no-preference) {
+  .auth-card {
+    animation: sheet-settle 520ms var(--ease-out) 60ms both;
+  }
+
+  .login-page .brand-banner {
+    animation: sheet-in 420ms var(--ease-out) both;
+  }
 }
 
 /* Primary link color (brand blue) */
@@ -147,26 +262,33 @@ h3.ant-typography,
 h4.ant-typography,
 h5.ant-typography {
   font-family: var(--font-headings) !important;
-  line-height: 1.2;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+  color: var(--ink-heading);
 }
 
 /* Responsive, slightly larger titles (mobile-first with clamp) */
 h1,
 h1.ant-typography {
   font-size: clamp(32px, 4.2vw, 45px);
-  font-weight: 700;
+  font-weight: 720;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
 }
 
 h2,
 h2.ant-typography {
   font-size: clamp(26px, 3.2vw, 38px);
   font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.08;
 }
 
 h3,
 h3.ant-typography {
   font-size: clamp(18px, 2.6vw, 26px);
-  font-weight: 600;
+  font-weight: 620;
 }
 
 h4,
@@ -233,9 +355,34 @@ h5.ant-typography {
   margin-top: 25px !important;
 }
 
-/* Buttons: smooth color transitions */
+/* Buttons: tactile pill keys. Lift on hover (pointer devices only), settle on press. */
 .ant-btn {
-  transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease, box-shadow 180ms ease, filter 180ms ease, opacity 180ms ease;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  border-radius: 999px !important;
+  transition: transform var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) ease,
+    color var(--dur-fast) ease,
+    border-color var(--dur-fast) ease,
+    box-shadow var(--dur-base) var(--ease-out),
+    opacity var(--dur-fast) ease;
+}
+
+.ant-btn:active:not(:disabled) {
+  transform: scale(0.96);
+  transition-duration: var(--dur-press);
+}
+
+/* Default (outlined) buttons: white key with a hairline lift */
+.ant-btn-default:not(.ant-btn-dangerous) {
+  border-color: var(--border-strong) !important;
+  color: var(--text) !important;
+  box-shadow: var(--shadow-soft);
+}
+
+/* Text/icon buttons: quiet circle that fills on hover */
+.ant-btn-text:not(.ant-btn-dangerous) {
+  color: var(--muted);
 }
 
 /* Primary buttons: brand yellow */
@@ -243,108 +390,92 @@ h5.ant-typography {
   border-color: var(--brand-yellow-deep) !important;
   background: var(--brand-yellow) !important;
   background-image: none !important;
-  color: #111 !important;
-  transition: transform 120ms cubic-bezier(0.2, 0.8, 0.2, 1),
-    box-shadow 200ms ease,
-    background-color 180ms ease,
-    color 180ms ease,
-    border-color 180ms ease,
-    filter 180ms ease,
-    opacity 180ms ease;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-  border-radius: var(--radius-squircle) !important;
+  color: var(--ink) !important;
+  box-shadow: var(--shadow-key);
 }
 
-.ant-btn-primary:focus-visible {
-  background: color-mix(in srgb, var(--brand-yellow) 88%, black) !important;
-}
-
-/* Hover lift only on devices that can hover; touch screens skip the extra compositing */
 @media (hover: hover) {
-  .ant-btn-primary:hover {
-    background: color-mix(in srgb, var(--brand-yellow) 88%, black) !important;
-    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
-    transform: translateY(-1px) scale(1.03);
+  .ant-btn-default:not(.ant-btn-dangerous):not(:disabled):hover {
+    background: var(--panel-subtle) !important;
+    border-color: color-mix(in srgb, var(--border-strong) 70%, var(--text)) !important;
+    color: var(--ink) !important;
+  }
+
+  .ant-btn-text:not(.ant-btn-dangerous):not(:disabled):hover {
+    background: rgba(26, 26, 26, 0.06) !important;
+    color: var(--text) !important;
+  }
+
+  .ant-btn-primary:not(:disabled):not(.ant-btn-dangerous):hover {
+    background: color-mix(in srgb, var(--brand-yellow) 94%, black) !important;
+    box-shadow: var(--shadow-key-hover);
+    transform: translateY(-1px);
   }
 }
 
-.ant-btn-primary:active {
-  background: color-mix(in srgb, var(--brand-yellow) 80%, black) !important;
-  transform: translateY(0) scale(0.98);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.10);
+.ant-btn-primary:not(.ant-btn-dangerous):active:not(:disabled) {
+  background: color-mix(in srgb, var(--brand-yellow) 86%, black) !important;
+  box-shadow: inset 0 1px 2px rgba(120, 90, 0, 0.25);
+  transform: translateY(0) scale(0.96);
 }
 
 /* Ensure danger primary buttons use brand red */
 .ant-btn-primary.ant-btn-dangerous {
-  background: #BE1E2D !important;
-  /* exact brand red */
-  border-color: #BE1E2D !important;
+  background: var(--brand-red) !important;
+  border-color: color-mix(in srgb, var(--brand-red) 85%, black) !important;
   color: #fff !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 2px 6px -1px rgba(120, 15, 25, 0.35);
 }
 
 .ant-btn-primary.ant-btn-dangerous:hover,
 .ant-btn-primary.ant-btn-dangerous:focus,
 .ant-btn-primary.ant-btn-dangerous:active {
-  background: #BE1E2D !important;
-  /* keep exact shade */
-  border-color: #BE1E2D !important;
+  background: color-mix(in srgb, var(--brand-red) 90%, black) !important;
+  border-color: color-mix(in srgb, var(--brand-red) 80%, black) !important;
 }
 
 /* Default (non-primary) danger buttons */
 .ant-btn-dangerous:not(.ant-btn-primary):not(.ant-btn-text):not(.ant-btn-link) {
-  color: #BE1E2D !important;
-  border-color: #BE1E2D !important;
+  color: var(--brand-red) !important;
+  border-color: color-mix(in srgb, var(--brand-red) 45%, white) !important;
 }
 
-.ant-btn-dangerous:not(.ant-btn-primary):not(.ant-btn-text):not(.ant-btn-link):hover,
-.ant-btn-dangerous:not(.ant-btn-primary):not(.ant-btn-text):not(.ant-btn-link):focus,
-.ant-btn-dangerous:not(.ant-btn-primary):not(.ant-btn-text):not(.ant-btn-link):active {
-  color: #BE1E2D !important;
-  border-color: #BE1E2D !important;
-  background: rgba(190, 30, 45, 0.08) !important;
-  /* subtle tint */
+.ant-btn-dangerous:not(.ant-btn-primary):not(.ant-btn-text):not(.ant-btn-link):not(:disabled):hover,
+.ant-btn-dangerous:not(.ant-btn-primary):not(.ant-btn-text):not(.ant-btn-link):not(:disabled):active {
+  color: var(--brand-red) !important;
+  border-color: var(--brand-red) !important;
+  background: rgba(190, 30, 45, 0.06) !important;
 }
 
-/* Disabled buttons: neutral grey, no purple gradient */
+/* Disabled buttons: flat and quiet, no lift */
 .ant-btn[disabled],
 .ant-btn:disabled,
 .ant-btn.ant-btn-disabled,
 .ant-btn[aria-disabled='true'] {
-  background: #F2F3F5 !important;
-  border-color: var(--border-strong, #D2D2D2) !important;
-  color: var(--text-secondary, rgba(59, 59, 59, 0.7)) !important;
-  box-shadow: none !important;
-  background-image: none !important;
-}
-
-.ant-btn-primary[disabled],
-.ant-btn-primary:disabled,
-.ant-btn-primary.ant-btn-disabled,
-.ant-btn-primary[aria-disabled='true'] {
-  background: #E9EAEE !important;
-  border-color: #D9DDE3 !important;
-  color: #9AA0A6 !important;
+  background: #F2F2F2 !important;
+  border-color: var(--border) !important;
+  color: #9A9A9A !important;
   box-shadow: none !important;
   background-image: none !important;
   transform: none !important;
-  filter: grayscale(0.12) saturate(0.6) brightness(0.98);
-  opacity: 0.9;
+}
+
+.ant-btn-text[disabled],
+.ant-btn-text:disabled {
+  background: transparent !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ant-btn-primary {
-    transition: box-shadow 200ms ease;
+
+  .ant-btn,
+  .ant-btn:active,
+  .ant-btn-primary:hover {
+    transform: none !important;
   }
 
   .list-tabs .ant-tabs-nav .ant-tabs-nav-list::after,
   .ant-progress-bg {
     transition: none !important;
-  }
-
-  .ant-btn-primary:hover,
-  .ant-btn-primary:focus,
-  .ant-btn-primary:active {
-    transform: none;
   }
 }
 
@@ -356,6 +487,8 @@ h5.ant-typography {
 
 /* Brand logo alignment: sits above the main panel, aligned left */
 .brand-logo {
+  /* Shared element: the logo glides between login and the app during a view transition */
+  view-transition-name: brand-logo;
   display: block;
   /* Offset to start after the card's curved corner */
   margin: 0 0 10px var(--radius-squircle);
@@ -403,7 +536,13 @@ h5.ant-typography {
 
 /* Wordmark next to logo on auth screen */
 .brand-banner {
-  margin: 0 0 10px var(--radius-squircle);
+  margin: 0 0 14px var(--radius-squircle);
+}
+
+/* Auth lockup: the house's ink starts where the card's text starts (28px padding minus
+   the logo image's own 8px of transparent margin) */
+.auth-container .brand-banner {
+  margin-left: 20px;
 }
 
 .brand-banner .brand-row {
@@ -418,15 +557,17 @@ h5.ant-typography {
 }
 
 .brand-wordmark {
-  padding-top: 28px;
-  margin-left: -12px;
+  margin-left: -8px;
+  /* A house is bottom-heavy, so its optical center sits below its box center; the
+     wordmark centers on the body, not the roof peak. */
+  position: relative;
+  top: 4px;
   font-family: var(--font-headings) !important;
-  font-weight: 900;
-  font-size: clamp(48px, 3.4vw, 38px);
-  line-height: 1.0;
-  color: #000;
-  /* For variable fonts, push to max weight if supported */
-  font-variation-settings: 'wght' 900;
+  font-weight: 860;
+  font-size: 44px;
+  line-height: 1;
+  letter-spacing: -0.035em;
+  color: #111;
 }
 
 /* Keep legacy layout wrappers; inner content now uses Ant components */
@@ -434,18 +575,6 @@ h5.ant-typography {
   padding: 0;
   border: none;
   background: transparent;
-}
-
-.row {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
-
-.col {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
 }
 
 /* Controls now come from Ant Design */
@@ -468,70 +597,12 @@ h5.ant-typography {
   font-size: 14px;
 }
 
-/* Modal */
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 50;
-}
-
-.modal {
-  width: min(560px, 92%);
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
-}
-
-.modal-header,
-.modal-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border);
-}
-
-.modal-footer {
-  border-top: 1px solid var(--border);
-  border-bottom: none;
-}
-
-.modal-body {
-  padding: 20px;
-}
-
-/* Toast */
-.toast-container {
-  position: fixed;
-  top: 16px;
-  right: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  z-index: 60;
-}
-
-.toast {
-  background: #0f1317;
-  border: 1px solid var(--border);
-  color: var(--text);
-  padding: 10px 12px;
-  border-radius: 8px;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
-}
-
 /* Stronger borders for list items within list page */
 .items-list .ant-list-item {
-  border-bottom: 1px solid var(--border-strong) !important;
+  border-bottom: 1px solid var(--border) !important;
   display: grid !important;
   grid-template-columns: 1fr auto;
-  font-weight: 600;
+  font-weight: 400;
   align-items: center;
   column-gap: 10px;
 }
@@ -552,14 +623,56 @@ h5.ant-typography {
 
 /* Stronger borders for lists on RoomPage and hover effects */
 .lists-list .ant-list-item {
-  border-bottom: 1px solid var(--border-strong) !important;
-  font-weight: 600;
+  position: relative;
+  border-bottom: none !important;
   align-items: center;
+  margin-inline: -12px;
+  padding-inline: 12px !important;
+  border-radius: 12px;
+  transition: background-color var(--dur-fast) ease;
 }
 
-.lists-list .ant-list-item:last-child {
-  border-bottom: none !important;
+/* Divider drawn inset so the row's rounded hover fill doesn't bend it */
+.lists-list .ant-list-item::after {
+  content: '';
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 0;
+  height: 1px;
+  background: var(--border);
 }
+
+.lists-list .ant-list-item:last-child::after {
+  display: none;
+}
+
+.lists-list .ant-list-item .ant-typography-secondary {
+  font-weight: 400;
+}
+
+.lists-list .list-row-name {
+  font-weight: 620;
+  font-size: 16px;
+  color: var(--ink-heading);
+  letter-spacing: -0.005em;
+}
+
+.lists-list .list-row-caret {
+  color: var(--brand-yellow-deep);
+  transition: transform var(--dur-base) var(--ease-out);
+}
+
+@media (hover: hover) {
+  .lists-list .ant-list-item:hover {
+    background: var(--panel-subtle);
+  }
+
+  .lists-list .ant-list-item:hover .list-row-caret {
+    transform: translateX(3px);
+  }
+}
+
 
 /* List page header */
 .list-header-grid {
@@ -588,6 +701,8 @@ h5.ant-typography {
 
 .list-meta {
   color: var(--text-secondary);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
 }
 
 .list-description {
@@ -595,19 +710,69 @@ h5.ant-typography {
   margin-top: 4px;
 }
 
-/* Add bar: sticky at the very bottom of the list sheet */
+/* Add bar: pinned to the bottom of the viewport while the list scrolls under it, and
+   docked flush to the card's bottom edge once you reach the end. The negative margins
+   cancel the card body's 24px padding so the bar spans the card edge to edge. */
 .add-bar {
   position: sticky;
-  bottom: -1px;
-  /* ensures flush with rounded edge */
+  bottom: 0;
   background: var(--panel);
-  padding: 12px 0;
-  /* align with list items (uses Card's own padding) */
+  margin: 16px -24px -24px;
+  padding: 12px 24px calc(12px + env(safe-area-inset-bottom, 0px));
   border-top: 1px solid var(--border);
-  box-shadow: none;
-  z-index: 1;
-  border-bottom-left-radius: var(--radius-squircle);
-  border-bottom-right-radius: var(--radius-squircle);
+  border-radius: 0 0 calc(var(--radius-squircle) - 1px) calc(var(--radius-squircle) - 1px);
+  box-shadow: 0 -10px 16px -14px rgba(0, 0, 0, 0.18);
+  z-index: 3;
+}
+
+.add-field {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.add-bar .add-input.ant-input,
+.add-bar textarea.add-input {
+  min-height: 44px !important;
+  padding: 10px 16px !important;
+  border-radius: 22px !important;
+  line-height: 22px !important;
+  background: var(--panel-subtle);
+  transition: background-color var(--dur-fast) ease, border-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease;
+}
+
+.add-bar .add-input.ant-input:focus,
+.add-bar textarea.add-input:focus {
+  background: var(--panel);
+}
+
+.add-field.has-qty textarea.add-input {
+  padding-right: 84px !important;
+}
+
+/* Parsed quantity preview: proof the app understood "2 kg" before you hit add */
+.add-qty-chip {
+  position: absolute;
+  z-index: 2;
+  top: 10px;
+  right: 10px;
+  max-width: 72px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--brand-yellow) 45%, white);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 22px;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+.add-btn .ant-btn-icon {
+  font-size: 22px !important;
 }
 
 /* Add row layout: input expands; button stays on right */
@@ -618,12 +783,8 @@ h5.ant-typography {
   flex-wrap: nowrap;
 }
 
-.add-input {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
 .add-btn {
+  flex: none;
   width: 44px !important;
   height: 44px !important;
   min-width: 44px !important;
@@ -665,9 +826,13 @@ h5.ant-typography {
   align-items: center;
   justify-content: space-between;
   margin-top: 8px;
-  padding-top: 8px;
+  padding-top: 12px;
   border-top: 1px solid var(--border);
-  color: var(--text-secondary);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Item row layout tweaks */
@@ -692,16 +857,126 @@ h5.ant-typography {
   overflow-wrap: anywhere;
 }
 
-/* Slightly larger checkbox in list items */
+/* List icon: a round paper sticker holding the list's emoji */
+.list-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  font-size: 22px;
+  line-height: 1;
+  background: var(--panel-subtle);
+  border: 1px solid var(--border);
+  box-shadow: var(--paper-edge), 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.list-icon-title {
+  margin-right: 12px;
+}
+
+/* Item text */
+.item-desc {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ink-heading);
+  line-height: 1.35;
+  /* Strike-through draws across instead of snapping on */
+  background-image: linear-gradient(currentColor, currentColor);
+  background-repeat: no-repeat;
+  background-position: 0 58%;
+  background-size: 0% 1.5px;
+  transition: background-size var(--dur-slow) var(--ease-out), color var(--dur-base) ease;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.item-desc.is-done {
+  background-size: 100% 1.5px;
+  color: var(--muted);
+}
+
+.item-body.is-completed {
+  opacity: 0.7;
+}
+
+/* Larger, crisper checkbox in list items (sized, not scaled, so edges stay sharp) */
 .items-list .checkbox-anchor {
   display: inline-flex;
   align-items: center;
   justify-content: center;
 }
 
-.items-list .checkbox-anchor .ant-checkbox {
-  transform: scale(1.2);
-  transform-origin: center;
+.items-list .checkbox-anchor .ant-checkbox-inner {
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  border-width: 1.5px;
+  border-color: color-mix(in srgb, var(--border-strong) 70%, var(--muted));
+  transition: background-color var(--dur-fast) ease, border-color var(--dur-fast) ease, transform var(--dur-base) var(--ease-out);
+}
+
+.items-list .checkbox-anchor .ant-checkbox-inner::after {
+  width: 7px;
+  height: 12px;
+  border-width: 2.5px;
+  border-color: var(--ink);
+}
+
+.items-list .checkbox-anchor .ant-checkbox-checked .ant-checkbox-inner {
+  background: var(--brand-yellow);
+  border-color: var(--brand-yellow-deep);
+  animation: check-pop var(--dur-slow) var(--ease-out);
+}
+
+.items-list .checkbox-anchor .ant-checkbox-checked::after {
+  display: none;
+}
+
+@media (hover: hover) {
+  .items-list .checkbox-anchor .ant-checkbox:not(.ant-checkbox-checked):not(.ant-checkbox-disabled):hover .ant-checkbox-inner {
+    border-color: var(--brand-yellow-deep);
+    background: color-mix(in srgb, var(--brand-yellow) 12%, white);
+  }
+}
+
+@keyframes check-pop {
+  0% {
+    transform: scale(0.82);
+  }
+
+  60% {
+    transform: scale(1.08);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Delete affordance: present but quiet until the row is engaged */
+.items-list .item-delete.ant-btn {
+  opacity: 0.7;
+  transition: opacity var(--dur-fast) ease, background-color var(--dur-fast) ease, transform var(--dur-fast) var(--ease-out);
+}
+
+@media (hover: hover) {
+  .items-list .ant-list-item:hover .item-delete.ant-btn,
+  .items-list .item-delete.ant-btn:focus-visible {
+    opacity: 1;
+  }
+
+  .items-list .item-delete.ant-btn:not(:disabled):hover {
+    background: rgba(190, 30, 45, 0.07) !important;
+  }
+}
+
+@media (hover: none) {
+  .items-list .item-delete.ant-btn {
+    opacity: 0.85;
+  }
 }
 
 /* Drag handle and sortable row */
@@ -718,7 +993,9 @@ h5.ant-typography {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: var(--muted);
+  color: color-mix(in srgb, var(--muted) 70%, white);
+  border-radius: 10px;
+  transition: color var(--dur-fast) ease, background-color var(--dur-fast) ease;
   padding: 10px 6px;
   /* larger tap target */
   /* keep a consistent handle column width */
@@ -736,6 +1013,14 @@ h5.ant-typography {
 
 .drag-handle:active {
   cursor: grabbing;
+  color: var(--text);
+}
+
+@media (hover: hover) {
+  .drag-handle:hover {
+    color: var(--text);
+    background: rgba(26, 26, 26, 0.05);
+  }
 }
 
 /* Mobile: larger handle, bigger icon, tighter row gap */
@@ -762,10 +1047,10 @@ h5.ant-typography {
 .empty-state {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 12px;
-  border: 1px dashed var(--border);
-  border-radius: 8px;
+  gap: 10px;
+  padding: 16px;
+  border: 1.5px dashed var(--border-strong);
+  border-radius: 14px;
   background: var(--panel-subtle);
 }
 
@@ -829,7 +1114,7 @@ h5.ant-typography {
   background: var(--panel);
   border: 1px solid var(--border-strong) !important;
   border-radius: var(--radius-squircle) !important;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--paper-edge), var(--lift-0);
 }
 
 .paper-card.paper-meta {
@@ -846,7 +1131,70 @@ h5.ant-typography {
   z-index: 2;
   margin-top: -20px;
   /* ~5px overlap */
-  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--paper-edge), var(--lift-1);
+}
+
+/* The stack: a third sheet's edge peeks out beneath the top sheet. It hangs off the
+   stack container (not the top card) so it paints genuinely underneath the top sheet,
+   which sits at z-index 2; only its bottom 8px ever shows. */
+.paper-stack::after {
+  content: '';
+  position: absolute;
+  z-index: 1;
+  left: 14px;
+  right: 14px;
+  bottom: -8px;
+  height: 40px;
+  background: var(--panel);
+  border: 1px solid var(--border-strong);
+  border-radius: 0 0 var(--radius-squircle) var(--radius-squircle);
+  box-shadow: 0 4px 10px -4px rgba(0, 0, 0, 0.1);
+}
+
+/* Arrival: the top sheet slides onto the stack, like paper set down on a desk */
+@media (prefers-reduced-motion: no-preference) {
+  .paper-stack .paper-meta {
+    animation: sheet-in var(--dur-slow) var(--ease-out) both;
+  }
+
+  .paper-stack .paper-list {
+    animation: sheet-settle 560ms var(--ease-out) 60ms both;
+  }
+
+  /* The peeking sheet arrives a beat later, so the stack assembles bottom-up */
+  .paper-stack::after {
+    animation: sheet-peek 520ms var(--ease-out) 180ms both;
+  }
+}
+
+@keyframes sheet-in {
+  from {
+    transform: translateY(6px);
+  }
+
+  to {
+    transform: none;
+  }
+}
+
+@keyframes sheet-peek {
+  from {
+    transform: translateY(-10px);
+  }
+
+  to {
+    transform: none;
+  }
+}
+
+@keyframes sheet-settle {
+  from {
+    transform: translateY(28px);
+  }
+
+  to {
+    transform: none;
+  }
 }
 
 /* Centered, pill-styled tabs for ListPage */
@@ -885,8 +1233,8 @@ h5.ant-typography {
   height: calc(100% - 8px);
   border-radius: 999px;
   background: var(--panel);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  transition: left 220ms cubic-bezier(0.2, 0.8, 0.2, 1), width 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.06);
+  transition: left 320ms var(--ease-out), width 320ms var(--ease-out);
   z-index: 0;
 }
 
@@ -897,7 +1245,7 @@ h5.ant-typography {
   padding: 4px 14px !important;
   border-radius: 999px !important;
   background: transparent !important;
-  transition: color 160ms ease;
+  transition: color var(--dur-fast) ease;
 }
 
 .list-tabs .ant-tabs-tab:hover {
@@ -905,12 +1253,13 @@ h5.ant-typography {
 }
 
 .list-tabs .ant-tabs-tab .ant-tabs-tab-btn {
-  color: var(--text-secondary);
+  color: var(--muted);
   font-weight: 600;
+  font-size: 14px;
 }
 
 .list-tabs .ant-tabs-tab-active .ant-tabs-tab-btn {
-  color: var(--text);
+  color: var(--ink) !important;
 }
 
 .list-tabs .ant-tabs-content-holder {
@@ -940,19 +1289,19 @@ h5.ant-typography {
 }
 
 .items-list .ant-btn.ant-btn-text.ant-btn-dangerous {
-  color: #BE1E2D !important;
+  color: var(--brand-red) !important;
 }
 
 .items-list .ant-btn.ant-btn-text.ant-btn-dangerous:hover,
 .items-list .ant-btn.ant-btn-text.ant-btn-dangerous:focus,
 .items-list .ant-btn.ant-btn-text.ant-btn-dangerous:active {
-  color: #BE1E2D !important;
+  color: var(--brand-red) !important;
   background: transparent !important;
 }
 
 .items-list .ant-btn.ant-btn-text.ant-btn-dangerous[disabled],
 .items-list .ant-btn.ant-btn-text.ant-btn-dangerous[aria-disabled='true'] {
-  color: #BE1E2D !important;
+  color: var(--brand-red) !important;
   background: transparent !important;
   border: none !important;
   opacity: 1 !important;
@@ -962,12 +1311,12 @@ h5.ant-typography {
 .items-list .ant-btn.ant-btn-text.ant-btn-dangerous[disabled] .anticon,
 .items-list .ant-btn.ant-btn-text.ant-btn-dangerous[aria-disabled='true'] .ant-btn-icon,
 .items-list .ant-btn.ant-btn-text.ant-btn-dangerous[aria-disabled='true'] .anticon {
-  color: #BE1E2D !important;
+  color: var(--brand-red) !important;
 }
 
 .items-list .ant-btn.ant-btn-text.ant-btn-dangerous[disabled] .ant-btn-icon svg,
 .items-list .ant-btn.ant-btn-text.ant-btn-dangerous[aria-disabled='true'] .ant-btn-icon svg {
-  color: #BE1E2D !important;
+  color: var(--brand-red) !important;
   fill: currentColor !important;
   stroke: currentColor !important;
 }
@@ -1021,6 +1370,41 @@ h5.ant-typography {
   font-size: 16px;
 }
 
+/* Dropdown menus: roomier rows, same squircle family */
+.ant-dropdown-menu {
+  padding: 6px !important;
+  box-shadow: var(--lift-3) !important;
+}
+
+.ant-modal .ant-modal-content,
+.ant-popover .ant-popover-inner {
+  box-shadow: var(--paper-edge), var(--lift-3) !important;
+}
+
+.ant-dropdown-menu .ant-dropdown-menu-item {
+  border-radius: 10px !important;
+  padding: 8px 12px !important;
+  font-weight: 500;
+}
+
+.ant-dropdown-menu .ant-dropdown-menu-item-danger:not(:hover) {
+  color: var(--brand-red) !important;
+}
+
+/* Inputs: calm focus that matches the button ring */
+.ant-input:focus,
+.ant-input-focused,
+.ant-input-affix-wrapper-focused,
+.ant-input-affix-wrapper:focus-within {
+  border-color: color-mix(in srgb, var(--brand-blue) 55%, white) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-blue) 14%, transparent) !important;
+}
+
+.ant-input::placeholder,
+.ant-input-affix-wrapper input::placeholder {
+  color: #767676;
+}
+
 /* Progress bar transition */
 .ant-progress-bg {
   transition: width 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
@@ -1029,62 +1413,63 @@ h5.ant-typography {
 /* Category Tag Refinement */
 .category-tag {
   border: none !important;
-  font-weight: 600 !important;
+  font-weight: 700 !important;
   font-size: 10px !important;
-  padding: 1px 6px !important;
-  border-radius: 4px !important;
+  line-height: 16px !important;
+  padding: 1px 7px !important;
+  border-radius: 6px !important;
   text-transform: uppercase;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.06em;
 }
 
 .cat-produce {
   background: color-mix(in srgb, var(--cat-produce) 12%, white) !important;
-  color: var(--cat-produce) !important;
+  color: color-mix(in srgb, var(--cat-produce) 55%, var(--ink)) !important;
 }
 
 .cat-dairy {
   background: color-mix(in srgb, var(--cat-dairy) 12%, white) !important;
-  color: var(--cat-dairy) !important;
+  color: color-mix(in srgb, var(--cat-dairy) 55%, var(--ink)) !important;
 }
 
 .cat-bakery {
   background: color-mix(in srgb, var(--cat-bakery) 12%, white) !important;
-  color: var(--cat-bakery) !important;
+  color: color-mix(in srgb, var(--cat-bakery) 55%, var(--ink)) !important;
 }
 
 .cat-meat {
   background: color-mix(in srgb, var(--cat-meat) 12%, white) !important;
-  color: var(--cat-meat) !important;
+  color: color-mix(in srgb, var(--cat-meat) 55%, var(--ink)) !important;
 }
 
 .cat-frozen {
   background: color-mix(in srgb, var(--cat-frozen) 12%, white) !important;
-  color: var(--cat-frozen) !important;
+  color: color-mix(in srgb, var(--cat-frozen) 55%, var(--ink)) !important;
 }
 
 .cat-plant {
   background: color-mix(in srgb, var(--cat-plant) 12%, white) !important;
-  color: var(--cat-plant) !important;
+  color: color-mix(in srgb, var(--cat-plant) 55%, var(--ink)) !important;
 }
 
 .cat-grains {
   background: color-mix(in srgb, var(--cat-grains) 12%, white) !important;
-  color: var(--cat-grains) !important;
+  color: color-mix(in srgb, var(--cat-grains) 55%, var(--ink)) !important;
 }
 
 .cat-pantry {
   background: color-mix(in srgb, var(--cat-pantry) 12%, white) !important;
-  color: var(--cat-pantry) !important;
+  color: color-mix(in srgb, var(--cat-pantry) 55%, var(--ink)) !important;
 }
 
 .cat-beverages {
   background: color-mix(in srgb, var(--cat-beverages) 12%, white) !important;
-  color: var(--cat-beverages) !important;
+  color: color-mix(in srgb, var(--cat-beverages) 55%, var(--ink)) !important;
 }
 
 .cat-household {
   background: color-mix(in srgb, var(--cat-household) 12%, white) !important;
-  color: var(--cat-household) !important;
+  color: color-mix(in srgb, var(--cat-household) 55%, var(--ink)) !important;
 }
 
 .cat-general {
@@ -1094,23 +1479,19 @@ h5.ant-typography {
 
 /* Quantity/Unit Badge */
 .qty-unit-line {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-secondary);
-  margin-top: 2px;
+  margin-top: 1px;
   display: flex;
   align-items: center;
   gap: 4px;
+  font-variant-numeric: tabular-nums;
 }
 
 .qty-label {
-  font-weight: 600;
+  font-weight: 500;
   color: var(--muted);
-  font-size: 12px;
-}
-
-/* Add bar elements */
-.add-input {
-  flex: 1 1 auto;
+  font-size: 13px;
 }
 
 /* Confetti animation */
@@ -1128,4 +1509,290 @@ h5.ant-typography {
   border-radius: 2px;
   opacity: 1;
   transform: translate3d(0, 0, 0) rotate(0);
+}
+/* ---------- Motion: the add loop and the paper ---------- */
+
+/* Item rows clear the sticky add bar when scrolled into view */
+.items-list .ant-list-item {
+  scroll-margin-bottom: 96px;
+}
+
+/* Picked up: a dragged row lifts off the sheet like a paper slip */
+.sortable-row.is-dragging {
+  position: relative;
+  z-index: 5;
+  background: var(--panel);
+  border-radius: 12px;
+  box-shadow: var(--lift-2);
+  scale: 1.02;
+  rotate: -0.6deg;
+  transition: scale var(--dur-fast) var(--ease-out), rotate var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) ease;
+}
+
+.sortable-row.is-dragging .drag-handle {
+  color: var(--ink);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+
+  /* New row: rises from the add bar it was typed into */
+  .items-list .ant-list-item.is-entering {
+    animation: row-in 380ms var(--ease-out) both;
+  }
+
+  /* ...and gets a highlighter swipe that fades like drying ink */
+  .is-entering .item-desc::after {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    inset: 42% -4px 6% -4px;
+    border-radius: 3px;
+    background: var(--highlighter);
+    transform-origin: left center;
+    animation: highlight 1500ms var(--ease-out) 80ms both;
+  }
+
+  /* The category arrives from the server a moment later and is stamped on */
+  .is-entering .category-tag {
+    animation: stamp 340ms var(--ease-out) both;
+  }
+
+  /* Add button arms when there's something to add, and turns on every add */
+  .add-btn.is-armed {
+    animation: arm 300ms var(--ease-out);
+  }
+
+  .add-plus.is-turning {
+    animation: plus-turn 380ms var(--ease-out);
+  }
+
+  .add-qty-chip {
+    animation: chip-in 220ms var(--ease-out);
+  }
+
+  /* Switching Items/Notes slides the new page in from the side of the pill that was tapped */
+  .list-tabs .ant-tabs-tabpane-active {
+    animation: pane-in 260ms var(--ease-out);
+  }
+
+  .completed-list {
+    animation: pane-in 320ms var(--ease-out);
+  }
+}
+
+/* Reduced motion keeps the meaning without the movement: the highlight still marks
+   the new row, it just fades instead of sweeping. */
+@media (prefers-reduced-motion: reduce) {
+  .is-entering .item-desc::after {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    inset: 42% -4px 6% -4px;
+    border-radius: 3px;
+    background: var(--highlighter);
+    animation: highlight-fade 1500ms ease both;
+  }
+
+  .sortable-row.is-dragging {
+    scale: none;
+    rotate: none;
+  }
+}
+
+.item-desc {
+  position: relative;
+  isolation: isolate;
+}
+
+@keyframes row-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes highlight {
+  0% {
+    transform: scaleX(0);
+    opacity: 1;
+  }
+
+  30% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+
+  70% {
+    opacity: 0.9;
+  }
+
+  100% {
+    transform: scaleX(1);
+    opacity: 0;
+  }
+}
+
+@keyframes highlight-fade {
+  0%,
+  60% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes stamp {
+  from {
+    opacity: 0;
+    transform: scale(1.3) rotate(-4deg);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes arm {
+  0% {
+    transform: scale(0.88);
+  }
+
+  60% {
+    transform: scale(1.06);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes plus-turn {
+  from {
+    transform: rotate(-90deg) scale(0.8);
+  }
+
+  to {
+    transform: none;
+  }
+}
+
+@keyframes chip-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px) scale(0.92);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes pane-in {
+  from {
+    opacity: 0.001;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ---------- Notes: ruled paper ---------- */
+.notes-textarea.ant-input,
+textarea.notes-textarea {
+  --rule: 28px;
+  line-height: var(--rule) !important;
+  padding: 6px 16px !important;
+  background-color: var(--panel) !important;
+  background-image:
+    linear-gradient(to right, transparent 0 40px, color-mix(in srgb, var(--brand-red) 22%, transparent) 40px 41px, transparent 41px),
+    repeating-linear-gradient(to bottom, transparent 0 calc(var(--rule) - 1px), color-mix(in srgb, var(--brand-blue) 12%, transparent) calc(var(--rule) - 1px) var(--rule));
+  background-position: 0 0, 0 6px;
+  background-attachment: local;
+  padding-left: 52px !important;
+}
+
+/* ---------- Touch: 44px hit areas without changing what you see ---------- */
+@media (pointer: coarse) {
+  .ant-btn {
+    position: relative;
+  }
+
+  .ant-btn::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: max(100%, 44px);
+    height: max(100%, 44px);
+    transform: translate(-50%, -50%);
+  }
+
+  .items-list .ant-checkbox-wrapper {
+    position: relative;
+  }
+
+  .items-list .ant-checkbox-wrapper::after {
+    content: '';
+    position: absolute;
+    inset: -11px;
+  }
+
+  .list-tabs .ant-tabs-tab {
+    padding: 8px 18px !important;
+  }
+}
+
+/* ---------- Page-to-page navigation (View Transitions) ---------- */
+/* The page crossfades; each page's own sheets supply the movement, and the logo morphs
+   from the big login lockup into the top bar. */
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-old(root) {
+    animation: vt-out 140ms ease both;
+  }
+
+  ::view-transition-new(root) {
+    animation: vt-in 240ms var(--ease-out) 40ms both;
+  }
+
+  ::view-transition-group(brand-logo) {
+    animation-duration: 460ms;
+    animation-timing-function: var(--ease-out);
+  }
+}
+
+@keyframes vt-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes vt-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* While a route or its data loads, hold the paper shape instead of flashing blank */
+.route-skeleton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 220px;
+  margin-top: 0;
+  border-radius: var(--radius-squircle);
+  background: var(--panel);
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--paper-edge), var(--lift-0);
 }
