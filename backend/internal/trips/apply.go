@@ -1,6 +1,7 @@
 package trips
 
 import (
+	"sort"
 	"time"
 
 	"github.com/janvillarosa/gracie-app/backend/internal/models"
@@ -217,4 +218,201 @@ func tripRestore(t *models.Trip, at int64, res *models.OpResult) bool {
 	return commit(&t.FieldAt, at, []change{{"deleted", func() {
 		t.DeletedAt, t.DeletedBy, t.PurgeAt = nil, "", nil
 	}}}, res)
+}
+
+const (
+	orderStep   = 1000.0
+	minOrderGap = 1e-7
+)
+
+func findTodo(t *models.Trip, id string) int {
+	for i := range t.Todos {
+		if t.Todos[i].TodoID == id {
+			return i
+		}
+	}
+	return -1
+}
+
+func tombstoned(t *models.Trip, id string) bool {
+	for _, ts := range t.Tombstones {
+		if ts.ID == id {
+			return true
+		}
+	}
+	return false
+}
+
+// resolveTodoTZ stores the effective zone at write time: place.tz, else the trip's.
+func resolveTodoTZ(t *models.Trip, td *models.TripTodo) {
+	if td.Place != nil && td.Place.TZ != "" {
+		td.TZ = td.Place.TZ
+		return
+	}
+	td.TZ = t.TZ
+}
+
+func dayKey(d *string) string {
+	if d == nil {
+		return ""
+	}
+	return *d
+}
+
+func nextOrder(t *models.Trip, day *string) float64 {
+	max, any := 0.0, false
+	for i := range t.Todos {
+		if dayKey(t.Todos[i].Day) == dayKey(day) && (!any || t.Todos[i].Order > max) {
+			max, any = t.Todos[i].Order, true
+		}
+	}
+	if !any {
+		return orderStep
+	}
+	return max + orderStep
+}
+
+// renumberIfCramped re-spaces any day group (or Ideas) whose neighbours are closer than
+// minOrderGap (including equal orders from two offline inserts). Ties break by todo_id.
+func renumberIfCramped(t *models.Trip, newV int64) {
+	groups := map[string][]int{}
+	for i := range t.Todos {
+		k := dayKey(t.Todos[i].Day)
+		groups[k] = append(groups[k], i)
+	}
+	for _, idx := range groups {
+		sort.Slice(idx, func(a, b int) bool {
+			x, y := &t.Todos[idx[a]], &t.Todos[idx[b]]
+			if x.Order != y.Order {
+				return x.Order < y.Order
+			}
+			return x.TodoID < y.TodoID
+		})
+		cramped := false
+		for k := 1; k < len(idx); k++ {
+			if t.Todos[idx[k]].Order-t.Todos[idx[k-1]].Order < minOrderGap {
+				cramped = true
+				break
+			}
+		}
+		if !cramped {
+			continue
+		}
+		for k, i := range idx {
+			t.Todos[i].Order = float64(k+1) * orderStep
+			t.Todos[i].V = newV
+		}
+	}
+}
+
+func todoChanges(td *models.TripTodo, p TodoPatch, actor string, now time.Time) []change {
+	var ch []change
+	if p.Title != nil {
+		v := *p.Title
+		ch = append(ch, change{"title", func() { td.Title = v }})
+	}
+	if p.Done != nil {
+		d := *p.Done
+		ch = append(ch, change{"done", func() {
+			td.Done = d
+			if d {
+				n := now
+				td.DoneBy, td.DoneAt = actor, &n
+			} else {
+				td.DoneBy, td.DoneAt = "", nil
+			}
+		}})
+	}
+	if p.Day.Set {
+		v := p.Day.Val
+		ch = append(ch, change{"day", func() { td.Day = v }})
+	}
+	if p.StartTime.Set {
+		v := p.StartTime.Val
+		ch = append(ch, change{"start_time", func() { td.StartTime = v }})
+	}
+	if p.DurationMin.Set {
+		v := p.DurationMin.Val
+		ch = append(ch, change{"duration_min", func() { td.DurationMin = v }})
+	}
+	if p.Order != nil {
+		v := *p.Order
+		ch = append(ch, change{"order", func() { td.Order = v }})
+	}
+	if p.Category != nil {
+		v := *p.Category
+		ch = append(ch, change{"category", func() { td.Category = v }})
+	}
+	if p.Notes != nil {
+		v := *p.Notes
+		ch = append(ch, change{"notes", func() { td.Notes = v }})
+	}
+	if p.Place.Set {
+		v := p.Place.Val
+		ch = append(ch, change{"place", func() { td.Place = v }})
+	}
+	return ch
+}
+
+func todoCreate(t *models.Trip, op models.Op, at int64, c Ctx, res *models.OpResult) bool {
+	if len(t.Todos) >= MaxTodos {
+		return fail(res, models.CodeCap)
+	}
+	if tombstoned(t, op.EntityID) {
+		return fail(res, models.CodeGone)
+	}
+	if findTodo(t, op.EntityID) >= 0 {
+		return fail(res, models.CodeInvalid)
+	}
+	var p TodoPatch
+	if code := decodePatch(op.Patch, &p); code != "" {
+		return fail(res, code)
+	}
+	if !validTodoPatch(p, true) {
+		return fail(res, models.CodeInvalid)
+	}
+	td := models.TripTodo{TodoID: op.EntityID, Category: "other", FieldAt: map[string]int64{}}
+	commit(&td.FieldAt, at, todoChanges(&td, p, c.Actor, c.Now), res)
+	if p.Order == nil {
+		td.Order = nextOrder(t, td.Day)
+	}
+	td.V = c.NewV
+	resolveTodoTZ(t, &td)
+	t.Todos = append(t.Todos, td)
+	renumberIfCramped(t, c.NewV)
+	return true
+}
+
+func todoUpdate(t *models.Trip, op models.Op, at int64, c Ctx, res *models.OpResult) bool {
+	i := findTodo(t, op.EntityID)
+	if i < 0 {
+		return fail(res, models.CodeGone)
+	}
+	var p TodoPatch
+	if code := decodePatch(op.Patch, &p); code != "" {
+		return fail(res, code)
+	}
+	if !validTodoPatch(p, false) {
+		return fail(res, models.CodeInvalid)
+	}
+	td := &t.Todos[i]
+	if !commit(&td.FieldAt, at, todoChanges(td, p, c.Actor, c.Now), res) {
+		return false
+	}
+	td.V = c.NewV
+	resolveTodoTZ(t, td)
+	if p.Order != nil || p.Day.Set {
+		renumberIfCramped(t, c.NewV)
+	}
+	return true
+}
+
+func todoDelete(t *models.Trip, op models.Op, c Ctx, res *models.OpResult) bool {
+	i := findTodo(t, op.EntityID)
+	if i < 0 {
+		return false // already gone (tombstoned or never existed): idempotent
+	}
+	t.Todos = append(t.Todos[:i], t.Todos[i+1:]...)
+	t.Tombstones = append(t.Tombstones, models.Tombstone{ID: op.EntityID, V: c.NewV, At: c.Now})
+	return true
 }
