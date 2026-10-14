@@ -6,22 +6,22 @@ import { useQuery } from '@tanstack/react-query'
 import { getMe } from '@api/endpoints'
 import { BrandLogo } from '@components/BrandLogo'
 import { Avatar } from '@components/Avatar'
-import { useNavigate } from 'react-router-dom'
+import { useTransitionNavigate, withViewTransition } from '@lib/viewTransition'
 
 export const TopNav: React.FC = () => {
   const { apiKey, setApiKey } = useAuth()
-  const navigate = useNavigate()
+  const navigate = useTransitionNavigate()
   const meQuery = useQuery({ queryKey: ['me'], queryFn: () => getMe(apiKey!) })
   const me = meQuery.data
 
   const items: MenuProps['items'] = [
-    { key: 'account', label: 'Account Settings' },
+    { key: 'account', label: 'Account settings' },
     { type: 'divider' as const },
-    { key: 'logout', label: 'Logout' },
+    { key: 'logout', label: 'Log out' },
   ]
   const onMenuClick: MenuProps['onClick'] = ({ key }) => {
     if (key === 'account') navigate('/app/account')
-    if (key === 'logout') setApiKey(null)
+    if (key === 'logout') withViewTransition(() => setApiKey(null))
   }
 
   const seed = me?.avatar_key || me?.name || me?.user_id || 'me'

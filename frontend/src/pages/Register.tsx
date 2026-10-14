@@ -1,9 +1,11 @@
 import React, { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { errorMessage } from '@lib/errors'
+import { useTransitionNavigate } from '@lib/viewTransition'
+import { TransitionLink } from '@components/TransitionLink'
 import { registerAuth } from '@api/endpoints'
-import { Card, Typography, Form, Input, Button, message } from 'antd'
+import { Form, Input, Button, Typography, message } from 'antd'
 import { useDocumentTitle } from '@lib/useDocumentTitle'
-import { BrandLogo } from '@components/BrandLogo'
+import { AuthShell } from '@components/AuthShell'
 
 export const Register: React.FC = () => {
   useDocumentTitle('Register')
@@ -12,76 +14,80 @@ export const Register: React.FC = () => {
   const [name, setName] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const navigate = useNavigate()
+  const navigate = useTransitionNavigate()
+  const finePointer = window.matchMedia?.('(pointer: fine)').matches ?? false
 
   async function onRegister(e: React.FormEvent) {
     e.preventDefault()
+    if (loading) return
     setLoading(true)
     try {
       await registerAuth(username.trim(), password, name.trim())
-      message.success('Account created. Redirecting to login…')
+      message.success('Account created. Log in to continue.')
       // Ask them to login afterwards per requirement
       setTimeout(() => navigate('/login', { replace: true }), 800)
     } catch (err: any) {
-      message.error(err?.message || 'Registration failed')
+      message.error(
+        err?.status === 409
+          ? 'An account with that email already exists. Try logging in instead.'
+          : errorMessage(err, 'Couldn’t create your account. Try again.'),
+      )
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="login-page">
-      <div className="container">
-        <BrandLogo to="/register" />
-        <Card className="paper-card">
-          <Typography.Title level={2} style={{ marginTop: 0 }}>
-            Create account
-          </Typography.Title>
-          <Form layout="vertical" onSubmitCapture={onRegister}>
-            <Form.Item label="Email (this will be your username)">
-              <Input
-                placeholder="you@example.com"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                autoComplete="email"
-                inputMode="email"
-              />
-            </Form.Item>
-            <Form.Item label="Password">
-              <Input.Password
-                placeholder="At least 8 characters"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete="new-password"
-              />
-            </Form.Item>
-            <Form.Item label="Display name (optional)">
-              <Input
-                placeholder="Your name (optional)"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                autoComplete="name"
-              />
-            </Form.Item>
-            <Button
-              type="primary"
-              htmlType="submit"
-              disabled={!username || password.length < 8 || loading}
-              size="large"
-              block
-            >
-              Create Account
-            </Button>
-          </Form>
-
-          <Typography.Text type="secondary" style={{ display: 'inline-block', paddingTop: 40 }}>
-            Already have an account?{' '}
-            <Link to="/login" className="link-primary">
-              Log in
-            </Link>
-          </Typography.Text>
-        </Card>
-      </div>
-    </div>
+    <AuthShell
+      title="Create account"
+      logoTo="/register"
+      footer={
+        <Typography.Text type="secondary">
+          Already have an account?{' '}
+          <TransitionLink to="/login" className="link-primary">
+            Log in
+          </TransitionLink>
+        </Typography.Text>
+      }
+    >
+      <Form layout="vertical" onSubmitCapture={onRegister}>
+        <Form.Item label="Email (this will be your username)">
+          <Input
+            placeholder="you@example.com"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            autoComplete="email"
+            inputMode="email"
+            autoFocus={finePointer}
+          />
+        </Form.Item>
+        <Form.Item label="Password" extra="Use at least 8 characters.">
+          <Input.Password
+            placeholder="Create a password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="new-password"
+          />
+        </Form.Item>
+        <Form.Item label="Display name (optional)">
+          <Input
+            placeholder="What your housemates will see"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            autoComplete="name"
+          />
+        </Form.Item>
+        <Button
+          type="primary"
+          htmlType="submit"
+          disabled={!username || password.length < 8}
+          loading={loading}
+          size="large"
+          block
+        >
+          Create account
+        </Button>
+      </Form>
+    </AuthShell>
   )
 }

@@ -6,6 +6,7 @@ import { RoomPage } from './RoomPage'
 import { NoRoomPage } from './NoRoomPage'
 import { Card, Alert, Spin, Button, Space } from 'antd'
 import { SignIn } from '@phosphor-icons/react'
+import { TopNav } from '@components/TopNav'
 
 export const Dashboard: React.FC = () => {
   const { apiKey, setApiKey } = useAuth()
@@ -22,10 +23,11 @@ export const Dashboard: React.FC = () => {
 
   if (meQuery.isLoading || roomQuery.isLoading) {
     return (
-      <div className="container">
-        <Card>
-          <Spin /> Loading…
-        </Card>
+      <div className="container" aria-busy="true">
+        <TopNav />
+        <div className="route-skeleton" role="status" aria-label="Loading your house">
+          <Spin />
+        </div>
       </div>
     )
   }
@@ -34,11 +36,11 @@ export const Dashboard: React.FC = () => {
     return (
       <div className="container">
         <Card>
-          <Alert type="error" message="Session expired. Please log in again." showIcon />
+          <Alert type="error" message="Your session expired. Log in again to continue." showIcon />
           <div className="spacer" />
           <Space>
             <Button type="primary" onClick={() => setApiKey(null)} icon={<SignIn />}>
-              Go to login
+              Log in
             </Button>
           </Space>
         </Card>
@@ -51,7 +53,13 @@ export const Dashboard: React.FC = () => {
     return (
       <div className="container">
         <Card>
-          <Alert type="error" message="Failed to load your house. Please retry." showIcon />
+          <Alert
+            type="error"
+            message="Couldn’t load your house. Check your connection and try again."
+            showIcon
+          />
+          <div className="spacer" />
+          <Button onClick={() => roomQuery.refetch()}>Try again</Button>
         </Card>
       </div>
     )

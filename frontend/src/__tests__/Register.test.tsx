@@ -15,8 +15,8 @@ describe('Register page', () => {
     expect(button).toBeDisabled()
 
     const email = screen.getByPlaceholderText('you@example.com')
-    const pwd = screen.getByPlaceholderText('At least 8 characters')
-    const name = screen.getByPlaceholderText('Your name (optional)')
+    const pwd = screen.getByPlaceholderText('Create a password')
+    const name = screen.getByPlaceholderText('What your housemates will see')
 
     fireEvent.change(email, { target: { value: 'alice@example.com' } })
     fireEvent.change(pwd, { target: { value: 'password123' } })

@@ -9,7 +9,7 @@ import { AuthProvider } from '@auth/AuthProvider'
 import { TopNav } from '@components/TopNav'
 
 describe('TopNav', () => {
-  it('shows avatar dropdown with Account Settings and Logout', async () => {
+  it('shows avatar dropdown with Account settings and Log out', async () => {
     localStorage.setItem('gracie_api_key', 'k_test')
     server.use(
       http.get(
@@ -37,10 +37,10 @@ describe('TopNav', () => {
     await userEvent.click(trigger)
 
     // Dropdown items should render in a portal
-    expect(await screen.findByText('Account Settings')).toBeInTheDocument()
-    expect(screen.getByText('Logout')).toBeInTheDocument()
+    expect(await screen.findByText('Account settings')).toBeInTheDocument()
+    expect(screen.getByText('Log out')).toBeInTheDocument()
 
-    await userEvent.click(screen.getByText('Logout'))
+    await userEvent.click(screen.getByText('Log out'))
     // Key should be removed on logout
     expect(localStorage.getItem('gracie_api_key')).toBeNull()
   })
