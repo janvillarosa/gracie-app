@@ -602,6 +602,21 @@ func (r *ListItemRepo) ListArchivedByRoom(_ context.Context, roomID string) ([]m
 	return out, nil
 }
 
+func (r *ListItemRepo) ListByRoom(_ context.Context, roomID string) ([]models.ListItem, error) {
+	r.st.mu.RLock()
+	defer r.st.mu.RUnlock()
+	out := []models.ListItem{}
+	for _, it := range r.st.items {
+		if it.RoomID == roomID {
+			out = append(out, *it)
+		}
+	}
+	sort.SliceStable(out, func(i, j int) bool {
+		return out[i].UpdatedAt.After(out[j].UpdatedAt)
+	})
+	return out, nil
+}
+
 func (r *ListItemRepo) Delete(_ context.Context, itemID string) error {
 	r.st.mu.Lock()
 	defer r.st.mu.Unlock()

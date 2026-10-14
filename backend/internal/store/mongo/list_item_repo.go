@@ -121,6 +121,19 @@ func (r *ListItemRepo) ListArchivedByRoom(ctx context.Context, roomID string) ([
 	return out, nil
 }
 
+func (r *ListItemRepo) ListByRoom(ctx context.Context, roomID string) ([]models.ListItem, error) {
+	filter := bson.D{{Key: "room_id", Value: roomID}}
+	cur, err := r.col().Find(ctx, filter, options.Find().SetSort(bson.D{{Key: "updated_at", Value: -1}}))
+	if err != nil {
+		return nil, err
+	}
+	var out []models.ListItem
+	if err := cur.All(ctx, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (r *ListItemRepo) Delete(ctx context.Context, itemID string) error {
 	_, err := r.col().DeleteOne(ctx, bson.D{{Key: "item_id", Value: itemID}})
 	return err

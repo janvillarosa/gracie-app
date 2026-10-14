@@ -66,6 +66,8 @@ type ListItemRepository interface {
 	UpdateStarred(ctx context.Context, itemID string, starred bool, updatedAt time.Time) error
 	ArchiveCompletedByList(ctx context.Context, listID string, updatedAt time.Time) error
 	ListArchivedByRoom(ctx context.Context, roomID string) ([]models.ListItem, error)
+	// ListByRoom returns every item in the room (active and archived), newest first.
+	ListByRoom(ctx context.Context, roomID string) ([]models.ListItem, error)
 	UpdateOrder(ctx context.Context, itemID string, order float64, updatedAt time.Time) error
 	Delete(ctx context.Context, itemID string) error
 }

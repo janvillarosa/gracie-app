@@ -2,7 +2,10 @@ package services
 
 import (
 	"context"
+	"sort"
 	"time"
+	"unicode"
+	"unicode/utf8"
 
 	derr "github.com/janvillarosa/gracie-app/backend/internal/errors"
 	"github.com/janvillarosa/gracie-app/backend/internal/models"
@@ -343,39 +346,86 @@ func (s *ListService) ArchiveCompletedItems(ctx context.Context, user *models.Us
 	return s.items.ArchiveCompletedByList(ctx, listID, now)
 }
 
+// PantryItem is one distinct thing a house has bought before; it powers add-bar
+// suggestions. Common entries come from the built-in grocery set, not house history.
 type PantryItem struct {
-	Description string `json:"description"`
-	Category    string `json:"category"`
-	Unit        string `json:"unit"`
+	Description string    `json:"description"`
+	Category    string    `json:"category"`
+	Quantity    string    `json:"quantity"`
+	Unit        string    `json:"unit"`
+	TimesAdded  int       `json:"times_added"`
+	LastAddedAt time.Time `json:"last_added_at"`
+	Common      bool      `json:"common"`
 }
+
+// A house with fewer distinct items than this also gets the common grocery set.
+const pantrySeedThreshold = 60
 
 func (s *ListService) GetPantry(ctx context.Context, user *models.User, roomID string) ([]PantryItem, error) {
 	if err := s.ensureRoomMembership(ctx, user, roomID); err != nil {
 		return nil, err
 	}
-	items, err := s.items.ListArchivedByRoom(ctx, roomID)
+	items, err := s.items.ListByRoom(ctx, roomID)
 	if err != nil {
 		return nil, err
 	}
 
-	// Aggregate unique items by description
-	seen := make(map[string]PantryItem)
+	// Items arrive newest first, so the first sighting of a key carries the most
+	// recent description, category, quantity and unit.
+	byKey := make(map[string]*PantryItem)
+	order := []string{}
 	for _, it := range items {
-		desc := it.Description
-		if _, ok := seen[desc]; !ok {
-			seen[desc] = PantryItem{
-				Description: desc,
-				Category:    it.Category,
-				Unit:        it.Unit,
-			}
+		key := parse.NormalizeKey(it.Description)
+		if key == "" {
+			continue
 		}
+		if p, ok := byKey[key]; ok {
+			p.TimesAdded++
+			continue
+		}
+		byKey[key] = &PantryItem{
+			Description: it.Description,
+			Category:    it.Category,
+			Quantity:    it.Quantity,
+			Unit:        it.Unit,
+			TimesAdded:  1,
+			LastAddedAt: it.CreatedAt,
+		}
+		order = append(order, key)
 	}
 
-	out := make([]PantryItem, 0, len(seen))
-	for _, v := range seen {
-		out = append(out, v)
+	out := make([]PantryItem, 0, len(order))
+	for _, k := range order {
+		out = append(out, *byKey[k])
+	}
+	sort.SliceStable(out, func(i, j int) bool {
+		if out[i].TimesAdded != out[j].TimesAdded {
+			return out[i].TimesAdded > out[j].TimesAdded
+		}
+		return out[i].LastAddedAt.After(out[j].LastAddedAt)
+	})
+
+	if len(out) < pantrySeedThreshold {
+		for _, a := range categorization.GroceryAnchors {
+			if _, ok := byKey[a.Term]; ok {
+				continue
+			}
+			out = append(out, PantryItem{
+				Description: capitalizeFirst(a.Term),
+				Category:    a.Category,
+				Common:      true,
+			})
+		}
 	}
 	return out, nil
+}
+
+func capitalizeFirst(s string) string {
+	if s == "" {
+		return s
+	}
+	r, n := utf8.DecodeRuneInString(s)
+	return string(unicode.ToUpper(r)) + s[n:]
 }
 
 func (s *ListService) DeleteItem(ctx context.Context, user *models.User, roomID, listID, itemID string) error {

@@ -79,3 +79,35 @@ func TestNormalizeLegacyItemForRead(t *testing.T) {
 		t.Fatalf("plain normalize changed item: (%q,%q,%q)", got3.Description, got3.Quantity, got3.Unit)
 	}
 }
+
+func TestGetPantryRanksHouseHistoryAndSeedsCommon(t *testing.T) {
+	tx, users, rooms, lists, items := memstore.Compose()
+	us := NewUserService(users, rooms, tx)
+	ls := NewListService(users, rooms, lists, items, categorization.NewKeywordCategorizer(categorization.GroceryAnchors))
+	ctx := context.Background()
+
+	cu, _ := us.CreateUserWithSoloRoom(ctx, "A")
+	roomID := *cu.User.RoomID
+	l, _ := ls.CreateList(ctx, cu.User, roomID, "Groceries", "", "")
+	for _, d := range []string{"Oat milk", "oat  milk", "Bananas", "Oat milk"} {
+		if _, err := ls.CreateItem(ctx, cu.User, roomID, l.ListID, d, "", "", ""); err != nil {
+			t.Fatalf("create %q: %v", d, err)
+		}
+	}
+
+	got, err := ls.GetPantry(ctx, cu.User, roomID)
+	if err != nil {
+		t.Fatalf("pantry: %v", err)
+	}
+	if got[0].TimesAdded != 3 || got[1].TimesAdded != 1 || got[0].Common {
+		t.Fatalf("history should lead, ranked by count: %+v", got[:2])
+	}
+	if !got[len(got)-1].Common {
+		t.Fatalf("sparse house should be padded with common items")
+	}
+	for _, p := range got {
+		if p.Common && (p.Description == "Bananas" || p.Description == "Oat milk") {
+			t.Fatalf("common set duplicated a house item: %+v", p)
+		}
+	}
+}
