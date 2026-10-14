@@ -8,4 +8,5 @@ var (
 	ErrConflict     = errors.New("conflict")
 	ErrNotFound     = errors.New("not found")
 	ErrForbidden    = errors.New("forbidden")
+	ErrRateLimited  = errors.New("rate limited")
 )
