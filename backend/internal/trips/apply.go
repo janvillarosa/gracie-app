@@ -416,3 +416,107 @@ func todoDelete(t *models.Trip, op models.Op, c Ctx, res *models.OpResult) bool 
 	t.Tombstones = append(t.Tombstones, models.Tombstone{ID: op.EntityID, V: c.NewV, At: c.Now})
 	return true
 }
+
+func findBooking(t *models.Trip, id string) int {
+	for i := range t.Bookings {
+		if t.Bookings[i].BookingID == id {
+			return i
+		}
+	}
+	return -1
+}
+
+func bookingChanges(b *models.Booking, p BookingPatch) []change {
+	var ch []change
+	if p.Kind != nil {
+		v := *p.Kind
+		ch = append(ch, change{"kind", func() { b.Kind = v }})
+	}
+	if p.Title != nil {
+		v := *p.Title
+		ch = append(ch, change{"title", func() { b.Title = v }})
+	}
+	if p.ConfirmationCode != nil {
+		v := *p.ConfirmationCode
+		ch = append(ch, change{"confirmation_code", func() { b.ConfirmationCode = v }})
+	}
+	if p.StartsAt.Set {
+		v := p.StartsAt.Val
+		ch = append(ch, change{"starts_at", func() { b.StartsAt = v }})
+	}
+	if p.EndsAt.Set {
+		v := p.EndsAt.Val
+		ch = append(ch, change{"ends_at", func() { b.EndsAt = v }})
+	}
+	if p.StartTZ.Set {
+		v := p.StartTZ.Val
+		ch = append(ch, change{"start_tz", func() { b.StartTZ = v }})
+	}
+	if p.EndTZ.Set {
+		v := p.EndTZ.Val
+		ch = append(ch, change{"end_tz", func() { b.EndTZ = v }})
+	}
+	if p.Place.Set {
+		v := p.Place.Val
+		ch = append(ch, change{"place", func() { b.Place = v }})
+	}
+	if p.Notes != nil {
+		v := *p.Notes
+		ch = append(ch, change{"notes", func() { b.Notes = v }})
+	}
+	return ch
+}
+
+func bookingCreate(t *models.Trip, op models.Op, at int64, c Ctx, res *models.OpResult) bool {
+	if len(t.Bookings) >= MaxBookings {
+		return fail(res, models.CodeCap)
+	}
+	if tombstoned(t, op.EntityID) {
+		return fail(res, models.CodeGone)
+	}
+	if findBooking(t, op.EntityID) >= 0 {
+		return fail(res, models.CodeInvalid)
+	}
+	var p BookingPatch
+	if code := decodePatch(op.Patch, &p); code != "" {
+		return fail(res, code)
+	}
+	if !validBookingPatch(p, true) {
+		return fail(res, models.CodeInvalid)
+	}
+	b := models.Booking{BookingID: op.EntityID, FieldAt: map[string]int64{}}
+	commit(&b.FieldAt, at, bookingChanges(&b, p), res)
+	b.V = c.NewV
+	t.Bookings = append(t.Bookings, b)
+	return true
+}
+
+func bookingUpdate(t *models.Trip, op models.Op, at int64, c Ctx, res *models.OpResult) bool {
+	i := findBooking(t, op.EntityID)
+	if i < 0 {
+		return fail(res, models.CodeGone)
+	}
+	var p BookingPatch
+	if code := decodePatch(op.Patch, &p); code != "" {
+		return fail(res, code)
+	}
+	if !validBookingPatch(p, false) {
+		return fail(res, models.CodeInvalid)
+	}
+	b := &t.Bookings[i]
+	if !commit(&b.FieldAt, at, bookingChanges(b, p), res) {
+		return false
+	}
+	b.V = c.NewV
+	return true
+}
+
+func bookingDelete(t *models.Trip, op models.Op, c Ctx, res *models.OpResult) bool {
+	i := findBooking(t, op.EntityID)
+	if i < 0 {
+		return false
+	}
+	t.Bookings = append(t.Bookings[:i], t.Bookings[i+1:]...)
+	t.Tombstones = append(t.Tombstones, models.Tombstone{ID: op.EntityID, V: c.NewV, At: c.Now})
+	return true
+}
