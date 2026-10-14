@@ -239,6 +239,14 @@ export const ListPage: React.FC = () => {
     },
   )
 
+  // Refetch only once the last optimistic mutation settles; an earlier refetch would return
+  // server state that doesn't yet reflect the others and flash removed rows back.
+  const inFlight = useRef(0)
+  const settle = () => {
+    inFlight.current -= 1
+    if (inFlight.current === 0) qc.invalidateQueries({ queryKey: ['list-items', listId] })
+  }
+
   // Optimistically rewrite every cached variant of this list's items; returns a rollback.
   const applyOptimistic = async (
     mutate: (items: ListItem[], withCompleted: boolean) => ListItem[],
@@ -266,6 +274,7 @@ export const ListPage: React.FC = () => {
   const onToggleComplete = useStableCallback(async (it: ListItem) => {
     if (savingItemId === it.item_id || editingItemId === it.item_id) return
     const next = !it.completed
+    inFlight.current += 1
     // Confetti and UI update immediately; the request reconciles afterwards.
     if (next) {
       const rect = checkboxRefs.current[it.item_id]?.getBoundingClientRect()
@@ -284,12 +293,13 @@ export const ListPage: React.FC = () => {
       rollback()
       msgApi.error(e?.message || 'Failed to update item')
     } finally {
-      qc.invalidateQueries({ queryKey: ['list-items', listId] })
+      settle()
     }
   })
 
   const onDeleteItem = useStableCallback(async (it: ListItem) => {
     if (savingItemId === it.item_id) return
+    inFlight.current += 1
     const rollback = await applyOptimistic((items) => items.filter((x) => x.item_id !== it.item_id))
     try {
       await deleteListItem(apiKey!, roomId!, listId, it.item_id)
@@ -297,7 +307,7 @@ export const ListPage: React.FC = () => {
       rollback()
       msgApi.error(e?.message || 'Failed to delete item')
     } finally {
-      qc.invalidateQueries({ queryKey: ['list-items', listId] })
+      settle()
     }
   })
 
