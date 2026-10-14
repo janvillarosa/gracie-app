@@ -29,7 +29,7 @@ export const InlineEditText: React.FC<Props> = ({ value, onSubmit, disabled, pla
     if (disabled || submitted) return
     const next = text.trim()
     if (!next) {
-      setError('Description can’t be empty')
+      setError('An item needs a name.')
       // re-focus to keep user in edit mode
       setTimeout(() => {
         try {

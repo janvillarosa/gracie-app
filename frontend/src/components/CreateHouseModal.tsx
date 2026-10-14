@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Modal, Form, Input, Space, Button, Typography } from 'antd'
-import { isValidDisplayName, MAX_DESCRIPTION } from '@lib/validation'
+import { DESCRIPTION_RULE, isValidDisplayName, MAX_DESCRIPTION, NAME_RULE } from '@lib/validation'
 
 type Props = {
   open: boolean
@@ -14,12 +14,10 @@ export const CreateHouseModal: React.FC<Props> = ({ open, onClose, onSubmit, sub
   const [description, setDescription] = useState('')
   const nameError = useMemo(() => {
     if (!displayName) return undefined // optional
-    return isValidDisplayName(displayName)
-      ? undefined
-      : 'Name is up to 64 characters. Only letters, numbers and spaces'
+    return isValidDisplayName(displayName) ? undefined : NAME_RULE
   }, [displayName])
   const descError = useMemo(() => {
-    return description.length <= MAX_DESCRIPTION ? undefined : 'Description too long'
+    return description.length <= MAX_DESCRIPTION ? undefined : DESCRIPTION_RULE
   }, [description])
 
   useEffect(() => {
@@ -33,7 +31,7 @@ export const CreateHouseModal: React.FC<Props> = ({ open, onClose, onSubmit, sub
 
   return (
     <Modal
-      title="Create a solo house"
+      title="Create a house"
       open={open}
       onCancel={onClose}
       footer={
@@ -82,7 +80,7 @@ export const CreateHouseModal: React.FC<Props> = ({ open, onClose, onSubmit, sub
           />
         </Form.Item>
         <Typography.Text type="secondary">
-          You can change these later in House Settings.
+          You can change these later in House settings. Invite others with a share code.
         </Typography.Text>
       </Form>
     </Modal>

@@ -13,7 +13,7 @@ describe('CreateHouseModal', () => {
     // name optional: enabled even when empty
     expect(btn).toBeEnabled()
     fireEvent.change(name, { target: { value: 'Bad!@#' } })
-    expect(screen.getByText(/only letters, numbers and spaces/i)).toBeInTheDocument()
+    expect(screen.getByText(/up to 64 letters, numbers or spaces/i)).toBeInTheDocument()
     expect(btn).toBeDisabled()
     fireEvent.change(name, { target: { value: 'My House' } })
     fireEvent.change(desc, { target: { value: 'Cozy' } })

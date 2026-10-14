@@ -1,7 +1,9 @@
 import React, { useMemo, useState } from 'react'
+import { errorMessage } from '@lib/errors'
 import type { RoomView, List } from '@api/types'
 import { useAuth } from '@auth/AuthProvider'
-import { useNavigate, Link } from 'react-router-dom'
+import { Link } from 'react-router-dom'
+import { useTransitionNavigate } from '@lib/viewTransition'
 import {
   createList,
   getLists,
@@ -47,7 +49,7 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
   userId,
 }) => {
   const { apiKey } = useAuth()
-  const navigate = useNavigate()
+  const navigate = useTransitionNavigate()
   useDocumentTitle(room.display_name || 'House')
   const [shareOpen, setShareOpen] = useState(false)
   const [shareToken, setShareToken] = useState<string | null>(null)
@@ -74,7 +76,7 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
       setShareToken(r.token)
       setShareOpen(true)
     } catch (e: any) {
-      message.error(e?.message || 'Failed to get share token')
+      message.error(errorMessage(e, 'Couldn’t get your share code. Try again.'))
     }
   }
 
@@ -108,7 +110,7 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
       setCreateOpen(false)
       await qc.invalidateQueries({ queryKey: ['lists', roomId] })
     } catch (e: any) {
-      message.error(e?.message || 'Failed to create list')
+      message.error(errorMessage(e, 'Couldn’t create the list. Try again.'))
     } finally {
       setCreating(false)
     }
@@ -126,7 +128,7 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
   const onSaveEdit = async () => {
     if (!editTarget) return
     if (!editName.trim()) {
-      message.error('List name is required')
+      message.error('Give the list a name.')
       return
     }
     setEditing(true)
@@ -140,7 +142,7 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
       setEditTarget(null)
       await qc.invalidateQueries({ queryKey: ['lists', roomId] })
     } catch (e: any) {
-      message.error(e?.message || 'Failed to update list')
+      message.error(errorMessage(e, 'Couldn’t save the list. Try again.'))
     } finally {
       setEditing(false)
     }
@@ -151,7 +153,7 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
       await voteListDeletion(apiKey!, roomId, l.list_id)
       await qc.invalidateQueries({ queryKey: ['lists', roomId] })
     } catch (e: any) {
-      message.error(e?.message || 'Failed to vote')
+      message.error(errorMessage(e, 'Couldn’t record your vote. Try again.'))
     }
   }
   const onCancelVoteList = async (l: List) => {
@@ -159,7 +161,7 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
       await cancelListDeletion(apiKey!, roomId, l.list_id)
       await qc.invalidateQueries({ queryKey: ['lists', roomId] })
     } catch (e: any) {
-      message.error(e?.message || 'Failed to cancel vote')
+      message.error(errorMessage(e, 'Couldn’t cancel your vote. Try again.'))
     }
   }
 
@@ -210,11 +212,11 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
 
             <Space>
               <Button onClick={onShare} icon={<ShareNetwork />} shape="round">
-                Share Code
+                Share code
               </Button>
               <Dropdown
                 menu={{
-                  items: [{ key: 'settings', label: 'House Settings' }],
+                  items: [{ key: 'settings', label: 'House settings' }],
                   onClick: ({ key }) => {
                     if (key === 'settings') navigate('/app/settings')
                   },
@@ -225,7 +227,7 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
                   icon={<DotsThreeVertical />}
                   shape="circle"
                   type="text"
-                  aria-label="More actions"
+                  aria-label="House actions"
                 />
               </Dropdown>
             </Space>
@@ -252,14 +254,16 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
                 onClick={() => setCreateOpen(true)}
                 icon={<Plus />}
               >
-                New List
+                New list
               </Button>
             </div>
 
             {listsQuery.isLoading ? (
-              <div>Loading lists…</div>
+              <div>Loading your lists…</div>
             ) : lists.length === 0 ? (
-              <Typography.Text type="secondary">No lists yet. Add one below.</Typography.Text>
+              <Typography.Text type="secondary">
+                No lists yet. Create one with New list.
+              </Typography.Text>
             ) : (
               <AntList
                 className="lists-list"
@@ -289,25 +293,12 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                         {l.icon ? (
-                          <div
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              width: 44,
-                              height: 44,
-                              background: 'var(--panel-subtle)',
-                              border: '1px solid var(--border)',
-                              borderRadius: '50%',
-                              fontSize: 22,
-                              flexShrink: 0,
-                            }}
-                          >
+                          <span className="list-icon" aria-hidden>
                             {toEmoji(l.icon)}
-                          </div>
+                          </span>
                         ) : null}
                         <div>
-                          <Typography.Link style={{ fontSize: 16 }}>{l.name}</Typography.Link>
+                          <span className="list-row-name">{l.name}</span>
                           {l.description && (
                             <div>
                               <Typography.Text type="secondary">{l.description}</Typography.Text>
@@ -324,7 +315,7 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
                                 { key: 'edit', label: 'Edit details' },
                                 ...(l.deletion_votes && l.deletion_votes[userId]
                                   ? [{ key: 'cancel', label: 'Cancel delete vote' }]
-                                  : [{ key: 'vote', label: 'Vote to delete' }]),
+                                  : [{ key: 'vote', label: 'Vote to delete list' }]),
                               ],
                               onClick: ({ key }) => {
                                 if (key === 'edit') onOpenEdit(l)
@@ -341,7 +332,7 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
                             />
                           </Dropdown>
                         </span>
-                        <CaretRight style={{ color: 'var(--color-primary)' }} />
+                        <CaretRight className="list-row-caret" aria-hidden />
                       </Space>
                     </div>
                   </AntList.Item>
@@ -361,14 +352,14 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
             const r = await rotateShare(apiKey!)
             setShareToken(r.token)
           } catch (e: any) {
-            message.error(e?.message || 'Failed to rotate code')
+            message.error(errorMessage(e, 'Couldn’t make a new code. Try again.'))
           }
         }}
       />
 
       {/* Create List Modal */}
       <Modal
-        title="Add List"
+        title="Add list"
         open={createOpen}
         onCancel={() => setCreateOpen(false)}
         footer={
@@ -408,7 +399,7 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
 
       {/* Edit List Modal */}
       <Modal
-        title="Edit List"
+        title="Edit list"
         open={editOpen}
         onCancel={() => setEditOpen(false)}
         footer={

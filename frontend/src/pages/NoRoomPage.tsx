@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react'
+import { errorMessage } from '@lib/errors'
 import { useAuth } from '@auth/AuthProvider'
 import {
   createRoom,
@@ -10,7 +11,7 @@ import {
 import { Card, Typography, Form, Input, Button, Space, Grid, Divider, message } from 'antd'
 import { Plus, UsersThree } from '@phosphor-icons/react'
 import { CreateHouseModal } from '@components/CreateHouseModal'
-import { useNavigate } from 'react-router-dom'
+import { useTransitionNavigate } from '@lib/viewTransition'
 import { useDocumentTitle } from '@lib/useDocumentTitle'
 import { TopNav } from '@components/TopNav'
 
@@ -18,8 +19,8 @@ const TOKEN_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ0123456789' // no I, O, L
 
 export const NoRoomPage: React.FC = () => {
   const { apiKey } = useAuth()
-  const navigate = useNavigate()
-  useDocumentTitle('Join or Create a House')
+  const navigate = useTransitionNavigate()
+  useDocumentTitle('Join or create a house')
   const [token, setToken] = useState('')
 
   const [loading, setLoading] = useState(false)
@@ -44,7 +45,7 @@ export const NoRoomPage: React.FC = () => {
       setCreateOpen(false)
       navigate('/app', { replace: true })
     } catch (e: any) {
-      message.error(e?.message || 'Failed to create house')
+      message.error(errorMessage(e, 'Couldn’t create your house. Try again.'))
     } finally {
       setCreating(false)
     }
@@ -57,9 +58,9 @@ export const NoRoomPage: React.FC = () => {
       await joinRoomByToken(apiKey!, token.trim().toUpperCase())
       window.location.reload()
     } catch (e: any) {
-      if (isForbidden(e)) message.error('Invalid code for this house.')
+      if (isForbidden(e)) message.error('That code doesn’t match a house. Check it and try again.')
       else if (isConflict(e)) message.error('You’re already a member of this house.')
-      else message.error(e?.message || 'Failed to join house')
+      else message.error(errorMessage(e, 'Couldn’t join that house. Try again.'))
     } finally {
       setLoading(false)
     }
@@ -91,7 +92,7 @@ export const NoRoomPage: React.FC = () => {
               Create a new house
             </Typography.Title>
             <Typography.Text className="no-room-subtitle">
-              You will be the only member until someone joins.
+              You’ll be the only member until someone joins with your share code.
             </Typography.Text>
             <Button
               type="primary"
@@ -100,7 +101,7 @@ export const NoRoomPage: React.FC = () => {
               icon={<Plus />}
               block
             >
-              New House
+              Create a house
             </Button>
           </div>
 
@@ -111,10 +112,13 @@ export const NoRoomPage: React.FC = () => {
               Join an existing house
             </Typography.Title>
             <Form layout="vertical" onSubmitCapture={onJoin}>
-              <Form.Item label="5-character code">
+              <Form.Item
+                label="House code"
+                extra="Ask a housemate for it. They’ll find it under Share code."
+              >
                 <div className="join-row">
                   <Input
-                    placeholder="5-character code"
+                    placeholder="e.g., K7M2Q"
                     value={token}
                     onChange={(e) =>
                       setToken(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))

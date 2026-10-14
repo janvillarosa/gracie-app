@@ -12,14 +12,14 @@ export const IconPicker: React.FC<Props> = ({ value, onChange }) => {
   const noIconSelected = value === undefined
   return (
     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-      <Tooltip title="No Icon">
+      <Tooltip title="No icon">
         <Button
           type={noIconSelected ? 'primary' : 'default'}
           onClick={() => onChange(undefined)}
           aria-pressed={noIconSelected}
           style={{ height: 40 }}
         >
-          No Icon
+          No icon
         </Button>
       </Tooltip>
       {LIST_ICONS.map((ic) => {

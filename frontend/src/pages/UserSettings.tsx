@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { errorMessage } from '@lib/errors'
 import { useAuth } from '@auth/AuthProvider'
-import { useNavigate } from 'react-router-dom'
+import { useTransitionNavigate } from '@lib/viewTransition'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getMe, updateMyProfile, changeMyPassword, deleteMyAccount } from '@api/endpoints'
 import type { User } from '@api/types'
@@ -16,8 +17,8 @@ function isEmail(v: string) {
 
 export const UserSettings: React.FC = () => {
   const { apiKey, setApiKey } = useAuth()
-  const navigate = useNavigate()
-  useDocumentTitle('Account Settings')
+  const navigate = useTransitionNavigate()
+  useDocumentTitle('Account settings')
   const qc = useQueryClient()
   const meQuery = useQuery<User>({ queryKey: ['me'], queryFn: () => getMe(apiKey!) })
   const [name, setName] = useState('')
@@ -53,7 +54,7 @@ export const UserSettings: React.FC = () => {
   async function onSaveProfile(e: React.FormEvent) {
     e.preventDefault()
     if (email && !isEmail(email)) {
-      message.error('Invalid email')
+      message.error('Enter a valid email address, like you@example.com.')
       return
     }
     setProfileSaving(true)
@@ -62,10 +63,10 @@ export const UserSettings: React.FC = () => {
       if (name !== meQuery.data?.name) body.name = name
       if (email !== meQuery.data?.username) body.username = email
       await updateMyProfile(apiKey!, body)
-      message.success('Profile updated')
+      message.success('Profile updated.')
       await qc.invalidateQueries({ queryKey: ['me'] })
     } catch (e: any) {
-      message.error(e?.message || 'Failed to update profile')
+      message.error(errorMessage(e, 'Couldn’t update your profile. Try again.'))
     } finally {
       setProfileSaving(false)
     }
@@ -87,9 +88,14 @@ export const UserSettings: React.FC = () => {
       setCurPwd('')
       setNewPwd('')
       setNewPwd2('')
-      message.success('Password updated')
+      message.success('Password updated.')
     } catch (e: any) {
-      message.error(e?.message || 'Failed to update password')
+      message.error(
+        errorMessage(
+          e,
+          'Couldn’t update your password. Check your current password and try again.',
+        ),
+      )
     } finally {
       setPwdSaving(false)
     }
@@ -101,7 +107,7 @@ export const UserSettings: React.FC = () => {
       setApiKey(null)
       navigate('/login', { replace: true })
     } catch (e: any) {
-      message.error(e?.message || 'Failed to delete account')
+      message.error(errorMessage(e, 'Couldn’t delete your account. Try again.'))
     } finally {
       setConfirmOpen(false)
     }
@@ -115,7 +121,7 @@ export const UserSettings: React.FC = () => {
           {isMobile ? (
             <Space direction="vertical" style={{ width: '100%' }} size="small">
               <Typography.Title level={2} style={{ margin: 0 }}>
-                Account Settings
+                Account settings
               </Typography.Title>
               <Space wrap>
                 <Button onClick={() => navigate('/app')} icon={<ArrowLeft />}>
@@ -126,7 +132,7 @@ export const UserSettings: React.FC = () => {
           ) : (
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Typography.Title level={2} style={{ margin: 0 }}>
-                Account Settings
+                Account settings
               </Typography.Title>
               <Button onClick={() => navigate('/app')} icon={<ArrowLeft />}>
                 Back
@@ -182,7 +188,7 @@ export const UserSettings: React.FC = () => {
                 disabled={!canSaveProfile || profileSaving}
                 icon={<FloppyDisk />}
               >
-                Save Profile
+                Save profile
               </Button>
             </div>
           </Form>
@@ -202,7 +208,7 @@ export const UserSettings: React.FC = () => {
                 />
               </Form.Item>
             )}
-            <Form.Item label="New password (mininum of 8 characters)">
+            <Form.Item label="New password (at least 8 characters)">
               <Input.Password
                 value={newPwd}
                 onChange={(e) => setNewPwd(e.target.value)}
@@ -222,7 +228,7 @@ export const UserSettings: React.FC = () => {
               disabled={!canSavePwd || pwdSaving}
               icon={<FloppyDisk />}
             >
-              Save Password
+              Save password
             </Button>
           </Form>
 
@@ -230,7 +236,7 @@ export const UserSettings: React.FC = () => {
 
           <div>
             <Typography.Title level={4} style={{ marginTop: 0 }}>
-              Danger Zone
+              Danger zone
             </Typography.Title>
             <Button danger icon={<Trash />} onClick={() => setConfirmOpen(true)}>
               Permanently delete my account
@@ -260,9 +266,8 @@ const DeleteConfirm: React.FC<{ onConfirm: () => void; onCancel: () => void }> =
   return (
     <Space direction="vertical" style={{ width: '100%' }}>
       <Typography.Paragraph>
-        This action will permanently remove your account. You will be removed from your House. If
-        your House only has you as a member, it will be deleted along with its lists and items. This
-        cannot be undone.
+        This permanently deletes your account and removes you from your house. If you’re the only
+        member, the house and all its lists and items are deleted too. This can’t be undone.
       </Typography.Paragraph>
       <Input
         value={text}
@@ -272,7 +277,7 @@ const DeleteConfirm: React.FC<{ onConfirm: () => void; onCancel: () => void }> =
       <Space>
         <Button onClick={onCancel}>Cancel</Button>
         <Button danger type="primary" disabled={!can} onClick={onConfirm}>
-          Yes, delete my account
+          Delete my account
         </Button>
       </Space>
     </Space>

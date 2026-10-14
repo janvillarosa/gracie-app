@@ -1,6 +1,7 @@
 import React from 'react'
 import { useAuth } from '@auth/AuthProvider'
-import { useNavigate, Link } from 'react-router-dom'
+import { Link } from 'react-router-dom'
+import { useTransitionNavigate } from '@lib/viewTransition'
 import { useQuery } from '@tanstack/react-query'
 import { getMe, getLists } from '@api/endpoints'
 import type { List } from '@api/types'
@@ -11,7 +12,7 @@ import { useDocumentTitle } from '@lib/useDocumentTitle'
 
 export const ListsIndex: React.FC = () => {
   const { apiKey } = useAuth()
-  const navigate = useNavigate()
+  const navigate = useTransitionNavigate()
   useDocumentTitle('Lists')
 
   const meQuery = useQuery({ queryKey: ['me'], queryFn: () => getMe(apiKey!) })
@@ -26,7 +27,7 @@ export const ListsIndex: React.FC = () => {
   if (meQuery.isLoading || listsQuery.isLoading) {
     return (
       <div className="container">
-        <Card>Loading…</Card>
+        <Card>Loading your lists…</Card>
       </div>
     )
   }
@@ -34,10 +35,10 @@ export const ListsIndex: React.FC = () => {
     return (
       <div className="container">
         <Card>
-          <Alert type="error" message="No house found." showIcon />
+          <Alert type="error" message="You’re not in a house yet." showIcon />
           <div className="spacer" />
           <Button onClick={() => navigate('/app')} icon={<ArrowLeft />}>
-            Back to House
+            Back to house
           </Button>
         </Card>
       </div>

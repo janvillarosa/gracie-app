@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { errorMessage } from '@lib/errors'
+import { useTransitionNavigate } from '@lib/viewTransition'
 import { useAuth } from '@auth/AuthProvider'
 import {
   rotateShare,
@@ -11,7 +12,7 @@ import {
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Card, Typography, Space, Button, Input, Form, Grid, message } from 'antd'
 import { ArrowLeft, FloppyDisk, ShareNetwork, Trash, XCircle } from '@phosphor-icons/react'
-import { isValidDisplayName, MAX_DESCRIPTION } from '@lib/validation'
+import { DESCRIPTION_RULE, isValidDisplayName, MAX_DESCRIPTION, NAME_RULE } from '@lib/validation'
 import { ShareCodeModal } from '@components/ShareCodeModal'
 import { useDocumentTitle } from '@lib/useDocumentTitle'
 import { TopNav } from '@components/TopNav'
@@ -20,8 +21,8 @@ const NAME_RE = /^[A-Za-z0-9 ]+$/ // kept for backwards compatibility if referen
 
 export const RoomSettings: React.FC = () => {
   const { apiKey } = useAuth()
-  const navigate = useNavigate()
-  useDocumentTitle('House Settings')
+  const navigate = useTransitionNavigate()
+  useDocumentTitle('House settings')
   const qc = useQueryClient()
   const roomQuery = useQuery({ queryKey: ['my-room'], queryFn: () => getMyRoom(apiKey!) })
   const [displayName, setDisplayName] = useState('')
@@ -51,11 +52,11 @@ export const RoomSettings: React.FC = () => {
   const onSave = async (e: React.FormEvent) => {
     e.preventDefault()
     if (displayName && !nameValid) {
-      message.error('Name is up to 64 characters. Only letters, numbers and spaces')
+      message.error(NAME_RULE)
       return
     }
     if (description.length > MAX_DESCRIPTION) {
-      message.error('Description too long')
+      message.error(DESCRIPTION_RULE)
       return
     }
     setSaving(true)
@@ -64,10 +65,10 @@ export const RoomSettings: React.FC = () => {
       if (displayName !== originalName) payload.display_name = displayName || undefined
       if (description !== originalDesc) payload.description = description
       await updateRoomSettings(apiKey!, payload)
-      message.success('Saved')
+      message.success('House settings saved.')
       qc.invalidateQueries({ queryKey: ['my-room'] })
     } catch (e: any) {
-      message.error(e?.message || 'Failed to save')
+      message.error(errorMessage(e, 'Couldn’t save your changes. Try again.'))
     } finally {
       setSaving(false)
     }
@@ -79,7 +80,7 @@ export const RoomSettings: React.FC = () => {
       setShareToken(r.token)
       setShareOpen(true)
     } catch (e: any) {
-      message.error(e?.message || 'Failed to rotate share code')
+      message.error(errorMessage(e, 'Couldn’t make a new code. Try again.'))
     }
   }
 
@@ -90,21 +91,21 @@ export const RoomSettings: React.FC = () => {
         // Room deleted; go back to dashboard
         navigate('/app', { replace: true })
       } else {
-        message.success('Deletion vote recorded')
+        message.success('Vote recorded. The house is deleted once every member votes.')
       }
       qc.invalidateQueries({ queryKey: ['my-room'] })
     } catch (e: any) {
-      message.error(e?.message || 'Failed to vote deletion')
+      message.error(errorMessage(e, 'Couldn’t record your vote. Try again.'))
     }
   }
 
   const onCancelVote = async () => {
     try {
       await cancelDeletion(apiKey!)
-      message.success('Deletion vote canceled')
+      message.success('Vote canceled.')
       qc.invalidateQueries({ queryKey: ['my-room'] })
     } catch (e: any) {
-      message.error(e?.message || 'Failed to cancel vote')
+      message.error(errorMessage(e, 'Couldn’t cancel your vote. Try again.'))
     }
   }
 
@@ -116,7 +117,7 @@ export const RoomSettings: React.FC = () => {
           {isMobile ? (
             <Space direction="vertical" style={{ width: '100%' }} size="small">
               <Typography.Title level={2} style={{ margin: 0 }}>
-                House Settings
+                House settings
               </Typography.Title>
               <Space wrap>
                 <Button onClick={() => navigate('/app')} icon={<ArrowLeft />}>
@@ -127,7 +128,7 @@ export const RoomSettings: React.FC = () => {
           ) : (
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Typography.Title level={2} style={{ margin: 0 }}>
-                House Settings
+                House settings
               </Typography.Title>
               <Button onClick={() => navigate('/app')} icon={<ArrowLeft />}>
                 Back
@@ -136,9 +137,10 @@ export const RoomSettings: React.FC = () => {
           )}
           <Form layout="vertical" onSubmitCapture={onSave}>
             <Form.Item
-              label="Display name (alphanumeric + spaces)"
+              label="House name"
               validateStatus={displayName && !nameValid ? 'error' : ''}
-              help={displayName && !nameValid ? 'Up to 64 chars; alphanumeric + spaces' : undefined}
+              extra={displayName && !nameValid ? undefined : NAME_RULE}
+              help={displayName && !nameValid ? NAME_RULE : undefined}
             >
               <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
             </Form.Item>
@@ -160,11 +162,11 @@ export const RoomSettings: React.FC = () => {
           </Form>
           <Space wrap>
             <Button type="primary" onClick={onShare} icon={<ShareNetwork />}>
-              Get share code
+              Share code
             </Button>
             {roomQuery.data?.my_deletion_vote ? (
               <Button onClick={onCancelVote} icon={<XCircle />}>
-                Cancel vote
+                Cancel delete vote
               </Button>
             ) : (
               <Button danger onClick={onVoteDelete} icon={<Trash />}>
@@ -177,7 +179,6 @@ export const RoomSettings: React.FC = () => {
             token={shareToken}
             onClose={() => setShareOpen(false)}
             onRotate={onShare}
-            title="Share House"
           />
         </Space>
       </Card>

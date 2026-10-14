@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { Modal, Space, Button, Input, Typography } from 'antd'
 import { ArrowClockwise, X } from '@phosphor-icons/react'
 
@@ -15,13 +15,24 @@ export const ShareCodeModal: React.FC<Props> = ({
   token,
   onClose,
   onRotate,
-  title = 'Share Code',
+  title = 'Share code',
 }) => {
+  // 'idle' | 'copied' | 'failed': the button says what happened instead of staying silent.
+  const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle')
+  useEffect(() => {
+    if (copyState === 'idle') return
+    const t = setTimeout(() => setCopyState('idle'), 2000)
+    return () => clearTimeout(t)
+  }, [copyState])
+
   const onCopy = async () => {
     if (!token) return
     try {
       await navigator.clipboard.writeText(token)
-    } catch {}
+      setCopyState('copied')
+    } catch {
+      setCopyState('failed')
+    }
   }
 
   return (
@@ -42,12 +53,13 @@ export const ShareCodeModal: React.FC<Props> = ({
     >
       <Space direction="vertical" style={{ width: '100%' }}>
         <Typography.Paragraph type="secondary">
-          Share this 5‑character code with your partner to join your house.
+          Give this 5-character code to anyone you want in your house. They enter it under Join an
+          existing house.
         </Typography.Paragraph>
         <div style={{ display: 'flex', gap: 8 }}>
           <Input value={token ?? ''} readOnly aria-label="Share code" />
-          <Button onClick={onCopy} disabled={!token}>
-            Copy
+          <Button onClick={onCopy} disabled={!token} aria-live="polite">
+            {copyState === 'copied' ? 'Copied' : copyState === 'failed' ? 'Copy failed' : 'Copy'}
           </Button>
         </div>
       </Space>
