@@ -77,7 +77,7 @@ func main() {
 	roomHandler := handlers.NewRoomHandler(roomSvc, usersRepo, []byte(cfg.AvatarSalt))
 	listHandler := handlers.NewListHandler(listSvc)
 
-	r := router.NewRouter(usersRepo, authHandler, userHandler, roomHandler, listHandler)
+	r := router.NewRouter(usersRepo, router.Handlers{Auth: authHandler, User: userHandler, Room: roomHandler, List: listHandler})
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,
