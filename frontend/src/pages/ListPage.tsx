@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { errorMessage } from '@lib/errors'
+import { useParams } from 'react-router-dom'
+import { useTransitionNavigate } from '@lib/viewTransition'
 import { useAuth } from '@auth/AuthProvider'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
@@ -68,7 +70,7 @@ import { TopNav } from '@components/TopNav'
 
 export const ListPage: React.FC = () => {
   const { apiKey } = useAuth()
-  const navigate = useNavigate()
+  const navigate = useTransitionNavigate()
   const { listId = '' } = useParams()
   const [includeCompleted, setIncludeCompleted] = useState(false)
   const [groupByCat, setGroupByCat] = useState(() => {
@@ -147,6 +149,17 @@ export const ListPage: React.FC = () => {
 
   const incompleteItems = useMemo(() => sortedItems.filter((it) => !it.completed), [sortedItems])
 
+  // Item ids already shown for this list. A row not in the set is new and slides in;
+  // the first load is recorded silently so the initial list doesn't animate row by row.
+  const seenIds = useRef<{ listId: string; ids: Set<string> } | null>(null)
+  useEffect(() => {
+    if (!itemsQuery.isSuccess) return
+    if (seenIds.current?.listId !== listId) seenIds.current = { listId, ids: new Set() }
+    for (const it of items) seenIds.current.ids.add(it.item_id)
+  }, [items, itemsQuery.isSuccess, listId])
+  const isEntering = (id: string) =>
+    seenIds.current?.listId === listId && !seenIds.current.ids.has(id)
+
   const incompleteGrouped = useMemo(() => {
     if (!groupByCat) return null
     const groups: Record<string, ListItem[]> = {}
@@ -212,7 +225,7 @@ export const ListPage: React.FC = () => {
     } catch (err: any) {
       // Revert on failure
       if (prevData) qc.setQueryData<ListItem[]>(key, prevData)
-      msgApi.error(err?.message || 'Failed to reorder item')
+      msgApi.error(errorMessage(err, 'Couldn’t move that item. Try again.'))
     }
   }
 
@@ -222,22 +235,10 @@ export const ListPage: React.FC = () => {
     if (listMeta) hadListRef.current = true
     if (listsQuery.isSuccess && !listsQuery.isFetching && hadListRef.current && !listMeta) {
       setRedirecting(true)
-      show('List is successfully deleted')
+      show('List deleted.')
       navigate('/app', { replace: true })
     }
   }, [listsQuery.isSuccess, listsQuery.isFetching, listMeta, navigate])
-
-  const onCreateItem = useStableCallback(
-    async (p: { description: string; quantity?: string; unit?: string }) => {
-      try {
-        await createListItem(apiKey!, roomId!, listId, p)
-        qc.invalidateQueries({ queryKey: ['list-items', listId] })
-      } catch (e: any) {
-        msgApi.error(e?.message || 'Failed to add item')
-        throw e
-      }
-    },
-  )
 
   // Refetch only once the last optimistic mutation settles; an earlier refetch would return
   // server state that doesn't yet reflect the others and flash removed rows back.
@@ -246,6 +247,59 @@ export const ListPage: React.FC = () => {
     inFlight.current -= 1
     if (inFlight.current === 0) qc.invalidateQueries({ queryKey: ['list-items', listId] })
   }
+
+  // Server id -> the temporary id a row was first rendered with, so swapping in the
+  // created item keeps the same React key (no remount, no replayed entrance).
+  const rowKeys = useRef(new Map<string, string>())
+  const tempSeq = useRef(0)
+  const isTemp = (id: string) => id.startsWith('tmp-')
+
+  // Adds appear instantly: insert a placeholder row, then swap in the server's item
+  // (which carries the category) when the request returns.
+  const onCreateItem = useStableCallback(
+    async (p: { description: string; quantity?: string; unit?: string }) => {
+      const tempId = `tmp-${++tempSeq.current}`
+      const now = new Date().toISOString()
+      const maxOrder = items.reduce((m, x) => Math.max(m, x.order || 0), 0)
+      const placeholder: ListItem = {
+        item_id: tempId,
+        list_id: listId,
+        room_id: roomId!,
+        description: p.description,
+        quantity: p.quantity,
+        unit: p.unit,
+        completed: false,
+        order: maxOrder + 1,
+        created_at: now,
+        updated_at: now,
+      }
+      inFlight.current += 1
+      const rollback = await applyOptimistic((list) => [...list, placeholder])
+      try {
+        const created = await createListItem(apiKey!, roomId!, listId, p)
+        rowKeys.current.set(created.item_id, tempId)
+        seenIds.current?.ids.add(created.item_id)
+        for (const [key, data] of qc.getQueriesData<ListItem[]>({
+          queryKey: ['list-items', listId],
+        })) {
+          if (data) {
+            qc.setQueryData<ListItem[]>(
+              key,
+              data.map((x) =>
+                x.item_id === tempId ? { ...created, order: created.order ?? x.order } : x,
+              ),
+            )
+          }
+        }
+      } catch (e: any) {
+        rollback()
+        msgApi.error(errorMessage(e, 'Couldn’t add that item. Your text is still in the box.'))
+        throw e
+      } finally {
+        settle()
+      }
+    },
+  )
 
   // Optimistically rewrite every cached variant of this list's items; returns a rollback.
   const applyOptimistic = async (
@@ -267,11 +321,12 @@ export const ListPage: React.FC = () => {
       await qc.invalidateQueries({ queryKey: ['list-items', listId] })
       msgApi.success('Completed items cleared to pantry')
     } catch (e: any) {
-      msgApi.error(e?.message || 'Failed to clear items')
+      msgApi.error(errorMessage(e, 'Couldn’t clear completed items. Try again.'))
     }
   }
 
   const onToggleComplete = useStableCallback(async (it: ListItem) => {
+    if (isTemp(it.item_id)) return
     if (savingItemId === it.item_id || editingItemId === it.item_id) return
     const next = !it.completed
     inFlight.current += 1
@@ -291,13 +346,14 @@ export const ListPage: React.FC = () => {
       await updateListItem(apiKey!, roomId!, listId, it.item_id, { completed: next })
     } catch (e: any) {
       rollback()
-      msgApi.error(e?.message || 'Failed to update item')
+      msgApi.error(errorMessage(e, 'Couldn’t update that item. Try again.'))
     } finally {
       settle()
     }
   })
 
   const onDeleteItem = useStableCallback(async (it: ListItem) => {
+    if (isTemp(it.item_id)) return
     if (savingItemId === it.item_id) return
     inFlight.current += 1
     const rollback = await applyOptimistic((items) => items.filter((x) => x.item_id !== it.item_id))
@@ -305,14 +361,14 @@ export const ListPage: React.FC = () => {
       await deleteListItem(apiKey!, roomId!, listId, it.item_id)
     } catch (e: any) {
       rollback()
-      msgApi.error(e?.message || 'Failed to delete item')
+      msgApi.error(errorMessage(e, 'Couldn’t delete that item. Try again.'))
     } finally {
       settle()
     }
   })
 
   const startEdit = useStableCallback((it: ListItem) => {
-    if (savingItemId) return
+    if (savingItemId || isTemp(it.item_id)) return
     setEditingItemId(it.item_id)
   })
 
@@ -341,7 +397,7 @@ export const ListPage: React.FC = () => {
       setEditingItemId(null)
       await qc.invalidateQueries({ queryKey: ['list-items', listId] })
     } catch (e: any) {
-      msgApi.error(e?.message || 'Failed to update item')
+      msgApi.error(errorMessage(e, 'Couldn’t update that item. Try again.'))
     } finally {
       setSavingItemId(null)
     }
@@ -354,11 +410,11 @@ export const ListPage: React.FC = () => {
       await qc.invalidateQueries({ queryKey: ['lists', roomId] })
       if (res.deleted) {
         setRedirecting(true)
-        show('List is successfully deleted')
+        show('List deleted.')
         navigate('/app')
       }
     } catch (e: any) {
-      msgApi.error(e?.message || 'Failed to vote deletion')
+      msgApi.error(errorMessage(e, 'Couldn’t record your vote. Try again.'))
     }
   }
   const onCancelVote = async () => {
@@ -366,7 +422,7 @@ export const ListPage: React.FC = () => {
       await cancelListDeletion(apiKey!, roomId!, listId)
       await qc.invalidateQueries({ queryKey: ['lists', roomId] })
     } catch (e: any) {
-      msgApi.error(e?.message || 'Failed to cancel vote')
+      msgApi.error(errorMessage(e, 'Couldn’t cancel your vote. Try again.'))
     }
   }
 
@@ -395,9 +451,9 @@ export const ListPage: React.FC = () => {
       setNotesSaving(true)
       await updateList(apiKey!, roomId, listId, { notes: notesText })
       await qc.invalidateQueries({ queryKey: ['lists', roomId] })
-      msgApi.success('Notes saved')
+      msgApi.success('Notes saved.')
     } catch (e: any) {
-      msgApi.error(e?.message || 'Failed to save notes')
+      msgApi.error(errorMessage(e, 'Couldn’t save your notes. They’re still here, so try again.'))
     } finally {
       setNotesSaving(false)
     }
@@ -437,8 +493,9 @@ export const ListPage: React.FC = () => {
 
   if (meQuery.isLoading || listsQuery.isLoading || itemsQuery.isLoading) {
     return (
-      <div className="container">
-        <Card>Loading…</Card>
+      <div className="container" aria-busy="true">
+        <TopNav />
+        <div className="route-skeleton" role="status" aria-label="Loading list" />
       </div>
     )
   }
@@ -446,10 +503,14 @@ export const ListPage: React.FC = () => {
     return (
       <div className="container">
         <Card>
-          <Alert type="error" message="List not found." showIcon />
+          <Alert
+            type="error"
+            message="We couldn’t find this list. It may have been deleted."
+            showIcon
+          />
           <div className="spacer" />
           <Button onClick={() => navigate('/app')} icon={<ArrowLeft />}>
-            Back to House
+            Back to house
           </Button>
         </Card>
       </div>
@@ -473,18 +534,18 @@ export const ListPage: React.FC = () => {
     { type: 'divider' as const },
     ...(myVote(listMeta)
       ? [{ key: 'cancel', label: 'Cancel delete vote', danger: true }]
-      : [{ key: 'vote', label: 'Vote to delete', danger: true }]),
+      : [{ key: 'vote', label: 'Vote to delete list', danger: true }]),
   ]
   const onMenuClick = ({ key }: { key: string }) => {
     if (key === 'toggle-completed') setIncludeCompleted(!includeCompleted)
     if (key === 'clear-completed') onClearCompleted()
     if (key === 'vote') {
       onVoteDelete()
-      show('Vote recorded')
+      show('Vote recorded. The list is deleted once every housemate votes.')
     }
     if (key === 'cancel') {
       onCancelVote()
-      show('Vote canceled')
+      show('Vote canceled.')
     }
   }
   const groupLabel = groupByCat
@@ -492,15 +553,16 @@ export const ListPage: React.FC = () => {
       ? 'Ungroup'
       : 'Ungroup categories'
     : isMobile
-      ? 'Group'
+      ? 'By category'
       : 'Group by category'
 
   const renderRow = (it: ListItem, variant: 'sortable' | 'plain' | 'completed', cat: boolean) => (
     <ItemRow
-      key={it.item_id}
+      key={rowKeys.current.get(it.item_id) ?? it.item_id}
       it={it}
       variant={variant}
       showCategory={cat}
+      entering={isEntering(it.item_id)}
       editing={editingItemId === it.item_id}
       saving={savingItemId === it.item_id}
       onToggle={onToggleComplete}
@@ -525,23 +587,9 @@ export const ListPage: React.FC = () => {
                 style={{ margin: 0, lineHeight: 1.2, display: 'flex', alignItems: 'center' }}
               >
                 {listMeta.icon ? (
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: 44,
-                      height: 44,
-                      background: 'var(--panel-subtle)',
-                      border: '1px solid var(--border)',
-                      borderRadius: '50%',
-                      fontSize: 22,
-                      flexShrink: 0,
-                      marginRight: 12,
-                    }}
-                  >
+                  <span className="list-icon list-icon-title" aria-hidden>
                     {toEmoji(listMeta.icon)}
-                  </div>
+                  </span>
                 ) : null}
                 {listMeta.name}
               </Typography.Title>
@@ -575,7 +623,12 @@ export const ListPage: React.FC = () => {
                 Back
               </Button>
               <Dropdown trigger={['click']} menu={{ items: menuItems, onClick: onMenuClick }}>
-                <Button icon={<DotsThreeVertical />} type="text" shape="circle" aria-label="More" />
+                <Button
+                  icon={<DotsThreeVertical />}
+                  type="text"
+                  shape="circle"
+                  aria-label="More list actions"
+                />
               </Dropdown>
             </div>
           </div>
@@ -594,79 +647,85 @@ export const ListPage: React.FC = () => {
                   key: 'items',
                   label: 'Items',
                   children: (
-                    <Space direction="vertical" style={{ width: '100%' }} size="large">
-                      {itemsQuery.isLoading ? (
-                        <Skeleton active paragraph={{ rows: 4 }} />
-                      ) : items.length === 0 ? (
-                        <div className="empty-state">
-                          <Plus size={20} style={{ color: 'var(--color-primary)' }} />
-                          <Typography.Text type="secondary">
-                            No items yet. Add your first item below.
-                          </Typography.Text>
-                        </div>
-                      ) : (
-                        <>
-                          {incompleteItems.length > 0 &&
-                            (groupByCat && incompleteGrouped ? (
-                              <div className="grouped-sections">
-                                {Object.entries(incompleteGrouped).map(([cat, catItems]) => (
-                                  <div
-                                    key={cat}
-                                    className="category-section"
-                                    style={{ marginBottom: 24 }}
-                                  >
+                    <>
+                      <Space direction="vertical" style={{ width: '100%' }} size="large">
+                        {itemsQuery.isLoading ? (
+                          <Skeleton active paragraph={{ rows: 4 }} />
+                        ) : items.length === 0 ? (
+                          <div className="empty-state">
+                            <Plus size={20} style={{ color: 'var(--color-primary)' }} />
+                            <Typography.Text type="secondary">
+                              No items yet. Add your first item below.
+                            </Typography.Text>
+                          </div>
+                        ) : (
+                          <>
+                            {incompleteItems.length > 0 &&
+                              (groupByCat && incompleteGrouped ? (
+                                <div className="grouped-sections">
+                                  {Object.entries(incompleteGrouped).map(([cat, catItems]) => (
                                     <div
-                                      className="category-section-header"
-                                      style={{ marginBottom: 8 }}
+                                      key={cat}
+                                      className="category-section"
+                                      style={{ marginBottom: 24 }}
                                     >
-                                      <Tag
-                                        className={`category-tag ${getCategoryClass(cat)}`}
-                                        style={{
-                                          fontSize: '12px',
-                                          padding: '2px 10px',
-                                          fontWeight: 600,
-                                        }}
+                                      <div
+                                        className="category-section-header"
+                                        style={{ marginBottom: 8 }}
                                       >
-                                        {cat.toUpperCase()}
-                                      </Tag>
+                                        <Tag
+                                          className={`category-tag ${getCategoryClass(cat)}`}
+                                          style={{
+                                            fontSize: '12px',
+                                            padding: '2px 10px',
+                                            fontWeight: 600,
+                                          }}
+                                        >
+                                          {cat.toUpperCase()}
+                                        </Tag>
+                                      </div>
+                                      <AntList itemLayout="horizontal" className="items-list">
+                                        {catItems.map((it) => renderRow(it, 'plain', false))}
+                                      </AntList>
                                     </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <DndContext sensors={sensors} onDragEnd={onDragEnd}>
+                                  <SortableContext
+                                    items={incompleteItems.map((it) => it.item_id)}
+                                    strategy={verticalListSortingStrategy}
+                                  >
                                     <AntList itemLayout="horizontal" className="items-list">
-                                      {catItems.map((it) => renderRow(it, 'plain', false))}
+                                      {incompleteItems.map((it) =>
+                                        renderRow(it, 'sortable', isGroceryList),
+                                      )}
                                     </AntList>
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              <DndContext sensors={sensors} onDragEnd={onDragEnd}>
-                                <SortableContext
-                                  items={incompleteItems.map((it) => it.item_id)}
-                                  strategy={verticalListSortingStrategy}
+                                  </SortableContext>
+                                </DndContext>
+                              ))}
+                            {includeCompleted && completedItems.length > 0 && (
+                              <>
+                                <div className="completed-header">
+                                  <span>Completed ({completedItems.length})</span>
+                                </div>
+                                <AntList
+                                  itemLayout="horizontal"
+                                  className="items-list completed-list"
                                 >
-                                  <AntList itemLayout="horizontal" className="items-list">
-                                    {incompleteItems.map((it) =>
-                                      renderRow(it, 'sortable', isGroceryList),
-                                    )}
-                                  </AntList>
-                                </SortableContext>
-                              </DndContext>
-                            ))}
-                          {includeCompleted && completedItems.length > 0 && (
-                            <>
-                              <div className="completed-header">
-                                <span>Completed ({completedItems.length})</span>
-                              </div>
-                              <AntList itemLayout="horizontal" className="items-list">
-                                {completedItems.map((it) =>
-                                  renderRow(it, 'completed', isGroceryList),
-                                )}
-                              </AntList>
-                            </>
-                          )}
-                        </>
-                      )}
-                      {/* Sticky Add Bar at bottom (always visible) */}
+                                  {completedItems.map((it) =>
+                                    renderRow(it, 'completed', isGroceryList),
+                                  )}
+                                </AntList>
+                              </>
+                            )}
+                          </>
+                        )}
+                      </Space>
+                      {/* Outside the Space wrapper so sticky pins to the whole tab pane,
+                        keeping the bar on screen while scrolling a long list. */}
                       <AddItemBar onCreate={onCreateItem} />
-                    </Space>
+                    </>
                   ),
                 },
                 {

@@ -150,6 +150,85 @@ describe('ListPage add bar', () => {
     expect(created).toBe(0)
   })
 
+  it('shows the new item immediately, before the server responds', async () => {
+    const { roomId, listId } = await setup()
+    const saved: any[] = []
+    server.use(
+      http.get(`/api/rooms/${roomId}/lists/${listId}/items`, () => {
+        return new Response(JSON.stringify(saved), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }),
+    )
+    let release: () => void = () => {}
+    const held = new Promise<void>((r) => {
+      release = r
+    })
+    server.use(
+      http.post(`/api/rooms/${roomId}/lists/${listId}/items`, async ({ request }) => {
+        const body = (await request.json()) as any
+        await held
+        const created = {
+          item_id: 'srv-1',
+          list_id: listId,
+          room_id: roomId,
+          description: body.description,
+          quantity: body.quantity,
+          unit: body.unit,
+          category: 'grains',
+          completed: false,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }
+        saved.push(created)
+        return new Response(JSON.stringify(created), {
+          status: 201,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }),
+    )
+
+    const input = await screen.findByPlaceholderText('Add an item')
+    await userEvent.type(input, '2 kg rice{enter}')
+
+    // Optimistic row is on screen while the request is still held.
+    expect(await screen.findByText('rice')).toBeInTheDocument()
+    expect(screen.queryByText('grains')).not.toBeInTheDocument()
+
+    release()
+    // The saved item (with its server-assigned category) replaces the placeholder in place.
+    expect(await screen.findByText('grains')).toBeInTheDocument()
+    expect(screen.getAllByText('rice')).toHaveLength(1)
+  })
+
+  it('removes the optimistic row and restores the text when adding fails', async () => {
+    const { roomId, listId } = await setup()
+    server.use(
+      http.post(`/api/rooms/${roomId}/lists/${listId}/items`, () => {
+        return new Response(JSON.stringify({ error: 'nope' }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }),
+    )
+
+    const input = await screen.findByPlaceholderText('Add an item')
+    await userEvent.type(input, 'Butter{enter}')
+
+    await waitFor(() => expect(input).toHaveValue('Butter'))
+    await waitFor(() => expect(document.querySelector('.item-desc')).toBeNull())
+  })
+
+  it('previews the parsed quantity while typing', async () => {
+    await setup()
+    const input = await screen.findByPlaceholderText('Add an item')
+    await userEvent.type(input, '3 cans tomatoes')
+    expect(screen.getByText('3 cans')).toBeInTheDocument()
+    await userEvent.clear(input)
+    expect(screen.queryByText('3 cans')).not.toBeInTheDocument()
+  })
+
   it('shows unchecked item count when present', async () => {
     const updatedAt = new Date().toISOString()
     const listItems = [
