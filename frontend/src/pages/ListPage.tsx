@@ -14,16 +14,14 @@ import {
   reorderListItem,
   updateList,
   clearListItems,
-  getRoomPantry,
 } from '@api/endpoints'
-import type { List, ListItem, PantryItem } from '@api/types'
+import type { List, ListItem } from '@api/types'
 import {
   Card,
   Typography,
   Space,
   Button,
   Input,
-  Checkbox,
   List as AntList,
   Grid,
   Dropdown,
@@ -35,12 +33,10 @@ import {
 } from 'antd'
 import {
   ArrowLeft,
-  Trash,
   Plus,
   Eye,
   EyeSlash,
   DotsThreeVertical,
-  DotsSixVertical,
   FloppyDisk,
   X,
   Broom,
@@ -57,15 +53,17 @@ import {
 import {
   SortableContext,
   verticalListSortingStrategy,
-  useSortable,
   sortableKeyboardCoordinates,
 } from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
 import { toEmoji } from '../icons'
 import { confettiAt } from '@lib/confetti'
 import { parseInput } from '@lib/parseInput'
-import { InlineEditText } from '@components/InlineEditText'
+import { timeAgo } from '@lib/time'
+import { getCategoryClass } from '@lib/category'
+import { useStableCallback } from '@lib/useStableCallback'
 import { useDocumentTitle } from '@lib/useDocumentTitle'
+import { ItemRow } from '@components/ItemRow'
+import { AddItemBar } from '@components/AddItemBar'
 import { TopNav } from '@components/TopNav'
 
 export const ListPage: React.FC = () => {
@@ -73,7 +71,6 @@ export const ListPage: React.FC = () => {
   const navigate = useNavigate()
   const { listId = '' } = useParams()
   const [includeCompleted, setIncludeCompleted] = useState(false)
-  const [newDesc, setNewDesc] = useState('')
   const [groupByCat, setGroupByCat] = useState(() => {
     const saved = localStorage.getItem('gracie_group_by_cat')
     return saved === 'true'
@@ -83,14 +80,12 @@ export const ListPage: React.FC = () => {
     localStorage.setItem('gracie_group_by_cat', String(groupByCat))
   }, [groupByCat])
 
-  const addRef = useRef<any>(null)
-
   const [editingItemId, setEditingItemId] = useState<string | null>(null)
   const [savingItemId, setSavingItemId] = useState<string | null>(null)
   const checkboxRefs = useRef<Record<string, HTMLElement | null>>({})
-  const setCheckboxRef = (id: string) => (el: HTMLElement | null) => {
+  const registerAnchor = useStableCallback((id: string, el: HTMLElement | null) => {
     checkboxRefs.current[id] = el
-  }
+  })
   const qc = useQueryClient()
   // Breakpoints hook must be called before any early returns
   const screens = Grid.useBreakpoint()
@@ -106,22 +101,6 @@ export const ListPage: React.FC = () => {
   const [notesSaving, setNotesSaving] = useState(false)
   const tabsWrapRef = useRef<HTMLDivElement | null>(null)
   const [tabVars, setTabVars] = useState<React.CSSProperties>({})
-
-  const timeAgo = (iso: string | Date | undefined) => {
-    if (!iso) return 'less than a minute ago'
-    const d = typeof iso === 'string' ? new Date(iso) : iso
-    const now = new Date()
-    const diffMs = d.getTime() - now.getTime()
-    const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' })
-    const sec = Math.round(diffMs / 1000)
-    const min = Math.round(sec / 60)
-    const hr = Math.round(min / 60)
-    const day = Math.round(hr / 24)
-    if (Math.abs(sec) < 60) return 'less than a minute ago'
-    if (Math.abs(min) < 60) return rtf.format(min, 'minute')
-    if (Math.abs(hr) < 24) return rtf.format(hr, 'hour')
-    return rtf.format(day, 'day')
-  }
 
   const meQuery = useQuery({ queryKey: ['me'], queryFn: () => getMe(apiKey!) })
   const roomId = meQuery.data?.room_id as string | undefined
@@ -237,24 +216,6 @@ export const ListPage: React.FC = () => {
     }
   }
 
-  const SortableRow: React.FC<{ it: ListItem; children: React.ReactNode }> = ({ it, children }) => {
-    const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
-      id: it.item_id,
-    })
-    const style = {
-      transform: CSS.Transform.toString(transform),
-      transition,
-    } as React.CSSProperties
-    return (
-      <div ref={setNodeRef} style={style} className="sortable-row">
-        <span className="drag-handle" {...attributes} {...listeners} aria-label="Drag to reorder">
-          <DotsSixVertical />
-        </span>
-        <div style={{ flex: 1, minWidth: 0 }}>{children}</div>
-      </div>
-    )
-  }
-
   // If the list disappears due to partner's vote while viewing, navigate home (avoid firing during refetch/errors)
   const hadListRef = useRef(false)
   useEffect(() => {
@@ -266,26 +227,30 @@ export const ListPage: React.FC = () => {
     }
   }, [listsQuery.isSuccess, listsQuery.isFetching, listMeta, navigate])
 
-  const onCreateItem = (val?: string) => {
-    const text = (val || newDesc).trim()
-    if (!text) return
-    const { description, quantity, unit } = parseInput(text)
-    if (!description) return
-
-    setNewDesc('')
-    requestAnimationFrame(() => {
-      addRef.current?.focus()
-    })
-
-    createListItem(apiKey!, roomId!, listId, { description, quantity, unit })
-      .then(() => {
+  const onCreateItem = useStableCallback(
+    async (p: { description: string; quantity?: string; unit?: string }) => {
+      try {
+        await createListItem(apiKey!, roomId!, listId, p)
         qc.invalidateQueries({ queryKey: ['list-items', listId] })
-      })
-      .catch((e: any) => {
-        setNewDesc(text)
-        addRef.current?.focus()
+      } catch (e: any) {
         msgApi.error(e?.message || 'Failed to add item')
-      })
+        throw e
+      }
+    },
+  )
+
+  // Optimistically rewrite every cached variant of this list's items; returns a rollback.
+  const applyOptimistic = async (
+    mutate: (items: ListItem[], withCompleted: boolean) => ListItem[],
+  ) => {
+    await qc.cancelQueries({ queryKey: ['list-items', listId] })
+    const snapshot = qc.getQueriesData<ListItem[]>({ queryKey: ['list-items', listId] })
+    for (const [key, data] of snapshot) {
+      if (data) qc.setQueryData<ListItem[]>(key, mutate(data, key[2] === true))
+    }
+    return () => {
+      for (const [key, data] of snapshot) qc.setQueryData<ListItem[]>(key, data)
+    }
   }
 
   const onClearCompleted = async () => {
@@ -298,40 +263,50 @@ export const ListPage: React.FC = () => {
     }
   }
 
-  const onToggleComplete = async (it: ListItem) => {
+  const onToggleComplete = useStableCallback(async (it: ListItem) => {
     if (savingItemId === it.item_id || editingItemId === it.item_id) return
-    try {
-      await updateListItem(apiKey!, roomId!, listId, it.item_id, { completed: !it.completed })
-      // Play confetti when marking complete
-      if (!it.completed) {
-        const el = checkboxRefs.current[it.item_id]
-        const rect = el?.getBoundingClientRect()
-        if (rect) {
-          confettiAt(rect.left + rect.width / 2, rect.top + rect.height / 2, { durationMs: 2000 })
-        }
+    const next = !it.completed
+    // Confetti and UI update immediately; the request reconciles afterwards.
+    if (next) {
+      const rect = checkboxRefs.current[it.item_id]?.getBoundingClientRect()
+      if (rect) {
+        confettiAt(rect.left + rect.width / 2, rect.top + rect.height / 2, { durationMs: 2000 })
       }
-      await qc.invalidateQueries({ queryKey: ['list-items', listId] })
-    } catch (e: any) {
-      msgApi.error(e?.message || 'Failed to update item')
     }
-  }
+    const rollback = await applyOptimistic((items, withCompleted) =>
+      withCompleted || !next
+        ? items.map((x) => (x.item_id === it.item_id ? { ...x, completed: next } : x))
+        : items.filter((x) => x.item_id !== it.item_id),
+    )
+    try {
+      await updateListItem(apiKey!, roomId!, listId, it.item_id, { completed: next })
+    } catch (e: any) {
+      rollback()
+      msgApi.error(e?.message || 'Failed to update item')
+    } finally {
+      qc.invalidateQueries({ queryKey: ['list-items', listId] })
+    }
+  })
 
-  const onDeleteItem = async (it: ListItem) => {
+  const onDeleteItem = useStableCallback(async (it: ListItem) => {
     if (savingItemId === it.item_id) return
+    const rollback = await applyOptimistic((items) => items.filter((x) => x.item_id !== it.item_id))
     try {
       await deleteListItem(apiKey!, roomId!, listId, it.item_id)
-      await qc.invalidateQueries({ queryKey: ['list-items', listId] })
     } catch (e: any) {
+      rollback()
       msgApi.error(e?.message || 'Failed to delete item')
+    } finally {
+      qc.invalidateQueries({ queryKey: ['list-items', listId] })
     }
-  }
+  })
 
-  const startEdit = (it: ListItem) => {
+  const startEdit = useStableCallback((it: ListItem) => {
     if (savingItemId) return
     setEditingItemId(it.item_id)
-  }
+  })
 
-  const submitEdit = async (it: ListItem, next: string) => {
+  const submitEdit = useStableCallback(async (it: ListItem, next: string) => {
     const trimmed = next.trim()
     if (!trimmed) return
 
@@ -360,7 +335,7 @@ export const ListPage: React.FC = () => {
     } finally {
       setSavingItemId(null)
     }
-  }
+  })
 
   const myVote = (l?: List) => !!l?.deletion_votes && !!userId && !!l.deletion_votes[userId]
   const onVoteDelete = async () => {
@@ -403,21 +378,6 @@ export const ListPage: React.FC = () => {
     )
   }, [listMeta?.name])
 
-  const getCategoryClass = (cat?: string) => {
-    if (!cat) return 'cat-general'
-    const c = cat.toLowerCase()
-    if (c.includes('produce')) return 'cat-produce'
-    if (c.includes('dairy') || c.includes('egg')) return 'cat-dairy'
-    if (c.includes('bakery') || c.includes('grain')) return 'cat-bakery' // Bakery exists as Grains & Bakery
-    if (c.includes('meat') || c.includes('seafood')) return 'cat-meat'
-    if (c.includes('frozen')) return 'cat-frozen'
-    if (c.includes('plant')) return 'cat-plant'
-    if (c.includes('pantry')) return 'cat-pantry'
-    if (c.includes('beverage')) return 'cat-beverages'
-    if (c.includes('household')) return 'cat-household'
-    return 'cat-general'
-  }
-
   const notesDirty = (listMeta?.notes || '') !== notesText
   const onSaveNotes = async () => {
     if (!roomId || !listId || !notesDirty) return
@@ -433,28 +393,37 @@ export const ListPage: React.FC = () => {
     }
   }
 
-  // Animate sliding pill indicator for tabs by updating CSS variables
+  const ready =
+    !meQuery.isLoading && !listsQuery.isLoading && !itemsQuery.isLoading && !!roomId && !!listMeta
+
+  // Slide the pill indicator under the active tab. A ResizeObserver replaces the window
+  // resize listener so we only measure when the tab strip actually changes size.
   useEffect(() => {
+    const wrap = tabsWrapRef.current
+    if (!ready || !wrap) return
+    const list = wrap.querySelector('.ant-tabs-nav .ant-tabs-nav-list') as HTMLElement | null
+    if (!list) return
     const update = () => {
-      const wrap = tabsWrapRef.current
-      if (!wrap) return
-      const list = wrap.querySelector('.ant-tabs-nav .ant-tabs-nav-list') as HTMLElement | null
       const active = wrap.querySelector('.ant-tabs-nav .ant-tabs-tab-active') as HTMLElement | null
-      if (!list || !active) return
+      if (!active) return
       const lr = list.getBoundingClientRect()
       const ar = active.getBoundingClientRect()
-      const left = Math.max(0, ar.left - lr.left)
-      const width = Math.max(0, ar.width)
-      setTabVars({ ['--tab-x' as any]: `${left}px`, ['--tab-w' as any]: `${width}px` })
+      const left = `${Math.max(0, ar.left - lr.left)}px`
+      const width = `${Math.max(0, ar.width)}px`
+      setTabVars((prev) =>
+        (prev as any)['--tab-x'] === left && (prev as any)['--tab-w'] === width
+          ? prev
+          : { ['--tab-x' as any]: left, ['--tab-w' as any]: width },
+      )
     }
     const id = requestAnimationFrame(update)
-    const onResize = () => update()
-    window.addEventListener('resize', onResize)
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(update) : null
+    ro?.observe(list)
     return () => {
       cancelAnimationFrame(id)
-      window.removeEventListener('resize', onResize)
+      ro?.disconnect()
     }
-  }, [activeTab, screens.md])
+  }, [activeTab, ready])
 
   if (meQuery.isLoading || listsQuery.isLoading || itemsQuery.isLoading) {
     return (
@@ -463,7 +432,7 @@ export const ListPage: React.FC = () => {
       </div>
     )
   }
-  if (!roomId) {
+  if (!roomId || (!listMeta && !(redirecting || hadListRef.current))) {
     return (
       <div className="container">
         <Card>
@@ -477,25 +446,60 @@ export const ListPage: React.FC = () => {
     )
   }
   if (!listMeta) {
-    if (redirecting || hadListRef.current) {
-      return (
-        <div className="container">
-          <Card>Redirecting…</Card>
-        </div>
-      )
-    }
     return (
       <div className="container">
-        <Card>
-          <Alert type="error" message="List not found." showIcon />
-          <div className="spacer" />
-          <Button onClick={() => navigate('/app')} icon={<ArrowLeft />}>
-            Back to House
-          </Button>
-        </Card>
+        <Card>Redirecting…</Card>
       </div>
     )
   }
+
+  const menuItems = [
+    {
+      key: 'toggle-completed',
+      label: includeCompleted ? 'Hide completed' : 'Show completed',
+      icon: includeCompleted ? <EyeSlash size={18} /> : <Eye size={18} />,
+    },
+    { key: 'clear-completed', label: 'Clear completed', icon: <Broom size={18} /> },
+    { type: 'divider' as const },
+    ...(myVote(listMeta)
+      ? [{ key: 'cancel', label: 'Cancel delete vote', danger: true }]
+      : [{ key: 'vote', label: 'Vote to delete', danger: true }]),
+  ]
+  const onMenuClick = ({ key }: { key: string }) => {
+    if (key === 'toggle-completed') setIncludeCompleted(!includeCompleted)
+    if (key === 'clear-completed') onClearCompleted()
+    if (key === 'vote') {
+      onVoteDelete()
+      show('Vote recorded')
+    }
+    if (key === 'cancel') {
+      onCancelVote()
+      show('Vote canceled')
+    }
+  }
+  const groupLabel = groupByCat
+    ? isMobile
+      ? 'Ungroup'
+      : 'Ungroup categories'
+    : isMobile
+      ? 'Group'
+      : 'Group by category'
+
+  const renderRow = (it: ListItem, variant: 'sortable' | 'plain' | 'completed', cat: boolean) => (
+    <ItemRow
+      key={it.item_id}
+      it={it}
+      variant={variant}
+      showCategory={cat}
+      editing={editingItemId === it.item_id}
+      saving={savingItemId === it.item_id}
+      onToggle={onToggleComplete}
+      onDelete={onDeleteItem}
+      onStartEdit={startEdit}
+      onSubmitEdit={submitEdit}
+      registerAnchor={registerAnchor}
+    />
+  )
 
   return (
     <div className="container">
@@ -504,207 +508,67 @@ export const ListPage: React.FC = () => {
       <div className="paper-stack">
         {/* Bottom sheet: title + details + actions */}
         <Card className="paper-card paper-meta">
-          {isMobile ? (
-            <Space direction="vertical" style={{ width: '100%' }} size="small">
-              <div className="list-header-grid">
-                <div className="list-header-title">
-                  <Typography.Title
-                    level={2}
-                    style={{ margin: 0, lineHeight: 1.2, display: 'flex', alignItems: 'center' }}
-                  >
-                    {listMeta.icon ? (
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          width: 44,
-                          height: 44,
-                          background: 'var(--panel-subtle)',
-                          border: '1px solid var(--border)',
-                          borderRadius: '50%',
-                          fontSize: 22,
-                          flexShrink: 0,
-                          marginRight: 12,
-                        }}
-                      >
-                        {toEmoji(listMeta.icon)}
-                      </div>
-                    ) : null}
-                    {listMeta.name}
-                  </Typography.Title>
-                  <Typography.Text className="list-meta">
-                    Updated {timeAgo(listMeta.updated_at)}
-                  </Typography.Text>
-                  {incompleteCount > 0 && (
-                    <Typography.Text className="list-meta">
-                      {incompleteCount === 1
-                        ? '1 unchecked item'
-                        : `${incompleteCount} unchecked items`}
-                    </Typography.Text>
-                  )}
-                  {listMeta.description && (
-                    <Typography.Text className="list-description">
-                      {listMeta.description}
-                    </Typography.Text>
-                  )}
-                </div>
-                <div className="list-actions">
-                  {isGroceryList && (
-                    <Button
-                      type={groupByCat ? 'primary' : 'default'}
-                      shape="round"
-                      onClick={() => setGroupByCat(!groupByCat)}
-                    >
-                      {groupByCat ? 'Ungroup' : 'Group'}
-                    </Button>
-                  )}
-                  <Button onClick={() => navigate('/app')} icon={<ArrowLeft />} shape="round">
-                    Back
-                  </Button>
-                  <Dropdown
-                    trigger={['click']}
-                    menu={{
-                      items: [
-                        {
-                          key: 'toggle-completed',
-                          label: includeCompleted ? 'Hide completed' : 'Show completed',
-                          icon: includeCompleted ? <EyeSlash size={18} /> : <Eye size={18} />,
-                        },
-                        {
-                          key: 'clear-completed',
-                          label: 'Clear completed',
-                          icon: <Broom size={18} />,
-                        },
-                        { type: 'divider' },
-                        ...(myVote(listMeta)
-                          ? [{ key: 'cancel', label: 'Cancel delete vote', danger: true }]
-                          : [{ key: 'vote', label: 'Vote to delete', danger: true }]),
-                      ],
-                      onClick: ({ key }) => {
-                        if (key === 'toggle-completed') setIncludeCompleted(!includeCompleted)
-                        if (key === 'clear-completed') onClearCompleted()
-                        if (key === 'vote') {
-                          onVoteDelete()
-                          show('Vote recorded')
-                        }
-                        if (key === 'cancel') {
-                          onCancelVote()
-                          show('Vote canceled')
-                        }
-                      },
+          <div className="list-header-grid">
+            <div className="list-header-title">
+              <Typography.Title
+                level={2}
+                style={{ margin: 0, lineHeight: 1.2, display: 'flex', alignItems: 'center' }}
+              >
+                {listMeta.icon ? (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: 44,
+                      height: 44,
+                      background: 'var(--panel-subtle)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '50%',
+                      fontSize: 22,
+                      flexShrink: 0,
+                      marginRight: 12,
                     }}
                   >
-                    <Button
-                      icon={<DotsThreeVertical />}
-                      type="text"
-                      shape="circle"
-                      aria-label="More"
-                    />
-                  </Dropdown>
-                </div>
-              </div>
-            </Space>
-          ) : (
-            <div className="list-header-grid">
-              <div className="list-header-title">
-                <Typography.Title
-                  level={2}
-                  style={{ margin: 0, lineHeight: 1.2, display: 'flex', alignItems: 'center' }}
-                >
-                  {listMeta.icon ? (
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        width: 44,
-                        height: 44,
-                        background: 'var(--panel-subtle)',
-                        border: '1px solid var(--border)',
-                        borderRadius: '50%',
-                        fontSize: 22,
-                        flexShrink: 0,
-                        marginRight: 12,
-                      }}
-                    >
-                      {toEmoji(listMeta.icon)}
-                    </div>
-                  ) : null}
-                  {listMeta.name}
-                </Typography.Title>
+                    {toEmoji(listMeta.icon)}
+                  </div>
+                ) : null}
+                {listMeta.name}
+              </Typography.Title>
+              <Typography.Text className="list-meta">
+                Updated {timeAgo(listMeta.updated_at)}
+              </Typography.Text>
+              {incompleteCount > 0 && (
                 <Typography.Text className="list-meta">
-                  Updated {timeAgo(listMeta.updated_at)}
+                  {incompleteCount === 1
+                    ? '1 unchecked item'
+                    : `${incompleteCount} unchecked items`}
                 </Typography.Text>
-                {incompleteCount > 0 && (
-                  <Typography.Text className="list-meta">
-                    {incompleteCount === 1
-                      ? '1 unchecked item'
-                      : `${incompleteCount} unchecked items`}
-                  </Typography.Text>
-                )}
-                {listMeta.description && (
-                  <Typography.Text className="list-description">
-                    {listMeta.description}
-                  </Typography.Text>
-                )}
-              </div>
-              <div className="list-actions">
-                {isGroceryList && (
-                  <Button
-                    type={groupByCat ? 'primary' : 'default'}
-                    shape="round"
-                    onClick={() => setGroupByCat(!groupByCat)}
-                  >
-                    {groupByCat ? 'Ungroup categories' : 'Group by category'}
-                  </Button>
-                )}
-                <Button onClick={() => navigate('/app')} icon={<ArrowLeft />} shape="round">
-                  Back
-                </Button>
-                <Dropdown
-                  trigger={['click']}
-                  menu={{
-                    items: [
-                      {
-                        key: 'toggle-completed',
-                        label: includeCompleted ? 'Hide completed' : 'Show completed',
-                        icon: includeCompleted ? <EyeSlash size={18} /> : <Eye size={18} />,
-                      },
-                      {
-                        key: 'clear-completed',
-                        label: 'Clear completed',
-                        icon: <Broom size={18} />,
-                      },
-                      { type: 'divider' },
-                      ...(myVote(listMeta)
-                        ? [{ key: 'cancel', label: 'Cancel delete vote', danger: true }]
-                        : [{ key: 'vote', label: 'Vote to delete', danger: true }]),
-                    ],
-                    onClick: ({ key }) => {
-                      if (key === 'toggle-completed') setIncludeCompleted(!includeCompleted)
-                      if (key === 'clear-completed') onClearCompleted()
-                      if (key === 'vote') {
-                        onVoteDelete()
-                        show('Vote recorded')
-                      }
-                      if (key === 'cancel') {
-                        onCancelVote()
-                        show('Vote canceled')
-                      }
-                    },
-                  }}
-                >
-                  <Button
-                    icon={<DotsThreeVertical />}
-                    type="text"
-                    shape="circle"
-                    aria-label="More"
-                  />
-                </Dropdown>
-              </div>
+              )}
+              {listMeta.description && (
+                <Typography.Text className="list-description">
+                  {listMeta.description}
+                </Typography.Text>
+              )}
             </div>
-          )}
+            <div className="list-actions">
+              {isGroceryList && (
+                <Button
+                  type={groupByCat ? 'primary' : 'default'}
+                  shape="round"
+                  onClick={() => setGroupByCat(!groupByCat)}
+                >
+                  {groupLabel}
+                </Button>
+              )}
+              <Button onClick={() => navigate('/app')} icon={<ArrowLeft />} shape="round">
+                Back
+              </Button>
+              <Dropdown trigger={['click']} menu={{ items: menuItems, onClick: onMenuClick }}>
+                <Button icon={<DotsThreeVertical />} type="text" shape="circle" aria-label="More" />
+              </Dropdown>
+            </div>
+          </div>
         </Card>
 
         {/* Top sheet: tabs over list content */}
@@ -735,7 +599,7 @@ export const ListPage: React.FC = () => {
                           {incompleteItems.length > 0 &&
                             (groupByCat && incompleteGrouped ? (
                               <div className="grouped-sections">
-                                {Object.entries(incompleteGrouped).map(([cat, items]) => (
+                                {Object.entries(incompleteGrouped).map(([cat, catItems]) => (
                                   <div
                                     key={cat}
                                     className="category-section"
@@ -756,85 +620,9 @@ export const ListPage: React.FC = () => {
                                         {cat.toUpperCase()}
                                       </Tag>
                                     </div>
-                                    <AntList
-                                      itemLayout="horizontal"
-                                      className="items-list"
-                                      dataSource={items}
-                                      renderItem={(it) => (
-                                        <AntList.Item
-                                          actions={[
-                                            <Button
-                                              key="del"
-                                              type="text"
-                                              danger
-                                              icon={<Trash />}
-                                              onClick={() => onDeleteItem(it)}
-                                              style={{ paddingInline: 8 }}
-                                              disabled={
-                                                savingItemId === it.item_id ||
-                                                editingItemId === it.item_id
-                                              }
-                                            />,
-                                          ]}
-                                        >
-                                          <div className="item-row">
-                                            <span
-                                              ref={setCheckboxRef(it.item_id)}
-                                              className="checkbox-anchor"
-                                            >
-                                              <Checkbox
-                                                checked={it.completed}
-                                                onChange={() => onToggleComplete(it)}
-                                                disabled={
-                                                  savingItemId === it.item_id ||
-                                                  editingItemId === it.item_id
-                                                }
-                                              />
-                                            </span>
-                                            <div
-                                              className="item-text"
-                                              onClick={(e) => {
-                                                e.stopPropagation()
-                                                startEdit(it)
-                                              }}
-                                            >
-                                              {editingItemId === it.item_id ? (
-                                                <InlineEditText
-                                                  value={`${it.quantity ? it.quantity + (it.unit ? ' ' + it.unit : '') + ' ' : it.unit ? it.unit + ' ' : ''}${it.description}`}
-                                                  onSubmit={(val) => submitEdit(it, val)}
-                                                  disabled={savingItemId === it.item_id}
-                                                />
-                                              ) : (
-                                                <div
-                                                  style={{
-                                                    display: 'flex',
-                                                    flexDirection: 'column',
-                                                  }}
-                                                >
-                                                  <div
-                                                    style={{
-                                                      textDecoration: it.completed
-                                                        ? 'line-through'
-                                                        : 'none',
-                                                      fontWeight: 400,
-                                                      fontSize: '15px',
-                                                    }}
-                                                  >
-                                                    {it.description}
-                                                  </div>
-                                                  {(it.quantity || it.unit) && (
-                                                    <div className="qty-unit-line">
-                                                      <span className="qty-label">Quantity:</span>{' '}
-                                                      {it.quantity} {it.unit}
-                                                    </div>
-                                                  )}
-                                                </div>
-                                              )}
-                                            </div>
-                                          </div>
-                                        </AntList.Item>
-                                      )}
-                                    />
+                                    <AntList itemLayout="horizontal" className="items-list">
+                                      {catItems.map((it) => renderRow(it, 'plain', false))}
+                                    </AntList>
                                   </div>
                                 ))}
                               </div>
@@ -844,105 +632,11 @@ export const ListPage: React.FC = () => {
                                   items={incompleteItems.map((it) => it.item_id)}
                                   strategy={verticalListSortingStrategy}
                                 >
-                                  <AntList
-                                    itemLayout="horizontal"
-                                    className="items-list"
-                                    dataSource={incompleteItems}
-                                    renderItem={(it) => (
-                                      <AntList.Item
-                                        actions={[
-                                          <Button
-                                            key="del"
-                                            type="text"
-                                            danger
-                                            icon={<Trash />}
-                                            aria-label="Delete item"
-                                            title="Delete item"
-                                            onClick={() => onDeleteItem(it)}
-                                            style={{ paddingInline: 8 }}
-                                            disabled={
-                                              savingItemId === it.item_id ||
-                                              editingItemId === it.item_id
-                                            }
-                                          />,
-                                        ]}
-                                      >
-                                        <SortableRow it={it}>
-                                          <div className="item-row">
-                                            <span
-                                              ref={setCheckboxRef(it.item_id)}
-                                              className="checkbox-anchor"
-                                            >
-                                              <Checkbox
-                                                checked={it.completed}
-                                                onChange={() => onToggleComplete(it)}
-                                                disabled={
-                                                  savingItemId === it.item_id ||
-                                                  editingItemId === it.item_id
-                                                }
-                                              />
-                                            </span>
-                                            <div
-                                              className="item-text"
-                                              onClick={(e) => {
-                                                e.stopPropagation()
-                                                startEdit(it)
-                                              }}
-                                            >
-                                              {editingItemId === it.item_id ? (
-                                                <InlineEditText
-                                                  value={`${it.quantity ? it.quantity + (it.unit ? ' ' + it.unit : '') + ' ' : it.unit ? it.unit + ' ' : ''}${it.description}`}
-                                                  onSubmit={(val) => submitEdit(it, val)}
-                                                  disabled={savingItemId === it.item_id}
-                                                />
-                                              ) : (
-                                                <div
-                                                  style={{
-                                                    display: 'flex',
-                                                    flexDirection: 'column',
-                                                  }}
-                                                >
-                                                  <div
-                                                    style={{
-                                                      display: 'flex',
-                                                      flexDirection: 'column',
-                                                    }}
-                                                  >
-                                                    <div
-                                                      style={{
-                                                        textDecoration: it.completed
-                                                          ? 'line-through'
-                                                          : 'none',
-                                                        fontWeight: 400,
-                                                        fontSize: '15px',
-                                                      }}
-                                                    >
-                                                      {it.description}
-                                                    </div>
-                                                    {(it.quantity || it.unit) && (
-                                                      <div className="qty-unit-line">
-                                                        <span className="qty-label">Quantity:</span>{' '}
-                                                        {it.quantity} {it.unit}
-                                                      </div>
-                                                    )}
-                                                  </div>
-                                                  {isGroceryList && it.category && (
-                                                    <div style={{ marginTop: 2 }}>
-                                                      <Tag
-                                                        className={`category-tag ${getCategoryClass(it.category)}`}
-                                                      >
-                                                        {it.category}
-                                                      </Tag>
-                                                    </div>
-                                                  )}
-                                                </div>
-                                              )}
-                                            </div>
-                                          </div>
-                                        </SortableRow>
-                                      </AntList.Item>
+                                  <AntList itemLayout="horizontal" className="items-list">
+                                    {incompleteItems.map((it) =>
+                                      renderRow(it, 'sortable', isGroceryList),
                                     )}
-                                  />
+                                  </AntList>
                                 </SortableContext>
                               </DndContext>
                             ))}
@@ -951,142 +645,17 @@ export const ListPage: React.FC = () => {
                               <div className="completed-header">
                                 <span>Completed ({completedItems.length})</span>
                               </div>
-                              <AntList
-                                itemLayout="horizontal"
-                                className="items-list"
-                                dataSource={completedItems}
-                                renderItem={(it) => (
-                                  <AntList.Item
-                                    actions={[
-                                      <Button
-                                        key="del"
-                                        type="text"
-                                        danger
-                                        icon={<Trash />}
-                                        aria-label="Delete item"
-                                        title="Delete item"
-                                        onClick={() => onDeleteItem(it)}
-                                        style={{ paddingInline: 8 }}
-                                        disabled={
-                                          savingItemId === it.item_id ||
-                                          editingItemId === it.item_id
-                                        }
-                                      />,
-                                    ]}
-                                  >
-                                    <div className="item-row item-row-completed">
-                                      <span
-                                        ref={setCheckboxRef(it.item_id)}
-                                        className="checkbox-anchor"
-                                      >
-                                        <Checkbox
-                                          checked={it.completed}
-                                          onChange={() => onToggleComplete(it)}
-                                          disabled={
-                                            savingItemId === it.item_id ||
-                                            editingItemId === it.item_id
-                                          }
-                                        />
-                                      </span>
-                                      <div
-                                        className="item-text"
-                                        onClick={(e) => {
-                                          e.stopPropagation()
-                                          startEdit(it)
-                                        }}
-                                      >
-                                        {editingItemId === it.item_id ? (
-                                          <InlineEditText
-                                            value={`${it.quantity ? it.quantity + (it.unit ? ' ' + it.unit : '') + ' ' : it.unit ? it.unit + ' ' : ''}${it.description}`}
-                                            onSubmit={(val) => submitEdit(it, val)}
-                                            disabled={savingItemId === it.item_id}
-                                          />
-                                        ) : (
-                                          <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                            <div
-                                              style={{ display: 'flex', flexDirection: 'column' }}
-                                            >
-                                              <div
-                                                style={{
-                                                  textDecoration: 'line-through',
-                                                  opacity: 0.6,
-                                                  fontWeight: 400,
-                                                  fontSize: '15px',
-                                                }}
-                                              >
-                                                {it.description}
-                                              </div>
-                                              {(it.quantity || it.unit) && (
-                                                <div
-                                                  className="qty-unit-line"
-                                                  style={{ opacity: 0.6 }}
-                                                >
-                                                  <span className="qty-label">Quantity:</span>{' '}
-                                                  {it.quantity} {it.unit}
-                                                </div>
-                                              )}
-                                            </div>
-                                            {isGroceryList && it.category && (
-                                              <div style={{ marginTop: 2, opacity: 0.6 }}>
-                                                <Tag
-                                                  className={`category-tag ${getCategoryClass(it.category)}`}
-                                                >
-                                                  {it.category}
-                                                </Tag>
-                                              </div>
-                                            )}
-                                          </div>
-                                        )}
-                                      </div>
-                                    </div>
-                                  </AntList.Item>
+                              <AntList itemLayout="horizontal" className="items-list">
+                                {completedItems.map((it) =>
+                                  renderRow(it, 'completed', isGroceryList),
                                 )}
-                              />
+                              </AntList>
                             </>
                           )}
                         </>
                       )}
                       {/* Sticky Add Bar at bottom (always visible) */}
-                      <div className="add-bar" role="region" aria-label="Add new item">
-                        <div className="add-row">
-                          <Input.TextArea
-                            ref={addRef}
-                            className="add-input"
-                            value={newDesc}
-                            onChange={(e) => setNewDesc(e.target.value)}
-                            placeholder="Add an item"
-                            autoSize={{ minRows: 1, maxRows: 3 }}
-                            onKeyDown={(e) => {
-                              const ne = e as unknown as {
-                                key: string
-                                shiftKey: boolean
-                                nativeEvent?: any
-                                isComposing?: boolean
-                                preventDefault: () => void
-                              }
-                              const composing =
-                                (ne.nativeEvent &&
-                                  (ne.nativeEvent.isComposing || ne.nativeEvent.keyCode === 229)) ||
-                                !!(ne as any).isComposing
-                              if (ne.key === 'Enter' && !ne.shiftKey && !composing) {
-                                e.preventDefault()
-                                onCreateItem()
-                              }
-                            }}
-                            aria-label="Add item input"
-                          />
-                          <Button
-                            className="add-btn"
-                            type="primary"
-                            shape="circle"
-                            onClick={() => onCreateItem()}
-                            disabled={!newDesc.trim()}
-                            icon={<Plus />}
-                            size="large"
-                            aria-label="Add item"
-                          />
-                        </div>
-                      </div>
+                      <AddItemBar onCreate={onCreateItem} />
                     </Space>
                   ),
                 },

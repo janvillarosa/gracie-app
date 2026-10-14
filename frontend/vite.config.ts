@@ -16,6 +16,18 @@ export default defineConfig({
       '@lib': path.resolve(__dirname, 'src/lib'),
     },
   },
+  build: {
+    target: ['es2020', 'safari15', 'chrome90'],
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ['react', 'react-dom', 'react-router-dom', '@tanstack/react-query'],
+          antd: ['antd'],
+          dnd: ['@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/utilities', '@dnd-kit/modifiers'],
+        },
+      },
+    },
+  },
   server: {
     port: 5173,
     proxy: {
@@ -39,10 +51,10 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'lcov'],
       reportsDirectory: 'coverage',
-      // Ratchet floor set just below the current baseline (statements 38.2%,
-      // branches 75.6%, functions 64.0%, lines 38.2%). Vitest reads these as
+      // Ratchet floor set just below the current baseline (statements 45.7%,
+      // branches 76.8%, functions 75.0%, lines 45.7%). Vitest reads these as
       // percentages (0-100). Raise them as coverage grows; never lower.
-      thresholds: { lines: 38, branches: 75, functions: 63, statements: 38 },
+      thresholds: { lines: 45, branches: 76, functions: 74, statements: 45 },
     },
   },
 })

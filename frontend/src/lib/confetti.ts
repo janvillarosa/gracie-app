@@ -4,8 +4,11 @@ export function confettiAt(
   opts?: { colors?: string[]; count?: number; durationMs?: number },
 ) {
   if (typeof document === 'undefined') return
+  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
   const colors = opts?.colors || ['#A094F2', '#7D6EF0', '#F3F78A', '#C7B090', '#FF7A90', '#74E0A6']
-  const count = opts?.count ?? 40 // denser burst
+  // Fewer particles on low-core devices keeps the burst at 60fps.
+  const lowEnd = (navigator.hardwareConcurrency ?? 8) <= 4
+  const count = opts?.count ?? (lowEnd ? 16 : 40)
   const duration = opts?.durationMs ?? 2000
   const gravity = 1600 // px/s^2, stronger gravity for visible arcs
   const drag = 0.98 // air resistance factor per frame

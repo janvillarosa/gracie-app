@@ -251,16 +251,21 @@ h5.ant-typography {
     border-color 180ms ease,
     filter 180ms ease,
     opacity 180ms ease;
-  will-change: transform, background-position;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
   border-radius: var(--radius-squircle) !important;
 }
 
-.ant-btn-primary:hover,
-.ant-btn-primary:focus {
+.ant-btn-primary:focus-visible {
   background: color-mix(in srgb, var(--brand-yellow) 88%, black) !important;
-  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
-  transform: translateY(-1px) scale(1.03);
+}
+
+/* Hover lift only on devices that can hover; touch screens skip the extra compositing */
+@media (hover: hover) {
+  .ant-btn-primary:hover {
+    background: color-mix(in srgb, var(--brand-yellow) 88%, black) !important;
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
+    transform: translateY(-1px) scale(1.03);
+  }
 }
 
 .ant-btn-primary:active {
@@ -331,6 +336,11 @@ h5.ant-typography {
     transition: box-shadow 200ms ease;
   }
 
+  .list-tabs .ant-tabs-nav .ant-tabs-nav-list::after,
+  .ant-progress-bg {
+    transition: none !important;
+  }
+
   .ant-btn-primary:hover,
   .ant-btn-primary:focus,
   .ant-btn-primary:active {
@@ -354,7 +364,6 @@ h5.ant-typography {
 .brand-logo-img {
   display: block;
   height: auto;
-  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.12));
 }
 
 /* Top navigation: logo left, avatar right */
@@ -913,7 +922,6 @@ h5.ant-typography {
 .notes-textarea textarea.ant-input {
   resize: vertical !important;
   overflow-y: auto !important;
-  will-change: transform;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -1015,7 +1023,7 @@ h5.ant-typography {
 
 /* Progress bar transition */
 .ant-progress-bg {
-  transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+  transition: width 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
 }
 
 /* Category Tag Refinement */

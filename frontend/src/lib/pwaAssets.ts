@@ -4,7 +4,6 @@
 import appleTouch from '@assets/apple-touch-icon.png'
 import faviconPng from '@assets/favicon-96x96.png'
 import faviconIco from '@assets/favicon.ico'
-import faviconSvg from '@assets/favicon.svg'
 import icon192 from '@assets/web-app-manifest-192x192.png'
 import icon512 from '@assets/web-app-manifest-512x512.png'
 import manifestJson from '@assets/site.webmanifest'
@@ -38,7 +37,6 @@ export function setupPWAAssets() {
   const themeColor: string = base?.theme_color || DEFAULT_THEME
 
   // Favicons
-  if (faviconSvg) upsertLink('icon-svg', 'icon', { type: 'image/svg+xml', href: faviconSvg })
   if (faviconPng)
     upsertLink('icon-png', 'icon', { type: 'image/png', sizes: '96x96', href: faviconPng })
   if (faviconIco) upsertLink('icon-ico', 'shortcut icon', { href: faviconIco })

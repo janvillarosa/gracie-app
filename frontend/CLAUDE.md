@@ -40,6 +40,21 @@ why the config forces a single fork.
   sleeps; replace them when you touch those files.)
 - Assert on user-visible behavior (roles/text), not implementation details.
 
+## Performance conventions (low-end devices)
+
+- **Routes are lazy.** `routes/AppRoutes.tsx` loads each page with `React.lazy`; vendor
+  chunks (`react`, `antd`, `dnd`) are split in `vite.config.ts` `build.rollupOptions`.
+  Don't import a page eagerly from the entry.
+- **Images:** never ship a source image bigger than ~2x its largest rendered size
+  (the logo is `logo-112.png` / `logo-168.png`). No SVGs that wrap base64 rasters.
+- **List rows are memoized** (`components/ItemRow.tsx`). Pass handlers wrapped in
+  `useStableCallback` and keep per-keystroke state (e.g. `AddItemBar`'s draft) out of
+  big pages. Define components at module scope, never inside another component.
+- **CSS:** no permanent `will-change`, no `filter` on always-visible images, hover
+  effects behind `@media (hover: hover)`.
+- **Fonts** are self-hosted via `@fontsource/outfit` (latin subsets only); don't add
+  third-party font or script origins.
+
 ## Ratchets (raise over time; never lower)
 
 - **Coverage:** thresholds live in `vite.config.ts` (`test.coverage.thresholds`),
