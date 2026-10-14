@@ -93,5 +93,23 @@ describe('ListPage notes', () => {
     await userEvent.click(saveBtn)
 
     await waitFor(() => expect(patched).toBe(true))
+    // Save confirms in place rather than with a toast
+    expect(await screen.findByRole('button', { name: /saved/i })).toBeInTheDocument()
+  })
+
+  it('lets Clear all be undone until the user types again', async () => {
+    await setup()
+    await userEvent.click(await screen.findByRole('tab', { name: /notes/i }))
+    const textarea = await screen.findByPlaceholderText(/write notes/i)
+    await userEvent.type(textarea, 'Buy oat milk')
+
+    await userEvent.click(screen.getByRole('button', { name: /clear all/i }))
+    expect(textarea).toHaveValue('')
+    await userEvent.click(screen.getByRole('button', { name: /undo clear/i }))
+    expect(textarea).toHaveValue('Buy oat milk')
+
+    await userEvent.click(screen.getByRole('button', { name: /clear all/i }))
+    await userEvent.type(textarea, 'x')
+    expect(screen.queryByRole('button', { name: /undo clear/i })).not.toBeInTheDocument()
   })
 })

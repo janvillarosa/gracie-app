@@ -2,7 +2,6 @@ import React, { useMemo, useState } from 'react'
 import { errorMessage } from '@lib/errors'
 import type { RoomView, List } from '@api/types'
 import { useAuth } from '@auth/AuthProvider'
-import { Link } from 'react-router-dom'
 import { useTransitionNavigate } from '@lib/viewTransition'
 import {
   createList,
@@ -22,7 +21,6 @@ import {
   Modal,
   Input,
   List as AntList,
-  Grid,
   Dropdown,
   message,
 } from 'antd'
@@ -33,12 +31,14 @@ import {
   Plus,
   FloppyDisk,
   X,
+  GearSix,
 } from '@phosphor-icons/react'
 import type { MenuProps } from 'antd'
 import { IconPicker } from '@components/IconPicker'
 import { AvatarBadge } from '@components/AvatarBadge'
 import { ShareCodeModal } from '@components/ShareCodeModal'
 import { TopNav } from '@components/TopNav'
+import { TransitionLink } from '@components/TransitionLink'
 import { toEmoji } from '../icons'
 import type { ListIcon } from '@api/types'
 import { useDocumentTitle } from '@lib/useDocumentTitle'
@@ -67,8 +67,6 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
   const [editIcon, setEditIcon] = useState<ListIcon | undefined>(undefined)
   const [editIconTouched, setEditIconTouched] = useState(false)
   const qc = useQueryClient()
-  const screens = Grid.useBreakpoint()
-  const isMobile = !screens.md
 
   const onShare = async () => {
     try {
@@ -214,22 +212,14 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
               <Button onClick={onShare} icon={<ShareNetwork />} shape="round">
                 Share code
               </Button>
-              <Dropdown
-                menu={{
-                  items: [{ key: 'settings', label: 'House settings' }],
-                  onClick: ({ key }) => {
-                    if (key === 'settings') navigate('/app/settings')
-                  },
-                }}
-                trigger={['click']}
-              >
-                <Button
-                  icon={<DotsThreeVertical />}
-                  shape="circle"
-                  type="text"
-                  aria-label="House actions"
-                />
-              </Dropdown>
+              <Button
+                icon={<GearSix size={20} />}
+                shape="circle"
+                type="text"
+                aria-label="House settings"
+                title="House settings"
+                onClick={() => navigate('/app/settings')}
+              />
             </Space>
           </div>
         </Card>
@@ -267,74 +257,50 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
             ) : (
               <AntList
                 className="lists-list"
-                itemLayout={isMobile ? 'vertical' : 'horizontal'}
                 dataSource={lists}
                 renderItem={(l) => (
-                  <AntList.Item
-                    style={{ cursor: 'pointer', paddingBlock: 16 }}
-                    onClick={() => navigate(`/app/lists/${l.list_id}`)}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault()
-                        navigate(`/app/lists/${l.list_id}`)
-                      }
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: 'flex',
-                        width: '100%',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        gap: 12,
+                  <AntList.Item>
+                    <TransitionLink to={`/app/lists/${l.list_id}`} className="list-row-link">
+                      {l.icon ? (
+                        <span className="list-icon" aria-hidden>
+                          {toEmoji(l.icon)}
+                        </span>
+                      ) : null}
+                      <span className="list-row-text">
+                        <span className="list-row-name">{l.name}</span>
+                        {l.description && (
+                          <Typography.Text type="secondary" className="list-row-desc">
+                            {l.description}
+                          </Typography.Text>
+                        )}
+                      </span>
+                    </TransitionLink>
+                    <Dropdown
+                      trigger={['click']}
+                      placement="bottomRight"
+                      menu={{
+                        items: [
+                          { key: 'edit', label: 'Edit details' },
+                          ...(l.deletion_votes && l.deletion_votes[userId]
+                            ? [{ key: 'cancel', label: 'Cancel delete vote' }]
+                            : [{ key: 'vote', label: 'Vote to delete list' }]),
+                        ],
+                        onClick: ({ key }) => {
+                          if (key === 'edit') onOpenEdit(l)
+                          if (key === 'vote') onVoteList(l)
+                          if (key === 'cancel') onCancelVoteList(l)
+                        },
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        {l.icon ? (
-                          <span className="list-icon" aria-hidden>
-                            {toEmoji(l.icon)}
-                          </span>
-                        ) : null}
-                        <div>
-                          <span className="list-row-name">{l.name}</span>
-                          {l.description && (
-                            <div>
-                              <Typography.Text type="secondary">{l.description}</Typography.Text>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      <Space>
-                        <span onClick={(e) => e.stopPropagation()}>
-                          <Dropdown
-                            trigger={['click']}
-                            menu={{
-                              items: [
-                                { key: 'edit', label: 'Edit details' },
-                                ...(l.deletion_votes && l.deletion_votes[userId]
-                                  ? [{ key: 'cancel', label: 'Cancel delete vote' }]
-                                  : [{ key: 'vote', label: 'Vote to delete list' }]),
-                              ],
-                              onClick: ({ key }) => {
-                                if (key === 'edit') onOpenEdit(l)
-                                if (key === 'vote') onVoteList(l)
-                                if (key === 'cancel') onCancelVoteList(l)
-                              },
-                            }}
-                          >
-                            <Button
-                              icon={<DotsThreeVertical />}
-                              type="text"
-                              shape="circle"
-                              aria-label="List actions"
-                            />
-                          </Dropdown>
-                        </span>
-                        <CaretRight className="list-row-caret" aria-hidden />
-                      </Space>
-                    </div>
+                      <Button
+                        className="list-row-menu"
+                        icon={<DotsThreeVertical size={20} weight="bold" />}
+                        type="text"
+                        shape="circle"
+                        aria-label={`Actions for ${l.name}`}
+                      />
+                    </Dropdown>
+                    <CaretRight className="list-row-caret" size={18} weight="bold" aria-hidden />
                   </AntList.Item>
                 )}
               />

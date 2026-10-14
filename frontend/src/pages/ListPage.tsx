@@ -40,8 +40,10 @@ import {
   Plus,
   DotsThreeVertical,
   FloppyDisk,
-  X,
   Broom,
+  Eraser,
+  ArrowCounterClockwise,
+  Check,
   Rows,
 } from '@phosphor-icons/react'
 import {
@@ -102,6 +104,10 @@ export const ListPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'items' | 'notes'>('items')
   const [notesText, setNotesText] = useState('')
   const [notesSaving, setNotesSaving] = useState(false)
+  // What Clear all wiped, kept until the user types or saves so the clear can be undone.
+  const [clearedNotes, setClearedNotes] = useState<string | null>(null)
+  // Save says "Saved" in place for a moment instead of raising a toast.
+  const [notesJustSaved, setNotesJustSaved] = useState(false)
   const tabsWrapRef = useRef<HTMLDivElement | null>(null)
   const [tabVars, setTabVars] = useState<React.CSSProperties>({})
 
@@ -513,6 +519,7 @@ export const ListPage: React.FC = () => {
   // Sync local notes buffer with server when loading or switching lists
   useEffect(() => {
     if (listMeta) setNotesText(listMeta.notes || '')
+    setClearedNotes(null)
   }, [listMeta?.list_id, listMeta?.notes])
 
   const isGroceryList = useMemo(() => {
@@ -527,13 +534,33 @@ export const ListPage: React.FC = () => {
   }, [listMeta?.name])
 
   const notesDirty = (listMeta?.notes || '') !== notesText
+  useEffect(() => {
+    if (!notesJustSaved) return
+    const t = setTimeout(() => setNotesJustSaved(false), 1800)
+    return () => clearTimeout(t)
+  }, [notesJustSaved])
+  const onNotesChange = (next: string) => {
+    setNotesText(next)
+    setClearedNotes(null)
+    setNotesJustSaved(false)
+  }
+  const onClearNotes = () => {
+    setClearedNotes(notesText)
+    setNotesText('')
+    setNotesJustSaved(false)
+  }
+  const onUndoClearNotes = () => {
+    if (clearedNotes !== null) setNotesText(clearedNotes)
+    setClearedNotes(null)
+  }
   const onSaveNotes = async () => {
     if (!roomId || !listId || !notesDirty) return
     try {
       setNotesSaving(true)
       await updateList(apiKey!, roomId, listId, { notes: notesText })
       await qc.invalidateQueries({ queryKey: ['lists', roomId] })
-      msgApi.success('Notes saved.')
+      setClearedNotes(null)
+      setNotesJustSaved(true)
     } catch (e: any) {
       msgApi.error(errorMessage(e, 'Couldn’t save your notes. They’re still here, so try again.'))
     } finally {
@@ -576,7 +603,9 @@ export const ListPage: React.FC = () => {
     }
   }, [activeTab, ready])
 
-  if (meQuery.isLoading || listsQuery.isLoading || itemsQuery.isLoading) {
+  // Items load inside the Items tab (it has its own skeleton), so a list already in the
+  // cache from the house page renders at once, and its sticker can land mid-transition.
+  if (meQuery.isLoading || listsQuery.isLoading || (itemsQuery.isLoading && !listMeta)) {
     return (
       <div className="container" aria-busy="true">
         <TopNav />
@@ -665,7 +694,11 @@ export const ListPage: React.FC = () => {
                 {listMeta.name}
               </Typography.Title>
               <Typography.Text className="list-meta">
-                {incompleteCount > 0 ? `${incompleteCount} to get · ` : 'All done · '}
+                {itemsQuery.isLoading
+                  ? ''
+                  : incompleteCount > 0
+                    ? `${incompleteCount} to get · `
+                    : 'All done · '}
                 updated {updatedAgo}
               </Typography.Text>
               {listMeta.description && (
@@ -824,28 +857,54 @@ export const ListPage: React.FC = () => {
                       <Input.TextArea
                         className="notes-textarea"
                         value={notesText}
-                        onChange={(e) => setNotesText(e.target.value)}
+                        onChange={(e) => onNotesChange(e.target.value)}
                         placeholder="Write notes for this list"
                         rows={12}
                       />
                       <div className="notes-actions">
-                        <Button
-                          danger
-                          onClick={() => setNotesText('')}
-                          disabled={!notesText.trim()}
-                          icon={<X />}
-                          shape="round"
-                        >
-                          Clear all
-                        </Button>
+                        {clearedNotes !== null ? (
+                          <Button
+                            key="undo"
+                            type="text"
+                            className="notes-clear is-undo"
+                            onClick={onUndoClearNotes}
+                            icon={<ArrowCounterClockwise size={18} />}
+                          >
+                            Undo clear
+                          </Button>
+                        ) : (
+                          <Button
+                            key="clear"
+                            type="text"
+                            className="notes-clear"
+                            onClick={onClearNotes}
+                            disabled={!notesText.trim()}
+                            icon={<Eraser size={18} />}
+                          >
+                            Clear all
+                          </Button>
+                        )}
                         <Button
                           type="primary"
-                          onClick={onSaveNotes}
-                          disabled={!notesDirty || notesSaving}
-                          icon={<FloppyDisk />}
                           shape="round"
+                          className={notesJustSaved ? 'notes-save is-saved' : 'notes-save'}
+                          onClick={onSaveNotes}
+                          loading={notesSaving}
+                          disabled={!notesDirty || notesSaving}
+                          icon={
+                            notesJustSaved ? (
+                              <Check
+                                key="saved"
+                                size={18}
+                                weight="bold"
+                                className="notes-saved-check"
+                              />
+                            ) : (
+                              <FloppyDisk size={18} />
+                            )
+                          }
                         >
-                          Save
+                          {notesJustSaved ? 'Saved' : 'Save'}
                         </Button>
                       </div>
                     </Space>

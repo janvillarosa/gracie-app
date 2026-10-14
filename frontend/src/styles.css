@@ -499,6 +499,22 @@ h5.ant-typography {
 .brand-logo-img {
   display: block;
   height: auto;
+  /* The source PNGs carry a faint 1px grey fringe on their outer edge; clip it so the
+     logo doesn't sit in a visible box on the page background. */
+  clip-path: inset(1px);
+}
+
+.brand-logo a {
+  display: block;
+  border-radius: 12px;
+}
+
+.brand-logo a:focus {
+  outline: none;
+}
+
+.brand-logo a:focus-visible {
+  box-shadow: var(--focus-ring);
 }
 
 /* Top navigation: logo left, avatar right */
@@ -507,6 +523,9 @@ h5.ant-typography {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  /* Same height whether it holds the logo or a back link, so the first sheet lands at the
+     same y on every page and the view transition doesn't jump. */
+  min-height: 56px;
   margin: 0 0 10px 0;
 }
 
@@ -525,15 +544,32 @@ h5.ant-typography {
   align-items: center;
   justify-content: center;
   border: none;
+  border-radius: 999px;
   background: transparent;
   padding: 0;
   cursor: pointer;
+  transition:
+    box-shadow var(--dur-fast) ease,
+    transform var(--dur-press) ease;
 }
 
 .avatar-button:focus {
-  outline: 2px solid var(--border-strong);
-  outline-offset: 2px;
-  border-radius: 999px;
+  outline: none;
+}
+
+.avatar-button:focus-visible,
+.avatar-button.ant-dropdown-open {
+  box-shadow: var(--focus-ring);
+}
+
+.avatar-button:active {
+  transform: scale(0.96);
+}
+
+@media (hover: hover) {
+  .avatar-button:hover:not(.ant-dropdown-open) {
+    box-shadow: 0 0 0 3px rgba(26, 26, 26, 0.08);
+  }
 }
 
 /* Wordmark next to logo on auth screen */
@@ -621,15 +657,80 @@ h5.ant-typography {
   padding: 0 !important;
 }
 
-/* Stronger borders for lists on RoomPage and hover effects */
+/* House page list rows: the whole row is one link (stretched over the row), with the
+   actions button raised above it so the two never nest. */
 .lists-list .ant-list-item {
   position: relative;
+  display: flex;
+  justify-content: flex-start !important;
+  gap: 4px;
   border-bottom: none !important;
   align-items: center;
   margin-inline: -12px;
-  padding-inline: 12px !important;
+  padding: 14px 12px !important;
   border-radius: 12px;
   transition: background-color var(--dur-fast) ease;
+}
+
+.lists-list .list-row-link {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 1;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.lists-list .list-row-link::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+
+.lists-list .list-row-link:focus {
+  outline: none;
+}
+
+.lists-list .ant-list-item:has(.list-row-link:focus-visible) {
+  box-shadow: var(--focus-ring);
+}
+
+.lists-list .list-row-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.lists-list .list-row-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Descriptions may wrap once on a phone, then clip */
+.lists-list .list-row-desc {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.lists-list .list-row-menu {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+  width: 40px !important;
+  height: 40px !important;
+  color: var(--muted) !important;
+}
+
+.lists-list .list-row-menu.ant-dropdown-open {
+  background: rgba(26, 26, 26, 0.06) !important;
+  color: var(--ink) !important;
 }
 
 /* Divider drawn inset so the row's rounded hover fill doesn't bend it */
@@ -659,6 +760,7 @@ h5.ant-typography {
 }
 
 .lists-list .list-row-caret {
+  flex-shrink: 0;
   color: var(--brand-yellow-deep);
   transition: transform var(--dur-base) var(--ease-out);
 }
@@ -1456,10 +1558,54 @@ h5.ant-typography {
 }
 
 /* Notes actions: right-aligned with Save on the far right */
+/* Notes actions: the quiet, undoable Clear all on the left, Save alone on the right */
 .notes-actions {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: space-between;
   gap: 8px;
+}
+
+.notes-actions .notes-clear.ant-btn {
+  margin-left: -8px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.notes-actions .notes-clear.ant-btn:disabled {
+  color: color-mix(in srgb, var(--muted) 45%, transparent);
+  background: transparent !important;
+  border-color: transparent !important;
+}
+
+.notes-actions .notes-clear.is-undo.ant-btn {
+  color: var(--brand-blue);
+}
+
+@media (hover: hover) {
+  .notes-actions .notes-clear.ant-btn:not(:disabled):not(.is-undo):hover {
+    color: var(--brand-red);
+    background: color-mix(in srgb, var(--brand-red) 7%, transparent);
+  }
+}
+
+/* "Saved" holds the button's shape in a settled yellow instead of the grey disabled look */
+.notes-actions .notes-save.is-saved.ant-btn:disabled {
+  background: color-mix(in srgb, var(--brand-yellow) 35%, white) !important;
+  border-color: color-mix(in srgb, var(--brand-yellow-deep) 70%, white) !important;
+  color: var(--ink) !important;
+  box-shadow: none !important;
+  cursor: default;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .notes-saved-check {
+    animation: check-pop 320ms var(--ease-out);
+  }
+
+  .notes-actions .notes-clear.is-undo {
+    animation: chip-in 220ms var(--ease-out);
+  }
 }
 
 /* Items list action buttons: keep trash red and borderless, even when disabled */
@@ -2052,6 +2198,63 @@ textarea.notes-textarea {
     animation-duration: 460ms;
     animation-timing-function: var(--ease-out);
   }
+
+  /* As the list page settles in, its sticker gives a small hop, like a sticker pressed down */
+  .list-icon-title {
+    animation: sticker-press 560ms ease-out 200ms both;
+  }
+}
+
+@keyframes sticker-press {
+  0% {
+    transform: rotate(0) scale(1);
+  }
+
+  30% {
+    transform: rotate(-9deg) scale(1.1);
+  }
+
+  60% {
+    transform: rotate(5deg) scale(1.03);
+  }
+
+  80% {
+    transform: rotate(-2deg);
+  }
+
+  100% {
+    transform: none;
+  }
+}
+
+/* Switching to Notes: the page gets ruled. The margin line is drawn first, then the
+   blue rules sweep down, as if a pen ran down the sheet. */
+@media (prefers-reduced-motion: no-preference) {
+  .list-tabs .ant-tabs-tabpane-active textarea.notes-textarea {
+    animation:
+      notes-margin 380ms var(--ease-out) backwards,
+      notes-rules 620ms var(--ease-out) 60ms backwards;
+  }
+}
+
+@keyframes notes-margin {
+  from {
+    background-size: 100% 0, 100% 100%;
+  }
+
+  to {
+    background-size: 100% 100%, 100% 100%;
+  }
+}
+
+@keyframes notes-rules {
+  from {
+    clip-path: inset(0 0 100% 0 round 6px);
+  }
+
+  to {
+    clip-path: inset(0 0 0 0 round 6px);
+  }
 }
 
 @keyframes vt-out {
@@ -2118,6 +2321,14 @@ textarea.notes-textarea {
   font-size: 16px;
   text-decoration: none;
   transition: background-color var(--dur-fast) ease;
+}
+
+.topnav-back:focus {
+  outline: none;
+}
+
+.topnav-back:focus-visible {
+  box-shadow: var(--focus-ring);
 }
 
 .topnav-back-label {
@@ -2194,6 +2405,50 @@ textarea.notes-textarea {
   background: color-mix(in srgb, var(--brand-yellow) 35%, white);
   border-color: var(--brand-yellow-deep);
   color: var(--ink);
+}
+
+/* The category toggle pops in when the Items page returns, and its rows shuffle each
+   time it's pressed: gathered into groups when on, spread back out when off. Two names
+   so the animation replays on every press. */
+@media (prefers-reduced-motion: no-preference) {
+  .view-toggle {
+    animation: toggle-in 320ms var(--ease-out) both;
+  }
+
+  .view-toggle[aria-pressed='true'] svg {
+    animation: rows-gather 380ms var(--ease-out);
+  }
+
+  .view-toggle[aria-pressed='false'] svg {
+    animation: rows-spread 380ms var(--ease-out);
+  }
+}
+
+@keyframes toggle-in {
+  from {
+    opacity: 0;
+    transform: scale(0.6) rotate(-20deg);
+  }
+}
+
+@keyframes rows-gather {
+  35% {
+    transform: scale(1.08, 0.7);
+  }
+
+  70% {
+    transform: scale(0.97, 1.08);
+  }
+}
+
+@keyframes rows-spread {
+  35% {
+    transform: scale(0.85, 1.2);
+  }
+
+  70% {
+    transform: scale(1.03, 0.95);
+  }
 }
 
 /* Footer row under the list: reveals checked-off items */

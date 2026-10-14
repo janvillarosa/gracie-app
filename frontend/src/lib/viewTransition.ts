@@ -18,6 +18,23 @@ export function withViewTransition(update: () => void) {
   doc.startViewTransition(() => {
     // React must commit the new route before the browser snapshots the "after" state.
     flushSync(update)
+    return routeSettled()
+  })
+}
+
+// A lazy route suspends for a tick even when its chunk is cached. Hold the "after" snapshot
+// (briefly, never more than maxMs) until the loading fallback gives way, so it shows the
+// real page and the crossfade never lands on a blank skeleton.
+function routeSettled(maxMs = 250): Promise<void> {
+  return new Promise((resolve) => {
+    const start = performance.now()
+    const check = () => {
+      const busy = document.querySelector('main > [aria-busy="true"]')
+      if (!busy || performance.now() - start > maxMs) resolve()
+      // Not rAF: rendering (and so rAF) is paused while the transition waits on us.
+      else setTimeout(check, 16)
+    }
+    check()
   })
 }
 
