@@ -17,6 +17,7 @@ type Handlers struct {
 	User *handlers.UserHandler
 	Room *handlers.RoomHandler
 	List *handlers.ListHandler
+	Trip *handlers.TripHandler
 }
 
 func NewRouter(userFinder authmw.UserFinder, h Handlers) http.Handler {
@@ -24,6 +25,7 @@ func NewRouter(userFinder authmw.UserFinder, h Handlers) http.Handler {
 	r.Use(middleware.RequestID)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
+	r.Use(middleware.Compress(5, "application/json"))
 
 	// CORS for production (Vercel frontend → Railway API). Control via CORS_ORIGIN env.
 	// If CORS_ORIGIN is set, allow only that origin and credentials; otherwise allow all without credentials.
@@ -80,6 +82,11 @@ func NewRouter(userFinder authmw.UserFinder, h Handlers) http.Handler {
 		ar.Patch("/rooms/{room_id}/lists/{list_id}/items/{item_id}", h.List.UpdateItem)
 		ar.Patch("/rooms/{room_id}/lists/{list_id}/items/{item_id}/position", h.List.UpdateItemPosition)
 		ar.Delete("/rooms/{room_id}/lists/{list_id}/items/{item_id}", h.List.DeleteItem)
+		if h.Trip != nil {
+			ar.Post("/rooms/{room_id}/trips/sync", h.Trip.Sync)
+			ar.Post("/rooms/{room_id}/trips/ops", h.Trip.Ops)
+			ar.Post("/rooms/{room_id}/trips/{trip_id}/packing-list", h.Trip.PackingList)
+		}
 	})
 
 	return r
