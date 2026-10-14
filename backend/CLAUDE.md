@@ -11,9 +11,13 @@ Layered packages under `internal/`:
 - `config` — env configuration with local defaults (Mongo-only).
 - `auth` — API-key generation/verification, bearer extraction, lookup derivation.
 - `crypto` — AES-256-GCM at-rest encryption; key loaded from `ENC_KEY_FILE`.
-- `models` — `User`, `Room`, `List`, `ListItem` with `bson` tags.
+- `models` — `User`, `Room`, `List`, `ListItem`, and the `Trip` aggregate (`TripTodo`,
+  `Booking`, `Place`, `Op`, `OpResult`, `TripDelta`) with `bson` tags.
 - `store` — repository interfaces; `store/mongo` is the only implementation.
 - `services` — business logic orchestrating repositories and enforcing rules.
+- `trips` — pure op engine: typed patches, validators, `ApplyOp`, `DeltaSince`. No I/O.
+- `ratelimit` — in-process token-bucket limiter keyed per user.
+- `services/places` — Photon geocoder proxy, offline tz lookup, place cache.
 - `services/categorization` — grocery categorization (keyword + vector + in-process
   ONNX MiniLM embeddings, chained).
 - `http/handlers`, `http/middleware` (auth → user in context), `http/router`
@@ -42,6 +46,24 @@ embedding model into the image at build time.
 - Error mapping is minimal (401/403/404/409). Room views are sanitized — internal IDs
   are not exposed.
 - Categorization failures degrade to `General` rather than failing item creation.
+
+## Trips (offline-first sync)
+
+Spec: `docs/superpowers/specs/2026-10-14-trips-api-persistence-design.md`.
+
+- One aggregate document per trip (todos and bookings embedded).
+- **All writes** go through `POST /rooms/{id}/trips/ops`: typed patches, per-device `seq`
+  idempotency (`acked[client_id]`), per-field `at` clocks, tombstones, soft delete +
+  restore. `ApplyOp` is pure; the service persists with a compare-and-swap `ReplaceCAS`.
+- **Reads** go through `POST /rooms/{id}/trips/sync` with `known: {trip_id: version}`. It
+  returns per-entity deltas, `removed`, and a `base_version` on each delta that the client
+  must match; otherwise it resyncs.
+- **Client rules for op results:** drop ops that come back `rejected`/`unsupported` and
+  revert their optimistic state; keep `retry` ops in the outbox; treat `duplicate` as
+  acked; surface `conflicted` with its `skipped_fields`.
+- Invariants: never add a write path to `trips` that bypasses `ApplyOp` + `ReplaceCAS`;
+  trip handlers use `tripStatus` (500 default), not `statusFromErr` (400 default).
+- Places: `PHOTON_BASE_URL` unset or upstream failure => `200 {"results":[],"degraded":true}`.
 
 ## Testing
 

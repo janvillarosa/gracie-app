@@ -13,8 +13,10 @@ import (
 	"github.com/janvillarosa/gracie-app/backend/internal/http/handlers"
 	"github.com/janvillarosa/gracie-app/backend/internal/http/router"
 	"github.com/janvillarosa/gracie-app/backend/internal/parse"
+	"github.com/janvillarosa/gracie-app/backend/internal/ratelimit"
 	"github.com/janvillarosa/gracie-app/backend/internal/services"
 	"github.com/janvillarosa/gracie-app/backend/internal/services/categorization"
+	"github.com/janvillarosa/gracie-app/backend/internal/services/places"
 	mongostore "github.com/janvillarosa/gracie-app/backend/internal/store/mongo"
 )
 
@@ -37,6 +39,14 @@ func main() {
 	_ = roomsRepo.EnsureIndexes(ctx)
 	_ = listsRepo.EnsureIndexes(ctx)
 	_ = itemsRepo.EnsureIndexes(ctx)
+	tripsRepo := mongostore.NewTripRepo(mcli)
+	placeCacheRepo := mongostore.NewPlaceCacheRepo(mcli)
+	if err := tripsRepo.EnsureIndexes(ctx); err != nil {
+		log.Fatalf("trips: ensure indexes: %v", err)
+	}
+	if err := placeCacheRepo.EnsureIndexes(ctx); err != nil {
+		log.Printf("place_cache: ensure indexes failed: %v (continuing)", err)
+	}
 	tx := mongostore.NewTx(mcli)
 
 	var categoryIndex *mongostore.CategoryIndexRepo
@@ -65,8 +75,25 @@ func main() {
 	roomSvc := services.NewRoomService(usersRepo, roomsRepo, tx)
 	roomSvc.UseListRepos(listsRepo, itemsRepo)
 	userSvc.UseListRepos(listsRepo, itemsRepo)
+	roomSvc.UseTripRepo(tripsRepo)
+	userSvc.UseTripRepo(tripsRepo)
 	categorizers := buildCategorizers(ctx, cfg, indexArg(categoryIndex))
 	listSvc := services.NewListService(usersRepo, roomsRepo, listsRepo, itemsRepo, categorizers["grocery"])
+	tripSvc := services.NewTripService(roomsRepo, tripsRepo, listSvc, listsRepo)
+
+	var geo places.Geocoder
+	if cfg.PhotonBaseURL != "" {
+		geo = places.NewPhoton(cfg.PhotonBaseURL, "Bauhouse/1.0 (+https://github.com/janvillarosa/gracie-app)", 2*time.Second, nil)
+	} else {
+		log.Printf("places: PHOTON_BASE_URL unset; place search will report degraded")
+	}
+	tz, err := places.NewTZF()
+	if err != nil {
+		log.Printf("places: timezone finder unavailable: %v", err)
+		tz = nil
+	}
+	placesSvc := places.NewService(geo, tz, placeCacheRepo, ratelimit.New(cfg.PlacesServerRPS, int(cfg.PlacesServerRPS)*4))
+
 	authSvc, err := services.NewAuthService(usersRepo, cfg.EncKeyFile, cfg.APIKeyTTLHours)
 	if err != nil {
 		log.Fatalf("auth service: %v", err)
@@ -77,7 +104,10 @@ func main() {
 	roomHandler := handlers.NewRoomHandler(roomSvc, usersRepo, []byte(cfg.AvatarSalt))
 	listHandler := handlers.NewListHandler(listSvc)
 
-	r := router.NewRouter(usersRepo, router.Handlers{Auth: authHandler, User: userHandler, Room: roomHandler, List: listHandler})
+	tripHandler := handlers.NewTripHandler(tripSvc, ratelimit.New(cfg.TripsUserRPS, int(cfg.TripsUserRPS)*4))
+	placesHandler := handlers.NewPlacesHandler(placesSvc, ratelimit.New(cfg.PlacesUserRPS, int(cfg.PlacesUserRPS)*4))
+
+	r := router.NewRouter(usersRepo, router.Handlers{Auth: authHandler, User: userHandler, Room: roomHandler, List: listHandler, Trip: tripHandler, Places: placesHandler})
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,
