@@ -66,7 +66,7 @@ import { timeAgo } from '@lib/time'
 import { getCategoryClass } from '@lib/category'
 import { useStableCallback } from '@lib/useStableCallback'
 import { useDocumentTitle } from '@lib/useDocumentTitle'
-import { ItemRow } from '@components/ItemRow'
+import { ItemRow, reorderLock } from '@components/ItemRow'
 import { AddItemBar } from '@components/AddItemBar'
 import { TopNav } from '@components/TopNav'
 import { HouseLoader } from '@components/HouseLoader'
@@ -211,11 +211,26 @@ export const ListPage: React.FC = () => {
   const incompleteCount = items.filter((it) => !it.completed).length
   // Sensors: touch (mobile long-press), mouse (desktop), keyboard (a11y)
   const sensors = useSensors(
-    useSensor(TouchSensor, { activationConstraint: { delay: 300, tolerance: 10 } }),
+    // Tolerance stays under ItemRow's SWIPE_START, so a finger that starts a swipe has
+    // always cancelled the long-press first and a row can't lift mid-swipe.
+    useSensor(TouchSensor, { activationConstraint: { delay: 300, tolerance: 5 } }),
     useSensor(MouseSensor, { activationConstraint: { distance: 4 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   )
 
+  // While a row is lifted, swipe-to-delete stays out of the way (see ItemRow.reorderLock).
+  const lockReorder = () => {
+    reorderLock.active = true
+  }
+  const unlockReorder = () => {
+    reorderLock.active = false
+  }
+  // Leaving the page mid-drag must not strand the lock and quietly disable swipes later.
+  useEffect(() => unlockReorder, [])
+  const onDragEndUnlocked = (e: DragEndEvent) => {
+    unlockReorder()
+    return onDragEnd(e)
+  }
   const onDragEnd = async (e: DragEndEvent) => {
     const activeId = e.active.id as string
     const overId = (e.over?.id as string) || null
@@ -836,7 +851,12 @@ export const ListPage: React.FC = () => {
                                   ))}
                                 </div>
                               ) : (
-                                <DndContext sensors={sensors} onDragEnd={onDragEnd}>
+                                <DndContext
+                                  sensors={sensors}
+                                  onDragStart={lockReorder}
+                                  onDragEnd={onDragEndUnlocked}
+                                  onDragCancel={unlockReorder}
+                                >
                                   <SortableContext
                                     items={incompleteItems.map((it) => it.item_id)}
                                     strategy={verticalListSortingStrategy}

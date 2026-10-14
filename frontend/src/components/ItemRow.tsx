@@ -40,10 +40,18 @@ const SortableRow: React.FC<{ id: string; children: React.ReactNode }> = ({ id, 
 
 const SWIPE_START = 10
 const SWIPE_COMMIT = 88
+// Sliding the finger this far off the row (up or down) mid-swipe cancels the delete.
+const SWIPE_DRIFT = 40
+
+// One finger, one gesture. Set while a row is lifted for reordering (ListPage's DndContext
+// sets and clears it): a lifted row moves, it never arms a delete. The reverse is handled
+// by the long-press tolerance in ListPage, which is tighter than SWIPE_START, so any
+// sideways move that could start a swipe has already cancelled the pending lift.
+export const reorderLock = { active: false }
 
 // Swipe left on a touch screen to delete: the row follows the finger over a red tray, and
-// letting go past the threshold deletes it. Mutates styles directly so a drag never
-// re-renders the list.
+// letting go past the threshold deletes it. Dragging back, or sliding the finger off the
+// row, sends it home instead. Mutates styles directly so a drag never re-renders the list.
 function useSwipeToDelete(onCommit: () => void, disabled: boolean) {
   const slideRef = React.useRef<HTMLDivElement>(null)
   const trayRef = React.useRef<HTMLDivElement>(null)
@@ -55,9 +63,14 @@ function useSwipeToDelete(onCommit: () => void, disabled: boolean) {
     if (!slide || !tray) return
     slide.style.transition = animate ? 'transform 220ms var(--ease-out)' : 'none'
     slide.style.transform = dx ? `translateX(${dx}px)` : ''
+    // Lifts the paper (its shadow falls on the tray) only while it's off its resting place
+    slide.dataset.swiping = dx ? 'true' : 'false'
     // Clip only while swiping so a lifted (dragged) row keeps its shadow.
     if (slide.parentElement) slide.parentElement.style.overflow = dx ? 'hidden' : ''
-    tray.style.opacity = String(Math.min(1, Math.abs(dx) / SWIPE_COMMIT))
+    // The tray goes solid red almost at once (a slow fade reads as muddy pink); the icon
+    // carries the progress toward the delete point instead, via --swipe-p.
+    tray.style.opacity = String(Math.min(1, Math.abs(dx) / 16))
+    tray.style.setProperty('--swipe-p', String(Math.min(1, Math.abs(dx) / SWIPE_COMMIT)))
     const armed = Math.abs(dx) >= SWIPE_COMMIT
     if (armed && tray.dataset.armed !== 'true') navigator.vibrate?.(8)
     tray.dataset.armed = armed ? 'true' : 'false'
@@ -70,8 +83,20 @@ function useSwipeToDelete(onCommit: () => void, disabled: boolean) {
   const onPointerMove = (e: React.PointerEvent) => {
     const g = gesture.current
     if (!g || g.id !== e.pointerId) return
+    // The row was lifted for reordering: this touch belongs to the drag now.
+    if (reorderLock.active) {
+      if (g.active) paint(0, true)
+      gesture.current = null
+      return
+    }
     const dx = e.clientX - g.x
     const dy = e.clientY - g.y
+    if (g.active && Math.abs(dy) > SWIPE_DRIFT) {
+      // Wandered off the row: treat it like dragging off a button and let go of the delete.
+      paint(0, true)
+      gesture.current = null
+      return
+    }
     if (!g.active) {
       if (Math.abs(dy) > SWIPE_START && Math.abs(dy) > Math.abs(dx)) {
         gesture.current = null

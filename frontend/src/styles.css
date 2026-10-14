@@ -1814,13 +1814,26 @@ h5.ant-typography {
 /* Swipe-to-delete: the row slides over a red tray */
 .item-swipe {
   position: relative;
+  /* The paper (and the tray under it) reach 12px past the row's content into the card's
+     padding, so a sliding row keeps a margin of paper between its tag and the red. */
+  margin-inline: -12px;
 }
 
 .item-slide {
   position: relative;
   z-index: 1;
+  padding-inline: 12px;
   background: var(--panel);
   touch-action: pan-y;
+  transition: box-shadow var(--dur-fast) ease;
+}
+
+/* Mid-swipe the paper sits on top of the tray: its edge casts onto the red */
+.item-slide[data-swiping='true'] {
+  border-radius: 12px;
+  box-shadow:
+    1px 0 0 rgba(0, 0, 0, 0.08),
+    12px 0 16px -6px rgba(50, 0, 6, 0.55);
 }
 
 .swipe-tray {
@@ -1831,7 +1844,13 @@ h5.ant-typography {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  padding-right: 24px;
+  padding-right: 28px;
+  /* Same 12px corners as a row's hover fill and a lifted row */
+  border-radius: 12px;
+  /* Recessed: a channel under the sheet rather than a red block beside it */
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.22),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.12);
   background: var(--brand-red);
   color: #fff;
   font-size: 22px;
@@ -1840,6 +1859,10 @@ h5.ant-typography {
 
 .swipe-tray[data-armed='true'] {
   background: color-mix(in srgb, var(--brand-red) 85%, black);
+}
+
+.swipe-tray {
+  transition: background-color var(--dur-fast) ease;
 }
 
 .qty-unit-line {
@@ -1980,12 +2003,17 @@ h5.ant-typography {
 
 /* Swipe tray: the bin pops and tilts the moment the swipe is far enough to delete. */
 .swipe-tray-icon {
-  transition: transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1);
-  transform: scale(0.8);
+  /* Follows the finger: fades and grows toward the delete point, then settles a touch
+     larger once letting go would delete. No spring, no tilt. */
+  opacity: calc(0.45 + 0.55 * var(--swipe-p, 0));
+  transform: scale(calc(0.85 + 0.15 * var(--swipe-p, 0)));
+  transition:
+    transform var(--dur-fast) var(--ease-out),
+    opacity var(--dur-fast) ease;
 }
 
 .swipe-tray[data-armed='true'] .swipe-tray-icon {
-  transform: scale(1.25) rotate(-10deg);
+  transform: scale(1.1);
 }
 
 /* Delete exit: the row clears away, then the gap closes. */

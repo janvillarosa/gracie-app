@@ -77,7 +77,11 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <AuthProvider>
-          <IconContext.Provider value={{ weight: 'bold' }}>
+          {/* A provider value replaces Phosphor's defaults rather than merging with them, so
+              restate size/color/mirrored; without size, unsized icons stretch to their box. */}
+          <IconContext.Provider
+            value={{ weight: 'bold', size: '1em', color: 'currentColor', mirrored: false }}
+          >
             <ConfigProvider theme={antdThemeConfig}>
               <AppRoutes />
             </ConfigProvider>
