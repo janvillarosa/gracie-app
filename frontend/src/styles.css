@@ -600,11 +600,9 @@ h5.ant-typography {
 /* Stronger borders for list items within list page */
 .items-list .ant-list-item {
   border-bottom: 1px solid var(--border) !important;
-  display: grid !important;
-  grid-template-columns: 1fr auto;
+  display: block !important;
+  padding: 0 !important;
   font-weight: 400;
-  align-items: center;
-  column-gap: 10px;
 }
 
 .items-list .ant-list-item:last-child {
@@ -677,20 +675,18 @@ h5.ant-typography {
 /* List page header */
 .list-header-grid {
   display: grid;
-  grid-template-columns: 1fr;
-  grid-template-areas:
-    "title"
-    "actions";
+  grid-template-columns: 1fr auto;
+  grid-template-areas: "title actions";
+  align-items: start;
   gap: 12px;
 }
 
 .list-actions {
   grid-area: actions;
   display: flex;
-  flex-wrap: wrap;
   gap: 8px;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: flex-end;
 }
 
 .list-header-title {
@@ -771,6 +767,134 @@ h5.ant-typography {
   pointer-events: none;
 }
 
+/* Ghost completion: the top suggestion's tail, faded after what you typed. Overlays the
+   textarea with identical metrics; the typed part is transparent so only the tail shows. */
+.add-ghost {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  padding: 10px 16px;
+  border: 1px solid transparent;
+  line-height: 22px;
+  font: inherit;
+  white-space: pre;
+  overflow: hidden;
+  color: color-mix(in srgb, var(--muted) 70%, transparent);
+  pointer-events: none;
+}
+
+.add-ghost-typed {
+  color: transparent;
+}
+
+/* Pantry slips: suggestions stack up out of the sticky bar like paper slips, best match
+   nearest the field. */
+.pantry-slips {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  bottom: calc(100% + 6px);
+  display: flex;
+  flex-direction: column-reverse;
+  margin: 0;
+  padding: 4px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: var(--lift-3);
+}
+
+.pantry-slip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 6px 12px;
+  border-radius: 14px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pantry-slip {
+  position: relative;
+}
+
+/* Hairline between slips (inset so it doesn't curve with the rounded corners). The list is
+   column-reverse, so every slip but the first sits above its neighbour. */
+.pantry-slip:not(:first-child)::after {
+  content: '';
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: -0.5px;
+  height: 1px;
+  background: var(--border);
+}
+
+.pantry-slip.is-active,
+.pantry-slip:active {
+  background: color-mix(in srgb, var(--brand-yellow) 22%, white);
+}
+
+@media (hover: hover) {
+  .pantry-slip:hover {
+    background: var(--panel-subtle);
+  }
+  .pantry-slip.is-active:hover {
+    background: color-mix(in srgb, var(--brand-yellow) 22%, white);
+  }
+}
+
+.slip-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink);
+}
+
+.slip-hit {
+  background: var(--highlighter);
+  color: inherit;
+  border-radius: 3px;
+  padding: 0 1px;
+  margin: 0 -1px;
+}
+
+.slip-usual {
+  flex: none;
+  color: var(--muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.slip-cat {
+  flex: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .pantry-slips {
+    animation: slips-rise 140ms var(--ease-out) both;
+    transform-origin: bottom center;
+  }
+  .pantry-slip {
+    animation: slip-in 160ms var(--ease-out) both;
+  }
+  .pantry-slip:nth-child(2) { animation-delay: 20ms; }
+  .pantry-slip:nth-child(3) { animation-delay: 40ms; }
+  .pantry-slip:nth-child(4) { animation-delay: 60ms; }
+  .pantry-slip:nth-child(5) { animation-delay: 80ms; }
+}
+
+@keyframes slips-rise {
+  from { opacity: 0; transform: translateY(6px) scale(0.98); }
+}
+
+@keyframes slip-in {
+  from { opacity: 0; transform: translateY(4px); }
+}
+
 .add-btn .ant-btn-icon {
   font-size: 22px !important;
 }
@@ -840,8 +964,7 @@ h5.ant-typography {
   display: flex;
   gap: 8px;
   align-items: center;
-  /* center checkbox and text vertically */
-  flex-wrap: wrap;
+  min-height: 52px;
   width: 100%;
 }
 
@@ -956,36 +1079,54 @@ h5.ant-typography {
   }
 }
 
-/* Delete affordance: present but quiet until the row is engaged */
+/* Delete: hidden until the row is engaged on desktop (red on hover); on touch screens the
+   row swipes instead and the button stays reachable only by screen readers / keyboard. */
 .items-list .item-delete.ant-btn {
-  opacity: 0.7;
-  transition: opacity var(--dur-fast) ease, background-color var(--dur-fast) ease, transform var(--dur-fast) var(--ease-out);
+  flex: none;
+  color: var(--muted);
+  opacity: 0;
+  padding-inline: 8px;
+  transition: opacity var(--dur-fast) ease, color var(--dur-fast) ease, background-color var(--dur-fast) ease;
+}
+
+.items-list .item-delete.ant-btn:focus-visible {
+  opacity: 1;
 }
 
 @media (hover: hover) {
-  .items-list .ant-list-item:hover .item-delete.ant-btn,
-  .items-list .item-delete.ant-btn:focus-visible {
+  .items-list .ant-list-item:hover .item-delete.ant-btn {
     opacity: 1;
   }
 
   .items-list .item-delete.ant-btn:not(:disabled):hover {
+    color: var(--brand-red);
     background: rgba(190, 30, 45, 0.07) !important;
   }
 }
 
 @media (hover: none) {
-  .items-list .item-delete.ant-btn {
-    opacity: 0.85;
+  .items-list .item-delete.ant-btn:not(:focus-visible),
+  .items-list .drag-handle:not(:focus-visible) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    min-width: 0;
+    min-height: 0;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
   }
 }
 
 /* Drag handle and sortable row */
 .sortable-row {
   display: flex;
-  gap: 10px;
+  gap: 4px;
   align-items: center;
   width: 100%;
-  touch-action: auto;
+  /* Vertical scroll stays native; sideways swipes reach the row's own handler and a
+     long press lifts the row for reordering. */
+  touch-action: pan-y;
 }
 
 .drag-handle {
@@ -1023,23 +1164,24 @@ h5.ant-typography {
   }
 }
 
-/* Mobile: larger handle, bigger icon, tighter row gap */
-@media (max-width: 767px) {
-  .sortable-row {
-    gap: 8px;
-  }
-
+/* Desktop: the handle appears when the row is engaged. Touch screens drop it (long-press
+   the row instead); it stays reachable for keyboard and screen readers. */
+@media (hover: hover) {
   .drag-handle {
-    width: 44px;
-    min-width: 44px;
-    min-height: 44px;
-    padding: 12px 10px;
-    font-size: 22px;
+    opacity: 0;
   }
 
-  .drag-handle svg {
-    width: 22px;
-    height: 22px;
+  .items-list .ant-list-item:hover .drag-handle,
+  .drag-handle:focus-visible,
+  .sortable-row.is-dragging .drag-handle {
+    opacity: 1;
+  }
+}
+
+/* Long-press lift gives the row a visible "picked up" state on touch */
+@media (hover: none) {
+  .sortable-row.is-dragging {
+    box-shadow: var(--lift-2);
   }
 }
 
@@ -1211,7 +1353,17 @@ h5.ant-typography {
 }
 
 .list-tabs .ant-tabs-nav .ant-tabs-nav-wrap {
-  justify-content: center;
+  flex: 0 0 auto;
+  justify-content: flex-start;
+}
+
+.list-tabs .ant-tabs-nav .ant-tabs-extra-content {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+  padding-left: 8px;
 }
 
 .list-tabs .ant-tabs-nav .ant-tabs-nav-list {
@@ -1478,6 +1630,51 @@ h5.ant-typography {
 }
 
 /* Quantity/Unit Badge */
+.item-qty {
+  margin-left: 8px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.item-cat {
+  flex: none;
+  margin-inline: 4px 0 !important;
+}
+
+/* Swipe-to-delete: the row slides over a red tray */
+.item-swipe {
+  position: relative;
+}
+
+.item-slide {
+  position: relative;
+  z-index: 1;
+  background: var(--panel);
+  touch-action: pan-y;
+}
+
+.swipe-tray {
+  position: absolute;
+  z-index: 0;
+  pointer-events: none;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 24px;
+  background: var(--brand-red);
+  color: #fff;
+  font-size: 22px;
+  opacity: 0;
+}
+
+.swipe-tray[data-armed='true'] {
+  background: color-mix(in srgb, var(--brand-red) 85%, black);
+}
+
 .qty-unit-line {
   font-size: 13px;
   color: var(--text-secondary);
@@ -1795,4 +1992,142 @@ textarea.notes-textarea {
   background: var(--panel);
   border: 1px solid var(--border-strong);
   box-shadow: var(--paper-edge), var(--lift-0);
+}
+
+/* Undo toast: the action sits inside the message so it's reachable with a thumb */
+.undo-toast {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.undo-btn {
+  min-height: 32px;
+  padding: 0 10px;
+  margin-right: -6px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-color: var(--brand-yellow-deep);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+/* Top bar way back: chevron + house name, a 44px target */
+.topnav-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  min-height: 44px;
+  min-width: 0;
+  margin-left: -8px;
+  padding: 0 12px 0 6px;
+  border-radius: 999px;
+  color: var(--ink);
+  font-weight: 650;
+  font-size: 16px;
+  text-decoration: none;
+  transition: background-color var(--dur-fast) ease;
+}
+
+.topnav-back-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 55vw;
+}
+
+@media (hover: hover) {
+  .topnav-back:hover {
+    background: rgba(26, 26, 26, 0.06);
+  }
+}
+
+/* Tab adornments: unchecked count and a dot when the list has notes */
+.tab-count {
+  margin-left: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.tab-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-left: 6px;
+  border-radius: 50%;
+  background: var(--brand-yellow-deep);
+  vertical-align: middle;
+}
+
+/* "By category" is a view toggle, so it reads as on/off rather than as a button */
+.view-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--muted);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) ease, border-color var(--dur-fast) ease, color var(--dur-fast) ease;
+}
+
+.view-toggle[aria-pressed='true'] {
+  background: color-mix(in srgb, var(--brand-yellow) 35%, white);
+  border-color: var(--brand-yellow-deep);
+  color: var(--ink);
+}
+
+/* Footer row under the list: reveals checked-off items */
+.completed-toggle {
+  display: block;
+  margin: 8px auto 0;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .completed-toggle:hover {
+    color: var(--ink);
+  }
+}
+
+@media (max-width: 480px) {
+  .list-tabs .ant-tabs-tab {
+    padding: 4px 10px !important;
+  }
+
+  .view-toggle {
+    padding: 0 10px;
+    gap: 4px;
+  }
+
+  .view-toggle-by {
+    display: none;
+  }
+
+  .view-toggle-word {
+    text-transform: capitalize;
+  }
 }

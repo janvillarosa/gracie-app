@@ -6,6 +6,7 @@ import { useAuth } from '@auth/AuthProvider'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   getMe,
+  getMyRoom,
   getListItems,
   getLists,
   createListItem,
@@ -16,8 +17,9 @@ import {
   reorderListItem,
   updateList,
   clearListItems,
+  getRoomPantry,
 } from '@api/endpoints'
-import type { List, ListItem } from '@api/types'
+import type { List, ListItem, PantryItem } from '@api/types'
 import {
   Card,
   Typography,
@@ -36,12 +38,11 @@ import {
 import {
   ArrowLeft,
   Plus,
-  Eye,
-  EyeSlash,
   DotsThreeVertical,
   FloppyDisk,
   X,
   Broom,
+  Rows,
 } from '@phosphor-icons/react'
 import {
   DndContext,
@@ -106,6 +107,13 @@ export const ListPage: React.FC = () => {
 
   const meQuery = useQuery({ queryKey: ['me'], queryFn: () => getMe(apiKey!) })
   const roomId = meQuery.data?.room_id as string | undefined
+  // Shares the dashboard's cache; only used to name the way back.
+  const houseQuery = useQuery({
+    queryKey: ['my-room'],
+    queryFn: () => getMyRoom(apiKey!),
+    retry: false,
+    staleTime: 60_000,
+  })
   const userId = meQuery.data?.user_id as string | undefined
 
   const parseMs = (v: any, def: number) => {
@@ -133,6 +141,18 @@ export const ListPage: React.FC = () => {
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
     staleTime: 5_000,
+  })
+
+  // Past items for add-bar suggestions. Fetched once and filtered on the client; a failure
+  // just means no suggestions.
+  const pantryQuery = useQuery({
+    queryKey: ['pantry', roomId],
+    queryFn: () => getRoomPantry(apiKey!, roomId!),
+    enabled: !!roomId,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    retry: false,
+    staleTime: 5 * 60_000,
   })
 
   // Always derive items and sorted views before any early returns to keep hook order stable
@@ -254,6 +274,26 @@ export const ListPage: React.FC = () => {
   const tempSeq = useRef(0)
   const isTemp = (id: string) => id.startsWith('tmp-')
 
+  // Keep suggestions current without a refetch: an added item moves to the front of the
+  // pantry (or joins it) so it is the first suggestion next time.
+  const bumpPantry = (created: ListItem) => {
+    const key = created.description.trim().toLowerCase()
+    qc.setQueryData<PantryItem[]>(['pantry', roomId], (prev) => {
+      if (!prev) return prev
+      const hit = prev.find((p) => p.description.trim().toLowerCase() === key)
+      const entry: PantryItem = {
+        description: created.description,
+        category: created.category || hit?.category || '',
+        quantity: created.quantity || hit?.quantity || '',
+        unit: created.unit || hit?.unit || '',
+        times_added: (hit?.common ? 0 : (hit?.times_added ?? 0)) + 1,
+        last_added_at: created.created_at,
+        common: false,
+      }
+      return [entry, ...prev.filter((p) => p !== hit)]
+    })
+  }
+
   // Adds appear instantly: insert a placeholder row, then swap in the server's item
   // (which carries the category) when the request returns.
   const onCreateItem = useStableCallback(
@@ -277,6 +317,7 @@ export const ListPage: React.FC = () => {
       const rollback = await applyOptimistic((list) => [...list, placeholder])
       try {
         const created = await createListItem(apiKey!, roomId!, listId, p)
+        bumpPantry(created)
         rowKeys.current.set(created.item_id, tempId)
         seenIds.current?.ids.add(created.item_id)
         for (const [key, data] of qc.getQueriesData<ListItem[]>({
@@ -352,19 +393,60 @@ export const ListPage: React.FC = () => {
     }
   })
 
+  // Deleting is deferred for a few seconds so it can be undone: the row leaves the list at
+  // once, the request is sent when the toast closes (or the page is left).
+  const pendingDeletes = useRef(new Map<string, () => Promise<void>>())
+  useEffect(() => {
+    const pending = pendingDeletes.current
+    return () => {
+      for (const commit of [...pending.values()]) void commit()
+    }
+  }, [])
+
   const onDeleteItem = useStableCallback(async (it: ListItem) => {
     if (isTemp(it.item_id)) return
     if (savingItemId === it.item_id) return
+    const id = it.item_id
+    if (pendingDeletes.current.has(id)) return
     inFlight.current += 1
-    const rollback = await applyOptimistic((items) => items.filter((x) => x.item_id !== it.item_id))
-    try {
-      await deleteListItem(apiKey!, roomId!, listId, it.item_id)
-    } catch (e: any) {
-      rollback()
-      msgApi.error(errorMessage(e, 'Couldn’t delete that item. Try again.'))
-    } finally {
+    await applyOptimistic((items) => items.filter((x) => x.item_id !== id))
+
+    const commit = async () => {
+      if (!pendingDeletes.current.delete(id)) return
+      try {
+        await deleteListItem(apiKey!, roomId!, listId, id)
+      } catch (e: any) {
+        await applyOptimistic((items) =>
+          items.some((x) => x.item_id === id) ? items : [...items, it],
+        )
+        msgApi.error(errorMessage(e, 'Couldn’t delete that item. Try again.'))
+      } finally {
+        settle()
+      }
+    }
+    const undo = async () => {
+      if (!pendingDeletes.current.delete(id)) return
+      msgApi.destroy(id)
+      await applyOptimistic((items) =>
+        items.some((x) => x.item_id === id) ? items : [...items, it],
+      )
       settle()
     }
+    pendingDeletes.current.set(id, commit)
+    msgApi.open({
+      key: id,
+      type: 'info',
+      duration: 5,
+      onClose: () => void commit(),
+      content: (
+        <span className="undo-toast">
+          Removed {it.description}
+          <button type="button" className="undo-btn" onClick={undo}>
+            Undo
+          </button>
+        </span>
+      ),
+    })
   })
 
   const startEdit = useStableCallback((it: ListItem) => {
@@ -459,6 +541,9 @@ export const ListPage: React.FC = () => {
     }
   }
 
+  const ago = timeAgo(listMeta?.updated_at)
+  const updatedAgo = ago === 'less than a minute ago' ? 'just now' : ago
+
   const ready =
     !meQuery.isLoading && !listsQuery.isLoading && !itemsQuery.isLoading && !!roomId && !!listMeta
 
@@ -525,11 +610,6 @@ export const ListPage: React.FC = () => {
   }
 
   const menuItems = [
-    {
-      key: 'toggle-completed',
-      label: includeCompleted ? 'Hide completed' : 'Show completed',
-      icon: includeCompleted ? <EyeSlash size={18} /> : <Eye size={18} />,
-    },
     { key: 'clear-completed', label: 'Clear completed', icon: <Broom size={18} /> },
     { type: 'divider' as const },
     ...(myVote(listMeta)
@@ -537,7 +617,6 @@ export const ListPage: React.FC = () => {
       : [{ key: 'vote', label: 'Vote to delete list', danger: true }]),
   ]
   const onMenuClick = ({ key }: { key: string }) => {
-    if (key === 'toggle-completed') setIncludeCompleted(!includeCompleted)
     if (key === 'clear-completed') onClearCompleted()
     if (key === 'vote') {
       onVoteDelete()
@@ -548,14 +627,6 @@ export const ListPage: React.FC = () => {
       show('Vote canceled.')
     }
   }
-  const groupLabel = groupByCat
-    ? isMobile
-      ? 'Ungroup'
-      : 'Ungroup categories'
-    : isMobile
-      ? 'By category'
-      : 'Group by category'
-
   const renderRow = (it: ListItem, variant: 'sortable' | 'plain' | 'completed', cat: boolean) => (
     <ItemRow
       key={rowKeys.current.get(it.item_id) ?? it.item_id}
@@ -575,7 +646,7 @@ export const ListPage: React.FC = () => {
 
   return (
     <div className="container">
-      <TopNav />
+      <TopNav back={{ to: '/app', label: houseQuery.data?.display_name || 'House' }} />
       {contextHolder}
       <div className="paper-stack">
         {/* Bottom sheet: title + details + actions */}
@@ -594,15 +665,9 @@ export const ListPage: React.FC = () => {
                 {listMeta.name}
               </Typography.Title>
               <Typography.Text className="list-meta">
-                Updated {timeAgo(listMeta.updated_at)}
+                {incompleteCount > 0 ? `${incompleteCount} to get · ` : 'All done · '}
+                updated {updatedAgo}
               </Typography.Text>
-              {incompleteCount > 0 && (
-                <Typography.Text className="list-meta">
-                  {incompleteCount === 1
-                    ? '1 unchecked item'
-                    : `${incompleteCount} unchecked items`}
-                </Typography.Text>
-              )}
               {listMeta.description && (
                 <Typography.Text className="list-description">
                   {listMeta.description}
@@ -610,18 +675,6 @@ export const ListPage: React.FC = () => {
               )}
             </div>
             <div className="list-actions">
-              {isGroceryList && (
-                <Button
-                  type={groupByCat ? 'primary' : 'default'}
-                  shape="round"
-                  onClick={() => setGroupByCat(!groupByCat)}
-                >
-                  {groupLabel}
-                </Button>
-              )}
-              <Button onClick={() => navigate('/app')} icon={<ArrowLeft />} shape="round">
-                Back
-              </Button>
               <Dropdown trigger={['click']} menu={{ items: menuItems, onClick: onMenuClick }}>
                 <Button
                   icon={<DotsThreeVertical />}
@@ -642,10 +695,32 @@ export const ListPage: React.FC = () => {
               style={tabVars}
               activeKey={activeTab}
               onChange={(k) => setActiveTab(k as 'items' | 'notes')}
+              tabBarExtraContent={{
+                right:
+                  isGroceryList && activeTab === 'items' ? (
+                    <button
+                      type="button"
+                      className="view-toggle"
+                      aria-pressed={groupByCat}
+                      onClick={() => setGroupByCat(!groupByCat)}
+                    >
+                      <Rows size={16} aria-hidden />
+                      <span>
+                        <span className="view-toggle-by">By </span>
+                        <span className="view-toggle-word">category</span>
+                      </span>
+                    </button>
+                  ) : null,
+              }}
               items={[
                 {
                   key: 'items',
-                  label: 'Items',
+                  label: (
+                    <>
+                      Items
+                      {incompleteCount > 0 && <span className="tab-count">{incompleteCount}</span>}
+                    </>
+                  ),
                   children: (
                     <>
                       <Space direction="vertical" style={{ width: '100%' }} size="large">
@@ -722,15 +797,30 @@ export const ListPage: React.FC = () => {
                           </>
                         )}
                       </Space>
+                      <button
+                        type="button"
+                        className="completed-toggle"
+                        aria-expanded={includeCompleted}
+                        onClick={() => setIncludeCompleted(!includeCompleted)}
+                      >
+                        {includeCompleted ? 'Hide checked-off items' : 'Show checked-off items'}
+                      </button>
                       {/* Outside the Space wrapper so sticky pins to the whole tab pane,
                         keeping the bar on screen while scrolling a long list. */}
-                      <AddItemBar onCreate={onCreateItem} />
+                      <AddItemBar onCreate={onCreateItem} pantry={pantryQuery.data} />
                     </>
                   ),
                 },
                 {
                   key: 'notes',
-                  label: 'Notes',
+                  label: (
+                    <>
+                      Notes
+                      {listMeta.notes?.trim() && (
+                        <span className="tab-dot" role="img" aria-label="has notes" />
+                      )}
+                    </>
+                  ),
                   children: (
                     <Space direction="vertical" style={{ width: '100%' }} size="large">
                       <Input.TextArea

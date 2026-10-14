@@ -65,24 +65,32 @@ const setup = () => {
 }
 
 describe('ListPage optimistic updates', () => {
-  it('removes a deleted item immediately and restores it if the request fails', async () => {
+  it('removes a deleted item immediately and brings it back on Undo without calling the API', async () => {
     setup()
-    let release: () => void = () => {}
-    const gate = new Promise<void>((r) => {
-      release = r
-    })
+    const onDelete = vi.fn()
     server.use(
-      http.delete('/api/rooms/r1/lists/l1/items/a', async () => {
-        await gate
-        return json({ error: 'nope' }, 500)
+      http.delete('/api/rooms/r1/lists/l1/items/a', () => {
+        onDelete()
+        return json({})
       }),
     )
     await screen.findByText('Milk')
     await userEvent.click(screen.getAllByRole('button', { name: 'Delete item' })[0])
     await waitFor(() => expect(screen.queryByText('Milk')).not.toBeInTheDocument())
-    release()
+    await userEvent.click(await screen.findByRole('button', { name: 'Undo' }))
     expect(await screen.findByText('Milk')).toBeInTheDocument()
+    expect(onDelete).not.toHaveBeenCalled()
   })
+
+  it('restores a deleted item if the request fails once the undo window closes', async () => {
+    setup()
+    server.use(http.delete('/api/rooms/r1/lists/l1/items/a', () => json({ error: 'nope' }, 500)))
+    await screen.findByText('Milk')
+    await userEvent.click(screen.getAllByRole('button', { name: 'Delete item' })[0])
+    await waitFor(() => expect(screen.queryByText('Milk')).not.toBeInTheDocument())
+    // The toast closes after its 5s window, then the delete is sent and fails.
+    expect(await screen.findByText('Milk', {}, { timeout: 8000 })).toBeInTheDocument()
+  }, 12000)
 
   it('drops a completed item from the open list right away', async () => {
     setup()

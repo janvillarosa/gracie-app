@@ -57,7 +57,12 @@ export type ListItem = {
 export type PantryItem = {
   description: string
   category: string
+  quantity: string
   unit: string
+  times_added: number
+  last_added_at: string
+  // From the built-in grocery set, not this house's history.
+  common: boolean
 }
 
 export type ListIcon =

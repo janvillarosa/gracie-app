@@ -60,6 +60,15 @@ why the config forces a single fork.
   `--dur-*`, `--shadow-key`, `--focus-ring`). Reuse them; animations stay behind
   `prefers-reduced-motion: no-preference`.
 
+## List page behaviors worth knowing
+
+- **Add-bar suggestions:** `AddItemBar` is an ARIA combobox fed by `GET /rooms/{id}/pantry`
+  (fetched once in `ListPage`, filtered client-side by `lib/suggest.ts`). Enter only takes a
+  slip the user explicitly arrowed to; otherwise it adds the typed text. `ListPage.bumpPantry`
+  keeps the cached pantry current after each add.
+- **Rows:** swipe-left (touch) and the hover trash (desktop) both go through `onDeleteItem`,
+  which defers the request ~5s behind an Undo toast and flushes on unmount.
+
 ## Ratchets (raise over time; never lower)
 
 - **Coverage:** thresholds live in `vite.config.ts` (`test.coverage.thresholds`),

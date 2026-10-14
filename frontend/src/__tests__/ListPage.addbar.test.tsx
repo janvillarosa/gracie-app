@@ -261,6 +261,6 @@ describe('ListPage add bar', () => {
       },
     ]
     await setup(listItems)
-    expect(await screen.findByText('2 unchecked items')).toBeInTheDocument()
+    expect(await screen.findByText(/^2 to get · updated/)).toBeInTheDocument()
   })
 })

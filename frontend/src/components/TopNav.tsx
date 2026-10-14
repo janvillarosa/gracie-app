@@ -1,14 +1,21 @@
 import React from 'react'
 import { Dropdown } from 'antd'
+import { CaretLeft } from '@phosphor-icons/react'
 import type { MenuProps } from 'antd'
 import { useAuth } from '@auth/AuthProvider'
 import { useQuery } from '@tanstack/react-query'
 import { getMe } from '@api/endpoints'
 import { BrandLogo } from '@components/BrandLogo'
 import { Avatar } from '@components/Avatar'
+import { TransitionLink } from '@components/TransitionLink'
 import { useTransitionNavigate, withViewTransition } from '@lib/viewTransition'
 
-export const TopNav: React.FC = () => {
+type Props = {
+  // Replaces the logo with a way back, e.g. from a list to its house.
+  back?: { to: string; label: string }
+}
+
+export const TopNav: React.FC<Props> = ({ back }) => {
   const { apiKey, setApiKey } = useAuth()
   const navigate = useTransitionNavigate()
   const meQuery = useQuery({ queryKey: ['me'], queryFn: () => getMe(apiKey!) })
@@ -28,7 +35,14 @@ export const TopNav: React.FC = () => {
 
   return (
     <div className="topnav">
-      <BrandLogo />
+      {back ? (
+        <TransitionLink to={back.to} className="topnav-back" aria-label={`Back to ${back.label}`}>
+          <CaretLeft size={22} weight="bold" aria-hidden />
+          <span className="topnav-back-label">{back.label}</span>
+        </TransitionLink>
+      ) : (
+        <BrandLogo />
+      )}
       <div className="topnav-right">
         <Dropdown
           menu={{ items, onClick: onMenuClick }}

@@ -32,3 +32,82 @@ describe('AddItemBar', () => {
     expect(onCreate).not.toHaveBeenCalled()
   })
 })
+
+describe('AddItemBar suggestions', () => {
+  const pantry = [
+    {
+      description: 'Basmati rice',
+      category: 'Grains & Bakery',
+      quantity: '1',
+      unit: 'kg',
+      times_added: 4,
+      last_added_at: '2026-01-01T00:00:00Z',
+      common: false,
+    },
+    {
+      description: 'Bananas',
+      category: 'Produce',
+      quantity: '',
+      unit: '',
+      times_added: 2,
+      last_added_at: '2026-01-01T00:00:00Z',
+      common: false,
+    },
+  ]
+
+  it('offers matching items and adds the picked one with its usual quantity', async () => {
+    const onCreate = vi.fn().mockResolvedValue(undefined)
+    render(<AddItemBar onCreate={onCreate} pantry={pantry} />)
+    const input = screen.getByRole('combobox')
+    await userEvent.type(input, 'bas')
+    await userEvent.click(await screen.findByRole('option', { name: /Basmati rice/ }))
+    expect(onCreate).toHaveBeenCalledWith({
+      description: 'Basmati rice',
+      quantity: '1',
+      unit: 'kg',
+    })
+    expect(input).toHaveValue('')
+  })
+
+  it('keeps a typed quantity over the usual one', async () => {
+    const onCreate = vi.fn().mockResolvedValue(undefined)
+    render(<AddItemBar onCreate={onCreate} pantry={pantry} />)
+    await userEvent.type(screen.getByRole('combobox'), '3 bag bas')
+    await userEvent.click(await screen.findByRole('option', { name: /Basmati rice/ }))
+    expect(onCreate).toHaveBeenCalledWith({
+      description: 'Basmati rice',
+      quantity: '3',
+      unit: 'bag',
+    })
+  })
+
+  it('never hijacks Enter: with no slip highlighted it adds exactly what was typed', async () => {
+    const onCreate = vi.fn().mockResolvedValue(undefined)
+    render(<AddItemBar onCreate={onCreate} pantry={pantry} />)
+    await userEvent.type(screen.getByRole('combobox'), 'bas{enter}')
+    expect(onCreate).toHaveBeenCalledWith({ description: 'bas', quantity: '', unit: '' })
+  })
+
+  it('moves through slips with the arrow keys and adds the highlighted one on Enter', async () => {
+    const onCreate = vi.fn().mockResolvedValue(undefined)
+    render(<AddItemBar onCreate={onCreate} pantry={pantry} />)
+    const input = screen.getByRole('combobox')
+    await userEvent.type(input, 'ba')
+    expect(screen.getAllByRole('option')).toHaveLength(2)
+    await userEvent.keyboard('{ArrowUp}{ArrowUp}{Enter}')
+    expect(onCreate.mock.calls[0][0].description).toBe('Bananas')
+  })
+
+  it('Escape closes the suggestions; Tab completes the ghost text', async () => {
+    const onCreate = vi.fn().mockResolvedValue(undefined)
+    render(<AddItemBar onCreate={onCreate} pantry={pantry} />)
+    const input = screen.getByRole('combobox')
+    await userEvent.type(input, 'bas')
+    await userEvent.keyboard('{Tab}')
+    expect(input).toHaveValue('Basmati rice'.replace(/^Bas/, 'bas'))
+    await userEvent.clear(input)
+    await userEvent.type(input, 'ban')
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('option')).not.toBeInTheDocument()
+  })
+})

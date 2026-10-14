@@ -44,7 +44,7 @@ describe('ItemRow', () => {
     renderRow()
     expect(screen.getByText('Milk')).toBeInTheDocument()
     expect(screen.getByText('Dairy')).toBeInTheDocument()
-    expect(screen.getByText(/Quantity:/)).toBeInTheDocument()
+    expect(screen.getByText('2 l')).toBeInTheDocument()
   })
 
   it('hides the category when showCategory is false', () => {
