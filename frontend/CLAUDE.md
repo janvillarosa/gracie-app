@@ -45,8 +45,9 @@ why the config forces a single fork.
 - **Routes are lazy.** `routes/AppRoutes.tsx` loads each page with `React.lazy`; vendor
   chunks (`react`, `antd`, `dnd`) are split in `vite.config.ts` `build.rollupOptions`.
   Don't import a page eagerly from the entry.
-- **Images:** never ship a source image bigger than ~2x its largest rendered size
-  (the logo is `logo-112.png` / `logo-168.png`). No SVGs that wrap base64 rasters.
+- **Images:** never ship a source image bigger than ~2x its largest rendered size.
+  No SVGs that wrap base64 rasters. The in-app logo is the inline `HouseMark` SVG, traced
+  from `logo-168.png` (kept as the reference artwork); keep the two in step.
 - **List rows are memoized** (`components/ItemRow.tsx`). Pass handlers wrapped in
   `useStableCallback` and keep per-keystroke state (e.g. `AddItemBar`'s draft) out of
   big pages. Define components at module scope, never inside another component.
@@ -59,6 +60,18 @@ why the config forces a single fork.
 - **Motion/shape tokens** live on `:root` in `styles.css` (`--ease-out`,
   `--dur-*`, `--shadow-key`, `--focus-ring`). Reuse them; animations stay behind
   `prefers-reduced-motion: no-preference`.
+
+## Loading and motion under latency
+
+- **Page loads** show `HouseLoader` (the logo building itself), hidden for its first ~250ms
+  so fast responses never flash it. **In-sheet loads** use `RowSkeleton`, drawn to the
+  real rows' geometry; content that replaces a skeleton fades in once (`is-arriving`).
+- **View transitions** wait (max 250ms) only for the lazy-route fallback
+  (`data-route-fallback`), never for data; a page's own loading state is what should show.
+- **Post-login welcome:** `startWelcome()` (in `Login`) opens a short window in which any
+  `BrandLogo` that mounts plays the window-light/door-swing, resuming mid-way on remount.
+- **Notes** never overwrite unsaved typing with server data (see `syncedNotes` in `ListPage`).
+- Test against latency with a delaying proxy in front of the API, not just the fast mock.
 
 ## List page behaviors worth knowing
 

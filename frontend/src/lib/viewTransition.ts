@@ -23,13 +23,14 @@ export function withViewTransition(update: () => void) {
 }
 
 // A lazy route suspends for a tick even when its chunk is cached. Hold the "after" snapshot
-// (briefly, never more than maxMs) until the loading fallback gives way, so it shows the
-// real page and the crossfade never lands on a blank skeleton.
+// (briefly, never more than maxMs) until that route fallback gives way, so the crossfade
+// lands on the real page. A page waiting on data is not held: its own loading state is
+// the right thing to show, and holding would freeze the old page for nothing.
 function routeSettled(maxMs = 250): Promise<void> {
   return new Promise((resolve) => {
     const start = performance.now()
     const check = () => {
-      const busy = document.querySelector('main > [aria-busy="true"]')
+      const busy = document.querySelector('[data-route-fallback]')
       if (!busy || performance.now() - start > maxMs) resolve()
       // Not rAF: rendering (and so rAF) is paused while the transition waits on us.
       else setTimeout(check, 16)

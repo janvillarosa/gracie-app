@@ -1,6 +1,7 @@
 import React from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { useAuth } from '@auth/AuthProvider'
+import { HouseLoader } from '@components/HouseLoader'
 
 const pageLoaders: Array<() => Promise<unknown>> = []
 
@@ -56,8 +57,10 @@ export const AppRoutes: React.FC = () => {
     <main>
       <React.Suspense
         fallback={
-          <div className="container" aria-busy="true">
-            <div className="route-skeleton" />
+          <div className="container" aria-busy="true" data-route-fallback>
+            <div className="route-skeleton">
+              <HouseLoader label="Loading" />
+            </div>
           </div>
         }
       >

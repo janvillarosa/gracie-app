@@ -54,7 +54,7 @@ export default defineConfig({
       // Ratchet floor set just below the current baseline (statements 45.7%,
       // branches 76.8%, functions 75.0%, lines 45.7%). Vitest reads these as
       // percentages (0-100). Raise them as coverage grows; never lower.
-      thresholds: { lines: 62, branches: 77, functions: 76, statements: 62 },
+      thresholds: { lines: 64, branches: 78, functions: 77, statements: 64 },
     },
   },
 })

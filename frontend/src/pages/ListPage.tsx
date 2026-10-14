@@ -30,7 +30,6 @@ import {
   Grid,
   Dropdown,
   message,
-  Skeleton,
   Alert,
   Tabs,
   Tag,
@@ -70,6 +69,8 @@ import { useDocumentTitle } from '@lib/useDocumentTitle'
 import { ItemRow } from '@components/ItemRow'
 import { AddItemBar } from '@components/AddItemBar'
 import { TopNav } from '@components/TopNav'
+import { HouseLoader } from '@components/HouseLoader'
+import { RowSkeleton } from '@components/RowSkeleton'
 
 export const ListPage: React.FC = () => {
   const { apiKey } = useAuth()
@@ -143,6 +144,9 @@ export const ListPage: React.FC = () => {
     queryKey: ['list-items', listId, includeCompleted],
     queryFn: () => getListItems(apiKey!, roomId!, listId, includeCompleted),
     enabled: !!roomId && !!listId,
+    // Showing/hiding checked-off items keeps the rows already on screen while the other
+    // set loads, instead of dropping back to a skeleton. Never across lists, though.
+    placeholderData: (prev, prevQuery) => (prevQuery?.queryKey[1] === listId ? prev : undefined),
     refetchInterval: false,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
@@ -160,6 +164,10 @@ export const ListPage: React.FC = () => {
     retry: false,
     staleTime: 5 * 60_000,
   })
+
+  // Items that replace a skeleton fade in; cached items just appear with the sheet.
+  const itemsWereLoading = useRef(false)
+  if (itemsQuery.isLoading) itemsWereLoading.current = true
 
   // Always derive items and sorted views before any early returns to keep hook order stable
   const items = itemsQuery.data ?? []
@@ -516,11 +524,21 @@ export const ListPage: React.FC = () => {
 
   // Set the document title unconditionally (before any early returns)
   useDocumentTitle(listMeta?.name || 'List')
-  // Sync local notes buffer with server when loading or switching lists
+  // Follow the server's notes into the buffer, but never over unsaved typing: only when the
+  // buffer still holds what the server last said (or we've switched lists). A slow save or a
+  // housemate's edit landing mid-sentence would otherwise wipe what's being written.
+  const syncedNotes = useRef<{ listId?: string; notes: string }>({ notes: '' })
   useEffect(() => {
-    if (listMeta) setNotesText(listMeta.notes || '')
-    setClearedNotes(null)
+    if (!listMeta) return
+    const server = listMeta.notes || ''
+    const prev = syncedNotes.current
+    const switched = prev.listId !== listMeta.list_id
+    setNotesText((buf) => (switched || buf === prev.notes ? server : buf))
+    if (switched) setClearedNotes(null)
+    syncedNotes.current = { listId: listMeta.list_id, notes: server }
   }, [listMeta?.list_id, listMeta?.notes])
+  const notesTextRef = useRef(notesText)
+  notesTextRef.current = notesText
 
   const isGroceryList = useMemo(() => {
     const name = listMeta?.name.toLowerCase() || ''
@@ -557,10 +575,17 @@ export const ListPage: React.FC = () => {
     if (!roomId || !listId || !notesDirty) return
     try {
       setNotesSaving(true)
-      await updateList(apiKey!, roomId, listId, { notes: notesText })
-      await qc.invalidateQueries({ queryKey: ['lists', roomId] })
+      const saved = notesText
+      await updateList(apiKey!, roomId, listId, { notes: saved })
+      // Confirm from the save itself rather than waiting on a refetch round trip; the
+      // refetch still runs in the background to pick up anything else that changed.
+      qc.setQueryData<List[]>(['lists', roomId], (old) =>
+        old?.map((l) => (l.list_id === listId ? { ...l, notes: saved } : l)),
+      )
+      void qc.invalidateQueries({ queryKey: ['lists', roomId] })
       setClearedNotes(null)
-      setNotesJustSaved(true)
+      // Typing carried on during the save: those words are still unsaved, so no "Saved".
+      if (notesTextRef.current === saved) setNotesJustSaved(true)
     } catch (e: any) {
       msgApi.error(errorMessage(e, 'Couldn’t save your notes. They’re still here, so try again.'))
     } finally {
@@ -609,7 +634,9 @@ export const ListPage: React.FC = () => {
     return (
       <div className="container" aria-busy="true">
         <TopNav />
-        <div className="route-skeleton" role="status" aria-label="Loading list" />
+        <div className="route-skeleton">
+          <HouseLoader label="Loading list" />
+        </div>
       </div>
     )
   }
@@ -662,7 +689,8 @@ export const ListPage: React.FC = () => {
       it={it}
       variant={variant}
       showCategory={cat}
-      entering={isEntering(it.item_id)}
+      // Checked-off rows arriving from the server are old items, not new ones
+      entering={variant !== 'completed' && isEntering(it.item_id)}
       editing={editingItemId === it.item_id}
       saving={savingItemId === it.item_id}
       onToggle={onToggleComplete}
@@ -754,9 +782,20 @@ export const ListPage: React.FC = () => {
                   ),
                   children: (
                     <>
-                      <Space direction="vertical" style={{ width: '100%' }} size="large">
+                      <Space
+                        // Remount when the items arrive so a skeleton hands over with a fade
+                        key={itemsQuery.isLoading ? 'loading' : 'ready'}
+                        className={
+                          !itemsQuery.isLoading && itemsWereLoading.current
+                            ? 'items-space is-arriving'
+                            : 'items-space'
+                        }
+                        direction="vertical"
+                        style={{ width: '100%' }}
+                        size="large"
+                      >
                         {itemsQuery.isLoading ? (
-                          <Skeleton active paragraph={{ rows: 4 }} />
+                          <RowSkeleton variant="item" rows={4} label="Loading items" />
                         ) : items.length === 0 ? (
                           <div className="empty-state">
                             <Plus size={20} style={{ color: 'var(--color-primary)' }} />
@@ -832,6 +871,7 @@ export const ListPage: React.FC = () => {
                         type="button"
                         className="completed-toggle"
                         aria-expanded={includeCompleted}
+                        aria-busy={itemsQuery.isPlaceholderData || undefined}
                         onClick={() => setIncludeCompleted(!includeCompleted)}
                       >
                         {includeCompleted ? 'Hide checked-off items' : 'Show checked-off items'}

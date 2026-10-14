@@ -1,30 +1,31 @@
-import React from 'react'
-import logo112 from '@assets/logo-112.png'
-import logo168 from '@assets/logo-168.png'
+import React, { useState } from 'react'
+import { HouseMark } from '@components/HouseMark'
 import { TransitionLink } from '@components/TransitionLink'
+import { welcomeElapsed } from '@lib/welcome'
 
-// Default size bumped ~30% for stronger presence across pages
 export const BrandLogo: React.FC<{ size?: number; to?: string }> = ({ size = 56, to = '/app' }) => {
-  const img = (
-    <img
-      src={logo112}
-      srcSet={`${logo112} 1x, ${logo168} 2x`}
-      alt="Bauhouse"
-      width={size}
-      height={size}
-      className="brand-logo-img"
-      decoding="async"
-      loading="eager"
+  // Read once on mount: a logo mounted during the post-login welcome joins it in progress.
+  const [welcomeAt] = useState(welcomeElapsed)
+  const mark = (
+    <HouseMark
+      size={size}
+      label="Bauhouse"
+      className={welcomeAt === null ? undefined : 'is-welcome'}
+      style={
+        welcomeAt === null
+          ? undefined
+          : ({ '--welcome-offset': `-${Math.round(welcomeAt)}ms` } as React.CSSProperties)
+      }
     />
   )
   return (
     <div className="brand-logo" aria-label="Bauhouse logo">
       {to ? (
         <TransitionLink to={to} aria-label="Go to app home">
-          {img}
+          {mark}
         </TransitionLink>
       ) : (
-        img
+        mark
       )}
     </div>
   )

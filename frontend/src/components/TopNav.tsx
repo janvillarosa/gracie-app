@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useRef } from 'react'
 import { Dropdown } from 'antd'
 import { CaretLeft } from '@phosphor-icons/react'
 import type { MenuProps } from 'antd'
@@ -20,6 +20,9 @@ export const TopNav: React.FC<Props> = ({ back }) => {
   const navigate = useTransitionNavigate()
   const meQuery = useQuery({ queryKey: ['me'], queryFn: () => getMe(apiKey!) })
   const me = meQuery.data
+  // The avatar fades in only when it replaces the placeholder, not on every page
+  const hadPlaceholder = useRef(false)
+  if (!me) hadPlaceholder.current = true
 
   const items: MenuProps['items'] = [
     { key: 'account', label: 'Account settings' },
@@ -50,12 +53,18 @@ export const TopNav: React.FC<Props> = ({ back }) => {
           placement="bottomRight"
         >
           <button className="avatar-button" aria-label="Open account menu">
-            <Avatar
-              seed={seed}
-              size={50}
-              style={'miniavs'}
-              alt={(me?.name || 'User') + ' avatar'}
-            />
+            {/* Until we know who you are, a blank disc instead of a stranger's face */}
+            {me ? (
+              <Avatar
+                seed={seed}
+                size={50}
+                style={'miniavs'}
+                alt={(me.name || 'User') + ' avatar'}
+                className={hadPlaceholder.current ? 'avatar-in' : undefined}
+              />
+            ) : (
+              <span className="avatar-placeholder" />
+            )}
           </button>
         </Dropdown>
       </div>

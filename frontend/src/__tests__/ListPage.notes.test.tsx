@@ -112,4 +112,30 @@ describe('ListPage notes', () => {
     await userEvent.type(textarea, 'x')
     expect(screen.queryByRole('button', { name: /undo clear/i })).not.toBeInTheDocument()
   })
+
+  it('keeps words typed while a save is still in flight', async () => {
+    const { roomId, listId } = await setup()
+    let release: () => void = () => {}
+    server.use(
+      http.patch(`/api/rooms/${roomId}/lists/${listId}`, async () => {
+        await new Promise<void>((r) => {
+          release = r
+        })
+        return new Response(JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }),
+    )
+    await userEvent.click(await screen.findByRole('tab', { name: /notes/i }))
+    const textarea = await screen.findByPlaceholderText(/write notes/i)
+    await userEvent.type(textarea, 'Buy oat milk')
+    await userEvent.click(screen.getByRole('button', { name: /save/i }))
+    await userEvent.type(textarea, ' and eggs')
+    release()
+
+    await waitFor(() => expect(screen.getByRole('button', { name: /save/i })).toBeEnabled())
+    expect(textarea).toHaveValue('Buy oat milk and eggs')
+    expect(screen.queryByRole('button', { name: /saved/i })).not.toBeInTheDocument()
+  })
 })

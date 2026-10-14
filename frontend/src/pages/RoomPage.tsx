@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useMemo, useRef, useState } from 'react'
 import { errorMessage } from '@lib/errors'
 import type { RoomView, List } from '@api/types'
 import { useAuth } from '@auth/AuthProvider'
@@ -39,6 +39,7 @@ import { AvatarBadge } from '@components/AvatarBadge'
 import { ShareCodeModal } from '@components/ShareCodeModal'
 import { TopNav } from '@components/TopNav'
 import { TransitionLink } from '@components/TransitionLink'
+import { RowSkeleton } from '@components/RowSkeleton'
 import { toEmoji } from '../icons'
 import type { ListIcon } from '@api/types'
 import { useDocumentTitle } from '@lib/useDocumentTitle'
@@ -90,6 +91,9 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
     ...liveOpts,
   })
   const lists = listsQuery.data ?? []
+  // Rows that replace a skeleton fade in; rows already cached just appear with the sheet.
+  const listsWereLoading = useRef(false)
+  if (listsQuery.isLoading) listsWereLoading.current = true
 
   // Deletion actions removed from dashboard; keep minimal helpers only if needed elsewhere
 
@@ -249,14 +253,14 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
             </div>
 
             {listsQuery.isLoading ? (
-              <div>Loading your lists…</div>
+              <RowSkeleton variant="list" rows={3} label="Loading your lists" />
             ) : lists.length === 0 ? (
               <Typography.Text type="secondary">
                 No lists yet. Create one with New list.
               </Typography.Text>
             ) : (
               <AntList
-                className="lists-list"
+                className={listsWereLoading.current ? 'lists-list is-arriving' : 'lists-list'}
                 dataSource={lists}
                 renderItem={(l) => (
                   <AntList.Item>

@@ -7,6 +7,7 @@ import { loginAuth } from '@api/endpoints'
 import { Form, Input, Button, Typography, message } from 'antd'
 import { useDocumentTitle } from '@lib/useDocumentTitle'
 import { AuthShell } from '@components/AuthShell'
+import { startWelcome } from '@lib/welcome'
 
 export const Login: React.FC = () => {
   const { setApiKey } = useAuth()
@@ -25,6 +26,7 @@ export const Login: React.FC = () => {
     try {
       const res = await loginAuth(username.trim(), password)
       setApiKey(res.api_key)
+      startWelcome()
       navigate('/app', { replace: true })
     } catch (err: any) {
       message.error(

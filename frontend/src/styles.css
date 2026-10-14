@@ -496,14 +496,6 @@ h5.ant-typography {
   margin: 0 0 10px var(--radius-squircle);
 }
 
-.brand-logo-img {
-  display: block;
-  height: auto;
-  /* The source PNGs carry a faint 1px grey fringe on their outer edge; clip it so the
-     logo doesn't sit in a visible box on the page background. */
-  clip-path: inset(1px);
-}
-
 .brand-logo a {
   display: block;
   border-radius: 12px;
@@ -2266,6 +2258,421 @@ textarea.notes-textarea {
 @keyframes vt-in {
   from {
     opacity: 0;
+  }
+}
+
+/* ---------- House mark: the logo, the loader and the post-login welcome ---------- */
+.house-mark {
+  display: block;
+  color: var(--ink);
+  overflow: visible;
+}
+
+.house-mark .hm-pane,
+.house-mark .hm-door {
+  transform-box: fill-box;
+}
+
+.house-mark .hm-pane {
+  transform-origin: center;
+}
+
+/* The door hangs on its hinge against the right wall */
+.house-mark .hm-door {
+  transform-origin: right center;
+}
+
+/* Loader: the house builds itself the way you'd sketch the logo, then holds and fades.
+   It waits a beat before showing at all, so a quick response never flashes it. */
+.house-loader {
+  display: inline-flex;
+  animation: hl-appear 200ms ease 250ms both;
+}
+
+.house-loader .hm-doorway {
+  display: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .house-loader .house-mark {
+    --hl: 2800ms;
+    animation: hl-fade var(--hl) ease infinite;
+  }
+
+  /* Each stroke stays invisible (not just dashed out) until its turn, so round caps
+     never leave a dot behind */
+  .house-loader [pathLength] {
+    stroke-dasharray: 1;
+  }
+
+  .house-loader .hm-roof {
+    animation: hl-roof var(--hl) var(--ease-out) infinite;
+  }
+
+  .house-loader .hm-shell {
+    animation: hl-shell var(--hl) var(--ease-out) infinite;
+  }
+
+  .house-loader .hm-lwall {
+    animation: hl-lwall var(--hl) var(--ease-out) infinite;
+  }
+
+  .house-loader .hm-room {
+    animation: hl-room var(--hl) var(--ease-out) infinite;
+  }
+
+  .house-loader .hm-frame {
+    animation: hl-frame var(--hl) var(--ease-out) infinite;
+  }
+
+  .house-loader .hm-lintel {
+    animation: hl-lintel var(--hl) var(--ease-out) infinite;
+  }
+
+  .house-loader .hm-pane {
+    animation: hl-pane var(--hl) var(--ease-out) infinite;
+  }
+
+  .house-loader .hm-door {
+    transform-origin: bottom;
+    animation: hl-door var(--hl) var(--ease-out) infinite;
+  }
+}
+
+/* Reduced motion: the finished house, its window glowing softly */
+@media (prefers-reduced-motion: reduce) {
+  .house-loader .hm-pane {
+    animation: hl-glow 1600ms ease-in-out infinite alternate;
+  }
+}
+
+@keyframes hl-appear {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes hl-fade {
+  0%,
+  86% {
+    opacity: 1;
+  }
+
+  96%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes hl-roof {
+  0% {
+    stroke-dashoffset: 1;
+  }
+
+  20%,
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes hl-shell {
+  0%,
+  12% {
+    stroke-dashoffset: 1;
+    opacity: 0;
+  }
+
+  12.1% {
+    opacity: 1;
+  }
+
+  34%,
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+}
+
+@keyframes hl-lwall {
+  0%,
+  30% {
+    stroke-dashoffset: 1;
+    opacity: 0;
+  }
+
+  30.1% {
+    opacity: 1;
+  }
+
+  40%,
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+}
+
+@keyframes hl-room {
+  0%,
+  30% {
+    stroke-dashoffset: 1;
+    opacity: 0;
+  }
+
+  30.1% {
+    opacity: 1;
+  }
+
+  46%,
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+}
+
+@keyframes hl-frame {
+  0%,
+  42% {
+    stroke-dashoffset: 1;
+    opacity: 0;
+  }
+
+  42.1% {
+    opacity: 1;
+  }
+
+  56%,
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+}
+
+@keyframes hl-lintel {
+  0%,
+  46% {
+    stroke-dashoffset: 1;
+    opacity: 0;
+  }
+
+  46.1% {
+    opacity: 1;
+  }
+
+  56%,
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+}
+
+@keyframes hl-pane {
+  0%,
+  56% {
+    transform: scale(0);
+  }
+
+  63% {
+    transform: scale(1.3);
+  }
+
+  68%,
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes hl-door {
+  0%,
+  60% {
+    transform: scaleY(0);
+  }
+
+  72%,
+  100% {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes hl-glow {
+  from {
+    opacity: 0.45;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/* Welcome home: after logging in, once the logo lands in the top bar its window lights
+   up and the door swings open and shut. Plays once; --welcome-offset lets a logo that
+   remounts mid-way carry on from the same moment. */
+@media (prefers-reduced-motion: no-preference) {
+  .house-mark.is-welcome .hm-pane {
+    animation: welcome-light 1600ms var(--ease-out) var(--welcome-offset, 0ms) both;
+  }
+
+  .house-mark.is-welcome .hm-door {
+    animation: welcome-door 1600ms ease-in-out var(--welcome-offset, 0ms) both;
+  }
+}
+
+@keyframes welcome-light {
+  0%,
+  24% {
+    fill: var(--ink);
+    transform: scale(1);
+  }
+
+  31% {
+    fill: var(--brand-yellow);
+    transform: scale(1.3);
+  }
+
+  40%,
+  100% {
+    fill: var(--brand-yellow);
+    transform: scale(1);
+  }
+}
+
+@keyframes welcome-door {
+  0%,
+  42% {
+    transform: none;
+  }
+
+  56%,
+  70% {
+    transform: scaleX(0.18);
+  }
+
+  84%,
+  100% {
+    transform: none;
+  }
+}
+
+/* ---------- Loading states that hold the final shape ---------- */
+.avatar-button {
+  /* The disc sits behind the avatar image too, so a slow image never leaves a hole */
+  background: var(--panel-subtle);
+}
+
+.avatar-placeholder {
+  display: block;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+}
+
+/* Skeleton rows match the real rows: list rows on the house page, item rows on a list */
+.row-skeleton .sk-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.row-skeleton-list .sk-row {
+  padding: 14px 0;
+}
+
+.row-skeleton-item .sk-row {
+  gap: 14px;
+  min-height: 52px;
+}
+
+.row-skeleton .sk-row + .sk-row::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--border);
+}
+
+.row-skeleton .sk-lead,
+.row-skeleton .sk-bar,
+.row-skeleton .sk-tag {
+  display: block;
+  flex-shrink: 0;
+  background: color-mix(in srgb, var(--ink) 7%, var(--panel));
+}
+
+.row-skeleton-list .sk-lead {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+}
+
+.row-skeleton-item .sk-lead {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+}
+
+.row-skeleton .sk-lines {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.row-skeleton .sk-bar {
+  width: var(--sk-w, 60%);
+  height: 12px;
+  border-radius: 6px;
+}
+
+.row-skeleton .sk-bar-sub {
+  width: calc(var(--sk-w, 60%) * 0.75);
+  height: 10px;
+}
+
+.row-skeleton .sk-tag {
+  width: 58px;
+  height: 20px;
+  border-radius: 10px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* A slow, shared breath rather than a shimmer racing across every row */
+  .row-skeleton .sk-lead,
+  .row-skeleton .sk-bar,
+  .row-skeleton .sk-tag {
+    animation: sk-breathe 1400ms ease-in-out infinite alternate;
+  }
+
+  /* Real rows that replace a skeleton settle in once */
+  .lists-list.is-arriving,
+  .items-space.is-arriving,
+  .avatar-in {
+    animation: content-arrive 280ms var(--ease-out) both;
+  }
+
+  /* Checked-off items are on their way: the toggle breathes until they land */
+  .completed-toggle[aria-busy='true'] {
+    animation: sk-breathe 700ms ease-in-out infinite alternate;
+  }
+}
+
+@keyframes sk-breathe {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0.55;
+  }
+}
+
+@keyframes content-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
   }
 }
 

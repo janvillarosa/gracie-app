@@ -1,12 +1,13 @@
 import React from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@auth/AuthProvider'
-import { getMe, getMyRoom, isNotFound } from '@api/endpoints'
+import { getLists, getMe, getMyRoom, isNotFound } from '@api/endpoints'
 import { RoomPage } from './RoomPage'
 import { NoRoomPage } from './NoRoomPage'
-import { Card, Alert, Spin, Button, Space } from 'antd'
+import { Card, Alert, Button, Space } from 'antd'
 import { SignIn } from '@phosphor-icons/react'
 import { TopNav } from '@components/TopNav'
+import { HouseLoader } from '@components/HouseLoader'
 
 export const Dashboard: React.FC = () => {
   const { apiKey, setApiKey } = useAuth()
@@ -20,13 +21,21 @@ export const Dashboard: React.FC = () => {
     queryFn: () => getMyRoom(key),
     retry: false,
   })
+  // Start the lists as soon as we know the house, alongside the room fetch, instead of
+  // after the house page renders: one round trip less before the lists show.
+  const roomId = meQuery.data?.room_id
+  useQuery({
+    queryKey: ['lists', roomId],
+    queryFn: () => getLists(key, roomId!),
+    enabled: !!roomId,
+  })
 
   if (meQuery.isLoading || roomQuery.isLoading) {
     return (
       <div className="container" aria-busy="true">
         <TopNav />
-        <div className="route-skeleton" role="status" aria-label="Loading your house">
-          <Spin />
+        <div className="route-skeleton">
+          <HouseLoader label="Loading your house" />
         </div>
       </div>
     )
