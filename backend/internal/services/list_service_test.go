@@ -11,7 +11,8 @@ import (
 )
 
 func TestListValidationsAndFilters(t *testing.T) {
-	tx, users, rooms, lists, items := memstore.Compose()
+	m := memstore.Compose()
+	tx, users, rooms, lists, items := m.Tx, m.Users, m.Rooms, m.Lists, m.Items
 	us := NewUserService(users, rooms, tx)
 	rs := NewRoomService(users, rooms, tx)
 	ls := NewListService(users, rooms, lists, items, categorization.NewKeywordCategorizer(categorization.GroceryAnchors))
@@ -81,7 +82,8 @@ func TestNormalizeLegacyItemForRead(t *testing.T) {
 }
 
 func TestGetPantryRanksHouseHistoryAndSeedsCommon(t *testing.T) {
-	tx, users, rooms, lists, items := memstore.Compose()
+	m := memstore.Compose()
+	tx, users, rooms, lists, items := m.Tx, m.Users, m.Rooms, m.Lists, m.Items
 	us := NewUserService(users, rooms, tx)
 	ls := NewListService(users, rooms, lists, items, categorization.NewKeywordCategorizer(categorization.GroceryAnchors))
 	ctx := context.Background()

@@ -43,10 +43,19 @@ func (Tx) WithTransaction(ctx context.Context, fn func(ctx context.Context) erro
 	return fn(ctx)
 }
 
+// Repos bundles the in-memory repositories that share one Store.
+type Repos struct {
+	Tx    store.TxRunner
+	Users store.UserRepository
+	Rooms store.RoomRepository
+	Lists store.ListRepository
+	Items store.ListItemRepository
+}
+
 // Compose returns in-memory repos + a no-op Tx runner.
-func Compose() (tx store.TxRunner, users store.UserRepository, rooms store.RoomRepository, lists store.ListRepository, items store.ListItemRepository) {
+func Compose() Repos {
 	st := NewStore()
-	return Tx{}, &UserRepo{st}, &RoomRepo{st}, &ListRepo{st}, &ListItemRepo{st}
+	return Repos{Tx: Tx{}, Users: &UserRepo{st}, Rooms: &RoomRepo{st}, Lists: &ListRepo{st}, Items: &ListItemRepo{st}}
 }
 
 // UserRepo

@@ -8,7 +8,8 @@ import (
 )
 
 func TestRoomJoinByTokenAndCancelVote(t *testing.T) {
-	tx, users, rooms, _, _ := memstore.Compose()
+	m := memstore.Compose()
+	tx, users, rooms := m.Tx, m.Users, m.Rooms
 	us := NewUserService(users, rooms, tx)
 	rs := NewRoomService(users, rooms, tx)
 
