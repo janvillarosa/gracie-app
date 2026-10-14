@@ -17,6 +17,7 @@ type UserService struct {
 	rooms store.RoomRepository
 	lists store.ListRepository
 	items store.ListItemRepository
+	trips store.TripRepository
 	tx    store.TxRunner
 }
 
@@ -182,6 +183,9 @@ func (s *UserService) DeleteAccount(ctx context.Context, userID string) error {
 }
 
 func (s *UserService) cleanupRoomResources(ctx context.Context, roomID string) {
+	if s.trips != nil {
+		_ = s.trips.DeleteByRoom(ctx, roomID)
+	}
 	if s.lists == nil {
 		return
 	}
@@ -193,3 +197,6 @@ func (s *UserService) cleanupRoomResources(ctx context.Context, roomID string) {
 		_ = s.lists.Delete(ctx, l.ListID)
 	}
 }
+
+// UseTripRepo injects the optional trip repository used to re-home and clean up trips.
+func (s *UserService) UseTripRepo(trips store.TripRepository) { s.trips = trips }
