@@ -196,3 +196,46 @@ func (s *TripService) Sync(ctx context.Context, user *models.User, roomID string
 	sort.Slice(resp.Removed, func(a, b int) bool { return resp.Removed[a].TripID < resp.Removed[b].TripID })
 	return resp, nil
 }
+
+// EnsurePackingList returns the trip's linked packing List, creating and linking it if needed.
+// Online-only by design. Linking is a compare-and-swap, so concurrent callers end up
+// sharing one List: the loser deletes the List it just created and returns the winner's.
+func (s *TripService) EnsurePackingList(ctx context.Context, user *models.User, roomID, tripID string) (*models.List, error) {
+	if err := ensureRoomMembership(ctx, s.rooms, user, roomID); err != nil {
+		return nil, err
+	}
+	t, err := s.trips.Get(ctx, tripID)
+	if err != nil {
+		return nil, err
+	}
+	if t.RoomID != roomID || t.DeletedAt != nil {
+		return nil, derr.ErrNotFound
+	}
+	if t.PackingListID != nil {
+		if l, err := s.listRepo.GetByID(ctx, *t.PackingListID); err == nil && !l.IsDeleted {
+			return l, nil
+		}
+		// stale link: fall through and relink, expecting the stale id
+	}
+	created, err := s.lists.CreateList(ctx, user, roomID, "Packing · "+t.Title, "", "")
+	if err != nil {
+		return nil, err
+	}
+	won, err := s.trips.LinkPackingList(ctx, tripID, roomID, t.PackingListID, created.ListID, s.now().UTC())
+	if err != nil {
+		_ = s.listRepo.Delete(ctx, created.ListID)
+		return nil, err
+	}
+	if won {
+		return created, nil
+	}
+	_ = s.listRepo.Delete(ctx, created.ListID)
+	cur, err := s.trips.Get(ctx, tripID)
+	if err != nil {
+		return nil, err
+	}
+	if cur.PackingListID == nil {
+		return nil, derr.ErrConflict
+	}
+	return s.listRepo.GetByID(ctx, *cur.PackingListID)
+}
