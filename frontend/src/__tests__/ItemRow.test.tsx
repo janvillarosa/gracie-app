@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { List as AntList } from 'antd'
 import type { ListItem } from '@api/types'
@@ -57,7 +57,8 @@ describe('ItemRow', () => {
     await userEvent.click(screen.getByRole('checkbox'))
     expect(p.onToggle).toHaveBeenCalledWith(item)
     await userEvent.click(screen.getByRole('button', { name: 'Delete item' }))
-    expect(p.onDelete).toHaveBeenCalledWith(item)
+    // Delete waits for the row's exit animation before telling the parent.
+    await waitFor(() => expect(p.onDelete).toHaveBeenCalledWith(item))
     await userEvent.click(screen.getByText('Milk'))
     expect(p.onStartEdit).toHaveBeenCalledWith(item)
   })

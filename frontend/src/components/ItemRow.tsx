@@ -31,7 +31,7 @@ const SortableRow: React.FC<{ id: string; children: React.ReactNode }> = ({ id, 
         {...attributes}
         aria-label="Drag to reorder"
       >
-        <DotsSixVertical />
+        <DotsSixVertical weight="bold" />
       </span>
       <div style={{ flex: 1, minWidth: 0 }}>{children}</div>
     </div>
@@ -58,7 +58,9 @@ function useSwipeToDelete(onCommit: () => void, disabled: boolean) {
     // Clip only while swiping so a lifted (dragged) row keeps its shadow.
     if (slide.parentElement) slide.parentElement.style.overflow = dx ? 'hidden' : ''
     tray.style.opacity = String(Math.min(1, Math.abs(dx) / SWIPE_COMMIT))
-    tray.dataset.armed = Math.abs(dx) >= SWIPE_COMMIT ? 'true' : 'false'
+    const armed = Math.abs(dx) >= SWIPE_COMMIT
+    if (armed && tray.dataset.armed !== 'true') navigator.vibrate?.(8)
+    tray.dataset.armed = armed ? 'true' : 'false'
   }
 
   const onPointerDown = (e: React.PointerEvent) => {
@@ -160,7 +162,21 @@ export const ItemRow = React.memo<Props>(function ItemRow({
     return () => clearTimeout(t)
   }, [fresh])
 
-  const swipe = useSwipeToDelete(() => onDelete(it), busy || variant === 'completed')
+  // Deleting plays a short exit (the row clears away and the gap closes) before the parent
+  // removes it, so the list never jumps. Reduced motion, or no matchMedia, deletes at once.
+  const liRef = React.useRef<HTMLDivElement>(null)
+  const [leaving, setLeaving] = React.useState(false)
+  const leave = React.useCallback(() => {
+    const reduce =
+      !window.matchMedia || window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    if (reduce) return onDelete(it)
+    const li = liRef.current
+    if (li) li.style.setProperty('--row-h', `${li.offsetHeight}px`)
+    setLeaving(true)
+    setTimeout(() => onDelete(it), 260)
+  }, [it, onDelete])
+
+  const swipe = useSwipeToDelete(leave, busy || leaving || variant === 'completed')
   const qtyText = [it.quantity, it.unit].filter(Boolean).join(' ')
 
   const body = (
@@ -207,17 +223,22 @@ export const ItemRow = React.memo<Props>(function ItemRow({
         icon={<Trash />}
         aria-label="Delete item"
         title="Delete item"
-        onClick={() => onDelete(it)}
-        disabled={busy}
+        onClick={leave}
+        disabled={busy || leaving}
       />
     </div>
   )
 
   return (
-    <AntList.Item className={fresh ? 'is-entering' : undefined}>
+    <AntList.Item
+      ref={liRef}
+      className={
+        [fresh && 'is-entering', leaving && 'is-leaving'].filter(Boolean).join(' ') || undefined
+      }
+    >
       <div className="item-swipe">
         <div ref={swipe.trayRef} className="swipe-tray" aria-hidden>
-          <Trash weight="bold" />
+          <Trash weight="bold" className="swipe-tray-icon" />
         </div>
         <div ref={swipe.slideRef} className="item-slide" {...swipe.handlers}>
           {variant === 'sortable' ? <SortableRow id={it.item_id}>{body}</SortableRow> : body}

@@ -48,6 +48,8 @@
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --dur-press: 90ms;
   --dur-fast: 160ms;
+  /* One height for every control in the list toolbar and add bar */
+  --control-h: 44px;
   --dur-base: 240ms;
   --dur-slow: 420ms;
   /* Yellow key: shadow tinted from the deep yellow instead of grey */
@@ -1102,6 +1104,19 @@ h5.ant-typography {
     color: var(--brand-red);
     background: rgba(190, 30, 45, 0.07) !important;
   }
+
+  .items-list .item-delete.ant-btn:not(:disabled):hover .anticon,
+  .items-list .item-delete.ant-btn:not(:disabled):hover svg {
+    transform: rotate(-8deg) scale(1.08);
+  }
+}
+
+.items-list .item-delete.ant-btn svg {
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.items-list .item-delete.ant-btn:not(:disabled):active svg {
+  transform: scale(0.88);
 }
 
 @media (hover: none) {
@@ -1155,6 +1170,15 @@ h5.ant-typography {
 .drag-handle:active {
   cursor: grabbing;
   color: var(--text);
+}
+
+.drag-handle svg {
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.drag-handle:active svg,
+.sortable-row.is-dragging .drag-handle svg {
+  transform: scale(1.15);
 }
 
 @media (hover: hover) {
@@ -1368,21 +1392,24 @@ h5.ant-typography {
 
 .list-tabs .ant-tabs-nav .ant-tabs-nav-list {
   position: relative;
+  box-sizing: border-box;
+  height: var(--control-h);
+  align-items: stretch;
   background: var(--panel-subtle);
   border: 1px solid var(--border-strong);
   border-radius: 999px;
-  padding: 4px;
-  gap: 6px;
+  padding: 3px;
+  gap: 2px;
 }
 
 /* Sliding pill indicator */
 .list-tabs .ant-tabs-nav .ant-tabs-nav-list::after {
   content: '';
   position: absolute;
-  top: 4px;
-  left: var(--tab-x, 4px);
+  top: 3px;
+  left: var(--tab-x, 3px);
   width: var(--tab-w, 60px);
-  height: calc(100% - 8px);
+  height: calc(100% - 6px);
   border-radius: 999px;
   background: var(--panel);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.06);
@@ -1393,8 +1420,10 @@ h5.ant-typography {
 .list-tabs .ant-tabs-tab {
   position: relative;
   z-index: 1;
+  display: flex;
+  align-items: center;
   margin: 0 !important;
-  padding: 4px 14px !important;
+  padding: 0 16px !important;
   border-radius: 999px !important;
   background: transparent !important;
   transition: color var(--dur-fast) ease;
@@ -1714,6 +1743,14 @@ h5.ant-typography {
   scroll-margin-bottom: 96px;
 }
 
+/* Each row's slide is its own stacking context (it sits above the swipe tray), so the
+   dragged row's z-index can't escape it: lift the whole list item instead, or the rows
+   below paint over the row being carried. */
+.items-list .ant-list-item:has(.sortable-row.is-dragging) {
+  position: relative;
+  z-index: 5;
+}
+
 /* Picked up: a dragged row lifts off the sheet like a paper slip */
 .sortable-row.is-dragging {
   position: relative;
@@ -1723,7 +1760,14 @@ h5.ant-typography {
   box-shadow: var(--lift-2);
   scale: 1.02;
   rotate: -0.6deg;
-  transition: scale var(--dur-fast) var(--ease-out), rotate var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) ease;
+  cursor: grabbing;
+}
+
+/* Lives on the base class so letting go settles the row back down instead of snapping. */
+@media (prefers-reduced-motion: no-preference) {
+  .sortable-row {
+    transition: scale 220ms var(--ease-out), rotate 220ms var(--ease-out), box-shadow 220ms ease;
+  }
 }
 
 .sortable-row.is-dragging .drag-handle {
@@ -1793,6 +1837,47 @@ h5.ant-typography {
   .sortable-row.is-dragging {
     scale: none;
     rotate: none;
+  }
+}
+
+/* Swipe tray: the bin pops and tilts the moment the swipe is far enough to delete. */
+.swipe-tray-icon {
+  transition: transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform: scale(0.8);
+}
+
+.swipe-tray[data-armed='true'] .swipe-tray-icon {
+  transform: scale(1.25) rotate(-10deg);
+}
+
+/* Delete exit: the row clears away, then the gap closes. */
+@media (prefers-reduced-motion: no-preference) {
+  .items-list .ant-list-item.is-leaving {
+    overflow: hidden;
+    pointer-events: none;
+    animation: row-out 260ms var(--ease-out) both;
+  }
+}
+
+@keyframes row-out {
+  0% {
+    max-height: var(--row-h);
+    opacity: 1;
+    transform: none;
+  }
+
+  45% {
+    opacity: 0;
+    transform: translateX(-20px);
+    max-height: var(--row-h);
+  }
+
+  100% {
+    max-height: 0;
+    opacity: 0;
+    transform: translateX(-20px);
+    padding-block: 0;
+    border-width: 0;
   }
 }
 
@@ -1947,7 +2032,7 @@ textarea.notes-textarea {
   }
 
   .list-tabs .ant-tabs-tab {
-    padding: 8px 18px !important;
+    padding: 0 18px !important;
   }
 }
 
@@ -2067,23 +2152,42 @@ textarea.notes-textarea {
   vertical-align: middle;
 }
 
-/* "By category" is a view toggle, so it reads as on/off rather than as a button */
+/* "Group by category" is an icon-only on/off toggle, the same size as the tab pill and
+   the add button so the toolbar sits on one line of controls. */
 .view-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  min-height: 36px;
-  padding: 0 12px;
+  justify-content: center;
+  flex: none;
+  box-sizing: border-box;
+  width: var(--control-h);
+  height: var(--control-h);
+  padding: 0;
   border: 1px solid var(--border-strong);
-  border-radius: 999px;
-  background: var(--panel);
+  border-radius: 50%;
+  background: var(--panel-subtle);
   color: var(--muted);
-  font: inherit;
-  font-size: 14px;
-  font-weight: 600;
-  white-space: nowrap;
   cursor: pointer;
   transition: background-color var(--dur-fast) ease, border-color var(--dur-fast) ease, color var(--dur-fast) ease;
+}
+
+.view-toggle:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+@media (hover: hover) {
+  .view-toggle:hover {
+    color: var(--ink);
+  }
+}
+
+.view-toggle svg {
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.view-toggle:active svg {
+  transform: scale(0.88);
 }
 
 .view-toggle[aria-pressed='true'] {
@@ -2115,19 +2219,6 @@ textarea.notes-textarea {
 
 @media (max-width: 480px) {
   .list-tabs .ant-tabs-tab {
-    padding: 4px 10px !important;
-  }
-
-  .view-toggle {
-    padding: 0 10px;
-    gap: 4px;
-  }
-
-  .view-toggle-by {
-    display: none;
-  }
-
-  .view-toggle-word {
-    text-transform: capitalize;
+    padding: 0 14px !important;
   }
 }

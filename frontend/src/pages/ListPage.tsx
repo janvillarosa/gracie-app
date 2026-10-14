@@ -703,12 +703,10 @@ export const ListPage: React.FC = () => {
                       className="view-toggle"
                       aria-pressed={groupByCat}
                       onClick={() => setGroupByCat(!groupByCat)}
+                      aria-label="Group by category"
+                      title="Group by category"
                     >
-                      <Rows size={16} aria-hidden />
-                      <span>
-                        <span className="view-toggle-by">By </span>
-                        <span className="view-toggle-word">category</span>
-                      </span>
+                      <Rows size={20} weight={groupByCat ? 'bold' : 'regular'} aria-hidden />
                     </button>
                   ) : null,
               }}
