@@ -17,6 +17,11 @@ is the only implementation (uses `go.mongodb.org/mongo-driver`). See
   `is_deleted`, timestamps.
 - **`list_items`** — `item_id` (unique), `list_id` (indexed), `room_id`, `description`,
   `completed`, `order`, timestamps.
+- **`trips`** — one document per trip with embedded todos/bookings. Indexes: unique
+  `trip_id`; `(room_id, deleted_at, trip_id, version, deleted_by)` so the sync manifest
+  is served from the index; TTL `purge_at_ttl` (`purge_at`, expireAfterSeconds 0).
+  Writes go only through `ReplaceCAS` / `Insert` / `LinkPackingList`.
+- **`place_cache`** — geocoder results; unique `key`; 30-day TTL on `created_at`.
 
 ## Rules & pitfalls (learned the hard way)
 
