@@ -490,6 +490,17 @@ Reference: `.impeccable/mocks/map-pills.html`.
   dotted.
 - **Phone:** 30px pills with 13px text and no time.
 
+## 6v. Map place popover (2026-10-15)
+
+Clicking a Google place opens a small paper popover:
+- the name and one muted line ("Palace · Sintra");
+- one **split key**, "Add to Thu 15 ▾" (the caret picks another day or Ideas);
+- a quiet **Open in Google Maps ↗** button.
+
+If the place is already in the trip, the popover shows "On Thu 15 · Show" instead. "More details" is
+removed: after adding, a toast offers Undo and editing happens on the row. A dropped pin uses the same
+popover with an editable name.
+
 ## 7. Constraints and open decisions
 
 Constraints:
