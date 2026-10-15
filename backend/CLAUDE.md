@@ -80,6 +80,11 @@ Spec: `docs/superpowers/specs/2026-10-14-trips-api-persistence-design.md`.
   `created_by`/`updated_by` on every applied change (create, update, and the booking-delete
   cascade); duplicate and fully-conflicted ops leave it alone. `GET /rooms/me` `members_meta`
   entries include `user_id` so clients can resolve `created_by`/`updated_by`/`done_by`.
+- **Booking end_place:** `Booking.end_place` (optional, `null` clears; same Place validation
+  and strict nested decoding) is the arrival / drop-off, `place` the departure / pick-up /
+  only place. Own clock `field_at["end_place"]`. If a patch sets `end_place` with a tz and
+  does not name `end_tz`, `end_tz` is derived from it (own clock); `start_tz` is never
+  derived from `place`.
 - **Trip icon:** `icon` (omitempty) on the trip fields, set via trip.create/update, clock
   `field_at["icon"]`; one of SUITCASE, PLANE, BEACH, MOUNTAIN, CITY, TRAIN, ROAD_TRIP,
   CAMPING, MAP, LANDMARK, WINE, SKI; `""` clears; anything else is `invalid`.

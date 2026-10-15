@@ -59,21 +59,23 @@ type TripTodo struct {
 
 // Booking is a vault entry (flight, stay, ticket...).
 type Booking struct {
-	BookingID        string           `bson:"booking_id" json:"booking_id"`
-	Kind             string           `bson:"kind" json:"kind"`
-	Title            string           `bson:"title" json:"title"`
-	ConfirmationCode string           `bson:"confirmation_code,omitempty" json:"confirmation_code,omitempty"`
-	StartsAt         *string          `bson:"starts_at,omitempty" json:"starts_at,omitempty"`
-	EndsAt           *string          `bson:"ends_at,omitempty" json:"ends_at,omitempty"`
-	StartTZ          *string          `bson:"start_tz,omitempty" json:"start_tz,omitempty"`
-	EndTZ            *string          `bson:"end_tz,omitempty" json:"end_tz,omitempty"`
-	Place            *Place           `bson:"place,omitempty" json:"place,omitempty"`
-	Notes            string           `bson:"notes,omitempty" json:"notes,omitempty"`
-	CreatedBy        string           `bson:"created_by,omitempty" json:"created_by,omitempty"`
-	UpdatedBy        string           `bson:"updated_by,omitempty" json:"updated_by,omitempty"`
-	UpdatedAt        *time.Time       `bson:"updated_at,omitempty" json:"updated_at,omitempty"` // server time of the last applied change
-	V                int64            `bson:"v" json:"v"`
-	FieldAt          map[string]int64 `bson:"field_at" json:"-"`
+	BookingID        string  `bson:"booking_id" json:"booking_id"`
+	Kind             string  `bson:"kind" json:"kind"`
+	Title            string  `bson:"title" json:"title"`
+	ConfirmationCode string  `bson:"confirmation_code,omitempty" json:"confirmation_code,omitempty"`
+	StartsAt         *string `bson:"starts_at,omitempty" json:"starts_at,omitempty"`
+	EndsAt           *string `bson:"ends_at,omitempty" json:"ends_at,omitempty"`
+	StartTZ          *string `bson:"start_tz,omitempty" json:"start_tz,omitempty"`
+	EndTZ            *string `bson:"end_tz,omitempty" json:"end_tz,omitempty"`
+	Place            *Place  `bson:"place,omitempty" json:"place,omitempty"`
+	// EndPlace is the arrival / drop-off; Place is the departure / pick-up / only place.
+	EndPlace  *Place           `bson:"end_place,omitempty" json:"end_place,omitempty"`
+	Notes     string           `bson:"notes,omitempty" json:"notes,omitempty"`
+	CreatedBy string           `bson:"created_by,omitempty" json:"created_by,omitempty"`
+	UpdatedBy string           `bson:"updated_by,omitempty" json:"updated_by,omitempty"`
+	UpdatedAt *time.Time       `bson:"updated_at,omitempty" json:"updated_at,omitempty"` // server time of the last applied change
+	V         int64            `bson:"v" json:"v"`
+	FieldAt   map[string]int64 `bson:"field_at" json:"-"`
 }
 
 // Tombstone records a deleted todo/booking so deletes sync and creates cannot revive it.

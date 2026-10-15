@@ -66,6 +66,7 @@ type BookingPatch struct {
 	StartTZ          Opt[string]       `json:"start_tz"`
 	EndTZ            Opt[string]       `json:"end_tz"`
 	Place            Opt[models.Place] `json:"place"`
+	EndPlace         Opt[models.Place] `json:"end_place"`
 	Notes            *string           `json:"notes"`
 }
 
