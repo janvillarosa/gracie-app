@@ -1,0 +1,94 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Spine and map</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0}
+body{width:1440px;height:900px;overflow:hidden;background:#E3E3E3;font:14px/1.45 Figtree,sans-serif;color:#3B3B3B;position:relative}
+h1,h2,h3{font-family:Outfit,sans-serif;color:#1A1A1A}
+.lbl{position:absolute;top:14px;font:600 11px Figtree;letter-spacing:.12em;text-transform:uppercase;color:#666}
+.desk{position:absolute;left:24px;top:40px;width:1020px;height:840px;background:#F7F7F7;border-radius:14px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.08);display:grid;grid-template-columns:470px 1fr}
+.nav{display:flex;align-items:center;justify-content:space-between;padding:14px 20px}
+.nav b{font:600 15px Outfit;color:#1A1A1A}
+.av{width:30px;height:30px;border-radius:50%;background:#B9C7E6;display:inline-block;border:2px solid #fff}
+.av.r{background:#E3B0C8;margin-left:-8px}
+.sheet{background:#fff;border-radius:16px;box-shadow:0 1px 2px rgba(0,0,0,.04),0 6px 18px -6px rgba(0,0,0,.08)}
+.meta{color:#656C78;font-size:13px}
+.head{padding:0 20px 10px}
+.head h1{font-size:30px;line-height:1.1}
+.tray{margin:0 16px;padding:12px 14px;border:2px dashed #E6BE00;background:#FFFBE6;border-radius:14px}
+.tray h3{font-size:15px;display:flex;justify-content:space-between}
+.chip{display:inline-block;border:1px solid #E6E6E6;border-radius:999px;padding:4px 10px;margin:6px 4px 0 0;font-size:12.5px;background:#fff}
+.spine{margin:12px 16px 0;padding:0 16px;height:600px;overflow:hidden}
+.dh{position:relative;display:flex;align-items:baseline;gap:10px;padding:14px 0 6px;border-bottom:2px solid #1A1A1A}
+.dh h2{font-size:19px}
+.dot{width:12px;height:12px;border-radius:50%;align-self:center}
+.dh.cur{border-color:#2348A6}
+.row{display:grid;grid-template-columns:22px 46px 1fr auto;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid #EFEFEF}
+.cb{width:20px;height:20px;border:2px solid #C9C9C9;border-radius:6px}
+.t{font:600 13px ui-monospace,monospace;color:#1A1A1A}
+.nm{color:#1A1A1A;font-weight:600}.nm small{display:block;font-weight:400;color:#656C78;font-size:12px}
+.st{font:700 10.5px Figtree;letter-spacing:.08em;padding:3px 7px;border-radius:5px}
+.food{background:#FDE7D2;color:#8A4209}.sight{background:#DCE5FA;color:#2348A6}.tr{background:#E8E8E8;color:#333}.stay{background:#FFF1B3;color:#6B5000}
+.stub{background:#FAFAFA;border-left:4px solid #2348A6;border-radius:0 8px 8px 0;margin:4px 0}
+.code{font:700 12px ui-monospace,monospace;letter-spacing:.08em;color:#2348A6}
+.mapwrap{position:relative;background:#E9EEE6;overflow:hidden}
+.sea{position:absolute;left:-80px;top:470px;width:900px;height:400px;background:#CFE0EC;transform:rotate(-8deg)}
+.road{position:absolute;height:2px;background:#fff}
+.pin{position:absolute;width:28px;height:28px;border-radius:50%;color:#fff;font:700 13px Figtree;display:grid;place-items:center;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.25)}
+.b{background:#2348A6}.g{background:#B5B5B5;width:16px;height:16px;border-width:2px}
+.line{position:absolute;border-top:4px solid #2348A6;transform-origin:left}
+.mapbar{position:absolute;left:16px;top:16px;right:16px;display:flex;justify-content:space-between}
+.pill{background:#fff;border-radius:999px;padding:8px 14px;font-weight:600;font-size:13px;box-shadow:0 2px 8px rgba(0,0,0,.12);color:#1A1A1A}
+.card{position:absolute;left:300px;top:250px;width:240px;padding:12px 14px}
+.attr{position:absolute;right:10px;bottom:8px;font-size:11px;color:#555;background:rgba(255,255,255,.8);padding:1px 6px;border-radius:4px}
+.key{background:#FFD417;border-radius:999px;padding:8px 14px;font-weight:700;color:#1A1A1A;box-shadow:inset 0 1px 0 rgba(255,255,255,.55),0 1px 0 #E6BE00}
+.phone{position:absolute;left:1076px;top:56px;width:340px;height:736px;border-radius:46px;border:10px solid #1A1A1A;background:#F7F7F7;overflow:hidden}
+.sheetup{position:absolute;left:0;right:0;bottom:0;height:150px;background:#E9EEE6;border-top:1px solid #DDD}
+.grab{position:absolute;left:0;right:0;bottom:120px;background:#fff;border-radius:18px 18px 0 0;padding:10px 16px;box-shadow:0 -6px 16px rgba(0,0,0,.08)}
+.grab i{display:block;width:40px;height:4px;background:#D2D2D2;border-radius:2px;margin:0 auto 8px}
+</style></head><body>
+<div class="lbl" style="left:28px">Desktop · planning before the trip</div>
+<div class="lbl" style="left:1080px;top:30px">Phone · on the trip (day 3)</div>
+<div class="desk">
+ <div>
+  <div class="nav"><b>‹ The Villarosa House</b><span><i class="av"></i><i class="av r"></i></span></div>
+  <div class="head"><div class="meta">Trip · synthetic example</div><h1>Lisbon &amp; Porto</h1><div class="meta">Thu 22 – Fri 30 Oct · Lisbon → Porto · 38 stops · 6 bookings</div></div>
+  <div class="tray"><h3>Ideas · 14 <span class="meta">Drag onto a day</span></h3>
+   <span class="chip">Livraria Lello</span><span class="chip">Gulbenkian</span><span class="chip">Ginjinha</span><span class="chip">Port tasting in Gaia</span><span class="chip">Francesinha</span><span class="chip">+ 9</span></div>
+  <div class="sheet spine">
+   <div class="dh"><i class="dot" style="background:#BE1E2D"></i><h2>Fri 23 · Alfama</h2><span class="meta">5 stops</span></div>
+   <div class="row"><i class="cb"></i><span class="t">18:40</span><span class="nm">Sunset at Senhora do Monte</span><span class="st sight">SIGHT</span></div>
+   <div class="row"><i class="cb"></i><span class="t">21:00</span><span class="nm">Fado at Clube de Fado<small>Added by Mia</small></span><span class="st food">FOOD</span></div>
+   <div class="dh cur"><i class="dot" style="background:#2348A6"></i><h2>Sat 24 · Sintra</h2><span class="meta">6 stops · on the map</span></div>
+   <div class="row stub"><i class="cb"></i><span class="t">08:41</span><span class="nm">Train Rossio → Sintra<small>Booking · <span class="code">CP-77120</span></small></span><span class="st tr">TRANSPORT</span></div>
+   <div class="row"><i class="cb"></i><span class="t">10:00</span><span class="nm">Pena Palace<small>Timed entry · 2 h</small></span><span class="st sight">SIGHT</span></div>
+   <div class="row"><i class="cb"></i><span class="t">12:30</span><span class="nm">Lunch at Tascantiga</span><span class="st food">FOOD</span></div>
+   <div class="row"><i class="cb"></i><span class="t">14:00</span><span class="nm">Quinta da Regaleira</span><span class="st sight">SIGHT</span></div>
+   <div class="row"><i class="cb"></i><span class="t">16:30</span><span class="nm">Travesseiros at Piriquita</span><span class="st food">FOOD</span></div>
+   <div class="row"><i class="cb"></i><span class="t">18:10</span><span class="nm">Train back to Lisbon</span><span class="st tr">TRANSPORT</span></div>
+   <div class="dh"><i class="dot" style="background:#4CAF50"></i><h2>Sun 25 · Belém</h2><span class="meta">4 stops</span></div>
+  </div>
+ </div>
+ <div class="mapwrap">
+  <i class="sea"></i><i class="road" style="left:0;top:200px;width:560px;transform:rotate(10deg)"></i><i class="road" style="left:200px;top:0;width:2px;height:900px"></i>
+  <i class="line" style="left:120px;top:150px;width:150px;transform:rotate(-15deg)"></i><i class="line" style="left:262px;top:112px;width:140px;transform:rotate(40deg)"></i><i class="line" style="left:368px;top:202px;width:120px;transform:rotate(100deg)"></i><i class="line" style="left:345px;top:320px;width:160px;transform:rotate(160deg)"></i>
+  <i class="pin b" style="left:104px;top:136px">1</i><i class="pin b" style="left:250px;top:96px">2</i><i class="pin b" style="left:356px;top:186px">3</i><i class="pin b" style="left:330px;top:304px">4</i><i class="pin b" style="left:180px;top:356px">5</i>
+  <i class="pin g" style="left:420px;top:620px"></i><i class="pin g" style="left:470px;top:650px"></i><i class="pin g" style="left:380px;top:690px"></i>
+  <div class="mapbar"><span class="pill">Sat 24 · 6 stops · 3 h walking</span><span class="pill">Show all days</span></div>
+  <div class="sheet card"><b style="color:#1A1A1A">Quinta da Regaleira</b><div class="meta">14:00 · 2 h · 1.1 km from Pena</div><div style="margin-top:8px"><span class="key">Open in Maps</span></div></div>
+  <span class="attr">© OpenStreetMap contributors</span>
+ </div>
+</div>
+<div class="phone">
+ <div class="nav" style="padding:38px 16px 6px"><b>‹ Lisbon &amp; Porto</b><i class="av"></i></div>
+ <div style="padding:0 14px"><div class="sheet" style="padding:0 14px 6px">
+  <div class="dh cur"><i class="dot" style="background:#2348A6"></i><h2>Today · Sat 24</h2></div>
+  <div class="row" style="grid-template-columns:22px 44px 1fr"><i class="cb"></i><span class="t">14:00</span><span class="nm">Quinta da Regaleira<small>Now · 12 min walk</small></span></div>
+  <div class="row" style="grid-template-columns:22px 44px 1fr"><i class="cb"></i><span class="t">16:30</span><span class="nm">Travesseiros at Piriquita</span></div>
+  <div class="row stub" style="grid-template-columns:22px 44px 1fr"><i class="cb"></i><span class="t">18:10</span><span class="nm">Train back to Lisbon<small><span class="code">CP-77120</span></small></span></div>
+  <div class="dh"><i class="dot" style="background:#4CAF50"></i><h2>Sun 25 · Belém</h2></div>
+  <div class="row" style="grid-template-columns:22px 44px 1fr"><i class="cb"></i><span class="t">10:00</span><span class="nm">Jerónimos Monastery</span></div>
+ </div></div>
+ <div class="sheetup"><i class="pin b" style="left:90px;top:60px">3</i><i class="pin b" style="left:190px;top:80px">4</i></div>
+ <div class="grab"><i></i><b style="color:#1A1A1A">Map · today</b> <span class="meta">pull up</span></div>
+</div>
+</body></html>

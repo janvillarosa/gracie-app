@@ -33,6 +33,8 @@ Trip {
   title ≤120   destination *Place   notes ≤16KB
   start_date, end_date  *"YYYY-MM-DD"   (end ≥ start; equal for a day trip; both nil = draft)
   tz           IANA. Taken from destination on create, then only changed by an explicit edit
+  stops    []Place  (cap 12; ordered route shown as "Lisbon → Porto"; display only)
+  days     map["YYYY-MM-DD"]string  (day labels ≤40 chars; cap 60 entries)
   packing_list_id *string
   todos    []TripTodo   (cap 150)
   bookings []Booking    (cap 50)
@@ -50,14 +52,14 @@ TripTodo { todo_id "ttd_<32hex>", title ≤200, done, done_by, done_at,
   day *"YYYY-MM-DD" (nil ⇒ Ideas), start_time *"HH:MM", duration_min *int,
   tz *IANA (worked out at write time: place.tz ?? trip.tz; stored, never derived on read),
   order float64, category enum{food,sight,activity,transport,stay,shopping,other},
-  notes ≤2KB, place *Place, v int64, field_at map }
+  notes ≤2KB, place *Place, created_by, updated_by, v int64, field_at map }
 
 Booking { booking_id "tbk_<32hex>", kind enum{flight,stay,train,car,ticket,other},
   title ≤200, confirmation_code ≤64, starts_at/ends_at *"YYYY-MM-DDTHH:MM",
   start_tz/end_tz *IANA (two zones, so a flight lands in its own zone), place *Place,
-  notes ≤2KB, v int64, field_at map }
+  notes ≤2KB, created_by, updated_by, v int64, field_at map }
 
-Place { name ≤200, address ≤300, lat, lng, tz, osm_ref?, source: photon|pin|manual }
+Place { name ≤200, address ≤300, locality? ≤120, lat, lng, tz, osm_ref?, source: photon|pin|manual }
 ```
 
 Behavior:
@@ -153,6 +155,25 @@ All endpoints sit behind the auth middleware and use the `ensureRoomMembership` 
 - Handler tests (httptest + full router): per-op results in one batch; 413 on oversized body; gzip response; 500 mapping; places degrades on a fake server that times out or errors.
 - `make test-integration` (real Mongo): `ReplaceCAS` version guard; duplicate key on insert; TTL indexes exist; measured document size for a typical trip and one at the caps.
 - `make check` passes and the coverage ratchet holds.
+
+## Amendment 2026-10-15 (from the UI brief)
+
+Decided while shaping the UI (`2026-10-15-trips-ui-brief.md`, section 7):
+
+- **`created_by` / `updated_by`** on `TripTodo` and `Booking`. The server sets both from the
+  authenticated user in `ApplyOp`; neither is a patch field. `updated_by` changes on every
+  applied update that changed at least one field.
+- **`Place.locality`** (town or city, ≤120). Filled from Photon's `city`/`town`/`village`
+  (or `reverse`); empty for manual places. Used to suggest day labels.
+- **`stops []Place`** on the trip: a hand-entered, ordered route (cap 12). Set as a whole list
+  through `trip.update` (one field clock, `field_at["stops"]`). Display only: it never moves
+  todos or changes `tz`.
+- **`days` map** (date → label ≤40 chars, cap 60): set through `trip.update` with a
+  `days: {"2026-10-24": "Sintra"}` patch, where an empty string removes the label. Each date
+  has its own clock, `field_at["days.2026-10-24"]`, so two members labelling different days
+  never conflict. Labels for dates outside the trip are kept, the same as todos.
+- Tests: add `ApplyOp` cases for the per-date clock, the stops cap, and `created_by` not being
+  settable from a patch.
 
 ## Skeptic review → resolution
 
