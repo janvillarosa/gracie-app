@@ -242,11 +242,12 @@
   box-shadow: 0 4px 10px -4px rgba(0, 0, 0, 0.4);
 }
 
-/* ---- "Wed 28 is off the map · Show": a paper chip at the top centre ------------------------- */
+/* ---- "Wed 28 is off the map · Show": a paper chip at the top centre, under the bar ------------------------- */
 .gm-chip {
   position: absolute;
   z-index: 1;
-  top: 12px;
+  /* under the pane's own bar (day, Show all days, Fit day) */
+  top: 62px;
   left: 50%;
   display: flex;
   align-items: center;

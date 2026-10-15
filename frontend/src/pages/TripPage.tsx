@@ -536,7 +536,9 @@ const TripScreen: React.FC<{
           ...s,
           route: true,
           emphasisDay,
-          ...(emphasisDay !== null && currentModel ? { emphasisLabel: shortDay(currentModel.date) } : {}),
+          ...(emphasisDay !== null && currentModel
+            ? { emphasisLabel: shortDay(currentModel.date) }
+            : {}),
         }
       : s
   }, [sceneFor, mapMode, currentDay, selected, deskScene, emphasisDay, currentModel])
@@ -563,7 +565,8 @@ const TripScreen: React.FC<{
     if (!row) return
     row.scrollIntoView?.({ block, behavior: reduced() ? 'auto' : 'smooth' })
     row.classList.add('is-sweep')
-    if (focus) row.querySelector<HTMLElement>('.trip-main, .trip-stubline')?.focus({ preventScroll: true })
+    if (focus)
+      row.querySelector<HTMLElement>('.trip-main, .trip-stubline')?.focus({ preventScroll: true })
     if (sweepTimer.current) clearTimeout(sweepTimer.current)
     sweepTimer.current = setTimeout(() => row.classList.remove('is-sweep'), 1400)
   }, [])

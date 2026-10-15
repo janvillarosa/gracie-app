@@ -178,7 +178,7 @@ export const MapScreen: React.FC<Props> = ({
           nextPrefix={false}
           following
           fitToken={index}
-          fitPadding={{ top: 56, bottom: 48, left: 40, right: 40 }}
+          fitPadding={{ top: 90, bottom: 48, left: 72, right: 72 }}
           title={`Map of ${day.long}, ${shown.stops.length} ${shown.stops.length === 1 ? 'stop' : 'stops'}`}
           onPinClick={(id) => {
             close()

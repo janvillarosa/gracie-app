@@ -134,7 +134,7 @@ describe('the phone map: a full-screen, read-only view', () => {
     expect(within(dlg).getByRole('button', { name: 'Previous day' })).toBeDisabled()
   })
 
-  it('shows the selected stop on a card (the next stop to begin with), and a tap on a pin switches it', async () => {
+  it('shows the next stop on a card, and a tap on a pill closes the map and lights its row', async () => {
     const { screen: dlg } = await openMap()
     await waitFor(() => expect(FakeMarker.pins().length).toBeGreaterThan(0))
     const card = () => within(dlg).getByRole('region', { name: 'Selected stop' })
@@ -149,13 +149,18 @@ describe('the phone map: a full-screen, read-only view', () => {
       clickableIcons: false,
       gestureHandling: 'greedy',
     })
+    Element.prototype.scrollIntoView = vi.fn()
     act(() =>
       FakeMarker.pins()
         .find((m) => m.title === 'Tascantiga')
         ?.click(),
     )
-    await waitFor(() => expect(card()).toHaveTextContent('Tascantiga'))
-    expect(dlg.querySelector('[role="status"]')).toHaveTextContent('Selected Tascantiga')
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: /^Map for / })).not.toBeInTheDocument(),
+    )
+    await waitFor(() => expect(document.querySelector('.trip-row.is-sweep')).not.toBeNull())
+    expect(document.querySelector('.trip-row.is-sweep')).toHaveTextContent('Tascantiga')
+    expect(Element.prototype.scrollIntoView).toHaveBeenCalled()
     // Nothing was created by tapping.
     expect(screen.queryByRole('dialog', { name: /^Add / })).not.toBeInTheDocument()
   })
@@ -166,8 +171,9 @@ describe('the phone map: a full-screen, read-only view', () => {
     const { screen: dlg } = await openMap(t)
     await waitFor(() => expect(FakeMarker.pins().length).toBeGreaterThan(0))
     const quinta = () => FakeMarker.pins().find((m) => m.title.startsWith('Quinta')) as FakeMarker
-    expect(quinta().label).toBe('Quinta da Reg…')
-    expect(quinta().label).toHaveLength(14)
+    expect(quinta().label).toBe('Quinta da Regal…')
+    expect(quinta().label).toHaveLength(16)
+    expect(quinta().time).toBe('')
     expect(within(dlg).getByRole('region', { name: 'Selected stop' })).toHaveTextContent(
       'Quinta da Regaleira do Convento',
     )

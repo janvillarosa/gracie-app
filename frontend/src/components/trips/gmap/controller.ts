@@ -27,6 +27,8 @@ import {
 
 const MAX_FIT_ZOOM = 15
 const CLUSTER_RADIUS = 28
+// A pill stands above its anchor and reaches ~100px to each side: keep them inside the fit.
+const FIT_PADDING = { top: 84, bottom: 56, left: 112, right: 112 }
 
 type Pin = {
   stop: MapStop
@@ -231,7 +233,7 @@ export class MapController {
     }
     const b = new this.g.core.LatLngBounds()
     for (const s of stops) b.extend({ lat: s.lat, lng: s.lng })
-    this.map.fitBounds(b, p.fitPadding ?? { top: 56, bottom: 56, left: 56, right: 56 })
+    this.map.fitBounds(b, p.fitPadding ?? FIT_PADDING)
     // A few close stops must not zoom in to the rooftops.
     this.g.core.event.addListenerOnce(this.map, 'idle', () => {
       if ((this.map.getZoom() ?? 0) > MAX_FIT_ZOOM) this.map.setZoom(MAX_FIT_ZOOM)

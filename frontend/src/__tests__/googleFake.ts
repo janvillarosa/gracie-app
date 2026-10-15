@@ -112,8 +112,12 @@ export class FakeMarker {
   static preview() {
     return FakeMarker.all.find((m) => m.content.classList.contains('gm-preview'))
   }
+  /** The pill's name. */
   get label() {
-    return this.content.querySelector('.gm-label')?.textContent ?? ''
+    return this.content.querySelector('.gm-name')?.textContent ?? ''
+  }
+  get time() {
+    return this.content.querySelector('.gm-time')?.textContent ?? ''
   }
   get shown() {
     return this.map !== null
@@ -266,7 +270,7 @@ export const libs = () => ({
   marker: { AdvancedMarkerElement: FakeMarker },
   core: {
     LatLngBounds: FakeBounds,
-    SymbolPath: { FORWARD_CLOSED_ARROW: 1 },
+    SymbolPath: { FORWARD_CLOSED_ARROW: 1, CIRCLE: 0 },
     event: {
       addListenerOnce: (map: FakeMap, type: string, fn: Fn) =>
         map.once.set(type, [...(map.once.get(type) ?? []), fn]),
