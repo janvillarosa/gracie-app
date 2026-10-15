@@ -297,6 +297,9 @@ flagged done days, and it didn't say which items clashed. Gaps now show where th
   with a day chip (another day or Ideas), and "More details". Nothing is created until you confirm.
   Esc, an outside click or a pan dismisses it.
 - Highlighting a place slip in the add bar previews its pin on the map.
+- **Google Maps considered and rejected (2026-10-15):** its terms forbid storing place snapshots
+  and using Places data on a non-Google map (see `2026-10-15-google-maps-option.md`). Protomaps and
+  Photon stay. Google is used only through the "Open in Maps" link.
 - **Phone map sheet: read-only.** Route and pins; pinch and pan only to look around. Tapping a pin
   opens its row's detail. No adding from the map, and no map controls. All map interactions are
   desktop only.
