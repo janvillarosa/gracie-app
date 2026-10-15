@@ -18,11 +18,11 @@
 | # | Dimension | Score | Key finding |
 |---|---|---|---|
 | 1 | Accessibility | 3 | The row and sheet checkbox hit area is 22×23px; the brief and the List page promise 44px. |
-| 2 | Performance | 3 | Lean: trip route about 50 KB gzip, map lazy at about 304 KB (under the 320 KB cap). The slow-device run was not done. |
+| 2 | Performance | 4 | Lean: trip route about 50 KB gzip, map lazy at about 304 KB (under the 320 KB cap). On a 150-stop trip at 6× CPU and Fast 3G (production build): content in 2.1s, scroll at 60 fps. |
 | 3 | Theming | 3 | Tokens are enforced by tests. The MapCanvas basemap colours are hard-coded. The app has no dark mode (product-wide, out of scope). |
 | 4 | Responsive design | 3 | No horizontal scroll at 375. Several controls are under 44px. Touch gestures were not exercised under real touch. |
 | 5 | Implementation integrity | 4 | Detector: 0 findings. One Sheet, one primitive set, side-stripe and hex bans enforced in CI. |
-| **Total** | | **16/20** | **Good**: address touch targets, then verify on a real phone. |
+| **Total** | | **17/20** | **Good**: address touch targets, then verify on a real phone. |
 
 ## Implementation integrity verdict: **pass**
 
@@ -41,7 +41,7 @@ The copy reads in the House voice ("Where to first?", "Nothing planned yet", "Ne
 
 ## Executive summary
 
-- **16/20, Good.** P0: 0 · P1: 1 · P2: 3 · P3: 3.
+- **17/20, Good.** P0: 0 · P1: 1 · P2: 2 · P3: 3.
 - **Top issues:**
   1. **[P1]** The checkbox hit area is 22px.
   2. **[P2]** Several controls are 28–36px tall: "Add a label" 28, the day-hide chevron and the add-bar day chip 32, the ⋮ menu and the pill tabs 36.
@@ -77,11 +77,19 @@ The copy reads in the House voice ("Where to first?", "Nothing planned yet", "Ne
   - sheet swipe-down vs inner scroll.
 - **Command:** /impeccable harden.
 
-**[P2] Slow-device performance not measured**
-- **Category:** Performance.
-- **Impact:** "Runs lean on old systems" is the product owner's bar. The sizes are good (route about 50 KB), but runtime cost (IntersectionObserver plus map follow, 150-row spine) hasn't been measured under CPU throttling.
-- **Recommendation:** Run S11: 6× CPU, Fast 3G, a 150-todo trip; record the load and the scroll frame rate.
-- **Command:** /impeccable optimize.
+**S11 measured (resolved).** Production build (`vite preview`) against the real API, on a 150-stop trip
+(14 days), at 375×812 with Chromium CDP emulating 6× CPU and Fast 3G (150ms, 1.6 Mbps):
+
+| Measure | Result |
+|---|---|
+| First paint | 536ms |
+| First content (FCP) | 904ms |
+| Content visible (LCP) | 2.1s |
+| Scroll, 4s continuous rAF scroll | 60 fps, 0 frames over 50ms |
+| Map chunk requested on the phone | no |
+
+On the unminified Vite dev server, LCP was 6.7s. That is not representative and is noted only for
+contrast.
 
 **[P3] MapCanvas basemap colours are hard-coded**
 - **Location:** `components/trips/MapCanvas.tsx:20-22, 78, 114` (earth, water, white), plus hex fallbacks for tokens.
@@ -119,6 +127,5 @@ The copy reads in the House voice ("Where to first?", "Nothing planned yet", "Ne
 
 1. **[P1] `/impeccable adapt`:** 44px hit areas for checkboxes, then the sub-44 controls (as a primitive-level fix).
 2. **[P2] `/impeccable harden`:** a real-device gesture pass (swipe, long-press, sheet swipe-down, map pinch).
-3. **[P2] `/impeccable optimize`:** the S11 throttled run on a 150-todo trip.
-4. **[P3] `/impeccable colorize`:** tokenise the MapCanvas basemap colours.
-5. **`/impeccable polish`:** a final pass once the above land.
+3. **[P3] `/impeccable colorize`:** tokenise the MapCanvas basemap colours.
+4. **`/impeccable polish`:** a final pass once the above land.
