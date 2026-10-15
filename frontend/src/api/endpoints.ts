@@ -255,3 +255,10 @@ export async function reorderListItem(
     body: JSON.stringify(params),
   })
 }
+
+export async function setMyPreferences(
+  apiKey: string,
+  preferences: { trips_show_next_stop?: boolean },
+): Promise<User> {
+  return apiFetch<User>('/me', { method: 'PUT', apiKey, body: JSON.stringify({ preferences }) })
+}

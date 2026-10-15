@@ -1,9 +1,10 @@
 import React, { useState } from 'react'
 import { Button } from 'antd'
-import { Airplane, Bed, BookmarkSimple, Car, Copy, Ticket, Train } from '@phosphor-icons/react'
+import { Copy } from '@phosphor-icons/react'
 import type { Booking, BookingKind, Place } from '@api/tripTypes'
 import { zoneLabel } from '@lib/trips/schedule'
-import { BOOKING_KINDS } from './tripUi'
+import { BOOKING_KINDS, KIND_ICON } from './tripUi'
+import { CodeReveal } from './CodeReveal'
 import { PlacePicker } from './PlacePicker'
 
 export type BookingActions = {
@@ -40,6 +41,7 @@ type EditorProps = {
   tripTz?: string
   bias: { lat: number; lng: number } | null
   defaultDay?: string
+  initialTitle?: string
   onSave: (patch: Record<string, unknown>) => void
   onCancel: () => void
   onDelete?: () => void
@@ -50,12 +52,13 @@ export const BookingEditor: React.FC<EditorProps> = ({
   tripTz,
   bias,
   defaultDay,
+  initialTitle,
   onSave,
   onCancel,
   onDelete,
 }) => {
   const [kind, setKind] = useState<BookingKind>(booking?.kind ?? 'ticket')
-  const [title, setTitle] = useState(booking?.title ?? '')
+  const [title, setTitle] = useState(booking?.title ?? initialTitle ?? '')
   const [code, setCode] = useState(booking?.confirmation_code ?? '')
   const [startsAt, setStartsAt] = useState(
     booking?.starts_at ?? (defaultDay ? `${defaultDay}T09:00` : ''),
@@ -222,15 +225,6 @@ export const BookingEditor: React.FC<EditorProps> = ({
   )
 }
 
-const KIND_ICON: Record<BookingKind, React.ReactNode> = {
-  flight: <Airplane aria-hidden />,
-  stay: <Bed aria-hidden />,
-  train: <Train aria-hidden />,
-  car: <Car aria-hidden />,
-  ticket: <Ticket aria-hidden />,
-  other: <BookmarkSimple aria-hidden />,
-}
-
 type LineProps = {
   booking: Booking
   past: boolean
@@ -285,53 +279,36 @@ export const BookingLine = React.memo<LineProps>(function BookingLine({
 
 type PanelProps = {
   bookings: Booking[]
-  tripTz?: string
-  bias: { lat: number; lng: number } | null
-  firstDay?: string
   nowMs: number
   actions: BookingActions
   startMs: (b: Booking) => number
   onOpen: (id: string) => void
+  onAdd: () => void
   locked: boolean
 }
 
 /** Every booking, grouped by kind, codes one tap from copying. */
 export const BookingsPanel: React.FC<PanelProps> = ({
   bookings,
-  tripTz,
-  bias,
-  firstDay,
   nowMs,
   actions,
   startMs,
   onOpen,
+  onAdd,
   locked,
 }) => {
-  const [adding, setAdding] = useState(false)
   const groups = BOOKING_KINDS.map((k) => ({
     ...k,
     items: bookings.filter((b) => b.kind === k.value).sort((a, c) => startMs(a) - startMs(c)),
   })).filter((g) => g.items.length)
   return (
     <section className="trip-pane-body" aria-label="Bookings">
-      {!adding && !locked && (
-        <Button type="primary" shape="round" onClick={() => setAdding(true)}>
+      {!locked && (
+        <Button type="primary" shape="round" onClick={onAdd}>
           Add booking
         </Button>
       )}
-      {adding && (
-        <BookingEditor
-          tripTz={tripTz}
-          bias={bias}
-          defaultDay={firstDay}
-          onCancel={() => setAdding(false)}
-          onSave={(patch) => {
-            actions.save(null, patch)
-            setAdding(false)
-          }}
-        />
-      )}
-      {!bookings.length && !adding && (
+      {!bookings.length && (
         <p className="trip-empty-text">
           No bookings yet. Add flights, stays and tickets with their confirmation codes.
         </p>
@@ -361,17 +338,14 @@ export const BookingsPanel: React.FC<PanelProps> = ({
                     </span>
                   </button>
                   {b.confirmation_code && (
-                    <span className="trip-code-wrap">
-                      <span className="trip-code">{b.confirmation_code}</span>
-                      <Button
-                        type="text"
-                        shape="circle"
-                        size="small"
-                        icon={<Copy />}
-                        aria-label={`Copy code for ${b.title}`}
-                        onClick={() => actions.copy(b.confirmation_code as string)}
-                      />
-                    </span>
+                    <CodeReveal
+                      compact
+                      code={b.confirmation_code}
+                      title={b.title}
+                      kind={b.kind}
+                      line={[b.starts_at?.split('T')[1], b.place?.name].filter(Boolean).join(' · ')}
+                      onCopy={actions.copy}
+                    />
                   )}
                 </li>
               )

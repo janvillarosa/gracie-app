@@ -39,6 +39,7 @@ const TRIP_KEYS = new Set([
   'tz',
   'stops',
   'days',
+  'icon',
 ])
 const TODO_KEYS = new Set([
   'title',
@@ -50,6 +51,7 @@ const TODO_KEYS = new Set([
   'category',
   'notes',
   'place',
+  'booking_id',
 ])
 const BOOKING_KEYS = new Set([
   'kind',
@@ -288,7 +290,7 @@ export class MockTripServer {
         if (t.tombstones.some((x) => x.id === id)) return ack(), res('rejected', 'gone')
         if (t.todos.some((x) => x.todo_id === id)) return ack(), res('duplicate')
         if (t.todos.length >= 150) return ack(), res('rejected', 'cap')
-        const bad = this.checkTodo(patch, true)
+        const bad = this.checkTodo(patch, true) ?? this.checkLink(t, patch)
         if (bad) return ack(), res('rejected', bad)
         ack()
         const v = this.bump(t)
@@ -311,7 +313,7 @@ export class MockTripServer {
       case 'todo.update': {
         const td = t.todos.find((x) => x.todo_id === op.entity_id)
         if (!td) return ack(), res('rejected', 'gone')
-        const bad = this.checkTodo(patch, false)
+        const bad = this.checkTodo(patch, false) ?? this.checkLink(t, patch)
         if (bad) return ack(), res('rejected', bad)
         ack()
         t.child_at[td.todo_id] ??= {}
@@ -382,6 +384,12 @@ export class MockTripServer {
         t.bookings = t.bookings.filter((x) => x.booking_id !== op.entity_id)
         if (t.bookings.length === before) return res('rejected', 'gone')
         t.tombstones.push({ id: op.entity_id ?? '', v: this.bump(t) })
+        // Todos linked to it lose the link.
+        for (const td of t.todos)
+          if (td.booking_id === op.entity_id) {
+            td.booking_id = null
+            td.v = this.bump(t)
+          }
         return res('applied')
       }
       default:
@@ -401,6 +409,12 @@ export class MockTripServer {
     if (typeof p.start_time === 'string' && !CLOCK.test(p.start_time)) return 'invalid'
     if (typeof p.category === 'string' && !CATEGORIES.has(p.category)) return 'invalid'
     return null
+  }
+
+  /** A link must point at a booking in the same trip. */
+  private checkLink(t: STrip, p: Record<string, unknown>): 'invalid' | null {
+    const id = p.booking_id
+    return typeof id === 'string' && !t.bookings.some((b) => b.booking_id === id) ? 'invalid' : null
   }
 
   private checkBooking(

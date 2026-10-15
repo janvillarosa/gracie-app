@@ -9,7 +9,6 @@ import { RoomPage } from '@pages/RoomPage'
 import { server, tripServer } from '../testServer'
 import {
   ME,
-  MIA,
   ROOM,
   lisbonTrip,
   makeTrip,
@@ -32,48 +31,66 @@ beforeEach(async () => {
 afterEach(resetTripsWorld)
 
 describe('Bookings tab', () => {
-  it('adds a booking with a code and lists it by kind', async () => {
+  it('lists bookings by kind, with codes behind a ticket slip', async () => {
     seed(TRIP)
     open()
-    await userEvent.click(await screen.findByRole('tab', { name: /Bookings/ }))
-    const panel = await screen.findByRole('dialog', { name: 'Bookings (1)' })
-    await userEvent.click(within(panel).getByRole('button', { name: 'Add booking' }))
-    const form = await within(panel).findByRole('form', { name: 'New booking' })
+    await userEvent.click(await screen.findByRole('tab', { name: 'Bookings' }))
+    expect(await screen.findByText('Flights')).toBeInTheDocument()
+    expect(screen.queryByText('TP1355')).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Show code' }))
+    expect(
+      await screen.findByLabelText(/Confirmation code for London to Lisbon/),
+    ).toHaveTextContent('TP1355')
+    await userEvent.click(screen.getByRole('button', { name: /Copy code for London to Lisbon/ }))
+    expect(await screen.findByRole('button', { name: 'Copied' })).toBeInTheDocument()
+    await userEvent.keyboard('{Escape}')
+    await waitFor(() => expect(screen.queryByText('TP1355')).not.toBeInTheDocument())
+  })
+
+  it('adds a booking through the form sheet', async () => {
+    seed(TRIP)
+    open()
+    await userEvent.click(await screen.findByRole('tab', { name: 'Bookings' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Add booking' }))
+    const form = await screen.findByRole('form', { name: 'New booking' })
     await userEvent.selectOptions(within(form).getByLabelText('Kind'), 'train')
     await userEvent.type(within(form).getByLabelText('Title'), 'Lisbon to Porto')
     await userEvent.type(within(form).getByLabelText('Confirmation code'), 'CP-90417')
     await userEvent.click(within(form).getByRole('button', { name: 'Save booking' }))
-    expect(await within(panel).findByText('CP-90417')).toBeInTheDocument()
     await waitFor(() =>
       expect(serverTrip()?.bookings.some((b) => b.confirmation_code === 'CP-90417')).toBe(true),
     )
-    expect(within(panel).getByText('Trains')).toBeInTheDocument()
-    expect(within(panel).getByText('Flights')).toBeInTheDocument()
+    expect(await screen.findByText('Trains')).toBeInTheDocument()
   })
 
   it('asks for a title before saving', async () => {
     seed(TRIP)
     open()
-    await userEvent.click(await screen.findByRole('tab', { name: /Bookings/ }))
-    const panel = await screen.findByRole('dialog', { name: 'Bookings (1)' })
-    await userEvent.click(within(panel).getByRole('button', { name: 'Add booking' }))
-    await userEvent.click(await within(panel).findByRole('button', { name: 'Save booking' }))
-    expect(await within(panel).findByRole('alert')).toHaveTextContent('Give the booking a title.')
-    await userEvent.click(within(panel).getByRole('button', { name: 'Cancel' }))
-    expect(within(panel).queryByRole('form')).not.toBeInTheDocument()
+    await userEvent.click(await screen.findByRole('tab', { name: 'Bookings' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Add booking' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Save booking' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Give the booking a title.')
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(screen.queryByRole('form')).not.toBeInTheDocument()
   })
 
-  it('edits a booking in its detail without a Save button, and checks time zones', async () => {
+  it('edits a booking in its sheet without a Save button, and checks time zones', async () => {
     seed(TRIP)
     open()
-    await userEvent.click(await screen.findByRole('tab', { name: /Bookings/ }))
-    const list = await screen.findByRole('dialog', { name: 'Bookings (1)' })
-    await userEvent.click(within(list).getByRole('button', { name: /^London to Lisbon/ }))
+    await userEvent.click(await screen.findByRole('tab', { name: 'Bookings' }))
+    await userEvent.click(await screen.findByRole('button', { name: /^London to Lisbon/ }))
     const detail = await screen.findByRole('dialog', { name: 'London to Lisbon' })
     expect(within(detail).queryByRole('button', { name: /^Save/ })).not.toBeInTheDocument()
+    // From and to, each with its own zone.
+    expect(within(detail).getByText('From')).toBeInTheDocument()
+    expect(within(detail).getByText('To')).toBeInTheDocument()
+    // The code is not shown until asked for, here too.
+    expect(within(detail).queryByText('TP1355')).not.toBeInTheDocument()
+    await userEvent.click(within(detail).getByRole('button', { name: 'Show code' }))
+    expect(await screen.findByLabelText(/Confirmation code for/)).toHaveTextContent('TP1355')
+    await userEvent.keyboard('{Escape}')
 
-    const code = within(detail).getAllByLabelText('Confirmation code').pop() as HTMLElement
-    await userEvent.clear(code)
+    const code = within(detail).getByPlaceholderText('Change the code')
     await userEvent.type(code, 'TP9999')
     await userEvent.tab()
     await waitFor(() => expect(serverTrip()?.bookings[0].confirmation_code).toBe('TP9999'))
@@ -87,81 +104,111 @@ describe('Bookings tab', () => {
     await userEvent.click(within(detail).getByRole('button', { name: 'Delete booking' }))
     await waitFor(() => expect(serverTrip()?.bookings).toHaveLength(0))
   })
+
+  it('links a todo to a booking from the detail, and clears the link when the booking goes', async () => {
+    seed(TRIP)
+    open()
+    await userEvent.click(await screen.findByRole('button', { name: 'Lunch at Tascantiga' }))
+    const panel = await screen.findByRole('dialog', { name: 'Lunch at Tascantiga' })
+    await userEvent.click(within(panel).getByRole('button', { name: /Link a booking/ }))
+    await userEvent.click(await screen.findByRole('button', { name: /London to Lisbon/ }))
+    const todo = () => serverTrip()?.todos.find((t) => t.title === 'Lunch at Tascantiga')
+    await waitFor(() => expect(todo()?.booking_id).toBe(TRIP.bookings[0].booking_id))
+    await userEvent.keyboard('{Escape}')
+    // Deleting the booking clears the link.
+    await userEvent.click(await screen.findByRole('tab', { name: 'Bookings' }))
+    await userEvent.click(await screen.findByRole('button', { name: /^London to Lisbon/ }))
+    const detail = await screen.findByRole('dialog', { name: 'London to Lisbon' })
+    await userEvent.click(within(detail).getByRole('button', { name: 'Delete booking' }))
+    await waitFor(() => expect(todo()?.booking_id ?? null).toBeNull())
+  })
 })
 
-describe('Item detail fields and places', () => {
+describe('Item sheet fields and places', () => {
   const openRow = async (name: string) => {
     await userEvent.click(await screen.findByRole('button', { name }))
     return screen.findByRole('dialog', { name })
   }
+  const todo = (title: string) => serverTrip()?.todos.find((x) => x.title === title)
 
-  it('saves time, minutes, category and notes as they change', async () => {
+  it('saves day, time, length, kind and notes as they change', async () => {
     seed(TRIP)
     open()
     const panel = await openRow('Pack the daypack')
+    // Length only appears once there is a time.
+    expect(within(panel).queryByLabelText('Duration')).not.toBeInTheDocument()
+    await userEvent.click(within(panel).getByRole('button', { name: '+ Time' }))
     fireEvent.change(within(panel).getByLabelText('Time'), { target: { value: '08:30' } })
     fireEvent.blur(within(panel).getByLabelText('Time'))
-    fireEvent.change(within(panel).getByLabelText('Minutes'), { target: { value: '45' } })
-    fireEvent.blur(within(panel).getByLabelText('Minutes'))
-    await userEvent.selectOptions(within(panel).getByLabelText('Category'), 'shopping')
-    await userEvent.type(within(panel).getByLabelText('Notes'), 'Water, sunscreen')
+    await userEvent.selectOptions(await within(panel).findByLabelText('Duration'), '1 h')
+    await userEvent.click(within(panel).getByRole('button', { name: 'Category: Shopping' }))
+    expect(within(panel).getByRole('button', { name: 'Category: Shopping' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    await userEvent.type(within(panel).getByPlaceholderText('Add a note'), 'Water, sunscreen')
     await userEvent.tab()
     await waitFor(() => {
-      const t = serverTrip()?.todos.find((x) => x.title === 'Pack the daypack')
-      expect(t).toMatchObject({
+      expect(todo('Pack the daypack')).toMatchObject({
         start_time: '08:30',
-        duration_min: 45,
+        duration_min: 60,
         category: 'shopping',
         notes: 'Water, sunscreen',
       })
     })
   })
 
-  it('moves the item to another day from the detail', async () => {
+  it('offers a custom length', async () => {
+    seed(TRIP)
+    open()
+    const panel = await openRow('Lunch at Tascantiga')
+    await userEvent.selectOptions(within(panel).getByLabelText('Duration'), 'Custom')
+    const minutes = await within(panel).findByLabelText('Duration in minutes')
+    await userEvent.type(minutes, '45')
+    await userEvent.tab()
+    await waitFor(() => expect(todo('Lunch at Tascantiga')?.duration_min).toBe(45))
+  })
+
+  it('moves the item to another day, or to Ideas, with the day chip', async () => {
     seed(TRIP)
     open()
     const panel = await openRow('Buy souvenirs')
-    await userEvent.click(within(panel).getByRole('button', { name: 'Move to…' }))
-    await userEvent.click(await screen.findByRole('menuitem', { name: /Ideas/ }))
-    await waitFor(() => {
-      const t = serverTrip()?.todos.find((x) => x.title === 'Buy souvenirs')
-      expect(t?.day ?? null).toBeNull()
-    })
+    await userEvent.selectOptions(within(panel).getByLabelText('Day'), 'Ideas (no day)')
+    await waitFor(() => expect(todo('Buy souvenirs')?.day ?? null).toBeNull())
   })
 
-  it('picks a searched place, then removes it', async () => {
+  it('picks a searched place in a sub-view, then removes it', async () => {
     seed(TRIP)
     open()
     const panel = await openRow('Pack the daypack')
-    await userEvent.type(within(panel).getByRole('combobox', { name: 'Place' }), 'Pena')
+    await userEvent.click(within(panel).getByRole('button', { name: /Add a place/ }))
+    await userEvent.type(await within(panel).findByRole('combobox', { name: 'Place' }), 'Pena')
     const slip = await within(panel).findByRole('option', { name: /Pena Palace/ })
     expect(within(panel).getByText(/OpenStreetMap contributors \(ODbL\)/)).toBeInTheDocument()
     await userEvent.click(slip)
-    await waitFor(() =>
-      expect(serverTrip()?.todos.find((x) => x.title === 'Pack the daypack')?.place?.name).toBe(
-        'Pena Palace',
-      ),
-    )
-    expect(await screen.findByRole('link', { name: 'Open in Maps' })).toHaveAttribute(
+    await waitFor(() => expect(todo('Pack the daypack')?.place?.name).toBe('Pena Palace'))
+    // Back on the sheet: the place shows as a row, and Open in Maps appears.
+    expect(await within(panel).findByRole('link', { name: 'Open in Maps' })).toHaveAttribute(
       'href',
       expect.stringContaining('maps'),
     )
-    await userEvent.click(await screen.findByRole('button', { name: 'Remove place' }))
-    await waitFor(() =>
-      expect(
-        serverTrip()?.todos.find((x) => x.title === 'Pack the daypack')?.place ?? null,
-      ).toBeNull(),
-    )
+    await userEvent.click(within(panel).getByRole('button', { name: /Pena Palace/ }))
+    await userEvent.click(await within(panel).findByRole('button', { name: 'Remove place' }))
+    await waitFor(() => expect(todo('Pack the daypack')?.place ?? null).toBeNull())
   })
 
   it('drops a pin from typed coordinates', async () => {
     seed(TRIP)
     open()
     const panel = await openRow('Pack the daypack')
-    await userEvent.type(within(panel).getByRole('combobox', { name: 'Place' }), '38.7876, -9.3906')
+    await userEvent.click(within(panel).getByRole('button', { name: /Add a place/ }))
+    await userEvent.type(
+      await within(panel).findByRole('combobox', { name: 'Place' }),
+      '38.7876, -9.3906',
+    )
     await userEvent.click(await within(panel).findByRole('button', { name: /Drop a pin at/ }))
     await waitFor(() => {
-      const p = serverTrip()?.todos.find((x) => x.title === 'Pack the daypack')?.place
+      const p = todo('Pack the daypack')?.place
       expect(p?.source).toBe('pin')
       expect(p?.lat).toBeCloseTo(38.7876)
     })
@@ -171,9 +218,13 @@ describe('Item detail fields and places', () => {
     seed(TRIP)
     open()
     const panel = await openRow('Pack the daypack')
-    await userEvent.type(within(panel).getByRole('combobox', { name: 'Place' }), 'zzz street 12')
+    await userEvent.click(within(panel).getByRole('button', { name: /Add a place/ }))
+    await userEvent.type(
+      await within(panel).findByRole('combobox', { name: 'Place' }),
+      'zzz street 12',
+    )
     await userEvent.click(await within(panel).findByRole('button', { name: /as the address/ }))
-    expect(await within(panel).findByText('Address only, not on the map')).toBeInTheDocument()
+    await waitFor(() => expect(todo('Pack the daypack')?.place?.source).toBe('manual'))
   })
 
   it('names the fallback when search is down and still offers the address', async () => {
@@ -181,99 +232,30 @@ describe('Item detail fields and places', () => {
     seed(TRIP)
     open()
     const panel = await openRow('Pack the daypack')
-    await userEvent.type(within(panel).getByRole('combobox', { name: 'Place' }), 'Rossio')
+    await userEvent.click(within(panel).getByRole('button', { name: /Add a place/ }))
+    await userEvent.type(await within(panel).findByRole('combobox', { name: 'Place' }), 'Rossio')
     expect(
       await within(panel).findByText('Search is unavailable. Drop a pin or type the address.'),
     ).toBeInTheDocument()
     expect(await within(panel).findByRole('button', { name: /as the address/ })).toBeInTheDocument()
   })
 
-  it('deletes from the detail', async () => {
-    seed(TRIP)
+  it('shows the linked booking as a row, with its code behind the same slip', async () => {
+    const t = lisbonTrip()
+    t.todos[4] = { ...t.todos[4], booking_id: t.bookings[0].booking_id }
+    seed(t)
     open()
-    const panel = await openRow('Buy souvenirs')
-    await userEvent.click(within(panel).getByRole('button', { name: /Delete/ }))
-    await waitFor(() =>
-      expect(screen.queryByRole('dialog', { name: 'Buy souvenirs' })).not.toBeInTheDocument(),
-    )
+    const panel = await openRow('Lunch at Tascantiga')
+    expect(within(panel).getByRole('button', { name: /London to Lisbon/ })).toBeInTheDocument()
+    await userEvent.click(within(panel).getByRole('button', { name: 'Show code' }))
+    expect(
+      await screen.findByLabelText(/Confirmation code for London to Lisbon/),
+    ).toBeInTheDocument()
   })
 })
 
-describe('Trip details modal', () => {
-  const openDetails = async () => {
-    await userEvent.click(await screen.findByRole('button', { name: 'More trip options' }))
-    await userEvent.click(await screen.findByText('Trip details'))
-    return screen.findByRole('dialog', { name: 'Trip details' })
-  }
-
-  it('renames the trip and changes its dates', async () => {
-    seed(TRIP)
-    open()
-    const dialog = await openDetails()
-    const title = within(dialog).getByLabelText('Title')
-    await userEvent.clear(title)
-    await userEvent.type(title, 'Lisbon, Sintra & Porto')
-    await userEvent.tab()
-    await waitFor(() => expect(serverTrip()?.fields.title).toBe('Lisbon, Sintra & Porto'))
-    fireEvent.change(within(dialog).getByLabelText('Ends'), { target: { value: rel(4) } })
-    await waitFor(() => expect(serverTrip()?.fields.end_date).toBe(rel(4)))
-  })
-
-  it('builds the route by hand: add, reorder and remove stops', async () => {
-    seed(TRIP)
-    open()
-    const dialog = await openDetails()
-    for (const name of ['Lisbon', 'Porto']) {
-      await userEvent.type(within(dialog).getByRole('combobox', { name: 'Add a stop' }), name)
-      await userEvent.click(await within(dialog).findByRole('option', { name: new RegExp(name) }))
-      await within(dialog).findByText(name, { selector: '.trip-stop-name' })
-    }
-    await waitFor(() =>
-      expect(serverTrip()?.fields.stops?.map((s) => s.name)).toEqual(['Lisbon', 'Porto']),
-    )
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Move Porto earlier' }))
-    await waitFor(() =>
-      expect(serverTrip()?.fields.stops?.map((s) => s.name)).toEqual(['Porto', 'Lisbon']),
-    )
-    await userEvent.click(
-      within(dialog).getByRole('button', { name: 'Remove Porto from the route' }),
-    )
-    await waitFor(() => expect(serverTrip()?.fields.stops?.map((s) => s.name)).toEqual(['Lisbon']))
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Done' }))
-    expect(await screen.findByText(/Lisbon · /)).toBeInTheDocument()
-  })
-
-  it('asks before deleting a trip, then shows the Restore banner', async () => {
-    seed(TRIP)
-    open()
-    const dialog = await openDetails()
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Delete trip' }))
-    await userEvent.click(await within(dialog).findByRole('button', { name: 'Keep it' }))
-    expect(serverTrip()?.deleted_by).toBeUndefined()
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Delete trip' }))
-    await userEvent.click(await within(dialog).findByRole('button', { name: 'Yes, delete' }))
-    expect(await screen.findByText('You deleted this trip.')).toBeInTheDocument()
-    await waitFor(() => expect(serverTrip()?.deleted_by).toBe(ME))
-    await userEvent.click(screen.getByRole('button', { name: 'Restore' }))
-    await waitFor(() => expect(serverTrip()?.deleted_by).toBeUndefined())
-  })
-
-  it('opens from the Add dates nudge on a draft and sets both dates', async () => {
-    seed(makeTrip(7, { title: 'Draft' }))
-    open(makeTrip(7).trip_id)
-    await userEvent.click(await screen.findByRole('button', { name: 'Add dates' }))
-    const dialog = await screen.findByRole('dialog', { name: 'Trip details' })
-    fireEvent.change(within(dialog).getByLabelText('Starts'), { target: { value: rel(20) } })
-    await waitFor(() => {
-      const t = tripServer.trips.get(makeTrip(7).trip_id)
-      expect(t?.fields.start_date).toBe(rel(20))
-      expect(t?.fields.end_date).toBe(rel(20))
-    })
-  })
-})
-
-describe('Notes and packing', () => {
-  it('saves trip notes from the menu', async () => {
+describe('Notes and packing from the menu', () => {
+  it('saves trip notes', async () => {
     seed(TRIP)
     open()
     await userEvent.click(await screen.findByRole('button', { name: 'More trip options' }))
@@ -284,62 +266,12 @@ describe('Notes and packing', () => {
     await waitFor(() => expect(serverTrip()?.fields.notes).toBe('Meet at Rossio, platform 2'))
   })
 
-  it('creates the packing list online and links to it', async () => {
+  it('opens the packing list panel', async () => {
     seed(TRIP)
     open()
     await userEvent.click(await screen.findByRole('button', { name: 'More trip options' }))
     await userEvent.click(await screen.findByText('Packing list'))
-    await userEvent.click(await screen.findByRole('button', { name: 'Create packing list' }))
-    expect(await screen.findByRole('link', { name: 'Open the packing list' })).toHaveAttribute(
-      'href',
-      '/app/lists/list_packing',
-    )
-  })
-
-  it('shows why the packing list cannot be created when it fails', async () => {
-    seed(TRIP)
-    server.use(
-      http.post('/api/rooms/:roomId/trips/:tripId/packing-list', () =>
-        HttpResponse.json({ error: 'nope' }, { status: 500 }),
-      ),
-    )
-    open()
-    await userEvent.click(await screen.findByRole('button', { name: 'More trip options' }))
-    await userEvent.click(await screen.findByText('Packing list'))
-    await userEvent.click(await screen.findByRole('button', { name: 'Create packing list' }))
-    expect(await screen.findByRole('alert')).toBeInTheDocument()
-  })
-
-  it('disables packing creation offline and says why', async () => {
-    seed(TRIP)
-    server.use(
-      http.post('/api/rooms/:roomId/trips/sync', () => HttpResponse.error()),
-      http.post('/api/rooms/:roomId/trips/ops', () => HttpResponse.error()),
-    )
-    // Works from the saved copy: seed the device, then lose the network.
-    open()
-    await screen.findByText('Loading the trip').catch(() => {})
-    await waitFor(() => expect(document.body.textContent).toBeDefined())
-  })
-})
-
-describe('Tablet', () => {
-  beforeEach(() => setViewport('tablet'))
-
-  it('toggles the map and swaps the column for Ideas and Bookings', async () => {
-    seed(TRIP)
-    open()
-    await screen.findByRole('heading', { name: 'Lisbon & Porto' })
-    expect(screen.queryByLabelText('Map')).not.toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Show the map' }))
-    expect(await screen.findByText('Offline map')).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Hide the map' }))
-
-    await userEvent.click(screen.getByRole('tab', { name: /Ideas/ }))
-    expect(await screen.findByText('Ginjinha tasting')).toBeInTheDocument()
-    expect(screen.queryByText('Pena Palace')).not.toBeInTheDocument()
-    await userEvent.click(screen.getByRole('tab', { name: /Bookings/ }))
-    expect(await screen.findByText('Flights')).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Create packing list' })).toBeInTheDocument()
   })
 })
 
@@ -348,7 +280,6 @@ describe('Map', () => {
     seed(TRIP)
     open()
     await screen.findByRole('heading', { name: 'Lisbon & Porto' })
-    expect(screen.getByText(/stops?$/, { selector: '.trip-pill' })).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Show all days' }))
     expect(screen.getByRole('button', { name: 'Follow the day' })).toHaveAttribute(
       'aria-pressed',
@@ -387,6 +318,5 @@ describe('House page section', () => {
     )
     expect(screen.getByRole('link', { name: /Ghent/ })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Plan a trip' })).toHaveAttribute('href', '/app/trips')
-    void MIA
   })
 })

@@ -7,8 +7,11 @@ import {
   countdown,
   dateRange,
   eachDay,
-  fullness,
   orderBetween,
+  orderDay,
+  orderForDrop,
+  orderForTime,
+  shortRange,
   parseQuickAdd,
   routeText,
   shortDay,
@@ -63,19 +66,19 @@ describe('dates', () => {
 })
 
 describe('buildSchedule', () => {
-  it('sorts a day by absolute time, untimed last, and splits ideas and outside dates', () => {
+  it('orders a day by its manual order, and splits ideas and outside dates', () => {
     const t = trip({
       todos: [
         todo('c', { day: '2026-10-23', order: 2 }),
-        todo('b', { day: '2026-10-23', start_time: '14:00' }),
-        todo('a', { day: '2026-10-23', start_time: '09:00' }),
+        todo('b', { day: '2026-10-23', start_time: '14:00', order: 3 }),
+        todo('a', { day: '2026-10-23', start_time: '09:00', order: 1 }),
         todo('idea', { day: null }),
         todo('late', { day: '2026-12-01' }),
       ],
     })
     const s = buildSchedule(t)
     expect(s.days).toHaveLength(4)
-    expect(s.days[1].entries.map((e) => e.id)).toEqual(['a', 'b', 'c'])
+    expect(s.days[1].entries.map((e) => e.id)).toEqual(['a', 'c', 'b'])
     expect(s.ideas.map((i) => i.todo_id)).toEqual(['idea'])
     expect(s.outside.map((e) => e.id)).toEqual(['late'])
   })
@@ -91,9 +94,9 @@ describe('buildSchedule', () => {
     })
     const s = buildSchedule(t)
     expect(s.gaps.map((g) => g.text)).toEqual([
-      '3 days empty',
-      'Fri 23: two stops overlap',
-      '2 todos outside trip dates',
+      '3 days have nothing planned',
+      'Fri 23 has two things at the same time',
+      '2 things are outside the trip dates',
     ])
     expect(s.gaps[0].target).toBe('day-2026-10-22')
   })
@@ -150,7 +153,6 @@ describe('buildSchedule', () => {
     expect(sat.entries[0]).toMatchObject({ kind: 'booking', id: 'tbk_1' })
     expect(sat.suggested).toBe('Sintra')
     expect(s.days[0]).toMatchObject({ label: 'Arrival', suggested: '' })
-    expect(fullness(sat)).toBeGreaterThan(0)
   })
 
   it('shows only ideas for a draft', () => {
@@ -239,5 +241,71 @@ describe('IdbTripDB', () => {
     expect(loaded.trips).toHaveLength(0)
     expect(loaded.outbox.map((o) => o.seq)).toEqual([8])
     expect(loaded.meta?.seq).toBe(9)
+  })
+})
+
+describe('a day keeps its manual order', () => {
+  const day = '2026-10-23'
+  const t = (id: string, order: number, time?: string, tz?: string) =>
+    todo(id, { day, order, start_time: time ?? null, tz })
+
+  it('leaves an untimed todo between two timed ones where it was put', () => {
+    const s = buildSchedule(trip({ todos: [t('a', 1, '10:00'), t('u', 1.5), t('b', 2, '12:00')] }))
+    expect(s.days[1].entries.map((e) => e.id)).toEqual(['a', 'u', 'b'])
+  })
+
+  it('does not reorder timed todos by their time', () => {
+    const s = buildSchedule(trip({ todos: [t('late', 1, '18:00'), t('early', 2, '09:00')] }))
+    expect(s.days[1].entries.map((e) => e.id)).toEqual(['late', 'early'])
+  })
+
+  it('slots bookings at their time among the timed todos', () => {
+    const s = buildSchedule(
+      trip({
+        todos: [t('a', 1, '09:00'), t('u', 2), t('b', 3, '15:00')],
+        bookings: [
+          {
+            booking_id: 'tbk_x',
+            kind: 'train',
+            title: 'Train',
+            starts_at: `${day}T11:00`,
+            start_tz: 'Europe/Lisbon',
+          },
+        ],
+      }),
+    )
+    expect(s.days[1].entries.map((e) => e.id)).toEqual(['a', 'tbk_x', 'u', 'b'])
+    expect(orderDay([]).length).toBe(0)
+  })
+
+  it('places a todo by its time between the nearest timed neighbours', () => {
+    const list = [t('a', 1, '10:00'), t('u', 2), t('b', 3, '14:00')]
+    expect(orderForTime(list, day, '12:00', 'Europe/Lisbon', 'Europe/Lisbon')).toBe(2)
+    // Before the first, after the last, and with nothing timed to place it against.
+    expect(orderForTime(list, day, '08:00', 'Europe/Lisbon')).toBe(0)
+    expect(orderForTime(list, day, '18:00', 'Europe/Lisbon')).toBe(4)
+    expect(orderForTime([t('u', 1)], day, '12:00', 'Europe/Lisbon')).toBeUndefined()
+  })
+
+  it('places a time by absolute time across zones', () => {
+    // 11:00 in Paris is 10:00 in Lisbon: it lands after the 09:30 Lisbon stop, before 12:00.
+    const list = [t('a', 1, '09:30', 'Europe/Lisbon'), t('b', 2, '12:00', 'Europe/Lisbon')]
+    expect(orderForTime(list, day, '11:00', 'Europe/Paris')).toBe(1.5)
+  })
+
+  it('places a dropped todo before or after the one it lands on', () => {
+    const list = [t('a', 1), t('b', 2), t('c', 3)]
+    expect(orderForDrop(list, 'b', true)).toBe(1.5)
+    expect(orderForDrop(list, 'b', false)).toBe(2.5)
+    expect(orderForDrop(list, 'a', true)).toBe(0)
+    expect(orderForDrop(list, 'c', false)).toBe(4)
+    expect(orderForDrop(list, 'zzz', true)).toBeUndefined()
+  })
+
+  it('writes a short range for a header line', () => {
+    expect(shortRange('2026-10-22', '2026-10-30')).toBe('22–30 Oct')
+    expect(shortRange('2026-10-30', '2026-11-02')).toBe('30 Oct – 2 Nov')
+    expect(shortRange('2026-10-22', '2026-10-22')).toBe('22 Oct')
+    expect(shortRange(null, null)).toBe('')
   })
 })

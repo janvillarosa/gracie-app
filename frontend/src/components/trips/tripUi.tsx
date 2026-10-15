@@ -1,4 +1,5 @@
 import React from 'react'
+import { Airplane, Bed, BookmarkSimple, Car, Ticket, Train } from '@phosphor-icons/react'
 import type { BookingKind, TripCategory } from '@api/tripTypes'
 
 export const CATEGORIES: Array<{ value: TripCategory; label: string }> = [
@@ -46,4 +47,13 @@ export function formatDuration(min?: number | null): string {
   const h = Math.floor(min / 60)
   const m = min % 60
   return h ? (m ? `${h} h ${m} min` : `${h} h`) : `${m} min`
+}
+
+export const KIND_ICON: Record<BookingKind, React.ReactNode> = {
+  flight: <Airplane aria-hidden />,
+  stay: <Bed aria-hidden />,
+  train: <Train aria-hidden />,
+  car: <Car aria-hidden />,
+  ticket: <Ticket aria-hidden />,
+  other: <BookmarkSimple aria-hidden />,
 }

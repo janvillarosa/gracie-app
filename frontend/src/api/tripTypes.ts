@@ -38,6 +38,8 @@ export type TripTodo = {
   category: TripCategory
   notes?: string
   place?: Place | null
+  // The booking this todo is about (a timed entry, a train), when linked.
+  booking_id?: string | null
   created_by?: string
   updated_by?: string
   // Server time of the last change (ISO). Optional: used for "changed in the last 24h".
@@ -70,6 +72,8 @@ export type TripFields = {
   end_date?: string | null
   tz?: string
   packing_list_id?: string | null
+  // One of the House icons (the same set lists use); shown on the trip's sheet.
+  icon?: string
   stops?: Place[]
   days?: Record<string, string>
 }

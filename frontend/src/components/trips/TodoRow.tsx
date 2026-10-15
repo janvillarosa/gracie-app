@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react'
 import { Button, Checkbox } from 'antd'
 import { ArrowsOutCardinal, DotsSixVertical, Trash } from '@phosphor-icons/react'
-import { useDraggable } from '@dnd-kit/core'
+import { useDraggable, useDroppable } from '@dnd-kit/core'
 import type { TripTodo } from '@api/tripTypes'
 import { confettiAt } from '@lib/confetti'
 import { useSwipeToDelete } from '@components/ItemRow'
@@ -66,6 +66,8 @@ export const TodoRow = React.memo<Props>(function TodoRow({
     data: { kind: 'todo' },
     disabled: locked,
   })
+  // Rows are drop targets too: dropping a row on another places it before or after it.
+  const drop = useDroppable({ id: `row:${id}`, disabled: locked })
   const swipe = useSwipeToDelete(() => actions.remove(id), locked)
 
   // A row that was just added scrolls into view if it is off screen.
@@ -98,6 +100,7 @@ export const TodoRow = React.memo<Props>(function TodoRow({
       ref={(el) => {
         liRef.current = el
         setNodeRef(el)
+        drop.setNodeRef(el)
       }}
       id={`row-${id}`}
       data-entry-id={id}
@@ -130,17 +133,22 @@ export const TodoRow = React.memo<Props>(function TodoRow({
                 aria-label={`${todo.title}, done`}
               />
             </span>
-            <span className="trip-time">
-              {todo.start_time ?? ''}
-              {pin ? <span className="trip-pinno">{pin}</span> : null}
-            </span>
+            {todo.start_time && (
+              <span className="trip-time">
+                {todo.start_time}
+                {pin ? <span className="trip-pinno">{pin}</span> : null}
+              </span>
+            )}
             <button
               type="button"
               className="trip-main"
               aria-haspopup="dialog"
               onClick={() => actions.open(id)}
             >
-              <span className="trip-title">{todo.title}</span>
+              <span className="trip-titleline">
+                <span className="trip-title">{todo.title}</span>
+                {pin && !todo.start_time ? <span className="trip-pinno">{pin}</span> : null}
+              </span>
               {second && <span className="trip-sub">{second}</span>}
             </button>
             {changedBy && (
@@ -148,11 +156,13 @@ export const TodoRow = React.memo<Props>(function TodoRow({
                 {changedBy[0].toUpperCase()}
               </span>
             )}
-            <span
-              className={`trip-catdot trip-catdot-${todo.category}`}
-              role="img"
-              aria-label={categoryLabel(todo.category)}
-            />
+            {!changedBy && (
+              <span
+                className={`trip-catdot trip-catdot-${todo.category}`}
+                role="img"
+                aria-label={categoryLabel(todo.category)}
+              />
+            )}
             {!locked && (
               <span className="trip-acts">
                 <Button
@@ -164,6 +174,14 @@ export const TodoRow = React.memo<Props>(function TodoRow({
                   aria-expanded={moveOpen}
                   onClick={() => actions.openMove(moveOpen ? null : id)}
                   icon={<ArrowsOutCardinal />}
+                />
+                <Button
+                  type="text"
+                  shape="circle"
+                  size="small"
+                  aria-label={`Delete ${todo.title}`}
+                  onClick={() => actions.remove(id)}
+                  icon={<Trash />}
                 />
               </span>
             )}

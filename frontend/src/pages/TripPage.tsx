@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   DndContext,
   DragOverlay,
@@ -10,7 +10,8 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from '@dnd-kit/core'
-import { Button, Modal, message } from 'antd'
+import { Button, Card, Tabs, message } from 'antd'
+import { Check } from '@phosphor-icons/react'
 import { useAuth } from '@auth/AuthProvider'
 import { TopNav } from '@components/TopNav'
 import { reorderLock } from '@components/ItemRow'
@@ -22,11 +23,14 @@ import { useDocumentTitle } from '@lib/useDocumentTitle'
 import { memberName, useTrips, type Member } from '@lib/trips/hooks'
 import type { TripStore } from '@lib/trips/store'
 import {
+  addDays,
   buildSchedule,
   fullDay,
   longDay,
   localDateKey,
   orderBetween,
+  orderForDrop,
+  orderForTime,
   shortDay,
   tonightsStay,
   tripPhase,
@@ -34,31 +38,19 @@ import {
   type DayModel,
   type Schedule,
 } from '@lib/trips/schedule'
-import { BookingsPanel, type BookingActions } from '@components/trips/Bookings'
+import { BookingEditor, BookingsPanel, type BookingActions } from '@components/trips/Bookings'
 import { BookingDetail, TodoDetail } from '@components/trips/ItemDetail'
-import { DateStrip, MapSheet, useMedia } from '@components/trips/Phone'
-import {
-  IdeasPanel,
-  NotesPane,
-  PackingPane,
-  Panel,
-  TripTabs,
-  type TabId,
-} from '@components/trips/Panels'
+import { DayList, type DayRow } from '@components/trips/DayList'
+import { NextStopDeck, type Stop, type Tomorrow } from '@components/trips/NextStop'
+import { MapSheet, useMedia } from '@components/trips/Phone'
+import { IdeasPanel, NotesPane, PackingPane, Panel, type TabId } from '@components/trips/Panels'
 import { AddBar, type QuickAddItem } from '@components/trips/QuickAdd'
-import {
-  DaySection,
-  DoneLine,
-  DoneRun,
-  EntryRows,
-  bylineFor,
-  dayDone,
-  type Shared,
-} from '@components/trips/Spine'
-import { TripDetails, TripHeader } from '@components/trips/TripHeader'
+import { DaySection, EntryRows, bylineFor, dayDone, type Shared } from '@components/trips/Spine'
+import { TripHeader } from '@components/trips/TripHeader'
 import { TripMap, type MapPoint, type TripMapHandle } from '@components/trips/TripMap'
 import type { RowActions } from '@components/trips/TodoRow'
 import { DAY_COLOURS } from '@components/trips/tripUi'
+import { usePillTabs } from '@components/trips/usePillTabs'
 import '../trips.css'
 
 type Extra = 'notes' | 'packing' | null
@@ -72,7 +64,7 @@ function scrollToEl(el: Element | null, focus = true) {
   if (!el) return
   ;(el as HTMLElement).scrollIntoView?.({ block: 'start', behavior: reduced() ? 'auto' : 'smooth' })
   if (focus) {
-    const target = el.querySelector<HTMLElement>('h2[tabindex], button') ?? (el as HTMLElement)
+    const target = el.querySelector<HTMLElement>('h3[tabindex], button') ?? (el as HTMLElement)
     target.focus?.({ preventScroll: true })
   }
 }
@@ -91,6 +83,16 @@ type Ctx = {
 
 const maxOrder = (trip: Trip, day: string | null) =>
   trip.todos.filter((t) => (t.day ?? null) === day).reduce((m, t) => Math.max(m, t.order), 0)
+
+/** A day's (or the Ideas) todos in their manual order. */
+const listFor = (trip: Trip, day: string | null, except?: string) =>
+  trip.todos
+    .filter((t) => (t.day ?? null) === day && t.todo_id !== except)
+    .sort((a, b) => a.order - b.order || (a.todo_id < b.todo_id ? -1 : 1))
+
+/** Where a todo with this time goes in its day: by time among the timed ones, else at the end. */
+const slotOrder = (trip: Trip, day: string, time: string, tz: string | undefined, id?: string) =>
+  orderForTime(listFor(trip, day, id), day, time, tz, trip.tz) ?? maxOrder(trip, day) + 1
 
 function useScreenActions(ctx: React.MutableRefObject<Ctx>) {
   const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>())
@@ -117,16 +119,20 @@ function useScreenActions(ctx: React.MutableRefObject<Ctx>) {
 
   return useMemo(() => {
     const c = () => ctx.current
-    const add = (day: string | null, item: QuickAddItem) => {
+    const add = (day: string | null, item: QuickAddItem): string | undefined => {
       const { trip, store, announce, entered, showDay } = c()
       if (trip.todos.length >= MAX_TODOS) {
         message.error('This trip is full (150 todos). Remove something before adding more.')
-        return
+        return undefined
       }
+      const order =
+        day && item.start_time
+          ? slotOrder(trip, day, item.start_time, item.place?.tz)
+          : maxOrder(trip, day) + 1
       const id = store.createTodo(trip.trip_id, {
         title: item.title,
         day,
-        order: maxOrder(trip, day) + 1,
+        order,
         category: 'other',
         ...(item.start_time ? { start_time: item.start_time } : {}),
         ...(item.place ? { place: item.place } : {}),
@@ -134,6 +140,7 @@ function useScreenActions(ctx: React.MutableRefObject<Ctx>) {
       if (day) showDay(day)
       entered(id)
       announce(`Added ${item.title} to ${day ? fullDay(day) : 'Ideas'}`)
+      return id
     }
 
     const rowActions: RowActions = {
@@ -146,11 +153,24 @@ function useScreenActions(ctx: React.MutableRefObject<Ctx>) {
         if (!td) return
         setMoveOpen(null)
         if ((td.day ?? null) === day) return
-        store.updateTodo(trip.trip_id, id, { day, order: maxOrder(trip, day) + 1 })
+        const order =
+          day && td.start_time
+            ? slotOrder(trip, day, td.start_time, td.tz, id)
+            : maxOrder(trip, day) + 1
+        store.updateTodo(trip.trip_id, id, { day, order })
         if (day) c().showDay(day)
         announce(`Moved ${td.title} to ${day ? fullDay(day) : 'Ideas'}`)
       },
-      patch: (id, patch) => c().store.updateTodo(c().trip.trip_id, id, patch),
+      patch: (id, patch) => {
+        const { trip, store } = c()
+        const td = trip.todos.find((t) => t.todo_id === id)
+        // Setting or changing a time places the todo by time among the timed ones; clearing
+        // it leaves the todo where it is.
+        if (td?.day && typeof patch.start_time === 'string' && patch.start_time) {
+          const order = slotOrder(trip, td.day, patch.start_time, td.tz, id)
+          store.updateTodo(trip.trip_id, id, { ...patch, order })
+        } else store.updateTodo(trip.trip_id, id, patch)
+      },
       remove: (id) => {
         const { trip, hide, openItem } = c()
         const td = trip.todos.find((t) => t.todo_id === id)
@@ -185,14 +205,11 @@ function useScreenActions(ctx: React.MutableRefObject<Ctx>) {
         })
       },
       reorder: (id, dir) => {
-        const { trip, schedule, store, announce } = c()
+        const { trip, store, announce } = c()
         const td = trip.todos.find((t) => t.todo_id === id)
         if (!td) return
-        const list = td.day
-          ? (schedule.days
-              .find((d) => d.date === td.day)
-              ?.entries.flatMap((e) => (e.kind === 'todo' ? [e.todo] : [])) ?? [])
-          : schedule.ideas
+        // The order is the manual order, timed or not.
+        const list = listFor(trip, td.day ?? null)
         const i = list.findIndex((t) => t.todo_id === id)
         const j = i + dir
         if (i < 0) return
@@ -200,16 +217,10 @@ function useScreenActions(ctx: React.MutableRefObject<Ctx>) {
           announce(`${td.title} is already ${dir < 0 ? 'first' : 'last'}`)
           return
         }
-        const other = list[j]
-        const timed = td.start_time || other.start_time
-        if (timed && td.start_time !== other.start_time) {
-          announce('Rows with a time stay in time order. Change the time to move this one.')
-          return
-        }
         const order =
           dir < 0
-            ? orderBetween(list[j - 1]?.order, other.order)
-            : orderBetween(other.order, list[j + 1]?.order)
+            ? orderBetween(list[j - 1]?.order, list[j].order)
+            : orderBetween(list[j].order, list[j + 1]?.order)
         store.updateTodo(trip.trip_id, id, { order })
         announce(
           `Moved ${td.title} ${dir < 0 ? 'up' : 'down'}, position ${j + 1} of ${list.length}`,
@@ -281,21 +292,23 @@ const TripScreen: React.FC<{
   userId?: string
   members: Member[]
   roomName: string
-}> = ({ trip: rawTrip, store, state, userId, members, roomName }) => {
+  showNextStop: boolean
+}> = ({ trip: rawTrip, store, state, userId, members, roomName, showNextStop }) => {
   const { apiKey } = useAuth()
   const [search] = useSearchParams()
   const [tab, setTab] = useState<TabId>('plan')
   const [extra, setExtra] = useState<Extra>(null)
-  const [detailsOpen, setDetailsOpen] = useState(false)
+  const navigate = useNavigate()
+  const goSettings = () => navigate(`/app/trips/${rawTrip.trip_id}/settings`)
   const [selected, setSelected] = useState<string | null>(null)
   const [moveOpenId, setMoveOpen] = useState<string | null>(null)
   const [unlocked, setUnlocked] = useState(false)
   const [override, setOverride] = useState<Record<string, boolean>>({})
-  const [mergeOpen, setMergeOpen] = useState<ReadonlySet<string>>(() => new Set())
+  const [showDone, setShowDone] = useState(false)
+  const [daysOpen, setDaysOpen] = useState(false)
   const [celebrating, setCelebrating] = useState<ReadonlySet<string>>(() => new Set())
-  const [tabletMap, setTabletMap] = useState(false)
+  const [dismissed, setDismissed] = useState<ReadonlySet<string>>(() => new Set())
   const [sheetOpen, setSheetOpen] = useState(false)
-  const [scrolled, setScrolled] = useState(false)
   const [currentDay, setCurrentDay] = useState<string | null>(null)
   const [allDays, setAllDays] = useState(false)
   const [announcement, setAnnouncement] = useState('')
@@ -303,14 +316,16 @@ const TripScreen: React.FC<{
   const [nowMs, setNowMs] = useState(() => Date.now())
   const [addTarget, setAddTarget] = useState<string>('auto')
   const [enteringId, setEnteringId] = useState<string | null>(null)
+  const [freshId, setFreshId] = useState<string | null>(null)
   const [packBusy, setPackBusy] = useState(false)
   const [packError, setPackError] = useState('')
   const [dragging, setDragging] = useState<string | null>(null)
   const mapRef = useRef<TripMapHandle>(null)
-  const headerRef = useRef<HTMLDivElement>(null)
 
+  const pill = usePillTabs(tab)
   const desktop = useMedia('(min-width: 1024px)')
-  const phone = useMedia('(max-width: 767px)')
+  // Tablets use the phone layout: one column, the map in a sheet.
+  const phone = useMedia('(max-width: 1023px)')
 
   // Rows waiting behind an Undo are hidden before the delete is sent.
   const trip = useMemo(
@@ -375,6 +390,7 @@ const TripScreen: React.FC<{
     showDay: (date) => setOverride((o) => (o[date] === true ? o : { ...o, [date]: true })),
   }
   const { add, rowActions, bookingActions, setDayLabel } = useScreenActions(ctx)
+  const [bookingDraft, setBookingDraft] = useState<{ title: string } | null>(null)
 
   const bias = useMemo(() => {
     const p = trip.destination ?? trip.stops?.[0]
@@ -382,34 +398,170 @@ const TripScreen: React.FC<{
   }, [trip.destination, trip.stops])
 
   // ---- which days are cards, closed cards or slim "done" lines ---------------------------
-  const isOpenDay = (d: DayModel) => {
-    if (celebrating.has(d.date)) return true
-    if (doneDays.has(d.date)) return override[d.date] === true
-    if (override[d.date] !== undefined) return override[d.date]
-    if (!phone) return true
-    return phase === 'during' ? d.date === today : d.date === schedule.days[0]?.date
-  }
-  // biome-ignore lint/correctness/useExhaustiveDependencies: isOpenDay reads exactly these
-  const segments = useMemo(() => {
-    const out: Segment[] = []
-    let run: DayModel[] = []
-    const flush = () => {
-      if (run.length) out.push({ kind: 'done', key: `done-${run[0].date}`, days: run })
-      run = []
-    }
-    schedule.days.forEach((d, index) => {
-      const open = isOpenDay(d)
-      if (doneDays.has(d.date) && !open) {
-        run.push(d)
-        return
+  const stay = phase === 'during' ? tonightsStay(trip, today) : undefined
+  // In the plan only tonight's stay and the next booking show; the rest live under Bookings.
+  const nextBookingId = useMemo(() => {
+    let best: { id: string; at: number } | null = null
+    for (const d of schedule.days)
+      for (const e of d.entries) {
+        if (e.kind !== 'booking' || e.id === stay?.booking_id) continue
+        if ((e.endMs ?? e.startMs ?? 0) < nowMs) continue
+        if (!best || (e.startMs ?? 0) < best.at) best = { id: e.id, at: e.startMs ?? 0 }
       }
-      flush()
-      out.push({ kind: 'day', key: d.date, day: d, index, closed: !open })
-    })
-    flush()
-    return out
-  }, [schedule.days, doneDays, override, celebrating, phone, phase, today])
+    return best?.id ?? null
+  }, [schedule.days, stay, nowMs])
+  const planDates = schedule.days.filter((d) => !doneDays.has(d.date)).map((d) => d.date)
+  const firstPlanDate = planDates[0]
+  const secondPlanDate = planDates[1]
+  const isOpenDay = (d: DayModel) =>
+    celebrating.has(d.date) ||
+    (override[d.date] ??
+      (!phone ||
+        (phase === 'during'
+          ? d.date <= addDays(today, 1)
+          : d.date === firstPlanDate || d.date === secondPlanDate)))
+  // The next-stop deck: today's stops in the day's order, only during the trip.
+  const deckStops = useMemo<Stop[]>(() => {
+    if (phase !== 'during' || !showNextStop) return []
+    const model = schedule.days.find((d) => d.date === today)
+    return (
+      model?.entries
+        .filter(
+          (e) =>
+            e.kind === 'todo' || !trip.todos.some((t) => t.booking_id === e.booking.booking_id),
+        )
+        .map((e): Stop => {
+          const clock = (dt?: string | null) => dt?.split('T')[1] ?? ''
+          if (e.kind === 'todo') {
+            const t = e.todo
+            const bk = t.booking_id
+              ? trip.bookings.find((x) => x.booking_id === t.booking_id)
+              : undefined
+            // The heading is only where to go; the rest is a quiet line under it.
+            const heading = t.place?.name || t.title
+            const time = t.start_time || clock(bk?.starts_at)
+            const sub = [
+              heading !== t.title ? t.title : '',
+              time,
+              bk?.title ?? '',
+              bk ? 'Booked' : '',
+            ]
+              .filter(Boolean)
+              .join(' · ')
+            return {
+              id: t.todo_id,
+              kind: 'todo',
+              title: t.title,
+              heading,
+              sub: sub || 'Anytime',
+              time: t.start_time ?? '',
+              place: t.place,
+              notes: t.notes,
+              code: bk?.confirmation_code,
+              linked: bk
+                ? {
+                    title: bk.title,
+                    kind: bk.kind,
+                    line: [clock(bk.starts_at), bk.place?.name].filter(Boolean).join(' · '),
+                  }
+                : undefined,
+              done: t.done,
+              planned: !t.done && e.startMs !== null && e.startMs < nowMs,
+            }
+          }
+          const b = e.booking
+          const heading = b.place?.name || b.title
+          return {
+            id: b.booking_id,
+            kind: 'booking',
+            title: b.title,
+            heading,
+            sub: [clock(b.starts_at), heading !== b.title ? b.title : '', 'Booked']
+              .filter(Boolean)
+              .join(' · '),
+            time: clock(b.starts_at),
+            place: b.place,
+            notes: b.notes,
+            code: b.confirmation_code,
+            bookingKind: b.kind,
+            line: [clock(b.starts_at), b.place?.name].filter(Boolean).join(' · '),
+            done:
+              (e.endMs ?? e.startMs ?? Number.POSITIVE_INFINITY) < nowMs ||
+              dismissed.has(b.booking_id),
+            planned: false,
+          }
+        }) ?? []
+    )
+  }, [schedule.days, phase, today, nowMs, dismissed, trip.bookings, showNextStop])
+  const deckTopId = deckStops.find((s) => !s.done)?.id
+  // With the deck switched off, a plain "Next up" line leads today's section.
+  const nextUp = useMemo(() => {
+    if (phase !== 'during' || showNextStop) return null
+    const model = schedule.days.find((d) => d.date === today)
+    const todos = model?.entries.flatMap((e) => (e.kind === 'todo' ? [e] : [])) ?? []
+    if (!todos.length) return null
+    const open = todos.filter((e) => !e.todo.done)
+    if (!open.length) return { title: '', time: '' }
+    const soon = open
+      .filter((e) => e.startMs !== null && e.startMs >= nowMs)
+      .sort((a, b) => (a.startMs as number) - (b.startMs as number))[0]
+    const pick = soon ?? open[0]
+    return { title: pick.todo.title, time: pick.todo.start_time ?? '' }
+  }, [schedule.days, phase, today, nowMs, showNextStop])
+  const tomorrow = useMemo<Tomorrow>(() => {
+    const model = schedule.days.find((d) => d.date === addDays(today, 1))
+    if (!model) return null
+    const first = model.entries.find((e) => e.kind === 'todo')
+    const todo = first?.kind === 'todo' ? first.todo : null
+    return {
+      date: model.date,
+      label: model.label || model.suggested || shortDay(model.date),
+      first: todo?.title ?? '',
+      time: todo?.start_time ?? '',
+    }
+  }, [schedule.days, today])
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: isOpenDay reads exactly these
+  const planDays = useMemo(
+    () =>
+      schedule.days
+        .filter((d) => showDone || !doneDays.has(d.date) || celebrating.has(d.date))
+        .map((d) => {
+          const deckDay = deckStops.length > 0 && d.date === today
+          return {
+            deckDay,
+            day: {
+              ...d,
+              // With the deck up, today lists only what comes after the top card.
+              entries: d.entries.filter((e) =>
+                deckDay
+                  ? e.id !== deckTopId &&
+                    (e.kind === 'todo'
+                      ? !e.todo.done
+                      : e.id === nextBookingId && !dismissed.has(e.id))
+                  : e.kind === 'todo' || e.id === nextBookingId,
+              ),
+            },
+            closed: !isOpenDay(d),
+          }
+        })
+        .filter((p) => !p.deckDay || p.day.entries.length > 0 || !!stay),
+    [
+      schedule.days,
+      showDone,
+      doneDays,
+      celebrating,
+      override,
+      phone,
+      phase,
+      today,
+      nextBookingId,
+      deckStops.length,
+      deckTopId,
+      dismissed,
+      stay,
+    ],
+  )
   // A day finishes when its last item is ticked: "Day done" shows for a moment, then it folds
   // into a slim line. Unticking anything unfolds it again.
   const prevDone = useRef<ReadonlySet<string> | null>(null)
@@ -466,7 +618,7 @@ const TripScreen: React.FC<{
     }
   }, [])
 
-  const mapVisible = desktop || (!phone && tabletMap) || (phone && sheetOpen)
+  const mapVisible = desktop || (phone && sheetOpen)
   const pins = useMemo(() => pinsFor(schedule), [schedule])
   const moveTargets = useMemo(
     () => [
@@ -501,9 +653,7 @@ const TripScreen: React.FC<{
   )
 
   // ---- the day in view -----------------------------------------------------------------
-  const segKey = segments
-    .map((s) => `${s.key}:${s.kind === 'day' && s.closed ? 'c' : 'o'}`)
-    .join(',')
+  const segKey = planDays.map((p) => `${p.day.date}:${p.closed ? 'c' : 'o'}`).join(',')
   useEffect(() => {
     if (!segKey || typeof IntersectionObserver === 'undefined') return
     const inBand = new Set<string>()
@@ -531,18 +681,6 @@ const TripScreen: React.FC<{
     setCurrentDay((c) => c ?? (phase === 'during' ? today : (schedule.days[0]?.date ?? null)))
     // biome-ignore lint/correctness/useExhaustiveDependencies: only the first value matters
   }, [schedule.days])
-
-  // The phone's slim title bar appears once the header has scrolled away.
-  useEffect(() => {
-    const el = headerRef.current
-    if (!el || !phone || typeof IntersectionObserver === 'undefined') {
-      setScrolled(false)
-      return
-    }
-    const io = new IntersectionObserver(([e]) => setScrolled(!e.isIntersecting))
-    io.observe(el)
-    return () => io.disconnect()
-  }, [phone])
 
   // Keep the address bar's ?day= in step with what is being read, without touching history.
   useEffect(() => {
@@ -585,13 +723,14 @@ const TripScreen: React.FC<{
   const goToDay = useCallback(
     (date: string, focus = true) => {
       setCurrentDay(date)
+      if (doneDays.has(date)) setShowDone(true)
       openDay(date)
       // After the open day has rendered.
       requestAnimationFrame(() =>
         requestAnimationFrame(() => scrollToEl(document.getElementById(`day-${date}`), focus)),
       )
     },
-    [openDay],
+    [openDay, doneDays],
   )
   const onGap = useCallback(
     (target: string) => {
@@ -647,7 +786,7 @@ const TripScreen: React.FC<{
   const mapNode = (
     <div className="trip-map">
       <div className="trip-map-bar">
-        <span className="trip-pill">{mapTitle.replace('Map of ', '')}</span>
+        <span className="trip-pill">{currentModel ? shortDay(currentModel.date) : 'Ideas'}</span>
         {schedule.days.length > 1 && (
           <button
             type="button"
@@ -673,7 +812,6 @@ const TripScreen: React.FC<{
   )
 
   // ---- derived bits for the spine ------------------------------------------------------
-  const stay = phase === 'during' ? tonightsStay(trip, today) : undefined
   const nowInfo = useMemo(() => {
     const model = schedule.days.find((d) => d.date === today)
     if (!model || phase !== 'during') return { index: -1, label: '' }
@@ -732,8 +870,27 @@ const TripScreen: React.FC<{
     setDragging(null)
     const over = e.over ? String(e.over.id) : ''
     if (!over) return
+    const activeId = String(e.active.id)
+    if (over.startsWith('row:')) {
+      // Dropped on another row: it goes before or after it, wherever the user put it.
+      const overId = over.slice(4)
+      const moving = trip.todos.find((t) => t.todo_id === activeId)
+      const target = trip.todos.find((t) => t.todo_id === overId)
+      if (!moving || !target || overId === activeId) return
+      const day = target.day ?? null
+      const full = listFor(trip, day)
+      const before =
+        (moving.day ?? null) !== day ||
+        full.findIndex((t) => t.todo_id === activeId) > full.findIndex((t) => t.todo_id === overId)
+      const order = orderForDrop(listFor(trip, day, activeId), overId, before)
+      if (order === undefined) return
+      store.updateTodo(trip.trip_id, activeId, { day, order })
+      if (day) ctx.current.showDay(day)
+      setAnnouncement(`Moved ${moving.title} ${before ? 'before' : 'after'} ${target.title}`)
+      return
+    }
     const target = over === 'ideas' ? null : over.startsWith('day:') ? over.slice(4) : undefined
-    if (target !== undefined) rowActions.move(String(e.active.id), target)
+    if (target !== undefined) rowActions.move(activeId, target)
   }
   const dragTitle = dragging ? trip.todos.find((t) => t.todo_id === dragging)?.title : ''
 
@@ -784,6 +941,9 @@ const TripScreen: React.FC<{
     <TodoDetail
       key={selTodo.todo_id}
       todo={selTodo}
+      fresh={selTodo.todo_id === freshId}
+      onCopy={bookingActions.copy}
+      bookings={trip.bookings}
       days={moveTargets}
       tripTz={trip.tz}
       bias={bias}
@@ -817,16 +977,27 @@ const TripScreen: React.FC<{
   const bookingsNode = (
     <BookingsPanel
       bookings={trip.bookings}
-      tripTz={trip.tz}
-      bias={bias}
-      firstDay={trip.start_date ?? undefined}
       nowMs={nowMs}
+      onAdd={() => setBookingDraft({ title: '' })}
       actions={bookingActions}
       startMs={bookingStart}
       onOpen={rowActions.open}
       locked={locked}
     />
   )
+  const bookingFormNode = bookingDraft ? (
+    <BookingEditor
+      tripTz={trip.tz}
+      bias={bias}
+      defaultDay={trip.start_date ?? undefined}
+      initialTitle={bookingDraft.title}
+      onCancel={() => setBookingDraft(null)}
+      onSave={(patch) => {
+        bookingActions.save(null, patch)
+        setBookingDraft(null)
+      }}
+    />
+  ) : null
   const extraNode =
     extra === 'notes' ? (
       <NotesPane
@@ -854,6 +1025,13 @@ const TripScreen: React.FC<{
       node: detailNode,
       close: closeSelected,
     }
+  } else if (bookingFormNode) {
+    panel = {
+      key: 'booking-new',
+      title: 'New booking',
+      node: bookingFormNode,
+      close: () => setBookingDraft(null),
+    }
   } else if (extraNode) {
     panel = {
       key: `extra-${extra}`,
@@ -861,24 +1039,10 @@ const TripScreen: React.FC<{
       node: extraNode,
       close: () => setExtra(null),
     }
-  } else if (desktop && tab === 'ideas') {
-    panel = {
-      key: 'tab-ideas',
-      title: `Ideas (${schedule.ideas.length})`,
-      node: ideasNode,
-      close: () => setTab('plan'),
-    }
-  } else if (desktop && tab === 'bookings') {
-    panel = {
-      key: 'tab-bookings',
-      title: `Bookings (${trip.bookings.length})`,
-      node: bookingsNode,
-      close: () => setTab('plan'),
-    }
   }
 
-  const showSide = desktop || (!phone && tabletMap)
-  const showAdd = !locked && (desktop || tab !== 'bookings')
+  const showSide = desktop
+  const showAdd = !locked
 
   const spine = (
     // One delegated listener lifts the map pin for the row under the pointer.
@@ -889,84 +1053,129 @@ const TripScreen: React.FC<{
       onFocus={onSpineOver}
       onPointerLeave={() => mapRef.current?.setHot(null)}
     >
-      {schedule.days.length === 0 && (
-        <p className="trip-empty-text">
-          {trip.todos.length || trip.bookings.length
-            ? 'Add dates to place these on days.'
-            : 'No dates yet. Add dates in the trip details, or collect ideas first.'}
-        </p>
-      )}
-      {segments.map((s) => {
-        if (s.kind === 'done') {
-          return s.days.length === 1 ? (
-            <DoneLine key={s.key} day={s.days[0]} onOpen={openDay} />
-          ) : (
-            <DoneRun
-              key={s.key}
-              days={s.days}
-              open={mergeOpen.has(s.key)}
-              onToggle={() =>
-                setMergeOpen((m) => {
-                  const n = new Set(m)
-                  if (n.has(s.key)) n.delete(s.key)
-                  else n.add(s.key)
-                  return n
-                })
-              }
-              onOpenDay={openDay}
-            />
-          )
-        }
-        const isToday = s.day.date === today && phase === 'during'
+      {planDays.map(({ day, closed, deckDay }) => {
+        const isToday = day.date === today && phase === 'during'
         return (
           <DaySection
-            key={s.key}
-            day={s.day}
-            index={s.index}
+            key={day.date}
+            day={day}
             shared={shared}
             moveOpenId={moveOpenId}
             selectedId={selected}
             enteringId={enteringId}
             isToday={isToday}
+            heading={deckDay ? 'Later today' : undefined}
             onFold={toggleDay}
-            nowMs={s.day.date < today ? Number.POSITIVE_INFINITY : s.day.date > today ? 0 : nowMs}
-            nowIndex={nowInfo.index}
+            nowMs={day.date < today ? Number.POSITIVE_INFINITY : day.date > today ? 0 : nowMs}
+            nowIndex={deckDay ? -1 : nowInfo.index}
             nowLabel={nowInfo.label}
             stay={stay}
             lazy={schedule.days.length > 14}
             today={today}
-            celebrating={celebrating.has(s.day.date)}
-            closed={s.closed}
+            celebrating={celebrating.has(day.date)}
+            closed={closed}
           />
         )
       })}
       {schedule.outside.length > 0 && (
-        <section
-          id="outside-dates"
-          className="trip-day is-open trip-outside"
-          aria-label="Outside trip dates"
-        >
+        <section id="outside-dates" className="trip-day is-open" aria-label="Outside trip dates">
           <header className="trip-day-head">
-            <div className="trip-day-title">
-              <h2 tabIndex={-1}>Outside trip dates</h2>
-            </div>
-            <p className="trip-day-sum">{schedule.outside.length} items</p>
+            <h3 tabIndex={-1}>Outside the trip dates</h3>
           </header>
-          <div className="trip-day-body">
-            <EntryRows
-              entries={schedule.outside}
-              shared={shared}
-              moveOpenId={moveOpenId}
-              selectedId={selected}
-              enteringId={enteringId}
-              nowMs={nowMs}
-              showDay
-            />
-          </div>
+          <EntryRows
+            entries={schedule.outside}
+            shared={shared}
+            moveOpenId={moveOpenId}
+            selectedId={selected}
+            enteringId={enteringId}
+            nowMs={nowMs}
+            showDay
+          />
         </section>
       )}
     </div>
   )
+
+  const emptyPlan = trip.todos.length === 0 && trip.bookings.length === 0
+  const dayRows: DayRow[] = schedule.days.map((d) => {
+    const todos = d.entries.filter((e) => e.kind === 'todo').length
+    return {
+      value: d.date,
+      title: `${d.date === today && phase === 'during' ? 'Today' : shortDay(d.date)}${d.label || d.suggested ? ` · ${d.label || d.suggested}` : ''}`,
+      note: doneDays.has(d.date) ? 'All done' : todos === 0 ? 'Nothing planned' : '',
+      current: d.date === currentDay,
+    }
+  })
+  const dayListNode = (
+    <DayList
+      label="Days"
+      rows={dayRows}
+      onPick={(date) => {
+        setDaysOpen(false)
+        goToDay(date)
+      }}
+    />
+  )
+  const planNode = (
+    <>
+      {doneDays.size > 0 && !emptyPlan && (
+        <button
+          type="button"
+          className="completed-toggle trip-donetoggle"
+          aria-expanded={showDone}
+          onClick={() => setShowDone((v) => !v)}
+        >
+          {showDone ? (
+            'Hide done days'
+          ) : (
+            <>
+              <Check aria-hidden /> {doneDays.size} {doneDays.size === 1 ? 'day' : 'days'} done
+            </>
+          )}
+        </button>
+      )}
+      {emptyPlan ? (
+        <div className="trip-empty-sheet">
+          <h3>Where to first?</h3>
+          <p>Add a place or a plan below. You can sort it into days later.</p>
+          {!trip.start_date && !locked && (
+            <Button shape="round" onClick={goSettings}>
+              When are you going?
+            </Button>
+          )}
+        </div>
+      ) : (
+        <>
+          {nextUp && (
+            <p className="trip-nextup">
+              {nextUp.title ? (
+                <>
+                  Next up: <strong>{nextUp.title}</strong>
+                  {nextUp.time ? ` at ${nextUp.time}` : ''}
+                </>
+              ) : (
+                'All done for today'
+              )}
+            </p>
+          )}
+          {spine}
+        </>
+      )}
+    </>
+  )
+
+  const addLabel =
+    tab === 'bookings'
+      ? 'Add a booking'
+      : target === 'ideas'
+        ? 'Add an idea'
+        : `Add to ${targetLabel}`
+  const addPlaceholder =
+    tab === 'bookings'
+      ? 'Add a booking'
+      : target === 'ideas'
+        ? 'Add an idea'
+        : 'Add a place or plan'
 
   return (
     <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
@@ -974,23 +1183,7 @@ const TripScreen: React.FC<{
         <div className="trip-shell">
           <div className="trip-col">
             <TopNav back={{ to: '/app', label: roomName }} />
-            {phone && (
-              <div className={scrolled ? 'trip-phonebar is-scrolled' : 'trip-phonebar'}>
-                <p className="trip-slim" aria-hidden={!scrolled}>
-                  {trip.title}
-                </p>
-                {schedule.days.length > 1 && (
-                  <DateStrip
-                    days={schedule.days}
-                    current={currentDay}
-                    today={today}
-                    done={doneDays}
-                    onPick={(d) => goToDay(d, false)}
-                  />
-                )}
-              </div>
-            )}
-            <div ref={headerRef}>
+            <div className="paper-stack">
               <TripHeader
                 trip={trip}
                 today={today}
@@ -1003,46 +1196,82 @@ const TripScreen: React.FC<{
                 onUnlock={() => setUnlocked(true)}
                 onRestore={() => store.restoreTrip(trip.trip_id)}
                 onGap={onGap}
-                onAddDates={() => setDetailsOpen(true)}
+                onMenu={(k) => (k === 'details' ? goSettings() : setExtra(k))}
+                desktop={desktop}
+                daysOpen={daysOpen}
+                onDaysOpen={setDaysOpen}
+                dayList={dayListNode}
               />
+              {phase === 'during' && tab === 'plan' && deckStops.length > 0 && (
+                <NextStopDeck
+                  stops={deckStops}
+                  tomorrow={tomorrow}
+                  locked={locked}
+                  announce={setAnnouncement}
+                  onDone={(id) => {
+                    if (deckStops.find((x) => x.id === id)?.kind === 'booking')
+                      setDismissed((s) => new Set(s).add(id))
+                    else rowActions.toggle(id, true)
+                  }}
+                  onSeeTomorrow={(d) => goToDay(d)}
+                  onOpen={rowActions.open}
+                  onCopy={bookingActions.copy}
+                />
+              )}
+              <Card className="paper-card paper-list">
+                <div ref={pill.wrapRef}>
+                  <Tabs
+                    className="list-tabs"
+                    style={pill.vars}
+                    activeKey={tab}
+                    onChange={(k) => setTab(k as TabId)}
+                    items={[
+                      { key: 'plan', label: 'Plan', children: planNode },
+                      { key: 'ideas', label: 'Ideas', children: ideasNode },
+                      { key: 'bookings', label: 'Bookings', children: bookingsNode },
+                    ]}
+                  />
+                </div>
+                {showAdd && (
+                  <AddBar
+                    inputId="trip-add-input"
+                    mode={tab === 'bookings' ? 'booking' : 'todo'}
+                    label={addLabel}
+                    placeholder={addPlaceholder}
+                    bias={bias}
+                    targets={targetOptions}
+                    target={target}
+                    onTarget={setAddTarget}
+                    onAdd={(item) =>
+                      tab === 'bookings'
+                        ? setBookingDraft({ title: item.title })
+                        : add(target === 'ideas' ? null : target, item)
+                    }
+                    onExpand={(item) => {
+                      // One editor for add and edit: create the item, then open it.
+                      const id = add(target === 'ideas' ? null : target, item)
+                      if (id) {
+                        setFreshId(id)
+                        ctx.current.openItem(id)
+                      }
+                    }}
+                  />
+                )}
+              </Card>
             </div>
-            <TripTabs
-              value={tab}
-              onChange={setTab}
-              ideas={schedule.ideas.length}
-              bookings={trip.bookings.length}
-              onMore={(k) => (k === 'details' ? setDetailsOpen(true) : setExtra(k))}
-            />
-            {!desktop && !phone && (
-              <Button size="small" aria-pressed={tabletMap} onClick={() => setTabletMap((m) => !m)}>
-                {tabletMap ? 'Hide the map' : 'Show the map'}
-              </Button>
-            )}
-            <div
-              role="tabpanel"
-              id={`panel-${desktop ? 'plan' : tab}`}
-              aria-labelledby={`tab-${desktop ? 'plan' : tab}`}
-            >
-              {desktop || tab === 'plan' ? spine : tab === 'ideas' ? ideasNode : bookingsNode}
-            </div>
-            {showAdd && (
-              <AddBar
-                inputId="trip-add-input"
-                label={target === 'ideas' ? 'Add an idea' : `Add to ${targetLabel}`}
-                bias={bias}
-                targets={targetOptions}
-                target={target}
-                onTarget={setAddTarget}
-                onAdd={(item) => add(target === 'ideas' ? null : target, item)}
-              />
-            )}
             {phone && <div className="trip-footer-space" aria-hidden />}
           </div>
           {showSide && (
             <aside className="trip-side" aria-label="Map">
               {mapNode}
               {desktop && panel && (
-                <Panel key={panel.key} desktop title={panel.title} onClose={panel.close}>
+                <Panel
+                  key={panel.key}
+                  desktop
+                  bare={panel.key.startsWith('item-')}
+                  title={panel.title}
+                  onClose={panel.close}
+                >
                   {panel.node}
                 </Panel>
               )}
@@ -1060,29 +1289,21 @@ const TripScreen: React.FC<{
             </MapSheet>
           </div>
         )}
-        {!desktop && panel && (
-          <Panel key={panel.key} desktop={false} title={panel.title} onClose={panel.close}>
-            {panel.node}
+        {!desktop && daysOpen && (
+          <Panel desktop={false} title="Days" onClose={() => setDaysOpen(false)}>
+            {dayListNode}
           </Panel>
         )}
-        {detailsOpen && (
-          <Modal
-            open
-            title="Trip details"
-            footer={null}
-            onCancel={() => setDetailsOpen(false)}
-            destroyOnClose
+        {!desktop && panel && (
+          <Panel
+            key={panel.key}
+            desktop={false}
+            bare={panel.key.startsWith('item-')}
+            title={panel.title}
+            onClose={panel.close}
           >
-            <TripDetails
-              trip={trip}
-              onPatch={(p) => store.updateTrip(trip.trip_id, p)}
-              onDelete={() => {
-                store.deleteTrip(trip.trip_id)
-                setDetailsOpen(false)
-              }}
-              onClose={() => setDetailsOpen(false)}
-            />
-          </Modal>
+            {panel.node}
+          </Panel>
         )}
         <div className="sr-only" role="status" aria-live="polite">
           {announcement}
@@ -1097,7 +1318,7 @@ const TripScreen: React.FC<{
 
 export const TripPage: React.FC = () => {
   const { tripId = '' } = useParams()
-  const { store, state, userId, members, loading, roomName } = useTrips()
+  const { store, state, userId, members, loading, roomName, showNextStop } = useTrips()
   const trip = state.trips[tripId]
   useDocumentTitle(trip?.title)
   if (loading || !store || (!trip && !state.synced)) {
@@ -1133,6 +1354,7 @@ export const TripPage: React.FC = () => {
       userId={userId}
       members={members}
       roomName={roomName}
+      showNextStop={showNextStop}
     />
   )
 }

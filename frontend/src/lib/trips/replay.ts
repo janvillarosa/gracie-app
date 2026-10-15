@@ -125,7 +125,13 @@ export function applyOpLocal(
         ),
       }
     case 'booking.delete':
-      return { ...trip, bookings: trip.bookings.filter((b) => b.booking_id !== op.entity_id) }
+      return {
+        ...trip,
+        bookings: trip.bookings.filter((b) => b.booking_id !== op.entity_id),
+        todos: trip.todos.map((t) =>
+          t.booking_id === op.entity_id ? { ...t, booking_id: null } : t,
+        ),
+      }
     default:
       return trip
   }

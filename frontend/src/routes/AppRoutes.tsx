@@ -22,6 +22,7 @@ const ListPage = lazyPage(() => import('@pages/ListPage'), 'ListPage')
 const ListsIndex = lazyPage(() => import('@pages/ListsIndex'), 'ListsIndex')
 const TripsIndex = lazyPage(() => import('@pages/TripsIndex'), 'TripsIndex')
 const TripPage = lazyPage(() => import('@pages/TripPage'), 'TripPage')
+const TripSettings = lazyPage(() => import('@pages/TripSettings'), 'TripSettings')
 
 const RequireAuth: React.FC<React.PropsWithChildren> = ({ children }) => {
   const { isAuthed } = useAuth()
@@ -104,6 +105,14 @@ export const AppRoutes: React.FC = () => {
             element={
               <RequireAuth>
                 <ListsIndex />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/app/trips/:tripId/settings"
+            element={
+              <RequireAuth>
+                <TripSettings />
               </RequireAuth>
             }
           />

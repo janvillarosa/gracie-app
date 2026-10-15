@@ -208,7 +208,7 @@ export function buildSeedTrips(today: string, phase: Phase, now = Date.now()): T
     }),
     b(4, {
       kind: 'ticket',
-      title: 'Pena Palace, timed entry',
+      title: 'Timed entry',
       confirmation_code: 'PENA-5521',
       starts_at: `${day(2)}T10:00`,
       start_tz: TZ,
@@ -243,6 +243,9 @@ export function buildSeedTrips(today: string, phase: Phase, now = Date.now()): T
       end_tz: 'Europe/London',
     }),
   ]
+
+  const pena = todos.find((t) => t.title === 'Pena Palace')
+  if (pena) pena.booking_id = bookings[3].booking_id
 
   const lisbonPorto: Trip = {
     trip_id: `trip_${hex(1)}`,

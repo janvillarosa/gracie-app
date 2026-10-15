@@ -92,6 +92,8 @@ export function useTrips() {
     state,
     userId: me.data?.user_id,
     roomName: room.data?.display_name || 'House',
+    // Account preference, on by default.
+    showNextStop: me.data?.preferences?.trips_show_next_stop !== false,
     members,
     loading: me.isLoading || room.isLoading || !state.ready,
   }

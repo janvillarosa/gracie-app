@@ -10,6 +10,7 @@ import { Avatar } from '@components/Avatar'
 import { ArrowLeft, FloppyDisk, Trash } from '@phosphor-icons/react'
 import { useDocumentTitle } from '@lib/useDocumentTitle'
 import { TopNav } from '@components/TopNav'
+import { TripsPreference } from '@components/trips/TripsPreference'
 
 function isEmail(v: string) {
   return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)
@@ -192,6 +193,15 @@ export const UserSettings: React.FC = () => {
               </Button>
             </div>
           </Form>
+
+          <Divider className="settings-divider" />
+
+          <div>
+            <Typography.Title level={4} style={{ marginTop: 0 }}>
+              Trips
+            </Typography.Title>
+            <TripsPreference />
+          </div>
 
           <Divider className="settings-divider" />
 

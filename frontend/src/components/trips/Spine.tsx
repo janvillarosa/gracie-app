@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useDroppable } from '@dnd-kit/core'
-import { CaretDown, CaretRight, Check } from '@phosphor-icons/react'
+import { CaretDown, CaretRight } from '@phosphor-icons/react'
 import type { Booking, TripTodo } from '@api/tripTypes'
 import { shortDay, type DayModel, type Entry } from '@lib/trips/schedule'
 import type { ConflictNote } from '@lib/trips/store'
@@ -155,11 +155,12 @@ type LabelProps = {
   label: string
   suggested: string
   locked: boolean
+  prefix?: string
   onSet: (d: string, l: string) => void
 }
 
 // The day's name: yours, or a muted suggestion from where its stops are. Click to accept or edit.
-const DayLabel: React.FC<LabelProps> = ({ date, label, suggested, locked, onSet }) => {
+const DayLabel: React.FC<LabelProps> = ({ date, label, suggested, locked, prefix, onSet }) => {
   const [editing, setEditing] = useState(false)
   const shown = label || suggested
   if (editing) {
@@ -206,7 +207,7 @@ const DayLabel: React.FC<LabelProps> = ({ date, label, suggested, locked, onSet 
             : `Add a label to ${shortDay(date)}`
       }
     >
-      {shown || 'Add a label'}
+      {shown ? `${prefix ?? ''}${shown}` : 'Add a label'}
     </button>
   )
 }
@@ -216,16 +217,16 @@ export const dayDone = (d: DayModel) => {
   const todos = d.entries.filter((e) => e.kind === 'todo')
   return todos.length > 0 && todos.every((e) => e.kind === 'todo' && e.todo.done)
 }
-const todoCount = (d: DayModel) => d.entries.filter((e) => e.kind === 'todo').length
 
 type DayProps = {
   day: DayModel
-  index: number
   shared: Shared
   moveOpenId: string | null
   selectedId: string | null
   enteringId: string | null
   isToday: boolean
+  // Replaces the date as the heading ("Later today" under the next-stop deck).
+  heading?: string
   onFold: (date: string) => void
   nowMs: number
   nowIndex: number
@@ -233,23 +234,21 @@ type DayProps = {
   stay?: Booking
   lazy: boolean
   today: string
-  // "Day done" shows for a moment after the last item is ticked, then the day folds.
+  // "Day done" shows for a moment after the last item is ticked, then the day leaves the plan.
   celebrating: boolean
-  // Collapsed to a one-line card (phone: only today and the day you picked are open).
+  // Collapsed to one line (phone: only today and the day you picked are open).
   closed: boolean
 }
 
-const dayStyle = (index: number) =>
-  ({ '--day-colour': `var(--trip-day-${index % 6})` }) as React.CSSProperties
-
+/** One day: a section of the plan sheet, divided the way a list divides its groups. */
 export const DaySection = React.memo<DayProps>(function DaySection({
   day,
-  index,
   shared,
   moveOpenId,
   selectedId,
   enteringId,
   isToday,
+  heading,
   onFold,
   nowMs,
   nowIndex,
@@ -261,17 +260,7 @@ export const DaySection = React.memo<DayProps>(function DaySection({
   closed,
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: `day:${day.date}` })
-  const todos = todoCount(day)
-  const bookings = day.entries.length - todos
-  const doneCount = day.entries.filter((e) => e.kind === 'todo' && e.todo.done).length
   const label = day.label || day.suggested
-  const summary = [
-    `${todos} ${todos === 1 ? 'stop' : 'stops'}`,
-    bookings ? `${bookings} ${bookings === 1 ? 'booking' : 'bookings'}` : '',
-  ]
-    .filter(Boolean)
-    .join(' · ')
-
   const cls = [
     'trip-day',
     closed ? 'is-closed' : 'is-open',
@@ -289,24 +278,18 @@ export const DaySection = React.memo<DayProps>(function DaySection({
         id={`day-${day.date}`}
         data-day={day.date}
         className={cls}
-        style={dayStyle(index)}
         aria-label={shortDay(day.date)}
       >
         <button
           type="button"
           className="trip-day-closed"
           aria-expanded={false}
-          aria-label={`Expand ${shortDay(day.date)}`}
+          aria-label={`Show ${shortDay(day.date)}`}
           onClick={() => onFold(day.date)}
         >
-          <span className="trip-day-dot" aria-hidden />
           <span className="trip-day-closed-text">
             <strong>{shortDay(day.date)}</strong>
             {label ? ` · ${label}` : ''}
-            <span className="trip-day-sum">
-              {' · '}
-              {todos === 0 ? 'Nothing planned' : `${doneCount} of ${todos} done`}
-            </span>
           </span>
           <CaretRight aria-hidden />
         </button>
@@ -320,123 +303,47 @@ export const DaySection = React.memo<DayProps>(function DaySection({
       id={`day-${day.date}`}
       data-day={day.date}
       className={cls}
-      style={dayStyle(index)}
       aria-label={shortDay(day.date)}
     >
       <header className="trip-day-head">
-        <div className="trip-day-title">
-          <span className="trip-day-dot" aria-hidden />
-          <h2 tabIndex={-1} id={`day-${day.date}-title`}>
-            {shortDay(day.date)}
-          </h2>
-          <DayLabel
-            date={day.date}
-            label={day.label}
-            suggested={day.suggested}
-            locked={shared.locked}
-            onSet={shared.setDayLabel}
-          />
-          {isToday && <span className="trip-today">Today</span>}
-          <button
-            type="button"
-            className="trip-day-fold"
-            aria-expanded
-            aria-label={`Collapse ${shortDay(day.date)}`}
-            onClick={() => onFold(day.date)}
-          >
-            <CaretDown aria-hidden />
-          </button>
-        </div>
-        <p className="trip-day-sum">{summary}</p>
+        <h3 tabIndex={-1} id={`day-${day.date}-title`}>
+          {heading ?? (isToday ? 'Today' : shortDay(day.date))}
+        </h3>
+        <DayLabel
+          date={day.date}
+          label={day.label}
+          suggested={day.suggested}
+          locked={shared.locked}
+          prefix={isToday && !heading ? 'in ' : undefined}
+          onSet={shared.setDayLabel}
+        />
+        <button
+          type="button"
+          className="trip-day-fold"
+          aria-expanded
+          aria-label={`Hide ${shortDay(day.date)}`}
+          onClick={() => onFold(day.date)}
+        >
+          <CaretDown aria-hidden />
+        </button>
         {celebrating && <span className="trip-stamp">Day done</span>}
       </header>
-      <div className="trip-day-body">
-        {day.entries.length === 0 && !stay ? (
-          <p className="trip-empty-row">Nothing planned yet</p>
-        ) : (
-          <EntryRows
-            entries={day.entries}
-            shared={shared}
-            moveOpenId={moveOpenId}
-            selectedId={selectedId}
-            enteringId={enteringId}
-            nowMs={nowMs}
-            today={today}
-            nowIndex={isToday ? nowIndex : -1}
-            nowLabel={nowLabel}
-            stay={isToday ? stay : undefined}
-          />
-        )}
-      </div>
+      {day.entries.length === 0 && !stay ? (
+        <p className="trip-empty-row">Nothing planned yet</p>
+      ) : (
+        <EntryRows
+          entries={day.entries}
+          shared={shared}
+          moveOpenId={moveOpenId}
+          selectedId={selectedId}
+          enteringId={enteringId}
+          nowMs={nowMs}
+          today={today}
+          nowIndex={isToday ? nowIndex : -1}
+          nowLabel={nowLabel}
+          stay={isToday ? stay : undefined}
+        />
+      )}
     </section>
   )
 })
-
-/** A finished day as a slim muted line, not a card. */
-export const DoneLine: React.FC<{
-  day: DayModel
-  onOpen: (date: string) => void
-}> = ({ day, onOpen }) => {
-  const n = todoCount(day)
-  const label = day.label || day.suggested
-  return (
-    <section
-      id={`day-${day.date}`}
-      data-day={day.date}
-      className="trip-done"
-      aria-label={shortDay(day.date)}
-    >
-      <button
-        type="button"
-        className="trip-doneline"
-        aria-expanded={false}
-        onClick={() => onOpen(day.date)}
-      >
-        <Check aria-hidden />
-        <span>
-          {shortDay(day.date)}
-          {label ? ` · ${label}` : ''} · {n} done
-        </span>
-      </button>
-    </section>
-  )
-}
-
-/** Consecutive finished days share one line; opening it lists each day's slim line. */
-export const DoneRun: React.FC<{
-  days: DayModel[]
-  open: boolean
-  onToggle: () => void
-  onOpenDay: (date: string) => void
-}> = ({ days, open, onToggle, onOpenDay }) => {
-  const first = days[0]
-  const last = days[days.length - 1]
-  const items = days.reduce((n, d) => n + todoCount(d), 0)
-  if (open)
-    return (
-      <div className="trip-donerun is-open">
-        <button type="button" className="trip-doneline" aria-expanded onClick={onToggle}>
-          <Check aria-hidden />
-          <span>Fold {days.length} done days</span>
-        </button>
-        {days.map((d) => (
-          <DoneLine key={d.date} day={d} onOpen={onOpenDay} />
-        ))}
-      </div>
-    )
-  return (
-    <section
-      id={`day-${first.date}`}
-      data-day={first.date}
-      className="trip-done"
-      aria-label={`${shortDay(first.date)} to ${shortDay(last.date)}`}
-    >
-      <button type="button" className="trip-doneline" aria-expanded={false} onClick={onToggle}>
-        <Check aria-hidden />
-        <span>
-          {shortDay(first.date)} – {shortDay(last.date)} · {days.length} days done · {items} items
-        </span>
-      </button>
-    </section>
-  )
-}

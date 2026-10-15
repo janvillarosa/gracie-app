@@ -6,6 +6,8 @@ import { http, HttpResponse } from 'msw'
 import { AuthProvider } from '@auth/AuthProvider'
 import { TripPage } from '@pages/TripPage'
 import { TripsIndex } from '@pages/TripsIndex'
+import { TripSettings } from '@pages/TripSettings'
+import { UserSettings } from '@pages/UserSettings'
 import type { Trip, TripTodo } from '@api/tripTypes'
 import { resetTripStores } from '@lib/trips/store'
 import { addDays, localDateKey } from '@lib/trips/schedule'
@@ -38,11 +40,26 @@ export const makeTrip = (n: number, p: Partial<Trip> = {}): Trip => ({
 export const today = () => localDateKey()
 export const rel = (n: number) => addDays(today(), n)
 
+// The signed-in account's preferences, as the server holds them.
+export const meState: { prefs: { trips_show_next_stop?: boolean } } = {
+  prefs: { trips_show_next_stop: true },
+}
+
 export function mockHouse() {
+  const me = () => ({
+    user_id: ME,
+    name: 'Jan',
+    room_id: ROOM,
+    avatar_key: 'jan',
+    preferences: { ...meState.prefs },
+  })
   server.use(
-    http.get('/api/me', () =>
-      HttpResponse.json({ user_id: ME, name: 'Jan', room_id: ROOM, avatar_key: 'jan' }),
-    ),
+    http.get('/api/me', () => HttpResponse.json(me())),
+    http.put('/api/me', async ({ request }) => {
+      const body = (await request.json()) as { preferences?: typeof meState.prefs }
+      meState.prefs = { ...meState.prefs, ...body.preferences }
+      return HttpResponse.json(me())
+    }),
     http.get('/api/rooms/me', () =>
       HttpResponse.json({
         display_name: 'The House',
@@ -71,7 +88,9 @@ export function renderTrips(path: string) {
           <Routes>
             <Route path="/app" element={<div>House page</div>} />
             <Route path="/app/trips" element={<TripsIndex />} />
+            <Route path="/app/trips/:tripId/settings" element={<TripSettings />} />
             <Route path="/app/trips/:tripId" element={<TripPage />} />
+            <Route path="/app/account" element={<UserSettings />} />
           </Routes>
         </QueryClientProvider>
       </AuthProvider>
@@ -87,6 +106,7 @@ export async function resetTripsWorld() {
     r.onsuccess = r.onerror = r.onblocked = () => resolve()
   })
   sessionStorage.clear()
+  meState.prefs = { trips_show_next_stop: true }
 }
 
 export const seed = (t: Trip) => tripServer.seed(ROOM, t, MIA)
@@ -101,7 +121,7 @@ export function setViewport(
       : kind === 'desktop'
         ? query.includes('min-width: 1024px')
         : kind === 'phone'
-          ? query.includes('max-width: 767px')
+          ? query.includes('max-width: 1023px')
           : false,
     media: query,
     onchange: null,

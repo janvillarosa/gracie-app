@@ -33,7 +33,9 @@ export async function startMockTrips() {
   ;(window as unknown as { __mockTrips: MockTripServer }).__mockTrips = srv
 
   const now = new Date().toISOString()
-  const user = {
+  const prefs = { trips_show_next_stop: true }
+  const user = () => ({ ...userBase, preferences: { ...prefs } })
+  const userBase = {
     user_id: ME,
     name: 'Jan',
     username: 'jan',
@@ -63,7 +65,13 @@ export async function startMockTrips() {
   ]
   const handlers = [
     ...tripHandlers(srv, { latencyMs: 80 }),
-    http.get('/api/me', () => HttpResponse.json(user)),
+    http.get('/api/me', () => HttpResponse.json(user())),
+    http.put('/api/me', async ({ request }) => {
+      const body = (await request.json()) as { preferences?: { trips_show_next_stop?: boolean } }
+      if (body.preferences?.trips_show_next_stop !== undefined)
+        prefs.trips_show_next_stop = body.preferences.trips_show_next_stop
+      return HttpResponse.json(user())
+    }),
     http.get('/api/rooms/me', () =>
       HttpResponse.json({
         display_name: 'The Villarosa House (synthetic)',

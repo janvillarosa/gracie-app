@@ -268,39 +268,10 @@ textarea.trip-field {
 .trip-header {
   padding: 0 2px 4px;
 }
-.trip-header-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-.trip-header h1 {
-  margin: 0;
-  font-family: var(--font-headings);
-  font-size: 30px;
-  line-height: 1.1;
-  color: var(--ink);
-  text-wrap: balance;
-}
 .trip-avatars {
   display: inline-flex;
   gap: 4px;
   flex: none;
-}
-.trip-meta {
-  margin: 4px 0 0;
-  color: var(--muted);
-  font-size: 14px;
-}
-.trip-header-row {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px 12px;
-  margin-top: 8px;
-}
-.trip-header-row:empty {
-  display: none;
 }
 .trip-gap-pill {
   min-height: 28px;
@@ -405,32 +376,6 @@ textarea.trip-field {
   margin: 8px 0 14px;
   border-bottom: 1px solid var(--border-strong);
 }
-.trip-tabs {
-  display: flex;
-  gap: 20px;
-}
-.trip-tab {
-  min-height: 44px;
-  padding: 0 2px;
-  background: none;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
-  font: inherit;
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--muted);
-  cursor: pointer;
-}
-.trip-tab.is-on {
-  color: var(--ink);
-  border-bottom-color: var(--ink);
-}
-.trip-tab:focus-visible {
-  box-shadow: var(--focus-ring);
-  outline: none;
-  border-radius: 6px;
-}
 
 /* ---- days: each is its own sheet ---------------------------------------------------- */
 .trip-spine {
@@ -449,9 +394,6 @@ textarea.trip-field {
   content-visibility: auto;
   contain-intrinsic-size: auto 360px;
 }
-.trip-day.is-over {
-  background: color-mix(in srgb, var(--brand-yellow) 14%, white);
-}
 .trip-day-head {
   position: sticky;
   top: var(--trip-sticky);
@@ -466,14 +408,6 @@ textarea.trip-field {
   flex-wrap: wrap;
   gap: 2px 10px;
 }
-.trip-day-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--day-colour, var(--ink));
-  align-self: center;
-  flex: none;
-}
 .trip-day-head h2 {
   margin: 0;
   font-family: var(--font-headings);
@@ -485,19 +419,6 @@ textarea.trip-field {
   outline: none;
   box-shadow: var(--focus-ring);
   border-radius: 6px;
-}
-.trip-day-sum {
-  margin: 2px 0 0;
-  color: var(--muted);
-  font-size: 13px;
-}
-.trip-today {
-  padding: 1px 9px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--brand-yellow) 45%, white);
-  color: var(--ink);
-  font-size: 12px;
-  font-weight: 650;
 }
 .trip-day-fold {
   margin-left: auto;
@@ -517,60 +438,15 @@ textarea.trip-field {
   box-shadow: var(--focus-ring);
   outline: none;
 }
-.trip-day-body {
-  padding: 0 12px 6px;
-}
-.trip-day-closed {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  min-height: 52px;
-  padding: 0 14px;
-  background: none;
-  border: 0;
-  border-radius: var(--radius-squircle);
-  font: inherit;
-  color: var(--ink);
-  text-align: left;
-  cursor: pointer;
-}
-.trip-day-closed-text {
-  flex: 1;
-  min-width: 0;
-}
-.trip-day-closed .trip-day-sum {
-  display: inline;
-  margin: 0;
-}
 
 /* A finished day is a slim muted line, not a card. */
 .trip-done {
   margin: 0;
 }
-.trip-doneline {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  min-height: 38px;
-  padding: 0 14px;
-  background: none;
-  border: 0;
-  border-radius: 10px;
-  font: inherit;
-  font-size: 13.5px;
-  color: var(--muted);
-  text-align: left;
-  cursor: pointer;
-}
 @media (hover: hover) {
   .trip-doneline:hover {
     background: color-mix(in srgb, var(--ink) 4%, transparent);
   }
-}
-.trip-donerun {
-  display: grid;
 }
 @media (prefers-reduced-motion: no-preference) {
   .trip-done {
@@ -1023,42 +899,6 @@ textarea.trip-field {
   border-radius: var(--radius-squircle);
   box-shadow: var(--paper-edge), var(--lift-1);
 }
-.trip-addbar .add-row {
-  gap: 8px;
-}
-.trip-target {
-  flex: 0 0 auto;
-  max-width: 9.5em;
-  min-height: var(--control-h);
-  padding: 0 12px;
-  font: inherit;
-  font-size: 16px;
-  color: var(--ink);
-  background: var(--panel-subtle);
-  border: 1px solid var(--border);
-  border-radius: 22px;
-}
-.trip-add-field {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-.trip-add-input {
-  width: 100%;
-  min-height: var(--control-h);
-  padding: 8px 16px;
-  font: inherit;
-  font-size: 16px;
-  color: var(--ink);
-  background: var(--panel-subtle);
-  border: 1px solid var(--border);
-  border-radius: 22px;
-}
-.trip-add-field:has(.add-qty-chip) .trip-add-input {
-  padding-right: 64px;
-}
-.trip-add-input:focus {
-  background: var(--panel);
-}
 .trip-add-status {
   font-size: 13px;
   color: var(--muted);
@@ -1264,92 +1104,6 @@ textarea.trip-field {
 }
 
 /* ---- phone ------------------------------------------------------------------------- */
-.trip-phonebar {
-  position: sticky;
-  top: 0;
-  z-index: 6;
-  margin: 0 -16px;
-  padding: 6px 16px;
-  background: var(--bg);
-}
-.trip-slim {
-  display: none;
-  margin: 0 0 4px;
-  font-family: var(--font-headings);
-  font-size: 17px;
-  font-weight: 600;
-  color: var(--ink);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.trip-phonebar.is-scrolled .trip-slim {
-  display: block;
-}
-.trip-strip {
-  display: flex;
-  gap: 6px;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-.trip-strip::-webkit-scrollbar {
-  display: none;
-}
-.trip-strip-day {
-  flex: 0 0 auto;
-  display: grid;
-  justify-items: center;
-  gap: 2px;
-  width: 46px;
-  min-height: 56px;
-  padding: 4px 0 6px;
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  font: inherit;
-  color: var(--ink);
-  cursor: pointer;
-}
-.trip-strip-day.is-on {
-  border-color: var(--ink);
-  box-shadow: inset 0 0 0 1px var(--ink);
-}
-.trip-strip-day.is-done {
-  color: var(--muted);
-  background: transparent;
-}
-.trip-strip-tick {
-  width: 14px;
-  height: 14px;
-  color: var(--muted);
-}
-.trip-strip-wd {
-  font-size: 11px;
-  color: var(--muted);
-}
-.trip-strip-n {
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-.trip-strip-bar {
-  display: block;
-  width: 28px;
-  height: 3px;
-  border-radius: 2px;
-  background: var(--border);
-  overflow: hidden;
-}
-.trip-strip-bar span {
-  display: block;
-  height: 100%;
-  background: var(--ink);
-  opacity: 0.55;
-  transform-origin: left;
-}
-.trip-strip-day:focus-visible {
-  box-shadow: var(--focus-ring);
-  outline: none;
-}
 .trip-bottom {
   position: fixed;
   z-index: 20;
@@ -1392,28 +1146,14 @@ textarea.trip-field {
 /* ---- breakpoints ------------------------------------------------------------------- */
 @media (max-width: 767px) {
   .trip-page {
-    --trip-sticky: 76px;
+    --trip-sticky: 106px;
     padding-inline: 12px;
-  }
-  .trip-phonebar {
-    margin-inline: -12px;
-    padding-inline: 12px;
-  }
-  .trip-header h1 {
-    font-size: 26px;
   }
   .trip-grip {
     display: none;
   }
   .trip-editor-pair {
     grid-template-columns: 1fr;
-  }
-  .trip-addbar {
-    bottom: calc(52px + env(safe-area-inset-bottom, 0px));
-    margin-inline: -4px;
-  }
-  .trip-target {
-    max-width: 7.5em;
   }
 }
 @media (min-width: 768px) and (max-width: 1023px) {
@@ -1618,4 +1358,701 @@ textarea.trip-field {
 /* Ideas have no times: their rows drop the time column. */
 .trip-ideas .trip-time {
   display: none;
+}
+
+
+/* ---- stacked papers: the trip is a stack like a list ----------------------------------- */
+.trip-col {
+  min-width: 0;
+  padding: 24px;
+  max-width: 640px;
+  margin: 0 auto;
+}
+@media (min-width: 1024px) {
+  .trip-col {
+    margin: 0;
+  }
+}
+.trip-avatars {
+  display: flex;
+  gap: 4px;
+  margin-top: 8px;
+}
+.trip-dayline {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 32px;
+  padding: 0;
+  background: none;
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+}
+.trip-days-pop .ant-popover-inner {
+  padding: 4px 8px;
+  min-width: 280px;
+  box-shadow: var(--lift-3);
+}
+.trip-dayrow {
+  background: none;
+  border: 0;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+.trip-dayrow[aria-current='true'] .list-row-name {
+  text-decoration: underline;
+  text-decoration-color: var(--brand-yellow-deep);
+  text-underline-offset: 4px;
+}
+.trip-header-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin-top: 12px;
+}
+
+/* Days are sections of the plan sheet, divided like a list's groups. */
+.trip-spine {
+  display: block;
+}
+.trip-day {
+  padding: 4px 0 8px;
+  border-top: 1px solid var(--border);
+}
+.trip-spine > .trip-day:first-child {
+  border-top: 0;
+}
+.trip-day-head {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  padding: 12px 0 4px;
+}
+.trip-day-head h2,
+.trip-day-head h3 {
+  margin: 0;
+  font-family: var(--font-headings);
+  font-size: 20px;
+  line-height: 1.2;
+  color: var(--ink);
+}
+.trip-day-head h2:focus-visible,
+.trip-day-head h3:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: 6px;
+}
+.trip-day.is-over {
+  background: color-mix(in srgb, var(--brand-yellow) 14%, white);
+}
+.trip-day-closed {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 48px;
+  padding: 0;
+  background: none;
+  border: 0;
+  font: inherit;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+.trip-day-closed-text {
+  flex: 1;
+  min-width: 0;
+  color: var(--muted);
+}
+.trip-day-closed-text strong {
+  color: var(--ink);
+}
+.trip-nextup {
+  margin: 0 0 8px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--brand-yellow) 22%, white);
+  color: var(--ink);
+}
+.trip-donetoggle {
+  margin: 0 0 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.trip-empty-sheet {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+  padding: 24px 0 8px;
+}
+.trip-empty-sheet h3 {
+  margin: 0;
+  font-family: var(--font-headings);
+  font-size: 22px;
+  color: var(--ink);
+}
+.trip-empty-sheet p {
+  margin: 0;
+  color: var(--muted);
+}
+
+/* The add bar is the list page's, with the day as a chip inside the field. */
+.trip-add-field {
+  position: relative;
+}
+.trip-add-field.has-target textarea.add-input {
+  padding-left: calc(var(--chip-w, 92px) + 16px) !important;
+}
+.trip-target-chip {
+  position: absolute;
+  z-index: 2;
+  left: 8px;
+  top: 50%;
+  translate: 0 -50%;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  max-width: 104px;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--brand-yellow) 45%, white);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.trip-add-status {
+  font-size: 13px;
+  color: var(--muted);
+}
+.trip-add-status:empty {
+  display: none;
+}
+.trip-category {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+@media (max-width: 767px) {
+  .trip-col {
+    padding: 16px 12px;
+  }
+}
+
+/* Sections, not cards: no sheet of their own inside the plan sheet. */
+.trip-day {
+  background: none;
+  border-width: 1px 0 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.trip-day-head {
+  position: relative;
+  top: auto;
+  z-index: auto;
+  background: none;
+  border-radius: 0;
+}
+.trip-spine > .trip-day:first-child {
+  border-top-width: 0;
+}
+
+/* ---- the next-stop deck: today's remaining stops as a stack of paper cards -------------- */
+.trip-deck-wrap {
+  position: relative;
+  z-index: 3;
+  margin-top: -20px;
+  margin-bottom: 28px;
+}
+.trip-deck-wrap + .paper-list {
+  margin-top: 0;
+}
+/* Sheet edges peek out under the card: one or two more are still to come. */
+.trip-deck-wrap.has-1::after,
+.trip-deck-wrap.has-2::after,
+.trip-deck-wrap.has-2::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  left: 14px;
+  right: 14px;
+  bottom: -8px;
+  height: 36px;
+  background: var(--panel);
+  border: 1px solid var(--border-strong);
+  border-radius: 0 0 var(--radius-squircle) var(--radius-squircle);
+  box-shadow: 0 4px 10px -4px rgba(0, 0, 0, 0.1);
+}
+.trip-deck-wrap.has-2::before {
+  left: 28px;
+  right: 28px;
+  bottom: -16px;
+}
+.trip-deck-card {
+  position: relative;
+  outline: none;
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+}
+.trip-deck-card:focus-visible {
+  box-shadow: var(--focus-ring);
+  border-radius: 8px;
+}
+.trip-kicker {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.trip-deck-title {
+  position: relative;
+  isolation: isolate;
+  margin: 0;
+  font-family: var(--font-headings);
+  font-size: 30px;
+  line-height: 1.15;
+  color: var(--ink);
+  text-wrap: balance;
+}
+.trip-deck-line {
+  margin: 0;
+  color: var(--muted);
+  font-size: 15px;
+}
+.trip-deck-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+.trip-deck-code {
+  margin: 4px 0 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.trip-deck-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 12px;
+  margin-top: 10px;
+}
+.trip-go {
+  height: 44px;
+  padding: 0 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  min-width: 88px;
+  color: var(--ink);
+}
+.trip-deck-end .trip-stamp {
+  top: 0;
+  right: 0;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .trip-deck-card {
+    animation: sheet-settle 420ms var(--ease-out) both;
+  }
+  .trip-deck-card.is-leaving {
+    animation: trip-deal-out 240ms var(--ease-out) both;
+  }
+  @keyframes trip-deal-out {
+    to {
+      opacity: 0;
+      transform: translateX(48px) rotate(3deg);
+    }
+  }
+  .trip-deck-title.is-ticked::after {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    inset: 42% -4px 6% -4px;
+    border-radius: 3px;
+    background: var(--highlighter);
+    transform-origin: left center;
+    animation: highlight 600ms var(--ease-out) both;
+  }
+}
+
+.trip-deck-titlebtn {
+  display: block;
+  padding: 0;
+  background: none;
+  border: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  text-wrap: balance;
+}
+.trip-deck-titlebtn:focus-visible {
+  box-shadow: var(--focus-ring);
+  border-radius: 6px;
+  outline: none;
+}
+
+/* The next-stop card: the place is the hero; the tick sits beside it like a list row's. */
+.trip-kicker {
+  font-size: 12px;
+}
+.trip-deck-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.trip-deck-check {
+  flex: 0 0 24px;
+  margin-top: 6px;
+}
+.trip-deck-title {
+  font-size: 36px;
+  line-height: 1.12;
+}
+.trip-deck-sub {
+  margin: 0 0 0 36px;
+  color: var(--muted);
+  font-size: 15px;
+}
+.trip-deck-note {
+  margin-left: 36px;
+}
+.trip-deck-actions {
+  margin-left: 36px;
+}
+@media (max-width: 480px) {
+  .trip-deck-title {
+    font-size: 30px;
+  }
+}
+.trip-reveal {
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+}
+.trip-reveal-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.trip-reveal.is-compact .trip-reveal-code {
+  font-size: 16px;
+  letter-spacing: 0.08em;
+}
+.trip-reveal-actions {
+  display: inline-flex;
+  gap: 6px;
+}
+
+/* ---- header: the date line, avatars and the pill share one line ------------------------ */
+.trip-metaline {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+}
+.trip-metaline .trip-avatars {
+  margin: 0;
+}
+.trip-metaline .trip-gap-pill {
+  margin-left: auto;
+}
+
+/* ---- the item sheet: one editor, grouped by spacing and hairlines, not boxes ------------- */
+.trip-sheet {
+  display: grid;
+  gap: 4px;
+  padding: 8px 20px 24px;
+}
+.trip-sheet-headline {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 4px 0 8px;
+}
+.trip-sheet-headline .trip-check {
+  margin-top: 8px;
+}
+.trip-sheet-title {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  background: none;
+  border: 0;
+  font-family: var(--font-headings);
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--ink);
+  outline: none;
+  text-overflow: ellipsis;
+}
+.trip-sheet-title:focus-visible {
+  box-shadow: var(--focus-ring);
+  border-radius: 6px;
+}
+.trip-sheet-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 48px;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-top: 1px solid var(--border);
+  font: inherit;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+.trip-sheet-row-icon {
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: 18px;
+}
+.trip-sheet-row-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.trip-muted {
+  color: var(--muted);
+}
+.trip-sheet-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+}
+.trip-chip {
+  min-height: 36px;
+  padding: 0 14px;
+  font: inherit;
+  font-size: 15px;
+  color: var(--ink);
+  background: var(--panel-subtle);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+.trip-chip.is-add {
+  color: var(--muted);
+  cursor: pointer;
+}
+.trip-chip:focus-visible,
+.trip-pick-row:focus-visible,
+.trip-sheet-row:focus-visible,
+.trip-stamp-btn:focus-visible {
+  box-shadow: var(--focus-ring);
+  outline: none;
+}
+.trip-sheet-stamps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+}
+.trip-stamp-btn {
+  cursor: pointer;
+  opacity: 0.55;
+  min-height: 28px;
+}
+.trip-stamp-btn.is-on {
+  opacity: 1;
+  outline: 2px solid currentColor;
+  outline-offset: 1px;
+}
+.trip-sheet-sub {
+  padding: 0 0 10px 30px;
+}
+.trip-sheet-notes,
+.trip-sheet-line {
+  width: 100%;
+  padding: 10px 0;
+  font: inherit;
+  font-size: 16px;
+  color: var(--ink);
+  background: none;
+  border: 0;
+  border-top: 1px solid var(--border);
+  resize: none;
+  outline: none;
+}
+.trip-sheet-notes:focus-visible,
+.trip-sheet-line:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+.trip-sheet-foot {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.trip-byline {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.trip-delete {
+  padding: 8px 0;
+  min-height: 44px;
+  background: none;
+  border: 0;
+  color: var(--brand-red);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.trip-sheet-back {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+.trip-pick {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.trip-pick-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 48px;
+  background: none;
+  border: 0;
+  border-top: 1px solid var(--border);
+  font: inherit;
+  text-align: left;
+  color: var(--ink);
+  cursor: pointer;
+}
+.trip-pick-row[aria-pressed='true'] {
+  font-weight: 650;
+}
+.trip-fromto {
+  display: grid;
+  gap: 8px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+}
+.trip-fromto-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.trip-fromto-label {
+  width: 40px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.trip-stub-icon.is-big {
+  font-size: 24px;
+  margin-top: 6px;
+}
+.trip-overlay-head.is-bare {
+  justify-content: flex-end;
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+/* ---- the ticket slip: where a confirmation code lives ----------------------------------- */
+.trip-slip {
+  display: grid;
+  gap: 4px;
+  justify-items: center;
+  min-width: 260px;
+  padding: 16px 20px 8px;
+  text-align: center;
+  background: var(--panel);
+  border-bottom: 2px dashed var(--border-strong);
+}
+.trip-slip-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-weight: 650;
+  color: var(--ink);
+}
+.trip-slip-icon {
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+}
+.trip-slip-line {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+.trip-slip-code {
+  margin: 10px 0 6px;
+  font-family: var(--font-headings);
+  font-size: 32px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.12em;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.trip-slip-pop .ant-popover-inner {
+  padding: 0;
+  overflow: hidden;
+}
+.trip-slip-drawer .ant-drawer-body {
+  padding: 8px 16px 24px;
+}
+
+/* ---- tighter rows, and the add bar above the map handle -------------------------------- */
+.trip-row-line {
+  gap: 6px;
+}
+.trip-time {
+  flex: 0 0 38px;
+  font-size: 12.5px;
+}
+.trip-pinno {
+  margin-left: 2px;
+}
+.trip-sheet-handle {
+  min-height: 48px;
+}
+@media (max-width: 1023px) {
+  .trip-addbar,
+  .trip-col .add-bar {
+    bottom: calc(48px + env(safe-area-inset-bottom, 0px));
+  }
+  .trip-footer-space {
+    height: 140px;
+  }
 }

@@ -28,27 +28,31 @@ describe('Trips index', () => {
     expect(screen.getByText('In 30 days')).toBeInTheDocument()
   })
 
-  it('creates a trip from a title alone and opens it', async () => {
+  it('asks one thing when creating a trip: its name', async () => {
     renderTrips('/app/trips')
     await userEvent.click(await screen.findByRole('button', { name: /new trip/i }))
-    await userEvent.type(screen.getByLabelText('Title'), 'Autumn in Vienna')
-    await userEvent.click(screen.getByRole('button', { name: 'Create trip' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Name your trip' })
+    expect(within(dialog).getAllByRole('textbox')).toHaveLength(1)
+    const create = within(dialog).getByRole('button', { name: 'Create trip' })
+    expect(create).toBeDisabled()
+    await userEvent.type(within(dialog).getByLabelText('Trip name'), 'Autumn in Vienna')
+    await userEvent.click(create)
 
     expect(await screen.findByRole('heading', { name: 'Autumn in Vienna' })).toBeInTheDocument()
     expect(screen.getByTestId('where').textContent).toMatch(/^\/app\/trips\/trip_[0-9a-f]{32}$/)
-    // The create op reaches the server.
+    // The create op reaches the server, with no dates yet.
     await waitFor(() => expect(tripServer.trips.size).toBe(1))
-    expect([...tripServer.trips.values()][0].fields.title).toBe('Autumn in Vienna')
+    const created = [...tripServer.trips.values()][0].fields
+    expect(created.title).toBe('Autumn in Vienna')
+    expect(created.start_date).toBeUndefined()
+    expect(await screen.findByRole('heading', { name: 'Where to first?' })).toBeInTheDocument()
   })
 
-  it('creates a trip with dates and refuses an end before the start', async () => {
+  it('creates on Enter', async () => {
     renderTrips('/app/trips')
     await userEvent.click(await screen.findByRole('button', { name: /new trip/i }))
-    await userEvent.type(screen.getByLabelText('Title'), 'Short break')
-    await userEvent.type(screen.getByLabelText(/Starts/), rel(10))
-    await userEvent.clear(screen.getByLabelText(/Ends/))
-    await userEvent.click(screen.getByRole('button', { name: 'Create trip' }))
-    expect(await screen.findByRole('alert')).toHaveTextContent(/both dates/i)
+    await userEvent.type(await screen.findByLabelText('Trip name'), 'Weekend away{Enter}')
+    expect(await screen.findByRole('heading', { name: 'Weekend away' })).toBeInTheDocument()
   })
 
   it('shows a calm empty state', async () => {

@@ -1,91 +1,50 @@
 import React, { useMemo, useState } from 'react'
-import { Button } from 'antd'
+import { Button, Input, Modal } from 'antd'
 import { Plus } from '@phosphor-icons/react'
 import { TopNav } from '@components/TopNav'
 import { HouseLoader } from '@components/HouseLoader'
-import { PlacePicker } from '@components/trips/PlacePicker'
 import { TripCard } from '@components/trips/TripCard'
 import { useTransitionNavigate } from '@lib/viewTransition'
 import { useDocumentTitle } from '@lib/useDocumentTitle'
 import { useTrips } from '@lib/trips/hooks'
 import { groupTrips, localDateKey } from '@lib/trips/schedule'
-import type { Place } from '@api/tripTypes'
 import '../trips.css'
 
 const deviceTz = () => Intl.DateTimeFormat().resolvedOptions().timeZone
 
-const NewTripForm: React.FC<{
-  onCreate: (v: { title: string; destination: Place | null; start: string; end: string }) => void
-  onCancel: () => void
-}> = ({ onCreate, onCancel }) => {
+// New trip asks one thing: the name. Dates, a destination and the route come later, from the
+// trip's details or from the nudge in an empty plan.
+const NewTripModal: React.FC<{ onCreate: (title: string) => void; onCancel: () => void }> = ({
+  onCreate,
+  onCancel,
+}) => {
   const [title, setTitle] = useState('')
-  const [destination, setDestination] = useState<Place | null>(null)
-  const [start, setStart] = useState('')
-  const [end, setEnd] = useState('')
-  const [error, setError] = useState('')
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!title.trim()) return setError('Give the trip a title.')
-    if ((start && !end) || (!start && end)) return setError('Set both dates, or leave both empty.')
-    if (start && end && end < start) return setError('The trip can’t end before it starts.')
-    onCreate({ title: title.trim(), destination, start, end })
+  const submit = () => {
+    if (title.trim()) onCreate(title.trim())
   }
   return (
-    <form className="trip-new" onSubmit={submit} aria-label="New trip">
-      <label className="trip-label">
-        Title
-        <input
-          className="trip-field"
-          value={title}
-          maxLength={120}
-          // biome-ignore lint/a11y/noAutofocus: the form opens because the user pressed New trip
-          autoFocus
-          onChange={(e) => setTitle(e.target.value)}
-        />
-      </label>
-      <div className="trip-label">
-        Destination (optional)
-        <PlacePicker label="Destination" value={destination} onChange={setDestination} />
-      </div>
-      <div className="trip-editor-pair">
-        <label className="trip-label">
-          Starts (optional)
-          <input
-            className="trip-field"
-            type="date"
-            value={start}
-            onChange={(e) => {
-              setStart(e.target.value)
-              if (!end || end < e.target.value) setEnd(e.target.value)
-            }}
-          />
-        </label>
-        <label className="trip-label">
-          Ends (optional)
-          <input
-            className="trip-field"
-            type="date"
-            value={end}
-            min={start || undefined}
-            onChange={(e) => setEnd(e.target.value)}
-          />
-        </label>
-      </div>
-      {error && (
-        <div role="alert" className="trip-error">
-          {error}
-        </div>
-      )}
-      <div className="trip-editor-foot">
-        <span />
-        <span className="trip-editor-btns">
-          <Button onClick={onCancel}>Cancel</Button>
-          <Button type="primary" shape="round" htmlType="submit">
-            Create trip
-          </Button>
-        </span>
-      </div>
-    </form>
+    <Modal
+      open
+      title="Name your trip"
+      onCancel={onCancel}
+      destroyOnClose
+      footer={
+        <Button type="primary" shape="round" disabled={!title.trim()} onClick={submit}>
+          Create trip
+        </Button>
+      }
+    >
+      <Input
+        aria-label="Trip name"
+        placeholder="Autumn in Lisbon"
+        value={title}
+        maxLength={120}
+        // biome-ignore lint/a11y/noAutofocus: the sheet opens because the user pressed New trip
+        autoFocus
+        onChange={(e) => setTitle(e.target.value)}
+        onPressEnter={submit}
+      />
+    </Modal>
   )
 }
 
@@ -132,11 +91,9 @@ export const TripsIndex: React.FC = () => {
       <div className="trips-sheet">
         <div className="trips-head">
           <h1>Trips</h1>
-          {!creating && (
-            <Button type="primary" shape="round" icon={<Plus />} onClick={() => setCreating(true)}>
-              New trip
-            </Button>
-          )}
+          <Button type="primary" shape="round" icon={<Plus />} onClick={() => setCreating(true)}>
+            New trip
+          </Button>
         </div>
         {state.offline && (
           <p className="trip-offline" role="status">
@@ -144,26 +101,17 @@ export const TripsIndex: React.FC = () => {
           </p>
         )}
         {creating && (
-          <NewTripForm
+          <NewTripModal
             onCancel={() => setCreating(false)}
-            onCreate={(v) => {
-              const patch: Record<string, unknown> = {
-                title: v.title,
-                tz: v.destination?.tz || deviceTz(),
-              }
-              if (v.destination) patch.destination = v.destination
-              if (v.start && v.end) {
-                patch.start_date = v.start
-                patch.end_date = v.end
-              }
-              const id = store.createTrip(patch)
+            onCreate={(title) => {
+              const id = store.createTrip({ title, tz: deviceTz() })
               navigate(`/app/trips/${id}`)
             }}
           />
         )}
         {total === 0 && !creating && (
           <p className="trip-empty-text">
-            No trips yet. Start one with New trip, then add days, ideas and bookings together.
+            No trips yet. Start one with New trip and plan it together.
           </p>
         )}
         <Group title="Now" trips={groups.now} today={today} />

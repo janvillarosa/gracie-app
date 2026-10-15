@@ -47,6 +47,19 @@ export function fullDay(key: string): string {
   const d = new Date(toUtc(key))
   return `${shortDay(key)} ${MONTH.format(d)}`
 }
+/** "22–30 Oct" or "30 Oct – 2 Nov": the short form for a header line. */
+export function shortRange(start?: string | null, end?: string | null): string {
+  if (!start || !end) return ''
+  const a = new Date(toUtc(start))
+  const b = new Date(toUtc(end))
+  const sd = a.getUTCDate()
+  const ed = b.getUTCDate()
+  if (start === end) return `${sd} ${MONTH.format(a)}`
+  return a.getUTCMonth() === b.getUTCMonth()
+    ? `${sd}–${ed} ${MONTH.format(b)}`
+    : `${sd} ${MONTH.format(a)} – ${ed} ${MONTH.format(b)}`
+}
+
 export function dateRange(start?: string | null, end?: string | null): string {
   if (!start || !end) return ''
   if (start === end) return fullDay(start)
@@ -167,14 +180,89 @@ function bookingEntry(b: Booking, tripTz?: string): Entry | null {
   return { kind: 'booking', id: b.booking_id, day, startMs, endMs, booking: b }
 }
 
-const orderOf = (e: Entry) => (e.kind === 'todo' ? e.todo.order : Number.MAX_SAFE_INTEGER)
-
-/** Absolute time first (untimed last), then order, then id. */
+/** By absolute time, then id. Used for the timed check and for slotting bookings. */
 export function compareEntries(a: Entry, b: Entry): number {
   if (a.startMs !== null && b.startMs !== null && a.startMs !== b.startMs)
     return a.startMs - b.startMs
-  if ((a.startMs === null) !== (b.startMs === null)) return a.startMs === null ? 1 : -1
-  return orderOf(a) - orderOf(b) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)
+  return a.id < b.id ? -1 : a.id > b.id ? 1 : 0
+}
+
+const byOrder = (a: TripTodo, b: TripTodo) =>
+  a.order - b.order || (a.todo_id < b.todo_id ? -1 : a.todo_id > b.todo_id ? 1 : 0)
+
+/**
+ * A day's order is the manual `order` of its todos, always: untimed todos stay where they
+ * were put. Bookings have no order, so each one sits at its time, after the last timed todo
+ * that starts before it.
+ */
+export function orderDay(entries: Entry[]): Entry[] {
+  const out: Entry[] = entries
+    .filter((e) => e.kind === 'todo')
+    .sort((a, b) => (a.kind === 'todo' && b.kind === 'todo' ? byOrder(a.todo, b.todo) : 0))
+  const bookings = entries.filter((e) => e.kind === 'booking').sort(compareEntries)
+  for (const b of bookings) {
+    let at = 0
+    out.forEach((e, i) => {
+      if (e.kind === 'todo' && e.startMs !== null && b.startMs !== null && e.startMs <= b.startMs)
+        at = i + 1
+    })
+    while (
+      at < out.length &&
+      out[at].kind === 'booking' &&
+      (out[at].startMs ?? 0) <= (b.startMs ?? 0)
+    )
+      at++
+    out.splice(at, 0, b)
+  }
+  return out
+}
+
+/**
+ * The `order` that places a todo by its time: between the nearest timed neighbours before and
+ * after it in time. `list` is the day's other todos in their manual order. Returns undefined
+ * when no neighbour is timed (nothing to place it against).
+ */
+export function orderForTime(
+  list: TripTodo[],
+  day: string,
+  time: string,
+  tz: string | undefined,
+  tripTz?: string,
+): number | undefined {
+  const at = wallToUtc(day, time, tz || tripTz)
+  let prev = -1
+  let next = -1
+  let prevMs = Number.NEGATIVE_INFINITY
+  let nextMs = Number.POSITIVE_INFINITY
+  list.forEach((t, i) => {
+    if (!t.start_time) return
+    const ms = wallToUtc(day, t.start_time, t.tz || tripTz)
+    if (ms <= at && ms >= prevMs) {
+      prev = i
+      prevMs = ms
+    } else if (ms > at && ms < nextMs) {
+      next = i
+      nextMs = ms
+    }
+  })
+  if (prev < 0 && next < 0) return undefined
+  if (prev >= 0 && next >= 0 && list[prev].order < list[next].order)
+    return (list[prev].order + list[next].order) / 2
+  if (prev >= 0) return orderBetween(list[prev].order, list[prev + 1]?.order)
+  return orderBetween(list[next - 1]?.order, list[next].order)
+}
+
+/** The `order` for dropping a todo before or after another in the same list. */
+export function orderForDrop(
+  list: TripTodo[],
+  overId: string,
+  before: boolean,
+): number | undefined {
+  const i = list.findIndex((t) => t.todo_id === overId)
+  if (i < 0) return undefined
+  return before
+    ? orderBetween(list[i - 1]?.order, list[i].order)
+    : orderBetween(list[i].order, list[i + 1]?.order)
 }
 
 export function compareIdeas(a: TripTodo, b: TripTodo): number {
@@ -233,10 +321,12 @@ export function buildSchedule(trip: Trip): Schedule {
     if (e) place(e)
   }
   ideas.sort(compareIdeas)
-  outside.sort((a, b) => (a.day < b.day ? -1 : a.day > b.day ? 1 : compareEntries(a, b)))
+  const outByDay = new Map<string, Entry[]>()
+  for (const e of outside) outByDay.set(e.day, [...(outByDay.get(e.day) ?? []), e])
+  const outsideOrdered = [...outByDay.keys()].sort().flatMap((d) => orderDay(outByDay.get(d) ?? []))
 
   const days: DayModel[] = dates.map((date) => {
-    const entries = (byDay.get(date) ?? []).sort(compareEntries)
+    const entries = orderDay(byDay.get(date) ?? [])
     const todos = entries.flatMap((e) => (e.kind === 'todo' ? [e.todo] : []))
     return {
       date,
@@ -251,29 +341,24 @@ export function buildSchedule(trip: Trip): Schedule {
   if (empty.length)
     gaps.push({
       id: 'empty',
-      text: `${empty.length} ${empty.length === 1 ? 'day' : 'days'} empty`,
+      text: `${empty.length} ${empty.length === 1 ? 'day has' : 'days have'} nothing planned`,
       target: `day-${empty[0].date}`,
     })
   for (const d of days)
     if (overlapping(d.entries))
       gaps.push({
         id: `overlap-${d.date}`,
-        text: `${shortDay(d.date)}: two stops overlap`,
+        text: `${shortDay(d.date)} has two things at the same time`,
         target: `day-${d.date}`,
       })
   const outTodos = outside.filter((e) => e.kind === 'todo').length
   if (outTodos)
     gaps.push({
       id: 'outside',
-      text: `${outTodos} ${outTodos === 1 ? 'todo' : 'todos'} outside trip dates`,
+      text: `${outTodos} ${outTodos === 1 ? 'thing is' : 'things are'} outside the trip dates`,
       target: 'outside-dates',
     })
-  return { days, ideas, outside, gaps }
-}
-
-/** 0..1: how full a day is, for the date strip bars. */
-export function fullness(day: DayModel): number {
-  return Math.min(1, day.entries.length / 6)
+  return { days, ideas, outside: outsideOrdered, gaps }
 }
 
 export type Phase = 'draft' | 'before' | 'during' | 'after'

@@ -7,6 +7,8 @@ export type User = {
   updated_at: string
   avatar_key?: string
   avatar_style?: string
+  // Per-account preferences (kept on the account, not on the device).
+  preferences?: { trips_show_next_stop?: boolean }
 }
 
 export type RoomView = {
