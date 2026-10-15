@@ -157,3 +157,40 @@ Log each finding with these fields:
 2. Sheets trap focus and return it on close.
 3. Reduced motion (DevTools rendering): there is no slide, deal or confetti motion, and only instant swaps.
 4. Hit targets are at least 44px on mobile, and text contrast meets WCAG AA.
+
+### S13. CRUD for every entity
+
+Run this matrix twice:
+- **Pass A:** against the mock (`VITE_MOCK_TRIPS=1`).
+- **Pass B:** against the real Go backend and Mongo. Run `docker compose up -d mongo mongo-rs-init`, start the API on `:8080`, and run the frontend without `VITE_MOCK_TRIPS`. Use a test account created for this run, and a second test account joined to the same House for the two-person checks.
+
+For every operation, check both columns:
+- **Works:** the UI updates instantly. After a reload it is still there (pass B: it's in Mongo). The other member sees it after their next sync. An offline change syncs on reconnect.
+- **UX follows guidance:** the rule in the last column. These rules come from the product owner's feedback, recorded in brief sections 6a–6h.
+
+| Entity | Op | How | UX rule to verify |
+|---|---|---|---|
+| Trip | Create | House → Trips pill → New trip | Asks **only the name** (one field + yellow key); icon defaults to 🧳 |
+| Trip | Read | House trip rows; trip page | Rows mirror list rows; trip page is a paper stack; now-trip first |
+| Trip | Update | Trip settings: title inline, icon sheet, Where, When | No boxed inputs, no labels, autosave, travel icons only, one range calendar |
+| Trip | Delete / restore | Settings → Delete trip (last, quiet red) → confirm; restore from the banner | Confirm mentions 30-day restore; a "Restore" banner appears for other members |
+| Todo (on a day) | Create | The single add bar (quick capture) and the expand → sheet | **One** add bar per screen; Enter adds instantly; expand only after typing |
+| Todo | Read | Plan rows; Next stop card; detail sheet | Rows ≤2 lines; heading = place; no stray chips |
+| Todo | Update | Tap row → sheet: title, place, day/time/duration chips, category, notes, tick | Sheet hierarchy per 6f; no Save button; chips not inputs |
+| Todo | Delete | Swipe left (mobile), hover trash (desktop), red Delete in sheet | Undo toast ~5s, same as Lists; no delete on the Next stop card |
+| Todo | Reorder / move | Long-press drag, hover handle, Alt+↑/↓, day chip in sheet | Untimed keep dragged position; timed re-slot by time |
+| Idea (no day) | Create / update / delete | Ideas tab, with the add bar targeting Ideas | Same row and sheet components; move to a day via the day chip or drag (desktop drawer) |
+| Booking | Create | Bookings tab → add opens the booking form directly | Same sheet anatomy; kind, both ends, zones, code |
+| Booking | Read | Bookings tab; Plan stubs (tonight's stay + next only); Show code slip | Code hidden by default; slip does not reflow the card |
+| Booking | Update / delete | Booking sheet; swipe | Deleting a linked booking clears the link on its todo (subheading updates) |
+| Todo ↔ booking link | Create / delete | Sheet → "Link a booking" / unlink | Deck shows the todo, not a duplicate booking card |
+| Day label | Create / update / delete | Day header (suggested locality shown muted) | Inline edit; clearing restores the suggestion |
+| Route stop | Create / reorder / delete | Settings → Where sub-sheet | Search to add, drag handle, swipe to remove; first stop = destination |
+| Packing list | Create / open | Settings → Packing list | "Make a packing list" when unlinked (online only); "N items ›" when linked |
+| Next-stop preference | Update | Settings "Just for you", UserSettings → Trips | Saved to the account (survives another browser); offline disabled |
+
+**Two-person checks (pass B only):**
+- Both users edit the same todo title while one is offline. The newer edit wins, and the loser sees the inline "changed this after your offline edit" note.
+- One user deletes a booking while the other is linking it. The link is rejected, and the optimistic state reverts with a toast.
+
+**Record the results** for each row as works pass/fail plus UX pass/fail, with notes, in the dated results file.
