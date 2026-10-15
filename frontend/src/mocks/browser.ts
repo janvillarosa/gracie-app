@@ -2,6 +2,7 @@
 // Enabled by VITE_MOCK_TRIPS=1 (see main.tsx); never part of a production build.
 import { getResponse, http, HttpResponse } from 'msw'
 import { setupWorker } from 'msw/browser'
+import { wipeTripDatabase, wipeTripDatabases } from '../lib/trips/db'
 import { localDateKey } from '../lib/trips/schedule'
 import { tripHandlers } from './handlers'
 import { buildSeedTrips, ME, MIA, type Phase } from './seed'
@@ -9,21 +10,34 @@ import { MockTripServer } from './tripsServer'
 
 const ROOM = 'room_mock'
 
-function phaseFromUrl(): Phase {
-  const q = new URLSearchParams(window.location.search).get('mockPhase')
-  const have = sessionStorage.getItem('mock_phase')
+/** `?mockPhase=before|during|after` picks the seed's phase; without it the last one stays (per
+ *  tab), and the default is "during". */
+export function phaseFrom(search: string, have: string | null): Phase {
+  const q = new URLSearchParams(search).get('mockPhase')
   const v = (q ?? have ?? 'during') as Phase
-  const phase: Phase = ['before', 'during', 'after'].includes(v) ? v : 'during'
+  return ['before', 'during', 'after'].includes(v) ? v : 'during'
+}
+
+/** Snapshots and queued changes from an earlier mock run would disagree with the fresh in-memory
+ *  server (and hide a new phase): delete every trips database, the signed-in mock user's included. */
+export async function resetMockPersistence(): Promise<void> {
+  await wipeTripDatabases()
+  await wipeTripDatabase(ME)
+  await new Promise<void>((resolve) => {
+    // The pre-per-user name, from the first mock builds.
+    const r = indexedDB.deleteDatabase('bauhouse-trips')
+    r.onsuccess = r.onerror = r.onblocked = () => resolve()
+  })
+}
+
+function phaseFromUrl(): Phase {
+  const phase = phaseFrom(window.location.search, sessionStorage.getItem('mock_phase'))
   sessionStorage.setItem('mock_phase', phase)
   return phase
 }
 
 export async function startMockTrips() {
-  // Snapshots from an earlier mock run would disagree with the fresh in-memory server.
-  await new Promise<void>((resolve) => {
-    const r = indexedDB.deleteDatabase('bauhouse-trips')
-    r.onsuccess = r.onerror = r.onblocked = () => resolve()
-  })
+  await resetMockPersistence()
   localStorage.setItem('gracie_api_key', 'mock-api-key')
 
   const srv = new MockTripServer()

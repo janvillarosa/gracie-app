@@ -100,11 +100,24 @@ why the config forces a single fork.
   **320 KB gzip** (JS + CSS); trip route chunks stay near 50 KB. On phones the map is a read-only
   full-screen view (history `#map`); pan/zoom/click-to-add are desktop only. Offline the map pane and
   its button are not rendered (5 s debounce), the plan widens, and no map chunk is requested.
+- **Desktop planning desk (`pages/TripPage.tsx`, brief 6n):** at 1200px and wider the trip is three
+  columns, Ideas (300) | Days | Map (~420); at 1024-1199px it is Ideas | Days, and the map opens
+  over them from the Map pill (`trip-side is-over`). Below 1024px nothing changes (phones keep the
+  Plan / Ideas / Bookings pills). On desks Ideas is a column, so the pills are Plan / Bookings;
+  every trip date shows (empty days are dashed "Nothing planned yet" slots that turn yellow while
+  dragging); the one add bar is sticky under the Days column with Ideas in its target chip; before
+  the trip a "Ready to go?" sheet (`components/trips/ReadyToGo.tsx`, pure rules in
+  `lib/trips/readiness.ts`: travel, a stay for every night, empty days, packing) sits where the Next
+  stop card goes during the trip. With no places the map column shows "Places you add show up here"
+  and renders no map. Tests set the viewport with `setViewport('desktop' | 'mid' | 'phone')`:
+  `desktop` is a 1440px screen (matches the 1024 and 1200 queries), `mid` is 1024-1199px.
 - **Dev mock (no backend needed):** `cd frontend && VITE_MOCK_TRIPS=1 pnpm dev --port 5174 --strictPort --host 127.0.0.1`
   (or just `pnpm dev`). It boots an MSW worker (a fetch
   shim if a service worker can't register) backed by `mocks/tripsServer.ts`, seeded from
-  `mocks/seed.ts` ("Lisbon & Porto", dates relative to today). `?mockPhase=` picks the trip
-  phase. Dev only; never in a production build.
+  `mocks/seed.ts` ("Lisbon & Porto", dates relative to today). `?mockPhase=before|during|after`
+  picks the seed's phase and re-seeds from scratch on every load that carries it (every trips
+  database, including the mock user's, is deleted first; without the param the tab keeps its last
+  phase, default `during`). Dev only; never in a production build.
 - **Tests:** `__tests__/trips.helpers.tsx` has `renderTrips`, `seed`, `setViewport`,
   `lisbonTrip`, `meState`, `resetTripsWorld`; the shared in-memory `tripServer` is in `testServer.ts`.
 

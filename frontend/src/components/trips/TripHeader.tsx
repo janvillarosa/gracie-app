@@ -31,6 +31,8 @@ type HeaderProps = {
   daysOpen: boolean
   onDaysOpen: (open: boolean) => void
   dayList: React.ReactNode
+  // On a desk the line also says how long until the trip, and the title never wraps.
+  desk?: boolean
 }
 
 const sharedWith = (members: Member[]) => {
@@ -59,6 +61,7 @@ export const TripHeader: React.FC<HeaderProps> = ({
   daysOpen,
   onDaysOpen,
   dayList,
+  desk,
 }) => {
   const route = routeText(trip)
   const phase = tripPhase(trip, today)
@@ -67,14 +70,20 @@ export const TripHeader: React.FC<HeaderProps> = ({
       ? `${countdown(trip, today)} · ${shortDay(today)}`
       : phase === 'draft'
         ? 'No dates yet'
-        : [route, shortRange(trip.start_date, trip.end_date)].filter(Boolean).join(' · ')
+        : [
+            route,
+            shortRange(trip.start_date, trip.end_date),
+            desk && phase === 'before' ? countdown(trip, today).toLowerCase() : '',
+          ]
+            .filter(Boolean)
+            .join(' · ')
   const items: MenuProps['items'] = [
     { key: 'notes', label: 'Notes' },
     { key: 'packing', label: packing.label, disabled: packing.disabled },
     { key: 'details', label: 'Trip settings' },
   ]
   return (
-    <Card className="paper-card paper-meta">
+    <Card className={desk ? 'paper-card paper-meta is-desk' : 'paper-card paper-meta'}>
       {deletedBy && (
         <div className="trip-banner" role="status">
           <span>{deletedBy} deleted this trip.</span>

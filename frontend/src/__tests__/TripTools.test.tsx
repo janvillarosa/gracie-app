@@ -317,6 +317,7 @@ describe('Packing line before the trip', () => {
   it('shows one quiet line within three days of leaving, and goes to the list', async () => {
     meState.lists = [list]
     meState.items = items(12, 4)
+    setViewport('phone')
     seed(trip(2))
     renderTrips(`/app/trips/${trip(2).trip_id}`)
     const line = await screen.findByRole('button', { name: /Packing · 4 of 12 packed/ })
@@ -358,7 +359,12 @@ describe('Packing line before the trip', () => {
 
 describe('Map', () => {
   it('shows the day in view and every day on request', async () => {
-    seed(TRIP)
+    const t = lisbonTrip()
+    t.todos[4] = {
+      ...t.todos[4],
+      place: { name: 'Tasca', lat: 38.78, lng: -9.39, source: 'photon' },
+    }
+    seed(t)
     open()
     await screen.findByRole('heading', { name: 'Lisbon & Porto' })
     await userEvent.click(screen.getByRole('button', { name: 'Show all days' }))
@@ -400,27 +406,19 @@ describe('Map', () => {
     expect(document.querySelectorAll('.map-pin text')).toHaveLength(0)
   })
 
-  it('opens Ideas over the map on wide screens, keeping the days, with grey idea pins', async () => {
-    const t = lisbonTrip()
-    t.todos[8] = {
-      ...t.todos[8],
-      place: { name: 'Ginjinha', lat: 38.71, lng: -9.14, source: 'photon' },
-    }
-    seed(t)
+  it('keeps Ideas in a column beside the days on desktops, not a tab or a drawer', async () => {
+    seed(TRIP)
     open()
     await screen.findByRole('heading', { name: 'Later today' })
-    await userEvent.click(screen.getByRole('tab', { name: 'Ideas' }))
-    const drawer = await screen.findByRole('dialog', { name: 'Ideas' })
-    expect(within(drawer).getByText('Ginjinha tasting')).toBeInTheDocument()
-    // The days are still there to drop an idea on.
+    expect(screen.queryByRole('tab', { name: 'Ideas' })).not.toBeInTheDocument()
+    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['Plan', 'Bookings'])
+    const column = document.querySelector('.trip-ideas-col') as HTMLElement
+    expect(within(column).getByText('Ginjinha tasting')).toBeInTheDocument()
+    expect(within(column).getByText('Drag onto a day')).toBeInTheDocument()
+    // No add field of its own: the one add bar under the days has Ideas in its target chip.
+    expect(within(column).queryByRole('combobox')).not.toBeInTheDocument()
+    expect(screen.getAllByPlaceholderText(/^Add (a|an|to) /)).toHaveLength(1)
+    // The days are right there to drop an idea on.
     expect(screen.getByRole('heading', { name: 'Later today' })).toBeInTheDocument()
-    await waitFor(() => expect(document.querySelectorAll('.map-pin')).toHaveLength(1))
-    expect(document.querySelector('.trip-map [aria-label="Map of the ideas"]')).not.toBeNull()
-    expect(screen.queryByRole('region', { name: 'Next stop' })).not.toBeInTheDocument()
-    await userEvent.click(within(drawer).getByRole('button', { name: 'Close' }))
-    await waitFor(() =>
-      expect(screen.queryByRole('dialog', { name: 'Ideas' })).not.toBeInTheDocument(),
-    )
-    expect(screen.getByRole('tab', { name: 'Plan' })).toHaveAttribute('aria-selected', 'true')
   })
 })
