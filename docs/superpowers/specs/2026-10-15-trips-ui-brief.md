@@ -300,12 +300,16 @@ flagged done days, and it didn't say which items clashed. Gaps now show where th
 - **Google Maps considered and rejected (2026-10-15):** its terms forbid storing place snapshots
   and using Places data on a non-Google map (see `2026-10-15-google-maps-option.md`). Protomaps and
   Photon stay. Google is used only through the "Open in Maps" link.
+- **Budget:** the lazy map chunk may be up to 320 KB gzip; trip route chunks stay around 50 KB.
+- **Offline: no map.** On desktop the pane hides (after a ~5s debounce) and the list widens, with
+  "The map comes back when you're online." On the phone the map button hides. The map chunk is
+  not fetched while offline.
 - **Phone map sheet: read-only.** Route and pins; pinch and pan only to look around. Tapping a pin
   opens its row's detail. No adding from the map, and no map controls. All map interactions are
   desktop only.
 - **Tiles (decided 2026-10-15): the Protomaps hosted API** (TileJSON, key in `VITE_PROTOMAPS_API_KEY`,
   restricted by domain). This supersedes self-hosted PMTiles in 7.1. There is no offline tile
-  prefetch (the API terms forbid it); offline, the map shows pins on a plain ground.
+  prefetch (the API terms forbid it); offline, the map is hidden (see the offline rule above).
 
 ## 7. Constraints and open decisions
 
