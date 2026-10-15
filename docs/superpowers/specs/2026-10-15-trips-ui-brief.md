@@ -469,6 +469,14 @@ for Latin, Greek and Cyrillic). CJK uses the device's system font through MapLib
 Scripts MapLibre can't shape fall back to a hover label. The basemap prefers English names, then the
 local name. No third-party font origins.
 
+## 6t. Open Maps (2026-10-15)
+
+Every "Open Maps" is one `MapsLink`, named for the place:
+- **Desktop:** Google Maps in a new tab.
+- **iOS and iPadOS, including the installed PWA:** the Apple Maps universal link, so it opens the Maps
+  app.
+- **Android:** the Google Maps universal link, so it opens the app, falling back to the web.
+
 ## 7. Constraints and open decisions
 
 Constraints:
