@@ -36,7 +36,7 @@ export const IdeasPanel: React.FC<IdeasProps> = ({
     return () => clearTimeout(t)
   }, [tip])
   // The first hover on an idea says how to move it, once (never again, and never if storage is off).
-  const onOver = (e: React.MouseEvent) => {
+  const onOver = (e: React.SyntheticEvent) => {
     if (tip || !(e.target as Element).closest?.('.trip-row')) return
     // Only in the desk's Ideas column, where the tip has room.
     if (!(e.currentTarget as Element).closest('.trip-ideas-col')) return
@@ -96,6 +96,7 @@ export const IdeasPanel: React.FC<IdeasProps> = ({
         className={isOver ? 'trip-ideas is-over' : 'trip-ideas'}
         aria-label="Ideas"
         onMouseOver={onOver}
+        onFocus={onOver}
       >
         {hint && (
           <p className="trip-hint">Places you might go. Move one onto a day when you’re ready.</p>

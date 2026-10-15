@@ -3098,3 +3098,33 @@
     margin-top: 0;
   }
 }
+
+/* ---- The inspector (an open item on a desk) ------------------------------------------------------
+   1200px and up it takes the right column's place (the map returns when it closes); 1024-1199px
+   it is an overlay panel at the right edge. Opening, switching and closing it never moves the
+   Days pane: a row that would be hidden under the sticky header or the composer is scrolled just
+   into view (scroll-margin makes `nearest` account for both). */
+.trip-inspector-overlay {
+  position: fixed;
+  z-index: 900;
+  top: var(--space-4);
+  right: var(--space-4);
+  bottom: var(--space-4);
+  width: min(440px, calc(100vw - 32px));
+  overflow: hidden;
+  background: var(--panel);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-squircle);
+  box-shadow: var(--paper-edge), var(--lift-2);
+}
+.trip-inspector-overlay .ui-sheet-panel {
+  width: 100%;
+}
+.trip-shell.is-desk .trip-side > .ui-sheet-panel {
+  width: 100%;
+  box-shadow: none;
+}
+.trip-days-col .trip-row,
+.trip-days-col .trip-stub {
+  scroll-margin-block: 52px calc(var(--composer-h) + 40px);
+}

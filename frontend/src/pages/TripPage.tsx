@@ -374,7 +374,9 @@ const TripScreen: React.FC<{
   // (phone, or no connection) panels are bottom sheets.
   // The map column exists on wide screens, online, once there is a place to show.
   const mapCol = wide && mapOk && hasPlaces
-  const docked = mapCol
+  // Item panels dock into the right column on wide screens (over the map, or alone when there is
+  // no map); at 1024-1199 they overlay. Below that they are sheets.
+  const docked = wide
   const moveTargets = useMemo(
     () => [
       ...schedule.days.map((d) => ({ value: d.date as string | null, label: fullDay(d.date) })),
@@ -607,7 +609,7 @@ const TripScreen: React.FC<{
         fitToken={mapFollow.fitToken}
         title={mapTitle}
         focusPoint={focusPoint}
-        focusInset={docked && selected ? 420 : 0}
+        focusInset={0}
         onPinClick={onPinClick}
         onMapClick={clickAdd.onMapClick}
         onUserMove={() => {
@@ -678,6 +680,19 @@ const TripScreen: React.FC<{
   })
 
   useAddBarShortcut(desktop)
+  // Opening, switching or closing the inspector never moves the Days pane. Only a selected row
+  // that is hidden (under the sticky header or the composer) is brought just into view.
+  useEffect(() => {
+    if (!desktop || !selected) return
+    const row = document.getElementById(`row-${selected}`)
+    const pane = daysCol.current
+    if (!row || !pane || !pane.contains(row)) return
+    const r = row.getBoundingClientRect()
+    const p = pane.getBoundingClientRect()
+    const composer = document.querySelector('.trip-composer')?.getBoundingClientRect()
+    const bottom = composer && composer.top > p.top ? Math.min(p.bottom, composer.top) : p.bottom
+    if (r.top < p.top + 44 || r.bottom > bottom) row.scrollIntoView?.({ block: 'nearest' })
+  }, [selected, desktop])
   // The desk is an app shell: the window itself does not scroll, each pane does.
   useEffect(() => {
     if (!desktop) return
@@ -721,7 +736,7 @@ const TripScreen: React.FC<{
     phase,
     today,
     nowMs,
-    docked,
+    docked: desktop,
     ideasOpen,
     ideasNode,
     selTodo,
@@ -740,6 +755,9 @@ const TripScreen: React.FC<{
     bias,
   })
   const showSide = docked
+  // The right column exists while the map has something to show, or an item is open in it.
+  const inspectorOpen = !!(selTodo || selBooking || bookingDraft || extra === 'notes')
+  const asideOpen = mapCol || (wide && inspectorOpen)
   const showAdd = !locked
 
   const spine = (
@@ -1043,7 +1061,7 @@ const TripScreen: React.FC<{
       onAdd={(item) => add(target === 'ideas' ? null : target, item)}
       onLaunch={(typed) => setBookingDraft({ title: typed, n: ++draftCount.current })}
       onPreview={
-        docked
+        mapCol
           ? (pl) => setBarPreview(pl ? { lat: pl.lat, lng: pl.lng, label: pl.name } : null)
           : undefined
       }
@@ -1059,8 +1077,12 @@ const TripScreen: React.FC<{
   ) : null
   // The map column, only while there are places: sticky, with the docked item panels over it.
   const sideNode = (
-    <aside className="trip-side" aria-label="Map" data-testid="trip-map-pane">
-      {mapNode}
+    <aside
+      className="trip-side"
+      aria-label={mapCol ? 'Map' : 'Details'}
+      data-testid={mapCol ? 'trip-map-pane' : 'trip-inspector-pane'}
+    >
+      {mapCol ? mapNode : null}
       {docked && shownSheet}
     </aside>
   )
@@ -1099,7 +1121,7 @@ const TripScreen: React.FC<{
         {desktop ? (
           <div className="trip-desk-frame">
             <TopNav back={{ to: '/app/trips', label: roomName }} />
-            <div className={mapCol ? 'trip-shell is-desk has-map' : 'trip-shell is-desk'}>
+            <div className={asideOpen ? 'trip-shell is-desk has-map' : 'trip-shell is-desk'}>
               {ideasColumn}
               <div className="trip-col trip-days-col" ref={daysCol}>
                 {!mapOk && hasPlaces && (
@@ -1118,7 +1140,7 @@ const TripScreen: React.FC<{
                   </Card>
                 </div>
               </div>
-              {mapCol && sideNode}
+              {asideOpen && sideNode}
             </div>
             {addBarNode && (
               <div
@@ -1187,7 +1209,10 @@ const TripScreen: React.FC<{
             opener={mapPill}
           />
         )}
-        {!docked && shownSheet}
+        {!desktop && shownSheet}
+        {desktop && !wide && shownSheet && (
+          <div className="trip-inspector-overlay">{shownSheet}</div>
+        )}
         <div className="sr-only" role="status" aria-live="polite">
           {announcement}
         </div>
