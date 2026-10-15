@@ -420,7 +420,17 @@ func todoChanges(td *models.TripTodo, p TodoPatch, actor string, now time.Time) 
 		v := p.Place.Val
 		ch = append(ch, change{"place", func() { td.Place = v }})
 	}
+	if p.BookingID.Set {
+		v := p.BookingID.Val
+		ch = append(ch, change{"booking_id", func() { td.BookingID = v }})
+	}
 	return ch
+}
+
+// bookingLinkOK reports whether a patch's booking_id (when set to a value) names a live
+// booking of this trip. Deleted bookings are removed from t.Bookings, so tombstoned ids fail too.
+func bookingLinkOK(t *models.Trip, p TodoPatch) bool {
+	return !p.BookingID.Set || p.BookingID.Val == nil || findBooking(t, *p.BookingID.Val) >= 0
 }
 
 func todoCreate(t *models.Trip, op models.Op, at int64, c Ctx, res *models.OpResult) bool {
@@ -437,7 +447,7 @@ func todoCreate(t *models.Trip, op models.Op, at int64, c Ctx, res *models.OpRes
 	if code := decodePatch(op.Patch, &p); code != "" {
 		return fail(res, code)
 	}
-	if !validTodoPatch(p, true) {
+	if !validTodoPatch(p, true) || !bookingLinkOK(t, p) {
 		return fail(res, models.CodeInvalid)
 	}
 	td := models.TripTodo{TodoID: op.EntityID, Category: "other", CreatedBy: c.Actor, UpdatedBy: c.Actor, FieldAt: map[string]int64{}}
@@ -461,7 +471,7 @@ func todoUpdate(t *models.Trip, op models.Op, at int64, c Ctx, res *models.OpRes
 	if code := decodePatch(op.Patch, &p); code != "" {
 		return fail(res, code)
 	}
-	if !validTodoPatch(p, false) {
+	if !validTodoPatch(p, false) || !bookingLinkOK(t, p) {
 		return fail(res, models.CodeInvalid)
 	}
 	td := &t.Todos[i]
@@ -591,5 +601,12 @@ func bookingDelete(t *models.Trip, op models.Op, c Ctx, res *models.OpResult) bo
 	}
 	t.Bookings = append(t.Bookings[:i], t.Bookings[i+1:]...)
 	t.Tombstones = append(t.Tombstones, models.Tombstone{ID: op.EntityID, V: c.NewV, At: c.Now})
+	for k := range t.Todos { // cascade: no todo may point at a deleted booking
+		if td := &t.Todos[k]; td.BookingID != nil && *td.BookingID == op.EntityID {
+			td.BookingID = nil
+			td.V = c.NewV
+			td.UpdatedBy = c.Actor
+		}
+	}
 	return true
 }

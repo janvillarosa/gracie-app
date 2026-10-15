@@ -53,6 +53,7 @@ type TodoPatch struct {
 	Category    *string           `json:"category"`
 	Notes       *string           `json:"notes"`
 	Place       Opt[models.Place] `json:"place"`
+	BookingID   Opt[string]       `json:"booking_id"`
 }
 
 type BookingPatch struct {
