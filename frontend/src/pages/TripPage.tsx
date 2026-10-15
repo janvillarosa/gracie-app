@@ -10,7 +10,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from '@dnd-kit/core'
-import { Button, Card, message } from 'antd'
+import { Button, Card, Modal, message } from 'antd'
 import { CaretRight, Check, MapTrifold } from '@phosphor-icons/react'
 import { useAuth } from '@auth/AuthProvider'
 import { TopNav } from '@components/TopNav'
@@ -43,8 +43,9 @@ import {
   type Schedule,
 } from '@lib/trips/schedule'
 import { WhenSheet } from '@components/trips/WhenSheet'
-import { BookingEditor, BookingsPanel, type BookingActions } from '@components/trips/Bookings'
-import { BookingDetail, TodoDetail } from '@components/trips/ItemDetail'
+import { BookingsPanel, type BookingActions } from '@components/trips/Bookings'
+import { BookingSheet } from '@components/trips/BookingSheet'
+import { TodoDetail } from '@components/trips/ItemDetail'
 import { DayList, type DayRow } from '@components/trips/DayList'
 import { NextStopDeck, type Stop, type Tomorrow } from '@components/trips/NextStop'
 import { useMedia } from '@components/trips/Phone'
@@ -426,6 +427,9 @@ const TripScreen: React.FC<{
   }
   const { add, rowActions, bookingActions, setDayLabel } = useScreenActions(ctx)
   const [bookingDraft, setBookingDraft] = useState<{ title: string } | null>(null)
+  // A new booking with something entered asks before it is closed.
+  const [bookingDirty, setBookingDirty] = useState(false)
+  const [discardOpen, setDiscardOpen] = useState(false)
 
   const bias = useMemo(() => {
     const p = trip.destination ?? trip.stops?.[0]
@@ -874,12 +878,6 @@ const TripScreen: React.FC<{
     : ''
   const online = !state.offline && (typeof navigator === 'undefined' || navigator.onLine !== false)
 
-  const bookingStart = (b: Booking) => {
-    if (!b.starts_at) return Number.MAX_SAFE_INTEGER
-    const [d, t] = b.starts_at.split('T')
-    return wallToUtc(d, t || '00:00', b.start_tz || trip.tz)
-  }
-
   // The packing list is the List page's: the menu says how packed it is and goes straight there.
   const packing = usePacking(store.roomId, trip.packing_list_id)
   const toList = (listId: string) =>
@@ -1015,8 +1013,9 @@ const TripScreen: React.FC<{
       onDelete={() => rowActions.remove(selTodo.todo_id)}
     />
   ) : selBooking ? (
-    <BookingDetail
+    <BookingSheet
       key={selBooking.booking_id}
+      mode="edit"
       booking={selBooking}
       note={
         state.notes[selBooking.booking_id]
@@ -1030,7 +1029,13 @@ const TripScreen: React.FC<{
       bias={bias}
       byline={bylineFor(selBooking, userId, members)}
       locked={locked}
-      actions={bookingActions}
+      linked={trip.todos
+        .filter((t) => t.booking_id === selBooking.booking_id)
+        .map((t) => ({ id: t.todo_id, title: t.title }))}
+      onOpenTodo={rowActions.open}
+      onSave={(id, patch) => bookingActions.save(id, patch)}
+      onDelete={() => bookingActions.remove(selBooking.booking_id)}
+      onCopy={bookingActions.copy}
     />
   ) : null
 
@@ -1047,9 +1052,8 @@ const TripScreen: React.FC<{
     <BookingsPanel
       bookings={trip.bookings}
       nowMs={nowMs}
-      startMs={bookingStart}
+      tripTz={trip.tz}
       onOpen={rowActions.open}
-      locked={locked}
     />
   )
   // A new booking starts at the next full hour today during the trip, else on day one at 09:00,
@@ -1060,17 +1064,25 @@ const TripScreen: React.FC<{
       : trip.start_date
         ? `${trip.start_date}T09:00`
         : undefined
+  const closeBookingDraft = () => {
+    setBookingDraft(null)
+    setBookingDirty(false)
+    setDiscardOpen(false)
+  }
   const bookingFormNode = bookingDraft ? (
-    <BookingEditor
+    <BookingSheet
+      mode="new"
+      initialTitle={bookingDraft.title}
       tripTz={trip.tz}
       bias={bias}
+      days={moveTargets}
       defaultStart={defaultStart}
-      initialTitle={bookingDraft.title}
-      onCancel={() => setBookingDraft(null)}
-      onSave={(patch) => {
-        bookingActions.save(null, patch)
-        setBookingDraft(null)
+      onDirty={setBookingDirty}
+      onSave={(id, patch) => {
+        bookingActions.save(id, patch)
+        closeBookingDraft()
       }}
+      onCopy={bookingActions.copy}
     />
   ) : null
   const extraNode =
@@ -1094,10 +1106,11 @@ const TripScreen: React.FC<{
     }
   } else if (bookingFormNode) {
     panel = {
-      key: 'booking-new',
+      key: 'item-booking-new',
       title: 'New booking',
       node: bookingFormNode,
-      close: () => setBookingDraft(null),
+      // Anything entered asks before it is thrown away.
+      close: () => (bookingDirty ? setDiscardOpen(true) : closeBookingDraft()),
     }
   } else if (extraNode) {
     panel = {
@@ -1350,7 +1363,7 @@ const TripScreen: React.FC<{
                     target={target}
                     onTarget={setAddTarget}
                     onAdd={(item) => add(target === 'ideas' ? null : target, item)}
-                    onLaunch={() => setBookingDraft({ title: '' })}
+                    onLaunch={(typed) => setBookingDraft({ title: typed })}
                     onExpand={(item) => {
                       // One editor for add and edit: create the item, then open it.
                       const id = add(target === 'ideas' ? null : target, item)
@@ -1415,6 +1428,18 @@ const TripScreen: React.FC<{
             {panel ? shownPanel.node : null}
           </Panel>
         )}
+        <Modal
+          open={discardOpen}
+          className="paper-modal"
+          title="Discard this booking?"
+          okText="Discard"
+          okButtonProps={{ danger: true }}
+          cancelText="Keep editing"
+          onOk={closeBookingDraft}
+          onCancel={() => setDiscardOpen(false)}
+        >
+          What you entered will be lost.
+        </Modal>
         <div className="sr-only" role="status" aria-live="polite">
           {announcement}
         </div>

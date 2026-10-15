@@ -176,10 +176,12 @@ export const TimeChip: React.FC<{
   // A todo's time can be cleared; a booking's cannot.
   clearable?: boolean
   label?: string
+  // The zone the time is in, only when it is not the trip's ("London").
+  suffix?: string
   disabled?: boolean
   autoFocus?: boolean
   onPick: (time: string | null) => void
-}> = ({ value, clearable, label = 'Time', disabled, autoFocus, onPick }) => {
+}> = ({ value, clearable, label = 'Time', suffix, disabled, autoFocus, onPick }) => {
   const have = value ?? NONE
   const options: Option[] = [
     ...(clearable ? [{ value: NONE, label: 'No time' }] : []),
@@ -189,8 +191,17 @@ export const TimeChip: React.FC<{
   return (
     <ChipPicker
       label={label}
-      text={value ?? 'not set'}
-      display={value ?? '+ Time'}
+      text={value ? `${value}${suffix ? ` ${suffix}` : ''}` : 'not set'}
+      display={
+        value ? (
+          <>
+            {value}
+            {suffix && <span className="trip-chip-zone"> {suffix}</span>}
+          </>
+        ) : (
+          '+ Time'
+        )
+      }
       muted={!value}
       title={label}
       disabled={disabled}

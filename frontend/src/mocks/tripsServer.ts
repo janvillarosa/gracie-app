@@ -104,6 +104,14 @@ export const PLACE_BOOK: Place[] = [
     source: 'photon',
   },
   {
+    name: 'Heathrow Airport',
+    locality: 'London',
+    lat: 51.47,
+    lng: -0.4543,
+    tz: 'Europe/London',
+    source: 'photon',
+  },
+  {
     name: 'Livraria Lello',
     address: 'Rua das Carmelitas, Porto',
     locality: 'Porto',

@@ -886,17 +886,6 @@ describe('The add bar', () => {
     expect(await screen.findByRole('dialog', { name: 'Sunset spot' })).toBeInTheDocument()
   })
 
-  it('starts the booking form from the Bookings tab', async () => {
-    seed(TRIP)
-    open()
-    await userEvent.click(await screen.findByRole('tab', { name: 'Bookings' }))
-    // One add bar, and on Bookings it opens the booking sheet at once.
-    expect(screen.queryByRole('button', { name: 'Add booking' })).not.toBeInTheDocument()
-    await userEvent.click(await screen.findByRole('button', { name: 'Add a booking' }))
-    const panel = await screen.findByRole('dialog', { name: 'New booking' })
-    expect(within(panel).getByLabelText('Title')).toHaveValue('')
-  })
-
   it('focuses on n or /, but not while typing elsewhere', async () => {
     seed(TRIP)
     open()

@@ -22,9 +22,9 @@ type Props = {
   inputId: string
   // Opens the item editor, prefilled with what is typed. Offered once something is typed.
   onExpand?: (item: QuickAddItem) => void
-  // 'booking': the bar is a launcher for the booking sheet (a booking needs kind, zones and a code).
+  // 'booking': what is typed becomes the title of a new booking, which opens in its own sheet.
   mode?: 'todo' | 'booking'
-  onLaunch?: () => void
+  onLaunch?: (typed: string) => void
 }
 
 const MAX_SLIPS = 5
@@ -73,6 +73,11 @@ export const AddBar: React.FC<Props> = ({
     onAdd({ title: parsed.title, start_time: parsed.start_time })
     reset()
   }
+  // Booking mode: what is typed is the new booking's title (it is never dropped).
+  const launch = () => {
+    onLaunch?.(value.trim())
+    reset()
+  }
   const expand = () => {
     onExpand?.({ title: parsed.title, start_time: parsed.start_time })
     reset()
@@ -99,6 +104,7 @@ export const AddBar: React.FC<Props> = ({
       expand()
     } else if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
+      if (mode === 'booking') return launch()
       // Enter only takes a slip the user moved to; otherwise it adds what was typed.
       if (open && active >= 0) pick(slips[active])
       else submit()
@@ -124,12 +130,8 @@ export const AddBar: React.FC<Props> = ({
         </div>
       )}
       <div className="add-row">
-        {mode === 'booking' ? (
-          <button type="button" className="add-field add-launch" onClick={onLaunch}>
-            {placeholder}
-          </button>
-        ) : (
-          <div className="add-field trip-add-field has-target">
+        <div className={mode === 'todo' ? 'add-field trip-add-field has-target' : 'add-field'}>
+          {mode === 'todo' && (
             <Popover
               trigger="click"
               placement="topLeft"
@@ -160,35 +162,35 @@ export const AddBar: React.FC<Props> = ({
                 <CaretDown aria-hidden />
               </button>
             </Popover>
-            <Input.TextArea
-              id={inputId}
-              ref={ref as never}
-              className="add-input"
-              value={value}
-              onChange={(e) => {
-                setValue(e.target.value)
-                setActive(-1)
-                setDismissed(false)
-              }}
-              placeholder={placeholder}
-              autoSize={{ minRows: 1, maxRows: 3 }}
-              enterKeyHint="enter"
-              onKeyDown={onKeyDown}
-              onBlur={() => setActive(-1)}
-              aria-label={label}
-              role="combobox"
-              aria-expanded={open}
-              aria-controls={open ? `${uid}-slips` : undefined}
-              aria-autocomplete="list"
-              aria-activedescendant={open && active >= 0 ? `${uid}-slip-${active}` : undefined}
-            />
-            {parsed.start_time && (
-              <span className="add-qty-chip" aria-hidden>
-                {parsed.start_time}
-              </span>
-            )}
-          </div>
-        )}
+          )}
+          <Input.TextArea
+            id={inputId}
+            ref={ref as never}
+            className="add-input"
+            value={value}
+            onChange={(e) => {
+              setValue(e.target.value)
+              setActive(-1)
+              setDismissed(false)
+            }}
+            placeholder={placeholder}
+            autoSize={{ minRows: 1, maxRows: 3 }}
+            enterKeyHint="enter"
+            onKeyDown={onKeyDown}
+            onBlur={() => setActive(-1)}
+            aria-label={label}
+            role="combobox"
+            aria-expanded={open}
+            aria-controls={open ? `${uid}-slips` : undefined}
+            aria-autocomplete="list"
+            aria-activedescendant={open && active >= 0 ? `${uid}-slip-${active}` : undefined}
+          />
+          {mode === 'todo' && parsed.start_time && (
+            <span className="add-qty-chip" aria-hidden>
+              {parsed.start_time}
+            </span>
+          )}
+        </div>
         {mode === 'todo' && onExpand && armed && (
           <Button
             type="text"
@@ -206,7 +208,7 @@ export const AddBar: React.FC<Props> = ({
           size="large"
           aria-label={`${label}, add`}
           disabled={mode === 'todo' && !armed}
-          onClick={mode === 'booking' ? onLaunch : submit}
+          onClick={mode === 'booking' ? launch : submit}
           icon={<Plus key={adds} className={adds ? 'add-plus is-turning' : 'add-plus'} />}
         />
       </div>

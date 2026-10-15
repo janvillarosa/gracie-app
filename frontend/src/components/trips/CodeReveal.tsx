@@ -12,16 +12,14 @@ type Props = {
   // One line: time and place.
   line?: string
   onCopy: (code: string) => void
+  // Shows an "Edit" button on the slip (the booking's code can be changed there).
+  onEdit?: () => void
   compact?: boolean
 }
 
-const Slip: React.FC<Pick<Props, 'code' | 'title' | 'kind' | 'line' | 'onCopy'>> = ({
-  code,
-  title,
-  kind,
-  line,
-  onCopy,
-}) => {
+const Slip: React.FC<
+  Pick<Props, 'code' | 'title' | 'kind' | 'line' | 'onCopy'> & { onEdit?: () => void }
+> = ({ code, title, kind, line, onCopy, onEdit }) => {
   const [copied, setCopied] = useState(false)
   useEffect(() => {
     if (!copied) return
@@ -64,13 +62,18 @@ const Slip: React.FC<Pick<Props, 'code' | 'title' | 'kind' | 'line' | 'onCopy'>>
       >
         {copied ? 'Copied' : 'Copy'}
       </Button>
+      {onEdit && (
+        <Button type="link" size="small" onClick={onEdit}>
+          Edit
+        </Button>
+      )}
     </div>
   )
 }
 
 /** "Show code" opens a ticket slip: a popover on desktop, a small bottom sheet on the phone.
  *  The code is never shown until asked for, and nothing underneath moves. */
-export const CodeReveal: React.FC<Props> = ({ compact, ...slip }) => {
+export const CodeReveal: React.FC<Props> = ({ compact, onEdit, ...slip }) => {
   const [open, setOpen] = useState(false)
   const desktop = useMedia('(min-width: 1024px)')
   // Esc closes the slip, and only the slip (not the sheet it was opened from).
@@ -85,6 +88,12 @@ export const CodeReveal: React.FC<Props> = ({ compact, ...slip }) => {
     document.addEventListener('keydown', onKey, true)
     return () => document.removeEventListener('keydown', onKey, true)
   }, [open, desktop])
+  const edit = onEdit
+    ? () => {
+        setOpen(false)
+        onEdit()
+      }
+    : undefined
   const button = (
     <Button
       size={compact ? 'small' : 'middle'}
@@ -105,7 +114,7 @@ export const CodeReveal: React.FC<Props> = ({ compact, ...slip }) => {
         onOpenChange={setOpen}
         overlayClassName="trip-gaps-pop trip-slip-pop"
         destroyTooltipOnHide
-        content={<Slip {...slip} />}
+        content={<Slip {...slip} onEdit={edit} />}
       >
         {button}
       </Popover>
@@ -121,7 +130,7 @@ export const CodeReveal: React.FC<Props> = ({ compact, ...slip }) => {
         className="trip-slip-drawer"
         onClose={() => setOpen(false)}
       >
-        {open ? <Slip {...slip} /> : null}
+        {open ? <Slip {...slip} onEdit={edit} /> : null}
       </Sheet>
     </>
   )
