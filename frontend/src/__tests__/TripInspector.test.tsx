@@ -136,6 +136,17 @@ describe('the desktop inspector edits in place', () => {
     expect(within(panel).getByRole('textbox', { name: 'Confirmation code' })).toBeInTheDocument()
   })
 
+  it('gives the inspector to a new booking: the open todo closes and the booking opens', async () => {
+    seed(TRIP)
+    open()
+    await openRow('Pena Palace')
+    await userEvent.click(await screen.findByRole('tab', { name: 'Bookings' }))
+    const bar = await screen.findByRole('combobox', { name: 'Add a booking' })
+    await userEvent.type(bar, 'Hotel Avenida{Enter}')
+    expect(await screen.findByRole('dialog', { name: 'New booking' })).toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: 'Pena Palace' })).not.toBeInTheDocument()
+  })
+
   it('searches for the place in place, and stores only the Google place id and coordinates', async () => {
     seed(TRIP)
     open()

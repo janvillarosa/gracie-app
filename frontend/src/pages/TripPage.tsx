@@ -279,6 +279,12 @@ const TripScreen: React.FC<{
     n: number
     start?: string
   } | null>(null)
+  // A new booking takes the inspector: whatever item was open there closes, or the draft would
+  // wait unseen behind it (the open item outranks a draft).
+  const startBookingDraft = (d: { title: string; start?: string }) => {
+    setSelected(null)
+    setBookingDraft({ ...d, n: ++draftCount.current })
+  }
 
   const bias = useMemo(() => {
     const p = trip.destination ?? trip.stops?.[0]
@@ -876,11 +882,10 @@ const TripScreen: React.FC<{
   const fixReady = (line: CheckLine) => {
     switch (line.fix?.action) {
       case 'add-travel':
-        return setBookingDraft({ title: '', n: ++draftCount.current })
+        return startBookingDraft({ title: '' })
       case 'add-stay':
-        return setBookingDraft({
+        return startBookingDraft({
           title: 'Stay',
-          n: ++draftCount.current,
           start: line.date ? `${line.date}T15:00` : undefined,
         })
       case 'show-empty-day':
@@ -1107,7 +1112,7 @@ const TripScreen: React.FC<{
       target={target}
       onTarget={setAddTarget}
       onAdd={(item) => add(target === 'ideas' ? null : target, item)}
-      onLaunch={(typed) => setBookingDraft({ title: typed, n: ++draftCount.current })}
+      onLaunch={(typed) => startBookingDraft({ title: typed })}
       onPreview={
         mapCol
           ? (pl) => setBarPreview(hasPin(pl) ? { lat: pl.lat, lng: pl.lng, label: pl.name } : null)
