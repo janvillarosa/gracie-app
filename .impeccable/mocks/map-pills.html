@@ -1,0 +1,74 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Map pills</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@700&family=Figtree:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#1A1A1A;--muted:#5C626B;--yellow:#FFD417;--yd:#E6BE00;--sight:#2348A6;--food:#C2410C;--tr:#4B5563;--day:#2348A6}
+*{box-sizing:border-box;margin:0}
+body{background:#DCDCDC;font:14px/1.4 Figtree,sans-serif;color:#3B3B3B;padding:24px}
+h1{font:700 22px Outfit;color:var(--ink)} p.l{color:#3F444C;max-width:900px;margin:6px 0 18px}
+.row{display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start}
+.cap{font-weight:700;color:var(--ink);margin:0 0 8px}
+.frame{position:relative;width:418px;height:866px;border-radius:16px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.12)}
+.bg{position:absolute;inset:0;background:url(assets/map-bg.png) center/cover}
+.bg.muted{filter:saturate(.28) brightness(1.06) contrast(.92)}
+.veil{position:absolute;inset:0;background:rgba(247,247,247,.18)}
+svg{position:absolute;inset:0}
+/* pill marker */
+.pill{position:absolute;transform:translate(-50%,calc(-100% - 10px));display:flex;align-items:center;gap:8px;height:34px;padding:0 14px 0 10px;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:999px;
+ box-shadow:0 1px 2px rgba(0,0,0,.08),0 6px 14px -6px rgba(0,0,0,.28);white-space:nowrap;font:600 14px Figtree;color:var(--ink)}
+.pill:after{content:"";position:absolute;left:50%;bottom:-6px;width:10px;height:10px;background:inherit;border-right:1px solid rgba(0,0,0,.08);border-bottom:1px solid rgba(0,0,0,.08);transform:translateX(-50%) rotate(45deg)}
+.pill .dot{width:12px;height:12px;border-radius:50%;flex:none;box-shadow:0 0 0 2px #fff}
+.pill .t{font:600 12.5px Figtree;color:var(--muted);font-variant-numeric:tabular-nums}
+.pill.next{background:var(--yellow);border-color:var(--yd);box-shadow:0 1px 0 var(--yd),0 8px 16px -6px rgba(150,115,0,.45)}
+.pill.next .k{font:700 10.5px Figtree;letter-spacing:.08em;text-transform:uppercase;color:var(--ink);opacity:.75}
+.pill.next .t{color:#5B4A00}
+.pill.done{background:#F3F3F3;color:#6B7079;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.pill.done .dot{background:#B8BBC0!important}
+.anchor{position:absolute;width:10px;height:10px;border-radius:50%;background:#fff;border:3px solid var(--ink);transform:translate(-50%,-50%)}
+.cluster{position:absolute;transform:translate(-50%,-50%);height:30px;padding:0 11px;border-radius:999px;background:var(--ink);color:#fff;font:700 13px Figtree;display:flex;align-items:center;box-shadow:0 4px 10px -4px rgba(0,0,0,.4)}
+.ctl{position:absolute;background:#fff;border-radius:999px;padding:8px 14px;font:600 13px Figtree;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.notes{max-width:420px;background:#fff;border-radius:16px;padding:18px 20px;font-size:14px;color:#3F444C}
+.notes b{color:var(--ink)} .notes li{margin:6px 0 0 18px}
+</style></head><body>
+<h1>Map pins and paths</h1>
+<p class="l">Left: the build today. Right: the proposal, drawn over the same map with the Map ID muted (a console style setting). Synthetic data: Thu 15, Sintra.</p>
+<div class="row">
+ <div><div class="cap">Now</div><div class="frame"><div class="bg"></div></div></div>
+ <div><div class="cap">Proposed</div>
+ <div class="frame"><div class="bg muted"></div><div class="veil"></div>
+  <svg viewBox="0 0 418 866">
+   <!-- route: white casing + day colour, rounded -->
+   <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M224 584 C 250 470, 280 380, 300 300 L 291 306 L 104 325" stroke="#fff" stroke-width="10" opacity=".95"/>
+    <path d="M224 584 C 250 470, 280 380, 300 300 L 291 306 L 104 325" stroke="var(--day)" stroke-width="5"/>
+    <!-- transport leg dashed -->
+    <path d="M291 306 L 360 200" stroke="#fff" stroke-width="9"/>
+    <path d="M291 306 L 360 200" stroke="var(--tr)" stroke-width="4" stroke-dasharray="2 8"/>
+   </g>
+   <!-- direction chevrons -->
+   <g fill="#fff" stroke="var(--day)" stroke-width="2.5" stroke-linejoin="round">
+    <path d="M253 470 l9 -10 l4 13 z"/><path d="M276 380 l9 -10 l4 13 z"/><path d="M200 315 l-12 4 l10 8 z"/>
+   </g>
+  </svg>
+  <i class="anchor" style="left:224px;top:584px;border-color:var(--yd)"></i>
+  <div class="pill next" style="left:224px;top:584px"><span class="k">Next</span><i class="dot" style="background:var(--sight)"></i>Pena Palace<span class="t">10:15</span></div>
+  <i class="anchor" style="left:104px;top:325px;border-color:var(--sight)"></i>
+  <div class="pill" style="left:104px;top:325px"><i class="dot" style="background:var(--sight)"></i>Quinta da Regaleira<span class="t">14:00</span></div>
+  <i class="anchor" style="left:291px;top:306px;border-color:var(--food)"></i>
+  <div class="pill" style="left:300px;top:306px"><i class="dot" style="background:var(--food)"></i>Piriquita<span class="t">16:30</span></div>
+  <i class="anchor" style="left:360px;top:200px;border-color:var(--tr)"></i>
+  <div class="cluster" style="left:360px;top:172px">+2</div>
+  <i class="anchor" style="left:160px;top:470px;border-color:#B8BBC0"></i>
+  <div class="pill done" style="left:160px;top:470px"><i class="dot"></i>Tascantiga</div>
+  <span class="ctl" style="left:12px;top:12px">Thu 15</span><span class="ctl" style="right:12px;top:12px">Fit day</span>
+ </div></div>
+ <div class="notes"><b>What changes</b><ul>
+  <li><b>Pills, not dots:</b> white paper chips, 34px tall, with Figtree 14/600, a category dot and the time. A small pointer tail and an anchor ring sit on the exact spot.</li>
+  <li><b>Next stop</b> is the yellow key pill with a "NEXT" kicker, the one loud thing on the map. <b>Done</b> stops turn to quiet grey pills.</li>
+  <li><b>The route</b> is a 5px day-colour line with a white 10px casing, so it reads on any map, plus round joins and white-filled chevrons for direction. <b>Transport legs</b> (train, flight) are dashed.</li>
+  <li><b>The "+N" cluster</b> is an ink pill. <b>Collisions:</b> a lower-priority pill shrinks to its anchor ring plus dot, and shows the full pill on hover.</li>
+  <li><b>Phone:</b> 30px pills, 13px text, the time hidden, names truncated at 16 characters.</li>
+  <li><b>Map style</b> muted in the console, so our pills lead.</li>
+ </ul></div>
+</div>
+</body></html>
