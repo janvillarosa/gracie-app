@@ -607,7 +607,7 @@ describe('Rows', () => {
     // On a desk they are edited in place: a day select, a typed time, the stamps, the note.
     expect(within(details).getByLabelText('Day')).toHaveValue(rel(0))
     expect(within(details).getByLabelText('Time')).toHaveValue('12:30')
-    expect(within(details).getByRole('button', { name: /^Place Add a place/ })).toBeInTheDocument()
+    expect(within(details).getByRole('combobox', { name: 'Place' })).toBeInTheDocument()
     expect(within(details).getByRole('button', { name: 'Sight' })).toHaveAttribute(
       'aria-pressed',
       'true',

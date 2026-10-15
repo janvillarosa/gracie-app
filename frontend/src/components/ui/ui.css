@@ -1012,3 +1012,21 @@ input.ui-sheet-title:focus-visible {
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
 }
+
+/* Place slips in the narrow inspector: the name on one line, where it is under it, so the name
+   is never squeezed down to a letter by a long address. */
+.ui-inline-place .pantry-slip {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0;
+}
+.ui-inline-place .pantry-slip .slip-name,
+.ui-inline-place .pantry-slip .slip-usual {
+  flex: 0 1 auto;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

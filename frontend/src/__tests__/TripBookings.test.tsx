@@ -181,12 +181,12 @@ describe('adding a booking', () => {
     seed(TRIP)
     open()
     const sheet = await newSheet()
-    // A desk edits times in place (a day select and a time field); places are still rows.
+    // A desk edits times in place (a day select and a time field); places are fields too.
     const row = (name: RegExp) =>
       within(sheet).queryByRole('button', { name }) ??
       within(sheet).queryByLabelText(new RegExp(`${name.source.trim()} time`))
     await userEvent.click(within(sheet).getByRole('button', { name: 'Flight' }))
-    expect(row(/^From /)).toBeInTheDocument()
+    expect(within(sheet).getByText('From')).toBeInTheDocument()
     expect(row(/^Depart /)).toBeInTheDocument()
     expect(row(/^Arrive /)).toBeInTheDocument()
     const change = async (from: string, to: string) => {
@@ -248,7 +248,6 @@ describe('adding a booking', () => {
     const departs = () => within(sheet).getByLabelText('Depart time') as HTMLInputElement
     const zone = () => departs().closest('.ui-inlinewhen')?.querySelector('.ui-inline-suffix')
     const pickPlace = async (query: string, option: RegExp) => {
-      await userEvent.click(within(sheet).getByRole('button', { name: /^From / }))
       const remove = screen.queryByRole('button', { name: 'Remove booking place' })
       if (remove) await userEvent.click(remove)
       await userEvent.type(await screen.findByRole('combobox', { name: 'Booking place' }), query)
@@ -332,14 +331,17 @@ describe('a booking with a start and an end place', () => {
     seed(TRIP)
     open()
     const sheet = await newSheet()
-    const row = (name: RegExp) => within(sheet).queryByRole('button', { name })
+    // A desk searches in place: the field is there, labelled From / To (or Place).
+    const row = (label: string) => within(sheet).queryByText(label)
     await userEvent.click(within(sheet).getByRole('button', { name: 'Car' }))
-    expect(row(/^From /)).toBeInTheDocument()
-    expect(row(/^To /)).toBeInTheDocument()
+    expect(row('From')).toBeInTheDocument()
+    expect(row('To')).toBeInTheDocument()
+    expect(within(sheet).getByRole('combobox', { name: 'Booking place' })).toBeInTheDocument()
+    expect(within(sheet).getByRole('combobox', { name: 'Booking end place' })).toBeInTheDocument()
     await userEvent.click(within(sheet).getByRole('button', { name: 'Kind, Car' }))
     await userEvent.click(await screen.findByRole('button', { name: 'Stay' }))
-    expect(row(/^Place /)).toBeInTheDocument()
-    expect(row(/^To /)).not.toBeInTheDocument()
+    expect(row('Place')).toBeInTheDocument()
+    expect(row('To')).not.toBeInTheDocument()
   })
 
   // The shared mock server (mocks/tripsServer.ts) still rejects `end_place`: add it to BOOKING_KEYS
@@ -348,9 +350,8 @@ describe('a booking with a start and an end place', () => {
     seed(TRIP)
     open()
     const sheet = await newSheet('Flight home')
-    await userEvent.click(within(sheet).getByRole('button', { name: /^To / }))
     await userEvent.type(
-      await screen.findByRole('combobox', { name: 'Booking end place' }),
+      await within(sheet).findByRole('combobox', { name: 'Booking end place' }),
       'Heathrow',
     )
     await userEvent.click(await screen.findByRole('option', { name: /Heathrow/ }))
@@ -371,7 +372,9 @@ describe('a booking with a start and an end place', () => {
     await userEvent.click(row)
     const sheet = await screen.findByRole('dialog', { name: 'Hop' })
     expect(sheet.querySelector('.ui-sheet-context')).toHaveTextContent(/^Lisbon → Porto · /)
-    expect(within(sheet).getByRole('button', { name: /^To Porto/ })).toBeInTheDocument()
+    expect(
+      within(sheet).getByRole('button', { name: /^Booking end place: Porto/ }),
+    ).toBeInTheDocument()
   })
 
   it('opens Maps at the start before it begins, and at the end once it is under way', async () => {
