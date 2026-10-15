@@ -56,7 +56,7 @@ without easing and the sweep becomes a plain highlight.
 ## 4. Scope and boundaries
 
 In scope (frontend; the backend spec is the contract):
-- `/app/trips`: the trip index (also surfaced as a "Trips" section on the House page).
+- `/app/trips`: the House page with the Trips pill selected (see 6g).
 - `/app/trips/:tripId`: the spine + map screen, with `?day=YYYY-MM-DD` deep links.
 - Create trip, edit trip details, todo detail editing, the place picker, the bookings view, the
   packing link and the notes.
@@ -248,6 +248,18 @@ adventure or a scavenger hunt.
   until there's a time), category stamps, a "Link a booking" row, and borderless notes. Open in
   Maps, an authorship line and Delete sit at the bottom. There are no field labels, no boxed
   inputs and no Save button; everything autosaves.
+
+## 6g. House navigation: pill nav (2026-10-15)
+
+- One shared **PillNav** (the List page's segmented pill) is the only tab style in the app: House
+  (Lists · Trips), List (Items · Notes), Trip (Plan · Ideas · Bookings).
+- The House page is a paper stack. The header sheet sits on top; the second sheet opens with
+  **Lists · Trips** pills and that section's yellow key ("New list" / "New trip"), replacing the
+  "Our Lists" / "Our Trips" headings. `/app` is Lists and `/app/trips` is Trips (the separate trips
+  index page is removed). The last pill is remembered per viewer, and a yellow dot marks a trip
+  happening now.
+- Trip rows mirror list rows (icon, title, one meta line, yellow chevron). Order: now, then
+  upcoming, then drafts. Past trips fold into "3 past trips · Show".
 
 ## 7. Constraints and open decisions
 
