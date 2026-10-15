@@ -6,6 +6,8 @@ import { useAuth } from '@auth/AuthProvider'
 import type { TripOp } from '../../api/tripTypes'
 import { getTripStore, TripStore, type StoreState } from './store'
 
+export { flushAndDispose, getPendingOnLogout, subscribePendingOnLogout } from './store'
+
 /** The house's trip store (one per user and house), started while the component is mounted. */
 export function useTripStoreFor(
   roomId: string | undefined,
@@ -13,6 +15,9 @@ export function useTripStoreFor(
   apiKey: string | null,
 ) {
   const qc = useQueryClient()
+  const { signOut } = useAuth()
+  const signOutRef = useRef(signOut)
+  signOutRef.current = signOut
   // The store outlives a sign-in: it is keyed by user and house, and only the credentials
   // it talks with are swapped (never captured), so a new key is used from the next call on.
   const api = useMemo(
@@ -37,15 +42,16 @@ export function useTripStoreFor(
           userId,
           api: apiRef.current as NonNullable<typeof api>,
           // After joining another house the old room answers 403: re-read who we are, and
-          // the store for the new house picks the saved outbox up.
+          // the store for the new house loads the whole saved outbox (it is per user, not per house)
+          // and re-tags it, so ops queued before the join still go out.
           onForbidden: () => {
             void qc.invalidateQueries({ queryKey: ['me'] })
             void qc.invalidateQueries({ queryKey: ['my-room'] })
           },
-          // A key that is no longer accepted is not "offline": re-check who we are, which is
-          // what signs the user out and back to the login.
+          // A key that is no longer accepted is not "offline": sign out through the same path as
+          // everything else (back to the login), keeping the queued changes on the device.
           onUnauthorized: () => {
-            void qc.invalidateQueries({ queryKey: ['me'] })
+            void signOutRef.current?.('expired')
           },
         }),
     )
