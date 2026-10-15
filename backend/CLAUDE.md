@@ -76,6 +76,10 @@ Spec: `docs/superpowers/specs/2026-10-14-trips-api-persistence-design.md`.
   cap 60; `""` removes; clock `field_at["days.<date>"]`, so labelling different days never
   conflicts). Over-cap patches are rejected with code `cap`. `field_at` keys with dots are
   fine because trips are only ever written as whole documents (`ReplaceCAS`).
+- **Attribution:** todos and bookings also carry server-set `updated_at` (UTC), stamped with
+  `created_by`/`updated_by` on every applied change (create, update, and the booking-delete
+  cascade); duplicate and fully-conflicted ops leave it alone. `GET /rooms/me` `members_meta`
+  entries include `user_id` so clients can resolve `created_by`/`updated_by`/`done_by`.
 - **Trip icon:** `icon` (omitempty) on the trip fields, set via trip.create/update, clock
   `field_at["icon"]`; one of SUITCASE, PLANE, BEACH, MOUNTAIN, CITY, TRAIN, ROAD_TRIP,
   CAMPING, MAP, LANDMARK, WINE, SKI; `""` clears; anything else is `invalid`.

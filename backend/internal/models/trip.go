@@ -52,6 +52,7 @@ type TripTodo struct {
 	BookingID *string          `bson:"booking_id,omitempty" json:"booking_id,omitempty"`
 	CreatedBy string           `bson:"created_by,omitempty" json:"created_by,omitempty"`
 	UpdatedBy string           `bson:"updated_by,omitempty" json:"updated_by,omitempty"`
+	UpdatedAt *time.Time       `bson:"updated_at,omitempty" json:"updated_at,omitempty"` // server time of the last applied change
 	V         int64            `bson:"v" json:"v"`
 	FieldAt   map[string]int64 `bson:"field_at" json:"-"`
 }
@@ -70,6 +71,7 @@ type Booking struct {
 	Notes            string           `bson:"notes,omitempty" json:"notes,omitempty"`
 	CreatedBy        string           `bson:"created_by,omitempty" json:"created_by,omitempty"`
 	UpdatedBy        string           `bson:"updated_by,omitempty" json:"updated_by,omitempty"`
+	UpdatedAt        *time.Time       `bson:"updated_at,omitempty" json:"updated_at,omitempty"` // server time of the last applied change
 	V                int64            `bson:"v" json:"v"`
 	FieldAt          map[string]int64 `bson:"field_at" json:"-"`
 }
