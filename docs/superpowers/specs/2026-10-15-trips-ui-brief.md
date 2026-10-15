@@ -327,6 +327,13 @@ flagged done days, and it didn't say which items clashed. Gaps now show where th
   restricted by domain). This supersedes self-hosted PMTiles in 7.1. There is no offline tile
   prefetch (the API terms forbid it); offline, the map is hidden (see the offline rule above).
 
+## 6k. Trip header avatars (2026-10-15)
+
+The member avatars stay. They are right-aligned on the "Day 3 of 9" line, with their right edge
+matching the ⋮ menu's, as a tight overlapping stack (24px avatars, "+N" after 3). On narrow
+screens they wrap onto their own line below, still right-aligned. They are not interactive, and
+the stack is labelled "Shared with …".
+
 ## 7. Constraints and open decisions
 
 Constraints:
