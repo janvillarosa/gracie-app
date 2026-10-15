@@ -22,13 +22,7 @@ import {
 } from '../lib/trips/places'
 import { DEMO_PLACES, demoSource, localityOf, setPlacesSource } from '../lib/trips/placesSource'
 import { DEBOUNCE_MS, MIN_QUERY, usePlaceSuggest, type Suggest } from '../lib/trips/usePlaces'
-import {
-  FakeAutocomplete,
-  FakePlace,
-  FakeToken,
-  fakeLayout,
-  resetGoogleFake,
-} from './googleFake'
+import { FakeAutocomplete, FakePlace, FakeToken, fakeLayout, resetGoogleFake } from './googleFake'
 
 vi.mock('@googlemaps/js-api-loader', async () => (await import('./googleFake')).loaderMock())
 vi.mock('@googlemaps/markerclusterer', async () => (await import('./googleFake')).clustererMock())
@@ -87,7 +81,8 @@ describe('what gets stored on a pick', () => {
 
   it('strips Google content from a patch on its way out, whatever a sheet spreads in', () => {
     setPlaceInfo('ChIJabc', { name: 'Sé', address: 'Largo da Sé', locality: 'Lisboa' })
-    const enriched = enrichTrip(trip({ todos: [todo('t', google('ChIJabc'))] })).todos[0].place as Place
+    const enriched = enrichTrip(trip({ todos: [todo('t', google('ChIJabc'))] })).todos[0]
+      .place as Place
     expect(enriched.name).toBe('Sé')
     const clean = sanitizePatch({ title: 'x', place: { ...enriched, tz: 'Europe/Lisbon' } })
     expect(clean.place).toEqual({ ...google('ChIJabc'), tz: 'Europe/Lisbon' })
@@ -121,7 +116,11 @@ describe('display from the session cache', () => {
     setPlaceInfo('ChIJabc', { name: 'Pena', address: 'Estrada da Pena', locality: 'Sintra' })
     const e = enrichTrip(t)
     expect(e).not.toBe(t)
-    expect(e.todos[0].place).toMatchObject({ name: 'Pena', address: 'Estrada da Pena', locality: 'Sintra' })
+    expect(e.todos[0].place).toMatchObject({
+      name: 'Pena',
+      address: 'Estrada da Pena',
+      locality: 'Sintra',
+    })
     expect(e.destination).toBe(t.destination)
     // The stored trip is untouched.
     expect(t.todos[0].place?.name).toBeUndefined()
@@ -146,9 +145,12 @@ describe('display from the session cache', () => {
   })
 
   it('takes the locality from the address components', () => {
-    expect(localityOf([{ longText: 'Rua', types: ['route'] }, { longText: 'Sintra', types: ['locality'] }])).toBe(
-      'Sintra',
-    )
+    expect(
+      localityOf([
+        { longText: 'Rua', types: ['route'] },
+        { longText: 'Sintra', types: ['locality'] },
+      ]),
+    ).toBe('Sintra')
     expect(localityOf([{ longText: 'Porto', types: ['postal_town'] }])).toBe('Porto')
     expect(localityOf(null)).toBeUndefined()
   })
@@ -157,7 +159,9 @@ describe('display from the session cache', () => {
 describe('refreshing coordinates (pure selection)', () => {
   it('wants Google places with no coordinates, or coordinates older than 25 days', () => {
     expect(needsRefresh(google('a'), NOW)).toBe(false)
-    expect(needsRefresh(google('a', { coords_fetched_at: iso(REFRESH_AFTER_MS + 1000) }), NOW)).toBe(true)
+    expect(
+      needsRefresh(google('a', { coords_fetched_at: iso(REFRESH_AFTER_MS + 1000) }), NOW),
+    ).toBe(true)
     expect(needsRefresh(google('a', { coords_fetched_at: iso(24 * DAY) }), NOW)).toBe(false)
     expect(needsRefresh({ source: 'google', place_id: 'a' }, NOW)).toBe(true)
     // Pins, manual places and a place with no id are not ours to refresh.
@@ -170,7 +174,10 @@ describe('refreshing coordinates (pure selection)', () => {
     const stale = google('old', { coords_fetched_at: iso(26 * DAY) })
     const t = trip({
       destination: stale,
-      stops: [google('fresh'), google('gone', { lat: undefined, lng: undefined, coords_fetched_at: undefined })],
+      stops: [
+        google('fresh'),
+        google('gone', { lat: undefined, lng: undefined, coords_fetched_at: undefined }),
+      ],
       todos: [todo('t1', stale), todo('t2', google('fresh'))],
       bookings: [
         {
@@ -196,11 +203,28 @@ describe('refreshing coordinates (pure selection)', () => {
     const t = trip({ stops: [google('a'), stale], todos: [todo('t1', stale)] })
     const targets = selectRefresh(t, NOW)
     const now = new Date(NOW)
-    expect(refreshPatch(t, targets.find((x) => x.slot.kind === 'todo') as never, { lat: 1, lng: 2 }, now)).toEqual({
-      place: { source: 'google', place_id: 'old', lat: 1, lng: 2, coords_fetched_at: now.toISOString() },
+    expect(
+      refreshPatch(
+        t,
+        targets.find((x) => x.slot.kind === 'todo') as never,
+        { lat: 1, lng: 2 },
+        now,
+      ),
+    ).toEqual({
+      place: {
+        source: 'google',
+        place_id: 'old',
+        lat: 1,
+        lng: 2,
+        coords_fetched_at: now.toISOString(),
+      },
     })
-    const stops = refreshPatch(t, targets.find((x) => x.slot.kind === 'trip') as never, { lat: 1, lng: 2 }, now)
-      .stops as Place[]
+    const stops = refreshPatch(
+      t,
+      targets.find((x) => x.slot.kind === 'trip') as never,
+      { lat: 1, lng: 2 },
+      now,
+    ).stops as Place[]
     expect(stops).toHaveLength(2)
     expect(stops[0]).toEqual(google('a'))
     expect(stops[1].lat).toBe(1)
@@ -211,7 +235,9 @@ describe('refreshing coordinates (pure selection)', () => {
     expect(worthRefreshing(trip({ end_date: '2026-10-20' }), '2026-10-15')).toBe(true)
     expect(worthRefreshing(trip({ end_date: '2026-10-01' }), '2026-10-15')).toBe(false)
     expect(worthRefreshing(trip({}), '2026-10-15')).toBe(true)
-    expect(worthRefreshing(trip({ end_date: '2026-12-01', deleted: { by: 'x' } }), '2026-10-15')).toBe(false)
+    expect(
+      worthRefreshing(trip({ end_date: '2026-12-01', deleted: { by: 'x' } }), '2026-10-15'),
+    ).toBe(false)
   })
 })
 

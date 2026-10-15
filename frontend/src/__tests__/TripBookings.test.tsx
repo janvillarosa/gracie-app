@@ -266,7 +266,9 @@ describe('adding a booking', () => {
     await waitFor(() => {
       const made = serverTrip()?.bookings.find((x) => x.title === 'Flight home')
       expect(made?.start_tz).toBe('Europe/London')
-      expect(made?.place?.name).toBe('Heathrow Airport')
+      // A Google place stores its id and coordinates, never its name.
+      expect(made?.place?.place_id).toBe('demo:heathrow')
+      expect(made?.place?.name).toBeUndefined()
     })
   })
 
@@ -355,7 +357,8 @@ describe('a booking with a start and an end place', () => {
     await userEvent.click(within(sheet).getByRole('button', { name: 'Add booking' }))
     await waitFor(() => {
       const made = serverTrip()?.bookings.find((x) => x.title === 'Flight home')
-      expect(made?.end_place?.name).toBe('Heathrow Airport')
+      expect(made?.end_place?.place_id).toBe('demo:heathrow')
+      expect(made?.end_place?.name).toBeUndefined()
       expect(made?.place ?? null).toBeNull()
     })
   })

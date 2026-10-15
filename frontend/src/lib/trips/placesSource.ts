@@ -134,8 +134,11 @@ export function googleSource(config: MapsConfig): PlacesSource {
 
 // ---- demo (no key) -----------------------------------------------------------------------------
 
-type DemoPlace = { id: string; name: string; locality: string; address: string } & LatLng
+type DemoPlace = { id: string; name: string; locality: string; address: string; tz?: string } & LatLng
 export const DEMO_PLACES: DemoPlace[] = [
+  { id: 'demo:lisbon', name: 'Lisbon', locality: 'Lisbon', address: 'Lisbon, Portugal', lat: 38.7223, lng: -9.1393, tz: 'Europe/Lisbon' },
+  { id: 'demo:porto', name: 'Porto', locality: 'Porto', address: 'Porto, Portugal', lat: 41.1579, lng: -8.6291, tz: 'Europe/Lisbon' },
+  { id: 'demo:heathrow', name: 'Heathrow Airport', locality: 'London', address: 'Longford, London', lat: 51.47, lng: -0.4543, tz: 'Europe/London' },
   {
     id: 'demo:se',
     name: 'Sé de Lisboa',
@@ -257,7 +260,7 @@ export const demoSource: PlacesSource = {
   },
   async resolve(s) {
     const d = s.prediction as DemoPlace
-    return { place: googlePlace(d.id, d), info: asInfo(d) }
+    return { place: googlePlace(d.id, d, new Date(), d.tz), info: asInfo(d) }
   },
   async details(placeId) {
     const d = DEMO_PLACES.find((x) => x.id === placeId)
