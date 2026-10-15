@@ -2043,11 +2043,17 @@
   gap: 8px;
   margin-top: 4px;
 }
-.map-add-actions .ant-btn {
-  flex: 1;
+.map-add-actions .ui-btn {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
 }
+/* The day chip gives way before the key's label wraps. */
 .map-add-day {
+  flex: 0 1 auto;
+  min-width: 0;
   padding: 0 10px;
+  white-space: nowrap;
 }
 .map-add-more {
   justify-self: start;

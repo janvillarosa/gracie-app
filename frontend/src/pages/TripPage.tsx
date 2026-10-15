@@ -441,7 +441,9 @@ const TripScreen: React.FC<{
   }
   const goToDay = useCallback(
     (date: string, focus = true) => {
-      mapFollow.resume()
+      // Picking a day is an explicit camera action: the map fits it (desk) or follows it.
+      if (desktop) mapFollow.fit()
+      else mapFollow.resume()
       setCurrentDay(date)
       if (doneDays.has(date)) setShowDone(true)
       openDay(date)
@@ -450,7 +452,7 @@ const TripScreen: React.FC<{
         requestAnimationFrame(() => scrollToEl(document.getElementById(`day-${date}`), focus)),
       )
     },
-    [openDay, doneDays],
+    [openDay, doneDays, desktop],
   )
   // ---- the one add bar -----------------------------------------------------------------
   const autoTarget =
@@ -497,9 +499,14 @@ const TripScreen: React.FC<{
     )
     return e?.id ?? null
   }, [schedule.days, phase, today, nowMs])
+  // On a desk the map holds every day and only changes emphasis as you scroll (the camera never
+  // follows), so finished days stay on it; elsewhere they drop off unless opened.
   const skipDays = useMemo(
-    () => new Set([...doneDays].filter((d) => override[d] !== true && d !== currentDay)),
-    [doneDays, override, currentDay],
+    () =>
+      desktop
+        ? new Set<string>()
+        : new Set([...doneDays].filter((d) => override[d] !== true && d !== currentDay)),
+    [desktop, doneDays, override, currentDay],
   )
   const sceneFor = useCallback(
     (mode: 'day' | 'all' | 'ideas', day: string | null, sel: string | null) =>
@@ -517,12 +524,20 @@ const TripScreen: React.FC<{
       }),
     [schedule, skipDays, today, nextStopId],
   )
-  const mapMode = ideasOpen ? 'ideas' : allDays ? 'all' : 'day'
-  const scene = useMemo(
-    () => sceneFor(mapMode, currentDay, selected),
-    [sceneFor, mapMode, currentDay, selected],
-  )
-  const dayStopCount = scene.stops.length
+  // Desk: one scene of every day with a route per day; the day in view is in colour and the
+  // others dimmed ("Show all days" dims nothing). Elsewhere: the day, or every day, or the ideas.
+  const deskScene = desktop && !ideasOpen
+  const mapMode = ideasOpen ? 'ideas' : deskScene || allDays ? 'all' : 'day'
+  const dayIdx = schedule.days.findIndex((d) => d.date === currentDay)
+  const emphasisDay = deskScene && !allDays && dayIdx >= 0 ? dayIdx : null
+  const scene = useMemo(() => {
+    const s = sceneFor(mapMode, currentDay, selected)
+    return deskScene ? { ...s, route: true, emphasisDay } : s
+  }, [sceneFor, mapMode, currentDay, selected, deskScene, emphasisDay])
+  const dayStopCount =
+    deskScene && emphasisDay !== null
+      ? scene.stops.filter((s) => s.dayIndex === emphasisDay).length
+      : scene.stops.length
   const mapTitle = ideasOpen
     ? 'Map of the ideas'
     : currentModel
@@ -585,7 +600,11 @@ const TripScreen: React.FC<{
               type="button"
               className="trip-pill is-button"
               aria-pressed={allDays}
-              onClick={() => setAllDays((a) => !a)}
+              onClick={() => {
+                setAllDays((a) => !a)
+                // Showing every day (or going back to the day) fits the map: an explicit action.
+                if (desktop) mapFollow.fit()
+              }}
             >
               {allDays ? 'Follow the day' : 'Show all days'}
             </button>

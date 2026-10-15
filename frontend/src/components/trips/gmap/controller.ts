@@ -170,12 +170,18 @@ export class MapController {
     return { north: j.north, south: j.south, east: j.east, west: j.west }
   }
 
-  /** Fit every stop in the scene, clear of the view's own chrome. */
+  /** Fit every stop in the scene, clear of the view's own chrome. An explicit fit (Fit day, a day
+   *  picked) of a scene with a day in emphasis fits that day's stops; the automatic fit on load
+   *  always takes the whole scene, so scrolling the list never moves the camera. */
   fit(force: boolean) {
     const p = this.props
-    const stops = p.scene.stops
+    const all = p.scene.stops
+    const day = p.scene.emphasisDay
+    const ofDay =
+      force && day !== undefined && day !== null ? all.filter((s) => s.dayIndex === day) : []
+    const stops = ofDay.length ? ofDay : all
     if (!stops.length) return
-    const key = stops.map((s) => `${s.id}:${s.lat}:${s.lng}`).join('|')
+    const key = all.map((s) => `${s.id}:${s.lat}:${s.lng}`).join('|')
     if (!force && (!p.following || key === this.lastFit)) return
     this.lastFit = key
     this.markProgrammatic(true)

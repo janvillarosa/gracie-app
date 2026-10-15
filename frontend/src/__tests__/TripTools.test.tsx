@@ -412,7 +412,11 @@ describe('Map', () => {
     seed(t)
     open()
     await screen.findByRole('region', { name: 'Next stop' })
-    await waitFor(() => expect(document.querySelectorAll('.map-pin')).toHaveLength(2))
+    // The desk map holds every day (the day in view is in colour, the others dimmed), so more than
+    // the two stops of today are drawn.
+    await waitFor(() =>
+      expect(document.querySelectorAll('.map-pin').length).toBeGreaterThanOrEqual(2),
+    )
     expect(document.querySelectorAll('.map-pin-ring')).toHaveLength(1)
     // No numbers anywhere on the pins.
     expect(document.querySelectorAll('.map-pin text')).toHaveLength(0)
