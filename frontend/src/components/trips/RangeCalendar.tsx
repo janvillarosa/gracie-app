@@ -7,6 +7,8 @@ type Props = {
   start?: string | null
   end?: string | null
   onChange: (start: string | null, end: string | null) => void
+  // Shown once a range exists: closes the sheet.
+  onDone?: () => void
 }
 
 const MONTH = new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' })
@@ -29,7 +31,7 @@ const shiftMonth = (key: string, n: number) => {
 
 /** One calendar for a date range: tap the first day, then the last. A single day is a trip
  *  too (tap the same day again). Saves as you pick; there is no Done. */
-export const RangeCalendar: React.FC<Props> = ({ start, end, onChange }) => {
+export const RangeCalendar: React.FC<Props> = ({ start, end, onChange, onDone }) => {
   const [month, setMonth] = useState(firstOf(start ?? localDateKey()))
   const first = utc(month)
   // Monday-first offset for the 1st.
@@ -39,6 +41,8 @@ export const RangeCalendar: React.FC<Props> = ({ start, end, onChange }) => {
     ...Array.from({ length: lead }, () => null),
     ...Array.from({ length: days }, (_, i) => addDays(month, i)),
   ]
+  // Always six weeks, so the sheet never changes height between taps or months.
+  while (cells.length < 42) cells.push(null)
   const choosingEnd = !!start && start === end
 
   const pick = (d: string) => {
@@ -100,18 +104,28 @@ export const RangeCalendar: React.FC<Props> = ({ start, end, onChange }) => {
           ),
         )}
       </div>
-      <p className="trip-help" role="status">
-        {!start
-          ? 'Pick the first day.'
-          : choosingEnd
-            ? 'Pick the last day, or keep it to one day.'
-            : `${diffDays(end as string, start) + 1} days`}
-      </p>
-      {start && (
-        <Button type="text" onClick={() => onChange(null, null)}>
+      <div className="trip-cal-foot">
+        <p className="trip-help" role="status">
+          {!start
+            ? 'Pick the first day.'
+            : choosingEnd
+              ? 'Pick the last day, or keep it to one day.'
+              : `${diffDays(end as string, start) + 1} days`}
+        </p>
+        <Button
+          type="text"
+          className="trip-cal-clear"
+          hidden={!start}
+          onClick={() => onChange(null, null)}
+        >
           Clear dates
         </Button>
-      )}
+        {onDone && (
+          <Button type="primary" shape="round" hidden={!start} onClick={onDone}>
+            Done
+          </Button>
+        )}
+      </div>
     </div>
   )
 }

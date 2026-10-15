@@ -822,6 +822,15 @@ describe('Sync and states', () => {
 describe('Phone', () => {
   beforeEach(() => setViewport('phone'))
 
+  it('opens the day list in the one sheet style, with a title and no divider chrome', async () => {
+    seed(TRIP)
+    open()
+    await userEvent.click(await screen.findByRole('button', { name: /Day 3 of 5/ }))
+    const sheet = await screen.findByRole('dialog')
+    expect(sheet.closest('.trip-sheet-drawer')).not.toBeNull()
+    expect(within(sheet).getByRole('list', { name: 'Days' })).toBeInTheDocument()
+  })
+
   it('opens today and tomorrow, and folds later days to a header line', async () => {
     seed(TRIP)
     open()

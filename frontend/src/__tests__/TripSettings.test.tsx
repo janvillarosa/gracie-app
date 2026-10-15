@@ -210,6 +210,29 @@ describe('Trip settings: When', () => {
     expect(sheet.querySelector('input[type="date"]')).toBeNull()
   })
 
+  it('never changes height between taps, and offers Done once a range exists', async () => {
+    seed(makeTrip(7, { title: 'Draft' }))
+    settings(makeTrip(7).trip_id)
+    await userEvent.click((await screen.findByText('When')).closest('button') as HTMLElement)
+    const sheet = await screen.findByRole('dialog')
+    const grid = () => sheet.querySelector('.trip-cal-grid') as HTMLElement
+    const foot = () => sheet.querySelector('.trip-cal-foot') as HTMLElement
+    // Six weeks always: the grid has the same number of cells before and after.
+    const cells = grid().children.length
+    expect(cells).toBe(7 + 42)
+    // The footer row exists from the start; its keys are only hidden until needed.
+    expect(foot()).toBeInTheDocument()
+    expect(within(sheet).queryByRole('button', { name: 'Done' })).not.toBeInTheDocument()
+    const label = (d: string) => new RegExp(shortDay(d).replace(/\s/, '.*'))
+    await userEvent.click(within(sheet).getByRole('button', { name: label(rel(1)) }))
+    expect(grid().children.length).toBe(cells)
+    expect(sheet.querySelector('.trip-cal-foot')).toBe(foot())
+    await userEvent.click(within(sheet).getByRole('button', { name: label(rel(3)) }))
+    expect(grid().children.length).toBe(cells)
+    await userEvent.click(await within(sheet).findByRole('button', { name: 'Done' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+  })
+
   it('keeps a single day when the same day is tapped twice, and clears the dates', async () => {
     seed(makeTrip(7, { title: 'Draft', start_date: rel(5), end_date: rel(5) }))
     settings(makeTrip(7).trip_id)

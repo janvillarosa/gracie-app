@@ -2193,3 +2193,62 @@ textarea.trip-field {
   margin: 0 0 8px;
   font-size: 13px;
 }
+
+/* ---- the one bottom sheet: handle bar, optional Outfit title, no divider ------------------- */
+.trip-sheet-drawer.ant-drawer-bottom .ant-drawer-content {
+  max-height: 90dvh;
+}
+.trip-sheet-drawer .ant-drawer-content::before {
+  content: '';
+  display: block;
+  flex: none;
+  width: 36px;
+  height: 4px;
+  margin: 8px auto 0;
+  border-radius: 2px;
+  background: var(--border-strong);
+}
+.trip-sheet-drawer .ant-drawer-wrapper-body {
+  min-height: 0;
+}
+.trip-sheet-drawer .ant-drawer-header {
+  padding: 12px 24px 4px;
+  border-bottom: 0;
+}
+.trip-sheet-drawer .ant-drawer-title {
+  font-family: var(--font-headings);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.trip-sheet-drawer.is-bare .ant-drawer-header {
+  display: none;
+}
+@media (max-width: 1023px) {
+  .trip-sheet-drawer .ant-drawer-close {
+    display: none;
+  }
+}
+.trip-sheet-pad {
+  padding: 4px 24px 24px;
+}
+.trip-sheet-drawer .trip-daylist {
+  padding: 0 24px 24px;
+}
+.trip-cal-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+}
+.trip-cal-foot .trip-help {
+  flex: 1;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.trip-cal-foot [hidden] {
+  display: inline-flex !important;
+  visibility: hidden;
+}

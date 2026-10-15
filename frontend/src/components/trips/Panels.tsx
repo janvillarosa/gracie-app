@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { Button, Drawer } from 'antd'
+import { Button } from 'antd'
 import { X } from '@phosphor-icons/react'
 import { useDroppable } from '@dnd-kit/core'
 import type { TripTodo } from '@api/tripTypes'
 import { TransitionLink } from '@components/TransitionLink'
 import type { Entry } from '@lib/trips/schedule'
+import { Sheet } from './Sheet'
 import { EntryRows, type Shared } from './Spine'
 
 export type TabId = 'plan' | 'ideas' | 'bookings'
@@ -44,18 +45,9 @@ export const Panel: React.FC<PanelProps> = ({ title, onClose, desktop, bare, chi
   }, [desktop])
   if (!desktop) {
     return (
-      <Drawer
-        open
-        placement="bottom"
-        height="88%"
-        title={bare ? <span className="sr-only">{title}</span> : title}
-        onClose={onClose}
-        destroyOnClose
-        className="trip-sheet-drawer"
-        styles={{ body: { padding: 0 } }}
-      >
+      <Sheet title={title} bare={bare} onClose={onClose} height={bare ? '88%' : undefined}>
         {children}
-      </Drawer>
+      </Sheet>
     )
   }
   return (

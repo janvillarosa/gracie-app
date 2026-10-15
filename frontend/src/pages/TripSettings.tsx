@@ -1,13 +1,14 @@
 import React, { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { Button, Card, Divider, Drawer, Modal, Typography } from 'antd'
+import { Card, Divider, Modal, Typography } from 'antd'
 import { CaretRight } from '@phosphor-icons/react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@auth/AuthProvider'
 import { HouseLoader } from '@components/HouseLoader'
 import { IconPicker } from '@components/IconPicker'
 import { TopNav } from '@components/TopNav'
-import { RangeCalendar } from '@components/trips/RangeCalendar'
+import { Sheet } from '@components/trips/Sheet'
+import { WhenSheet } from '@components/trips/WhenSheet'
 import { TripsPreference } from '@components/trips/TripsPreference'
 import { WhereSheet } from '@components/trips/WhereSheet'
 import { TransitionLink } from '@components/TransitionLink'
@@ -22,7 +23,7 @@ import { useTransitionNavigate } from '@lib/viewTransition'
 import { TRIP_ICONS, TRIP_ICON_EMOJI, toTripEmoji, type TripIcon } from '../icons'
 import '../trips.css'
 
-type Sheet = 'icon' | 'where' | 'when' | null
+type SheetKind = 'icon' | 'where' | 'when' | null
 
 /** One setting as a list row: what it is, its value in muted type, and the yellow chevron. */
 const SettingRow: React.FC<{
@@ -63,7 +64,7 @@ export const TripSettings: React.FC = () => {
   const navigate = useTransitionNavigate()
   const { store, state, loading } = useTrips()
   const trip = state.trips[tripId]
-  const [sheet, setSheet] = useState<Sheet>(null)
+  const [sheet, setSheet] = useState<SheetKind>(null)
   const [confirming, setConfirming] = useState(false)
   const [packBusy, setPackBusy] = useState(false)
   const [packError, setPackError] = useState('')
@@ -217,53 +218,35 @@ export const TripSettings: React.FC = () => {
       </Card>
 
       {sheet === 'icon' && (
-        <Drawer
-          open
-          placement="bottom"
-          height="auto"
-          title="Trip icon"
-          onClose={() => setSheet(null)}
-          destroyOnClose
-        >
-          <IconPicker<TripIcon>
-            value={(trip.icon as TripIcon | undefined) ?? 'SUITCASE'}
-            options={TRIP_ICONS}
-            emoji={TRIP_ICON_EMOJI}
-            allowNone={false}
-            onChange={(v) => {
-              patch({ icon: v ?? 'SUITCASE' })
-              setSheet(null)
-            }}
-          />
-        </Drawer>
+        <Sheet title="Trip icon" onClose={() => setSheet(null)}>
+          <div className="trip-sheet-pad">
+            <IconPicker<TripIcon>
+              value={(trip.icon as TripIcon | undefined) ?? 'SUITCASE'}
+              options={TRIP_ICONS}
+              emoji={TRIP_ICON_EMOJI}
+              allowNone={false}
+              onChange={(v) => {
+                patch({ icon: v ?? 'SUITCASE' })
+                setSheet(null)
+              }}
+            />
+          </div>
+        </Sheet>
       )}
       {sheet === 'where' && (
-        <Drawer
-          open
-          placement="bottom"
-          height="80%"
-          title="Where"
-          onClose={() => setSheet(null)}
-          destroyOnClose
-        >
-          <WhereSheet stops={stops} tz={trip.tz} onChange={setStops} />
-        </Drawer>
+        <Sheet title="Where" height="80%" onClose={() => setSheet(null)}>
+          <div className="trip-sheet-pad">
+            <WhereSheet stops={stops} tz={trip.tz} onChange={setStops} />
+          </div>
+        </Sheet>
       )}
       {sheet === 'when' && (
-        <Drawer
-          open
-          placement="bottom"
-          height="auto"
-          title="When"
+        <WhenSheet
+          start={trip.start_date}
+          end={trip.end_date}
+          onChange={(s, e) => patch({ start_date: s, end_date: e })}
           onClose={() => setSheet(null)}
-          destroyOnClose
-        >
-          <RangeCalendar
-            start={trip.start_date}
-            end={trip.end_date}
-            onChange={(s, e) => patch({ start_date: s, end_date: e })}
-          />
-        </Drawer>
+        />
       )}
       <Modal
         open={confirming}

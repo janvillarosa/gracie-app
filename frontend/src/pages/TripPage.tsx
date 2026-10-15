@@ -10,7 +10,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from '@dnd-kit/core'
-import { Button, Card, Drawer, message } from 'antd'
+import { Button, Card, message } from 'antd'
 import { Check, MapTrifold } from '@phosphor-icons/react'
 import { useAuth } from '@auth/AuthProvider'
 import { TopNav } from '@components/TopNav'
@@ -50,6 +50,7 @@ import { DaySection, EntryRows, bylineFor, dayDone, type Shared } from '@compone
 import { TripHeader } from '@components/trips/TripHeader'
 import { TripMap, type MapPoint, type TripMapHandle } from '@components/trips/TripMap'
 import type { RowActions } from '@components/trips/TodoRow'
+import { Sheet } from '@components/trips/Sheet'
 import { DAY_COLOURS } from '@components/trips/tripUi'
 import { PillNav } from '@components/PillNav'
 import '../trips.css'
@@ -1276,18 +1277,14 @@ const TripScreen: React.FC<{
           )}
         </div>
         {phone && sheetOpen && (
-          <Drawer
-            open
-            placement="bottom"
-            height="62%"
+          <Sheet
             title={`Map · ${currentModel ? shortDay(currentModel.date) : 'ideas'}`}
+            height="62%"
+            className="trip-map-drawer"
             onClose={() => setSheetOpen(false)}
-            destroyOnClose
-            className="trip-sheet-drawer trip-map-drawer"
-            styles={{ body: { padding: 0, display: 'flex' } }}
           >
             {mapNode}
-          </Drawer>
+          </Sheet>
         )}
         {!desktop && daysOpen && (
           <Panel desktop={false} title="Days" onClose={() => setDaysOpen(false)}>
