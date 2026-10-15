@@ -11,6 +11,7 @@ import type {
   TripOpType,
 } from '../../api/tripTypes'
 import {
+  bySeq,
   createDefaultDB,
   newDeviceId,
   wipeTripDatabases,
@@ -95,6 +96,8 @@ export class TripStore {
   private persistFailed = false
   private unpersisted = new Set<string>()
   private writing = new Set<Promise<void>>()
+  // Ops handed to the database that it has not stamped yet.
+  private stamping = new Set<string>()
   // Ops made before the first load finished wait for it, so order and seq stay right.
   private early: Array<() => void> = []
   private disposed = false
@@ -339,6 +342,7 @@ export class TripStore {
   private accept(op: TripOp, draft: DraftOp) {
     if (this.disposed) return
     this.outbox = [...this.outbox, op]
+    this.stamping.add(op.op_id)
     const applied = renderTrip(
       this.rendered[op.trip_id],
       [op],
@@ -357,7 +361,10 @@ export class TripStore {
         op.seq = stamped.seq
       })
       .catch(() => this.degrade(op))
-      .finally(() => this.writing.delete(w))
+      .finally(() => {
+        this.stamping.delete(op.op_id)
+        this.writing.delete(w)
+      })
     this.writing.add(w)
     void this.flush()
   }
@@ -463,7 +470,6 @@ export class TripStore {
   }
 
   private async runLocked(): Promise<void> {
-    await this.reloadOutbox()
     do {
       this.again = false
       const pushed = await this.pushOps()
@@ -478,23 +484,42 @@ export class TripStore {
     } while (this.again)
   }
 
-  /** Picks up ops other tabs queued (and forgets ones they already sent). Ops that could not be
-   *  written to the database stay: they only exist in this tab. */
-  private async reloadOutbox() {
-    if (this.writing.size > 0) return
+  /** Waits for this tab's writes, then reads the outbox back from the database: it picks up ops
+   *  other tabs queued and forgets ones they already sent. Returns the ops that may go out now:
+   *  those the database holds (stamped, and so in seq order with every lower seq present, since
+   *  seqs are allocated atomically) plus ops that only exist in this tab (they have their own
+   *  volatile client id). An op still being stamped is never among them. */
+  private async reloadOutbox(): Promise<TripOp[]> {
+    await this.settle()
     try {
       const { outbox } = await this.db.load(this.roomId)
-      if (this.disposed || this.writing.size > 0) return
+      if (this.disposed) return []
       // Ops this tab already holds keep their identity; the database adds what other tabs queued.
       const mine = new Map(this.outbox.map((o) => [o.op_id, o]))
       const inDb = new Set(outbox.map((o) => o.op_id))
-      const memoryOnly = this.outbox.filter(
-        (o) => this.unpersisted.has(o.op_id) && !inDb.has(o.op_id),
+      const stored = outbox.map((o) => {
+        const m = mine.get(o.op_id)
+        if (!m) return o
+        // Stored before this tab heard back: take the stamp the database gave it.
+        if (!m.seq) {
+          m.client_id = o.client_id
+          m.seq = o.seq
+        }
+        return m
+      })
+      const onlyHere = this.outbox.filter(
+        (o) => !inDb.has(o.op_id) && (this.unpersisted.has(o.op_id) || this.stamping.has(o.op_id)),
       )
-      this.outbox = [...outbox.map((o) => mine.get(o.op_id) ?? o), ...memoryOnly]
+      this.outbox = [...stored, ...onlyHere]
       this.recomputeAll()
       this.emit()
-    } catch {}
+      return [...stored, ...onlyHere.filter((o) => this.unpersisted.has(o.op_id))].filter(
+        (o) => o.seq > 0,
+      )
+    } catch {
+      // Could not read the database: fall back to what this tab holds, stamped ops only.
+      return this.outbox.filter((o) => o.seq > 0).sort(bySeq)
+    }
   }
 
   private scheduleRetry() {
@@ -525,8 +550,13 @@ export class TripStore {
   /** 'ok': everything went; 'retry': the server asked us to try again (later ops wait);
    *  'stop': offline, signed out or moved house. */
   private async pushOps(): Promise<'ok' | 'retry' | 'stop'> {
-    while (this.outbox.length) {
-      const batch = this.outbox.slice(0, this.batchSize)
+    for (;;) {
+      // Before EVERY batch: re-read the database, so a lower seq another tab queued meanwhile is
+      // never sent after a higher one (the server drops any seq at or below what it has applied).
+      const ready = await this.reloadOutbox()
+      if (this.disposed) return 'stop'
+      const batch = ready.slice(0, this.batchSize)
+      if (!batch.length) break
       let resp: OpsResponse
       try {
         resp = await this.api.ops(this.roomId, batch)
