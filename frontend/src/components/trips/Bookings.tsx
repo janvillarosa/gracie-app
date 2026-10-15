@@ -2,14 +2,7 @@ import React, { useState } from 'react'
 import { Button } from '@components/ui'
 import { CaretDown, CaretRight, Warning } from '@phosphor-icons/react'
 import type { Booking } from '@api/tripTypes'
-import {
-  bookingHeadline,
-  bookingRoute,
-  bookingSub,
-  groupBookings,
-  nextMeta,
-  nowMeta,
-} from '@lib/trips/bookings'
+import { bookingRoute, bookingSub, groupBookings, nextMeta, nowMeta } from '@lib/trips/bookings'
 import { KIND_ICON } from './tripUi'
 
 export type BookingActions = {
@@ -96,17 +89,17 @@ export const BookingsPanel: React.FC<PanelProps> = ({ bookings, nowMs, tripTz, o
   const [showUsed, setShowUsed] = useState(false)
   const g = groupBookings(bookings, nowMs, tripTz)
   const row = (b: Booking, opts: { meta?: string; stamp?: boolean; strong?: boolean }) => {
-    const headline = bookingHeadline(b)
+    // The title is the person's own words, never rewritten; the route is its own line.
+    const route = bookingRoute(b)
     return (
       <li key={b.booking_id} className={opts.stamp ? 'trip-bcard is-used' : 'trip-bcard'}>
         <button type="button" className="trip-bcard-main" onClick={() => onOpen(b.booking_id)}>
           <span className="trip-stub-icon">{KIND_ICON[b.kind]}</span>
           <span className="trip-bcard-text">
-            <span className="trip-title">{headline}</span>
+            <span className="trip-title">{b.title}</span>
+            {route && <span className="trip-sub">{route}</span>}
             <span className={opts.strong ? 'trip-sub is-strong' : 'trip-sub'}>
-              {[headline.includes(' → ') ? '' : bookingRoute(b), opts.meta ?? bookingSub(b)]
-                .filter(Boolean)
-                .join(' · ')}
+              {opts.meta ?? bookingSub(b)}
             </span>
           </span>
           {opts.stamp && <span className="trip-used">Used</span>}

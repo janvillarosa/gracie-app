@@ -104,9 +104,7 @@ describe('Trip screen', () => {
     seed(t)
     open()
     await userEvent.click(await screen.findByRole('tab', { name: 'Bookings' }))
-    await userEvent.click(
-      await screen.findByRole('button', { name: /^Rossio → Sintra|Rossio to Sintra/ }),
-    )
+    await userEvent.click(await screen.findByRole('button', { name: /^Rossio to Sintra/ }))
     const sheet = await screen.findByRole('dialog', { name: 'Rossio to Sintra' })
     await userEvent.click(within(sheet).getByRole('button', { name: 'Show code' }))
     const slip = await screen.findByRole('dialog', { name: 'Ticket for Rossio to Sintra' })

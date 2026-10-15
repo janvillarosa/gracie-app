@@ -43,7 +43,7 @@ describe('Bookings tab', () => {
     const fold = await screen.findByRole('button', { name: '1 used · Show' })
     expect(fold).toHaveAttribute('aria-expanded', 'false')
     await userEvent.click(fold)
-    const row = (await screen.findByText('London → Lisbon')).closest('li') as HTMLElement
+    const row = (await screen.findByText('London to Lisbon')).closest('li') as HTMLElement
     expect(within(row).getByText('Used')).toBeInTheDocument()
     // A row is the trip and its day, not a button for the code.
     expect(within(row).queryByRole('button', { name: 'Show code' })).not.toBeInTheDocument()
@@ -62,7 +62,7 @@ describe('Bookings tab', () => {
     await userEvent.keyboard('{Escape}')
     // Deleting the booking clears the link.
     await showUsed()
-    await userEvent.click(await screen.findByRole('button', { name: /^London → Lisbon/ }))
+    await userEvent.click(await screen.findByRole('button', { name: /^London to Lisbon/ }))
     const detail = await screen.findByRole('dialog', { name: 'London to Lisbon' })
     await userEvent.click(within(detail).getByRole('button', { name: 'Delete booking' }))
     await waitFor(() => expect(todo()?.booking_id ?? null).toBeNull())
