@@ -70,6 +70,19 @@ Spec: `docs/superpowers/specs/2026-10-14-trips-api-persistence-design.md`.
   cap 60; `""` removes; clock `field_at["days.<date>"]`, so labelling different days never
   conflicts). Over-cap patches are rejected with code `cap`. `field_at` keys with dots are
   fine because trips are only ever written as whole documents (`ReplaceCAS`).
+- **Batch semantics:** ops are grouped per trip and applied in `seq` order per `client_id`
+  (array order across clients is kept). **Only one flusher may run per `client_id`**: seqs
+  are a per-device total order, and a lower seq arriving after a higher one is `duplicate`.
+  A storage error on one trip turns that trip's ops into `retry` and the rest of the batch
+  proceeds; only a dead request context fails the whole call.
+- **Bounded documents:** `acked` entries carry a last-seen time and are pruned after 30 days
+  idle; at most 3 new `client_id`s per trip per batch and 200 per trip (else `cap`, seq not
+  consumed). A `days` patch has at most 60 keys; `days.*` clocks are capped at 240 per trip
+  and pruned for unlabelled dates after 30 days. Pruning an old `acked` entry means a replay
+  older than 30 days could re-apply, the same horizon as tombstones.
+- Packing-list link is stale (and relinked) only for not-found, soft-deleted, or a list in
+  another room (e.g. left behind in a deleted solo room after a join); other lookup errors
+  surface. Lists are not moved on join.
 - Places: `PHOTON_BASE_URL` unset or upstream failure => `200 {"results":[],"degraded":true}`.
 
 ## Testing

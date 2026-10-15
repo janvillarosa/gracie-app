@@ -14,27 +14,30 @@ import (
 )
 
 const (
-	TypeTripCreate    = "trip.create"
-	TypeTripUpdate    = "trip.update"
-	TypeTripDelete    = "trip.delete"
-	TypeTripRestore   = "trip.restore"
-	TypeTodoCreate    = "todo.create"
-	TypeTodoUpdate    = "todo.update"
-	TypeTodoDelete    = "todo.delete"
-	TypeBookingCreate = "booking.create"
-	TypeBookingUpdate = "booking.update"
-	TypeBookingDelete = "booking.delete"
-	MaxTodos          = 150
-	MaxBookings       = 50
-	maxTripTitle      = 120
-	maxItemTitle      = 200
-	maxTripNotes      = 16384
-	maxItemNotes      = 2048
-	maxConfirmation   = 64
-	MaxStops          = 12
-	MaxDays           = 60
-	maxDayLabel       = 40
-	maxLocality       = 120
+	TypeTripCreate        = "trip.create"
+	TypeTripUpdate        = "trip.update"
+	TypeTripDelete        = "trip.delete"
+	TypeTripRestore       = "trip.restore"
+	TypeTodoCreate        = "todo.create"
+	TypeTodoUpdate        = "todo.update"
+	TypeTodoDelete        = "todo.delete"
+	TypeBookingCreate     = "booking.create"
+	TypeBookingUpdate     = "booking.update"
+	TypeBookingDelete     = "booking.delete"
+	MaxTodos              = 150
+	MaxBookings           = 50
+	maxTripTitle          = 120
+	maxItemTitle          = 200
+	maxTripNotes          = 16384
+	maxItemNotes          = 2048
+	maxConfirmation       = 64
+	MaxStops              = 12
+	MaxDays               = 60
+	maxDayLabel           = 40
+	MaxDayClocks          = 4 * MaxDays // live labels plus recently removed ones awaiting clock pruning
+	MaxAckedClients       = 200
+	MaxNewClientsPerBatch = 3
+	maxLocality           = 120
 )
 
 var (
@@ -111,6 +114,9 @@ func validTripPatch(p TripPatch, create bool) bool {
 				return false
 			}
 		}
+	}
+	if len(p.Days) > MaxDays {
+		return false
 	}
 	for date, label := range p.Days {
 		if !validDate(date) || utf8.RuneCountInString(label) > maxDayLabel {

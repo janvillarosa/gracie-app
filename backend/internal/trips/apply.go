@@ -2,6 +2,7 @@ package trips
 
 import (
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/janvillarosa/gracie-app/backend/internal/models"
@@ -83,6 +84,10 @@ func ApplyOp(t *models.Trip, op models.Op, c Ctx) (models.OpResult, Outcome) {
 		fail(&res, models.CodeForbiddenOrUnknown)
 		return res, Outcome{}
 	}
+	if _, known := t.Acked[op.ClientID]; !known && len(t.Acked) >= MaxAckedClients {
+		fail(&res, models.CodeCap) // bounded document: too many distinct devices; seq not consumed
+		return res, Outcome{}
+	}
 	at := op.At
 	if ms := c.Now.UnixMilli(); at > ms {
 		at = ms // a skewed phone clock must not win forever
@@ -92,6 +97,10 @@ func ApplyOp(t *models.Trip, op models.Op, c Ctx) (models.OpResult, Outcome) {
 		t.Acked = map[string]int64{}
 	}
 	t.Acked[op.ClientID] = op.Seq // every non-duplicate outcome consumes the seq
+	if t.AckedAt == nil {
+		t.AckedAt = map[string]int64{}
+	}
+	t.AckedAt[op.ClientID] = c.Now.UnixMilli()
 	if bump {
 		t.Version = c.NewV
 	}
@@ -202,13 +211,25 @@ func tripCapExceeded(t *models.Trip, p TripPatch) bool {
 	if p.Stops.Set && p.Stops.Val != nil && len(*p.Stops.Val) > MaxStops {
 		return true
 	}
-	added := 0
-	for d, label := range p.Days {
-		if _, exists := t.Days[d]; label != "" && !exists {
-			added++
+	labels, clocks := len(t.Days), 0
+	for k := range t.FieldAt {
+		if strings.HasPrefix(k, "days.") {
+			clocks++
 		}
 	}
-	return len(t.Days)+added > MaxDays
+	for d, label := range p.Days {
+		_, exists := t.Days[d]
+		switch {
+		case label != "" && !exists:
+			labels++
+		case label == "" && exists:
+			labels--
+		}
+		if _, has := t.FieldAt["days."+d]; !has {
+			clocks++
+		}
+	}
+	return labels > MaxDays || clocks > MaxDayClocks
 }
 
 func tripCreate(t *models.Trip, op models.Op, at int64, c Ctx, res *models.OpResult) bool {
@@ -403,11 +424,11 @@ func todoChanges(td *models.TripTodo, p TodoPatch, actor string, now time.Time) 
 }
 
 func todoCreate(t *models.Trip, op models.Op, at int64, c Ctx, res *models.OpResult) bool {
-	if len(t.Todos) >= MaxTodos {
-		return fail(res, models.CodeCap)
-	}
 	if tombstoned(t, op.EntityID) {
 		return fail(res, models.CodeGone)
+	}
+	if len(t.Todos) >= MaxTodos {
+		return fail(res, models.CodeCap)
 	}
 	if findTodo(t, op.EntityID) >= 0 {
 		return fail(res, models.CodeInvalid)
@@ -449,7 +470,9 @@ func todoUpdate(t *models.Trip, op models.Op, at int64, c Ctx, res *models.OpRes
 	}
 	td.V = c.NewV
 	td.UpdatedBy = c.Actor
-	resolveTodoTZ(t, td)
+	if p.Place.Set { // a title-only edit must not shift the time after a trip tz change
+		resolveTodoTZ(t, td)
+	}
 	if p.Order != nil || p.Day.Set {
 		renumberIfCramped(t, c.NewV)
 	}
@@ -517,11 +540,11 @@ func bookingChanges(b *models.Booking, p BookingPatch) []change {
 }
 
 func bookingCreate(t *models.Trip, op models.Op, at int64, c Ctx, res *models.OpResult) bool {
-	if len(t.Bookings) >= MaxBookings {
-		return fail(res, models.CodeCap)
-	}
 	if tombstoned(t, op.EntityID) {
 		return fail(res, models.CodeGone)
+	}
+	if len(t.Bookings) >= MaxBookings {
+		return fail(res, models.CodeCap)
 	}
 	if findBooking(t, op.EntityID) >= 0 {
 		return fail(res, models.CodeInvalid)

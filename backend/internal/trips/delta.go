@@ -1,6 +1,7 @@
 package trips
 
 import (
+	"strings"
 	"time"
 
 	"github.com/janvillarosa/gracie-app/backend/internal/models"
@@ -41,6 +42,53 @@ func DeltaSince(t *models.Trip, known int64, present bool) models.TripDelta {
 		}
 	}
 	return d
+}
+
+// Prune bounds the document: tombstones, idle client ack entries and clocks of removed
+// day labels all expire after 30 days.
+func Prune(t *models.Trip, now time.Time) {
+	PruneTombstones(t, now)
+	PruneAcked(t, now)
+	PruneDayClocks(t, now)
+}
+
+// PruneAcked drops client_id entries idle for more than 30 days. Entries from before
+// last-seen tracking are stamped with now and age out from there.
+func PruneAcked(t *models.Trip, now time.Time) {
+	cutoff := now.Add(-tombstoneTTL).UnixMilli()
+	for id := range t.Acked {
+		ts, ok := t.AckedAt[id]
+		if !ok {
+			if t.AckedAt == nil {
+				t.AckedAt = map[string]int64{}
+			}
+			t.AckedAt[id] = now.UnixMilli()
+			continue
+		}
+		if ts < cutoff {
+			delete(t.Acked, id)
+			delete(t.AckedAt, id)
+		}
+	}
+	for id := range t.AckedAt {
+		if _, ok := t.Acked[id]; !ok {
+			delete(t.AckedAt, id)
+		}
+	}
+}
+
+// PruneDayClocks drops field clocks of unlabelled dates once older than the tombstone TTL
+// (clocks are clamped to server time, so a stale op that old can no longer beat them).
+func PruneDayClocks(t *models.Trip, now time.Time) {
+	cutoff := now.Add(-tombstoneTTL).UnixMilli()
+	for k, at := range t.FieldAt {
+		if !strings.HasPrefix(k, "days.") {
+			continue
+		}
+		if _, labelled := t.Days[strings.TrimPrefix(k, "days.")]; !labelled && at < cutoff {
+			delete(t.FieldAt, k)
+		}
+	}
 }
 
 // PruneTombstones drops tombstones older than 30 days and raises TombFloor to the
