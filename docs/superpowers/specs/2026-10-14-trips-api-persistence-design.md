@@ -64,7 +64,7 @@ Place { name ≤200, address ≤300, locality? ≤120, lat, lng, tz, osm_ref?, s
 
 Behavior:
 - **Size:** worst case at the caps is about 0.6MB; a typical trip is about 30KB raw, about 6KB gzipped. An integration test measures both.
-- **Times** are stored as wall-clock time plus an IANA zone (the source of truth, DST-safe). Clients sort a day by absolute time computed from those (nulls last), then `order`, then `todo_id`. Ideas sort by `order` then id.
+- **Times** are stored as wall-clock time plus an IANA zone (the source of truth, DST-safe). Clients sort a day by `order`, then `todo_id` (revised 2026-10-15; previously absolute time with nulls last). When a time is set or changed, the client gives the todo an `order` between its nearest timed neighbours, so timed todos stay chronological and untimed todos keep their dragged position. Ideas sort by `order` then id.
 - A `day` outside the trip dates is allowed; the UI shows it as "outside trip dates", so changing dates never drops data.
 - **Reordering** uses midpoint `order`; when a gap falls below 1e-7, `ApplyOp` renumbers that day's todos in the same write.
 - **"Open in maps"** is built on the client from lat/lng. No API.

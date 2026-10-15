@@ -161,6 +161,18 @@ section wins. Hierarchy now has three levels:
 - Colour in the spine is limited to the day dot, the yellow key and state. The day-colour cycle
   lives on the map.
 
+## 6b. Add flow and untimed todos (2026-10-15)
+
+- **Add:** the single add bar is for quick capture: it parses "14:00 Pena Palace" into a time and a
+  title, shows place slips, and Enter adds at once. An expand button (or Shift+Enter) opens the item
+  detail, prefilled. The item detail is the same editor used for editing (a bottom sheet on the
+  phone, a panel over the map on desktop). In the Bookings tab, add opens the booking form
+  directly.
+- **Untimed todos are first-class.** A day's order is the manual `order`. Setting a time places the
+  todo between its timed neighbours; untimed todos stay where they were dragged. Rows without a
+  time have no empty time column. The Now marker, overlap gaps and time display apply only to
+  timed todos. Duration is optional and lives in the detail.
+
 ## 7. Constraints and open decisions
 
 Constraints:
