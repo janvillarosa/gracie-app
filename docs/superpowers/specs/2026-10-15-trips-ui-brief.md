@@ -419,6 +419,20 @@ empty map), and planning before the trip happens on desktop. The user chose opti
 - **Quick delete for ideas:** a hover trash icon, swipe, or Delete/Backspace, all with Undo (5s) and
   never a confirm dialog. Spine rows share the same row-actions component.
 
+## 6p. Desktop inspector (2026-10-15)
+
+On desktop (1024px and wider) the item and booking panels become an **inline inspector**. They use
+the same four tiers, but the details tier edits in place with no picker sheets:
+- **When:** day select, a typed time with ↑/↓ adjusting it, and a duration segmented control.
+- **Place:** inline search.
+- **Category:** a stamp select where only the selected stamp is filled.
+- **Booking:** an inline select. **Note:** a visible textarea.
+
+It is master-detail: clicking another row swaps the content without closing, J/K moves between items,
+and Esc closes. At 1200px and wider it takes the map column's place while open. Target: setting day,
+time, place and category takes 5 clicks or fewer. The phone keeps the existing row-to-picker flow.
+Context lines leave an 8px gap before the stamp.
+
 ## 7. Constraints and open decisions
 
 Constraints:
