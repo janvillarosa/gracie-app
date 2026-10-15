@@ -241,8 +241,6 @@ export const BookingEditor: React.FC<EditorProps> = ({
 type LineProps = {
   booking: Booking
   past: boolean
-  // Map number, shown quietly while the map is visible.
-  pin?: number
   tonight?: boolean
   selected: boolean
   clash?: boolean
@@ -254,7 +252,6 @@ type LineProps = {
 export const BookingLine = React.memo<LineProps>(function BookingLine({
   booking: b,
   past,
-  pin,
   tonight,
   selected,
   clash,
@@ -282,11 +279,6 @@ export const BookingLine = React.memo<LineProps>(function BookingLine({
         onClick={() => onOpen(b.booking_id)}
       >
         <span className="trip-stub-icon">{KIND_ICON[b.kind]}</span>
-        {pin ? (
-          <span className="trip-pinno" aria-hidden>
-            {pin}
-          </span>
-        ) : null}
         <span className="trip-time">
           {tonight ? 'Tonight' : (b.starts_at?.split('T')[1] ?? '')}
         </span>

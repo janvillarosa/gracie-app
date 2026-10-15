@@ -10,7 +10,7 @@ import React, {
   useState,
 } from 'react'
 
-export type MapPoint = { id: string; lat: number; lng: number; n?: number }
+export type MapPoint = { id: string; lat: number; lng: number }
 export type TripMapHandle = { setHot: (id: string | null) => void }
 
 export type MapProps = {
@@ -129,9 +129,6 @@ const PlainMap: React.FC<MapProps & { hot: string | null; reason: string }> = ({
           >
             {nextId === p.id && <circle r={20} className="map-pin-ring" />}
             <circle r={14} fill={colour} className="map-pin-disc" />
-            <text textAnchor="middle" dy="0.35em">
-              {p.n}
-            </text>
           </g>
         ))}
       </svg>

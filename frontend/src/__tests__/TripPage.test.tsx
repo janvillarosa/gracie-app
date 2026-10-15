@@ -186,7 +186,7 @@ describe('Next-stop deck', () => {
     const card = await deck()
     expect(within(card).getByText('Next stop')).toBeInTheDocument()
     expect(within(card).getByRole('heading', { name: 'Pena Palace' })).toBeInTheDocument()
-    expect(within(card).getByText('10:15')).toBeInTheDocument()
+    expect(within(card).getByText('Planned for 10:15')).toBeInTheDocument()
     // The heading is only where to go; there is no "more today" line.
     expect(within(card).queryByText(/more today/)).not.toBeInTheDocument()
     // The checkbox sits beside the title; there is no Done, Go or Skip button.
@@ -219,7 +219,9 @@ describe('Next-stop deck', () => {
     open()
     const card = await deck()
     expect(within(card).getByRole('heading', { name: 'Pena Palace' })).toBeInTheDocument()
-    expect(within(card).getByText('10:15 · London to Lisbon · Booked')).toBeInTheDocument()
+    expect(
+      within(card).getByText('Planned for 10:15 · London to Lisbon · Booked'),
+    ).toBeInTheDocument()
     // The linked booking is not a card of its own, and its code waits behind a button.
     expect(within(card).getByRole('button', { name: 'Show code' })).toBeInTheDocument()
   })
@@ -268,7 +270,7 @@ describe('Next-stop deck', () => {
     t.todos[3] = { ...t.todos[3], start_time: '00:01', tz: 'Pacific/Kiritimati', order: 1 }
     seed(t)
     open()
-    expect(await screen.findByText('Planned for 00:01')).toBeInTheDocument()
+    expect(await screen.findByText(/^Planned for 00:01/)).toBeInTheDocument()
   })
 
   it('uses the place as the heading, with the title as the first part of the subheading', async () => {
@@ -607,7 +609,7 @@ describe('Rows', () => {
     await waitFor(() => expect(document.body.textContent).toContain('Moved Ginjinha tasting to'))
   })
 
-  it('numbers a stop with a small badge before its time, only while the map is up', async () => {
+  it('shows no map numbers in rows: the row is the name, the map is the picture', async () => {
     const t = lisbonTrip()
     t.todos[4] = {
       ...t.todos[4],
@@ -616,12 +618,8 @@ describe('Rows', () => {
     seed(t)
     open()
     const row = (await screen.findByText('Lunch at Tascantiga')).closest('li') as HTMLElement
-    const badge = row.querySelector('.trip-pinno') as HTMLElement
-    expect(badge).toHaveTextContent('1')
-    const time = row.querySelector('.trip-time') as HTMLElement
-    expect(badge.compareDocumentPosition(time) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    // The number is not inside the time, so it can never read as "12:301".
-    expect(time).toHaveTextContent(/^12:30$/)
+    expect(row.querySelector('.trip-pinno')).toBeNull()
+    expect(row.querySelector('.trip-time')).toHaveTextContent(/^12:30$/)
   })
 
   it('reorders with Alt+Arrow, timed or not, and announces it', async () => {

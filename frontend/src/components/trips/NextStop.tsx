@@ -141,7 +141,6 @@ export const NextStopDeck: React.FC<Props> = ({
               </h3>
             </div>
             <p className="trip-deck-sub">{top.sub}</p>
-            {top.planned && <p className="trip-deck-note">Planned for {top.time}</p>}
             {note && <p className="trip-deck-note">{note}</p>}
             {(pin || top.code) && (
               <div className="trip-deck-actions">

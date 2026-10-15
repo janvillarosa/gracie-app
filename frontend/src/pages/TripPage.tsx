@@ -262,7 +262,7 @@ function useScreenActions(ctx: React.MutableRefObject<Ctx>) {
 }
 
 function pinsFor(schedule: Schedule) {
-  const numbers = new Map<string, number>()
+  let hasDayPlaces = false
   const byDay = new Map<string, MapPoint[]>()
   const ideaDots: MapPoint[] = []
   const ideaPins: MapPoint[] = []
@@ -271,9 +271,8 @@ function pinsFor(schedule: Schedule) {
     for (const e of d.entries) {
       const p = e.kind === 'todo' ? e.todo.place : e.booking.place
       if (!p || p.source === 'manual') continue
-      const n = list.length + 1
-      numbers.set(e.id, n)
-      list.push({ id: e.id, lat: p.lat, lng: p.lng, n })
+      hasDayPlaces = true
+      list.push({ id: e.id, lat: p.lat, lng: p.lng })
     }
     byDay.set(d.date, list)
   }
@@ -281,14 +280,12 @@ function pinsFor(schedule: Schedule) {
     if (t.place && t.place.source !== 'manual')
       ideaDots.push({ id: t.todo_id, lat: t.place.lat, lng: t.place.lng })
   for (const d of ideaDots) ideaPins.push(d)
-  return { numbers, byDay, ideaDots, ideaPins }
+  return { hasDayPlaces, byDay, ideaDots, ideaPins }
 }
 
 type Segment =
   | { kind: 'day'; key: string; day: DayModel; index: number; closed: boolean }
   | { kind: 'done'; key: string; days: DayModel[] }
-
-const NO_PINS = new Map<string, number>()
 
 const TripScreen: React.FC<{
   trip: Trip
@@ -449,9 +446,11 @@ const TripScreen: React.FC<{
             // The heading is only where to go; the rest is a quiet line under it.
             const heading = t.place?.name || t.title
             const time = t.start_time || clock(bk?.starts_at)
+            const overdue = !t.done && e.startMs !== null && e.startMs < nowMs
             const sub = [
               heading !== t.title ? t.title : '',
-              time,
+              // Said once: the time, or "Planned for" it once it has passed.
+              overdue && time ? `Planned for ${time}` : time,
               bk?.title ?? '',
               bk ? 'Booked' : '',
             ]
@@ -475,7 +474,7 @@ const TripScreen: React.FC<{
                   }
                 : undefined,
               done: t.done,
-              planned: !t.done && e.startMs !== null && e.startMs < nowMs,
+              planned: overdue,
             }
           }
           const b = e.booking
@@ -632,7 +631,7 @@ const TripScreen: React.FC<{
   const mapVisible = desktop || (phone && sheetOpen)
   const pins = useMemo(() => pinsFor(schedule), [schedule])
   // The map control appears once there is something to show on it.
-  const hasPlaces = pins.numbers.size > 0 || pins.ideaDots.length > 0
+  const hasPlaces = pins.hasDayPlaces || pins.ideaDots.length > 0
   const moveTargets = useMemo(
     () => [
       ...schedule.days.map((d) => ({ value: d.date as string | null, label: fullDay(d.date) })),
@@ -649,24 +648,13 @@ const TripScreen: React.FC<{
       members,
       notes: state.notes,
       locked,
-      pins: mapVisible ? pins.numbers : NO_PINS,
       setDayLabel,
       onClash: (id: string) => {
         ctx.current.openItem(id)
         setFocusTime(id)
       },
     }),
-    [
-      rowActions,
-      moveTargets,
-      userId,
-      members,
-      state.notes,
-      locked,
-      pins.numbers,
-      mapVisible,
-      setDayLabel,
-    ],
+    [rowActions, moveTargets, userId, members, state.notes, locked, setDayLabel],
   )
 
   // ---- the day in view -----------------------------------------------------------------
@@ -746,7 +734,7 @@ const TripScreen: React.FC<{
     for (const [date, list] of pins.byDay) {
       // Finished days stay off the map unless you opened them or are reading them.
       if (doneDays.has(date) && override[date] !== true && date !== currentDay) continue
-      if (allDays || date !== currentDay) out.push(...list.map((p) => ({ ...p, n: undefined })))
+      if (allDays || date !== currentDay) out.push(...list)
     }
     return out
   }, [pins, currentDay, allDays, doneDays, override, ideasOpen])

@@ -24,8 +24,6 @@ export type RowNote = { text: string }
 
 type Props = {
   todo: TripTodo
-  // Number on the map, shown quietly in the time gutter while the map is visible.
-  pin?: number
   // Name of a housemate who changed this in the last 24h (their initial shows as a dot).
   changedBy: string
   note?: RowNote
@@ -50,7 +48,6 @@ type Props = {
 // Memoized so ticking one row or typing in the add bar doesn't re-render the whole spine.
 export const TodoRow = React.memo<Props>(function TodoRow({
   todo,
-  pin,
   changedBy,
   note,
   moveOpen,
@@ -130,9 +127,6 @@ export const TodoRow = React.memo<Props>(function TodoRow({
         </div>
         <div ref={swipe.slideRef} className="item-slide" {...swipe.handlers}>
           <div className="trip-row-line" {...listeners}>
-            <span className="trip-grip" aria-hidden>
-              <DotsSixVertical />
-            </span>
             {idea ? (
               <span className="trip-check trip-idea-dot">
                 <span
@@ -151,11 +145,6 @@ export const TodoRow = React.memo<Props>(function TodoRow({
                 />
               </span>
             )}
-            {pin ? (
-              <span className="trip-pinno" aria-hidden>
-                {pin}
-              </span>
-            ) : null}
             {todo.start_time && <span className="trip-time">{todo.start_time}</span>}
             <button
               type="button"
@@ -168,43 +157,48 @@ export const TodoRow = React.memo<Props>(function TodoRow({
               </span>
               {second && <span className="trip-sub">{second}</span>}
             </button>
-            {changedBy && (
-              <span className="trip-whodot" role="img" aria-label={`Changed by ${changedBy}`}>
-                {changedBy[0].toUpperCase()}
-              </span>
-            )}
-            {!changedBy && !idea && (
-              <span
-                className={`trip-catdot trip-catdot-${todo.category}`}
-                role="img"
-                aria-label={categoryLabel(todo.category)}
-              />
-            )}
-            {!locked && (
-              <span className="trip-acts">
+            <span className="trip-trail">
+              {changedBy && (
+                <span className="trip-whodot" role="img" aria-label={`Changed by ${changedBy}`}>
+                  {changedBy[0].toUpperCase()}
+                </span>
+              )}
+              {!changedBy && !idea && (
+                <span
+                  className={`trip-catdot trip-catdot-${todo.category}`}
+                  role="img"
+                  aria-label={categoryLabel(todo.category)}
+                />
+              )}
+              {!locked && (
+                <span className="trip-acts">
+                  <Button
+                    type="text"
+                    shape="circle"
+                    size="small"
+                    aria-label={`Delete ${todo.title}`}
+                    onClick={() => actions.remove(id)}
+                    icon={<Trash />}
+                  />
+                </span>
+              )}
+              {idea && !locked && (
                 <Button
+                  className="trip-addday"
                   type="text"
                   shape="circle"
                   size="small"
-                  aria-label={`Delete ${todo.title}`}
-                  onClick={() => actions.remove(id)}
-                  icon={<Trash />}
+                  aria-label={`Add ${todo.title} to a day`}
+                  aria-haspopup="menu"
+                  aria-expanded={moveOpen}
+                  onClick={() => actions.openMove(moveOpen ? null : id)}
+                  icon={<CalendarPlus />}
                 />
+              )}
+              <span className="trip-grip" aria-hidden>
+                <DotsSixVertical />
               </span>
-            )}
-            {idea && !locked && (
-              <Button
-                className="trip-addday"
-                type="text"
-                shape="circle"
-                size="small"
-                aria-label={`Add ${todo.title} to a day`}
-                aria-haspopup="menu"
-                aria-expanded={moveOpen}
-                onClick={() => actions.openMove(moveOpen ? null : id)}
-                icon={<CalendarPlus />}
-              />
-            )}
+            </span>
             {moveOpen && (
               <MoveMenu
                 title={todo.title}

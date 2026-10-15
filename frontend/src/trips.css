@@ -2297,11 +2297,6 @@ textarea.trip-field {
   flex: none;
   padding: 0 20px;
 }
-@media (max-width: 480px) {
-  .trip-deck-actions {
-    margin-left: 0;
-  }
-}
 
 /* ---- rows: checkbox and time sit on the title's first line; titles are two lines at most --- */
 .trip-grip,
@@ -2353,22 +2348,6 @@ textarea.trip-field {
   margin-top: 0;
   width: 10px;
   height: 10px;
-}
-/* A small numbered disc before the time, in the day's colour: the map pin's twin. */
-.trip-pinno {
-  flex: none;
-  display: grid;
-  place-items: center;
-  width: 18px;
-  height: 18px;
-  margin-top: 13px;
-  border-radius: 50%;
-  background: var(--day-colour, var(--ink));
-  color: #fff;
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
 }
 /* One row inset across Plan, Ideas and Bookings. */
 .pill-nav-pane .trip-ideas,
@@ -2467,4 +2446,162 @@ textarea.trip-field {
 .trip-chip .trip-stamp-btn {
   min-height: 0;
   cursor: inherit;
+}
+
+/* ---- ONE row grid for every line in the plan sheet ----------------------------------------
+   [lead 24] 12 [time 48] 12 [title 1fr] [trail]. The lead holds a checkbox, a booking icon or
+   the first character of a line; the time column holds "Tonight", times and (while the map is
+   up) the pin number; text always starts in the title column. A day without any times drops
+   the time column for all of its lines, so its titles start at lead + 12px. */
+.pill-nav-pane {
+  --lead: 24px;
+  --gap: 12px;
+  --lead-col: calc(var(--lead) + var(--gap));
+  --time-w: 48px;
+  --time-col: 0px;
+  --tcol: var(--time-col);
+}
+.trip-day.has-time {
+  --time-col: calc(var(--time-w) + var(--gap));
+}
+.trip-row-line,
+.trip-stubline {
+  display: grid;
+  grid-template-columns: var(--lead-col) var(--tcol) minmax(0, 1fr) auto;
+  column-gap: 0;
+  align-items: start;
+  padding: 0;
+}
+.trip-row-line > .trip-check,
+.trip-row-line > .trip-idea-dot {
+  grid-column: 1;
+  grid-row: 1;
+  justify-self: start;
+  width: var(--lead);
+}
+.trip-row-line > .trip-time,
+.trip-stubline > .trip-time {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: start;
+  width: var(--time-w);
+  flex: none;
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+.trip-row-line > .trip-main {
+  grid-column: 3;
+  grid-row: 1;
+  min-width: 0;
+  padding-left: 0;
+}
+.trip-row-line > .trip-trail {
+  grid-column: 4;
+  grid-row: 1;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+.trip-trail .trip-grip {
+  flex: none;
+  margin-top: 15px;
+}
+/* The stub (booking line, "Tonight") */
+.trip-stubline {
+  min-height: 44px;
+  align-items: center;
+}
+.trip-stubline > .trip-stub-icon {
+  grid-column: 1;
+  grid-row: 1;
+  width: var(--lead);
+  justify-self: start;
+}
+.trip-stubline > .trip-time {
+  margin-top: 0;
+  align-self: center;
+}
+.trip-stubline > .trip-time {
+  margin-top: 0;
+}
+.trip-stubline > .trip-stub-title {
+  grid-column: 3;
+  grid-row: 1;
+}
+.trip-stubline > .trip-used {
+  grid-column: 4;
+  grid-row: 1;
+}
+/* The Now marker starts in the time column, then a rule. */
+.trip-now {
+  padding-left: var(--lead-col);
+}
+.trip-now::before {
+  display: none;
+}
+/* Empty day, overlap line: text in the title column. */
+.trip-empty-row {
+  margin: 0;
+  padding: 10px 0 10px calc(var(--lead-col) + var(--tcol));
+  border: 0;
+  border-radius: 0;
+  text-align: left;
+}
+.trip-clash {
+  padding-left: calc(var(--lead-col) + var(--tcol));
+}
+/* Bookings list: icon in the lead, title column for the text. */
+.trip-bcard-main {
+  display: grid;
+  grid-template-columns: var(--lead-col) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0;
+}
+.trip-bcard-main > .trip-stub-icon {
+  width: var(--lead);
+  justify-self: start;
+}
+/* The next-stop card uses the same columns inside its own padding. */
+.trip-deck-head {
+  gap: var(--gap, 12px);
+}
+.trip-deck-sub,
+.trip-deck-note,
+.trip-deck-actions {
+  margin-left: calc(24px + 12px);
+}
+.trip-deck-actions {
+  flex-wrap: wrap;
+  padding-right: 0;
+}
+.trip-deck-card {
+  padding-right: 0;
+}
+
+/* Custom properties resolve where they are defined, so the day's column is defined on the day
+   (where --time-col is set) as well as on the sheet. */
+.trip-day {
+  --tcol: var(--time-col);
+}
+@media (max-width: 480px) {
+  /* The deck takes a little of the sheet's side padding so its two keys fit on one row. */
+  .pill-nav-pane .trip-deck-wrap {
+    margin-inline: -12px;
+  }
+  .trip-deck.ant-card .ant-card-body {
+    padding: 16px;
+  }
+  .trip-deck-actions {
+    gap: 8px;
+  }
+  .trip-deck-actions .trip-go {
+    padding: 0 16px;
+    min-width: 0;
+  }
+}
+
+/* The fold lines start at the lead column edge, like day headers. */
+.completed-toggle.trip-donetoggle {
+  margin-inline: 0;
+  padding-left: 0;
 }

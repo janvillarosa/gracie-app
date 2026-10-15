@@ -18,8 +18,6 @@ export type Shared = {
   members: Member[]
   notes: Record<string, ConflictNote>
   locked: boolean
-  // Map numbers; empty while the map is not on screen (the gutter stays quiet then).
-  pins: Map<string, number>
   setDayLabel: (date: string, label: string) => void
   // Opens an item's sheet with its time ready to change (from the overlap line).
   onClash: (id: string) => void
@@ -113,7 +111,6 @@ export const EntryRows: React.FC<RowsProps> = ({
         <TodoRow
           key={td.todo_id}
           todo={td}
-          pin={shared.pins.get(td.todo_id)}
           changedBy={recentOther(td, shared.me, shared.members, t)}
           note={noteFor(td, shared.notes, shared.me, shared.members)}
           moveOpen={moveOpenId === td.todo_id}
@@ -135,7 +132,6 @@ export const EntryRows: React.FC<RowsProps> = ({
           key={b.booking_id}
           booking={b}
           past={(e.endMs ?? e.startMs ?? Number.POSITIVE_INFINITY) < nowMs}
-          pin={shared.pins.get(b.booking_id)}
           selected={selectedId === b.booking_id}
           clash={!!clashIds?.includes(b.booking_id)}
           onOpen={shared.actions.open}
@@ -278,8 +274,11 @@ export const DaySection = React.memo<DayProps>(function DaySection({
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: `day:${day.date}` })
   const label = day.label || day.suggested
+  // One row grid for the whole day: a time column only when something in it has a time.
+  const hasTime = day.entries.some((e) => e.startMs !== null) || (isToday && !!stay)
   const cls = [
     'trip-day',
+    hasTime ? 'has-time' : '',
     closed ? 'is-closed' : 'is-open',
     lazy ? 'is-lazy' : '',
     isOver ? 'is-over' : '',

@@ -399,9 +399,8 @@ describe('Map', () => {
     await waitFor(() => expect(document.querySelectorAll('.map-pin')).toHaveLength(2))
     const pins = document.querySelectorAll('.map-pin')
     expect(document.querySelectorAll('.map-pin.is-next')).toHaveLength(1)
-    expect(document.querySelector('.map-pin.is-next text')?.textContent).toBe('1')
-    // Numbers are sequential among the stops that have a place.
-    expect([...pins].map((p) => p.querySelector('text')?.textContent)).toEqual(['1', '2'])
+    // No numbers anywhere on the pins.
+    expect(document.querySelectorAll('.map-pin text')).toHaveLength(0)
   })
 
   it('opens Ideas over the map on wide screens, keeping the days, with grey idea pins', async () => {

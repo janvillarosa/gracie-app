@@ -150,7 +150,6 @@ const MapCanvas: React.FC<Props> = ({
           markers.current.set(p.id, entry)
         }
         entry.m.setLngLat([p.lng, p.lat])
-        entry.el.textContent = String(p.n ?? '')
         entry.el.style.background = colour
         entry.el.classList.toggle('is-next', p.id === nextId)
       }
