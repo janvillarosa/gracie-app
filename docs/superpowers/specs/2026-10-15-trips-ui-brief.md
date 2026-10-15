@@ -193,6 +193,10 @@ this." This section outranks feature completeness; when in doubt, show less.
 - **New trip asks only for a name.** Dates, destination and stops come later, from Trip details
   or a gentle prompt in the empty plan.
 - Done days fold into one quiet line at the top of the plan sheet, like "Show checked-off items".
+- **No horizontal date strip** on any breakpoint. The header's friendly line ("Day 3 of 9 · Thu
+  15 ▾") opens a day list (a bottom sheet on the phone, a popover on desktop) styled like the House
+  page's list rows. On the phone, days after tomorrow are folded to their header line until
+  tapped. `?day=` deep links still work.
 
 ## 7. Constraints and open decisions
 
