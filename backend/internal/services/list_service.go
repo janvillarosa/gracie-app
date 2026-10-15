@@ -28,28 +28,7 @@ func NewListService(users store.UserRepository, rooms store.RoomRepository, list
 }
 
 func (s *ListService) ensureRoomMembership(ctx context.Context, user *models.User, roomID string) error {
-	if user.RoomID == nil || *user.RoomID == "" {
-		return derr.ErrForbidden
-	}
-	if *user.RoomID != roomID {
-		return derr.ErrForbidden
-	}
-	rm, err := s.rooms.GetByID(ctx, roomID)
-	if err != nil {
-		return err
-	}
-	// verify membership
-	isMember := false
-	for _, mid := range rm.MemberIDs {
-		if mid == user.UserID {
-			isMember = true
-			break
-		}
-	}
-	if !isMember {
-		return derr.ErrForbidden
-	}
-	return nil
+	return ensureRoomMembership(ctx, s.rooms, user, roomID)
 }
 
 // Lists

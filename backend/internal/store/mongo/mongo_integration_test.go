@@ -6,11 +6,16 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
+	"errors"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
+	derr "github.com/janvillarosa/gracie-app/backend/internal/errors"
 	"github.com/janvillarosa/gracie-app/backend/internal/models"
+	"github.com/janvillarosa/gracie-app/backend/internal/trips"
 )
 
 func randHex(n int) string {
@@ -217,5 +222,149 @@ func TestMongoTxRunnerFallback(t *testing.T) {
 	}
 	if !ran {
 		t.Fatalf("tx function did not run")
+	}
+}
+
+func newTestTrip(id, room string) *models.Trip {
+	now := time.Now().UTC()
+	return &models.Trip{TripID: id, RoomID: room, Version: 1, V: 1, FieldAt: map[string]int64{}, Acked: map[string]int64{},
+		TripFields: models.TripFields{Title: "Japan"}, CreatedBy: "user_a", CreatedAt: now, UpdatedAt: now}
+}
+
+func TestMongoTripRepoCASInsertAndIndexes(t *testing.T) {
+	c := connectOrSkip(t)
+	r := NewTripRepo(c)
+	ctx := context.Background()
+	if err := r.EnsureIndexes(ctx); err != nil {
+		t.Fatalf("indexes: %v", err)
+	}
+	id := "trip_" + randHex(16)
+	if err := r.Insert(ctx, newTestTrip(id, "room_1")); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.Insert(ctx, newTestTrip(id, "room_2")); !errors.Is(err, derr.ErrConflict) {
+		t.Fatalf("duplicate insert should be ErrConflict, got %v", err)
+	}
+	cur, _ := r.Get(ctx, id)
+	cur.Version = 2
+	cur.Title = "Japan 2026"
+	if ok, err := r.ReplaceCAS(ctx, cur, 1); err != nil || !ok {
+		t.Fatalf("CAS should win: %v %v", ok, err)
+	}
+	stale := cur.Clone()
+	stale.Version = 2
+	if ok, _ := r.ReplaceCAS(ctx, stale, 1); ok {
+		t.Fatalf("stale CAS must lose")
+	}
+	got, _ := r.Get(ctx, id)
+	if got.Title != "Japan 2026" || got.Version != 2 {
+		t.Fatalf("stored: %+v", got)
+	}
+
+	// TTL index on purge_at exists
+	cur2, _ := r.Get(ctx, id)
+	idxs, _ := r.col().Indexes().List(ctx)
+	var found bool
+	var doc struct {
+		Name   string `bson:"name"`
+		Expire *int32 `bson:"expireAfterSeconds"`
+	}
+	for idxs.Next(ctx) {
+		if err := idxs.Decode(&doc); err == nil && doc.Name == "purge_at_ttl" && doc.Expire != nil {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("purge_at TTL index missing")
+	}
+	_ = cur2
+}
+
+func TestMongoTripRepoManifestMoveLinkDelete(t *testing.T) {
+	c := connectOrSkip(t)
+	r := NewTripRepo(c)
+	ctx := context.Background()
+	_ = r.EnsureIndexes(ctx)
+	a, b := "trip_"+randHex(16), "trip_"+randHex(16)
+	_ = r.Insert(ctx, newTestTrip(a, "room_1"))
+	del := newTestTrip(b, "room_1")
+	d := time.Now().UTC()
+	del.DeletedAt, del.DeletedBy = &d, "user_x"
+	_ = r.Insert(ctx, del)
+
+	stubs, err := r.Manifest(ctx, "room_1")
+	if err != nil || len(stubs) != 2 {
+		t.Fatalf("manifest: %v %v", stubs, err)
+	}
+	many, _ := r.GetMany(ctx, "room_1", []string{a, "trip_other"})
+	if len(many) != 1 || many[0].TripID != a {
+		t.Fatalf("GetMany: %+v", many)
+	}
+
+	if ok, _ := r.LinkPackingList(ctx, a, "room_1", nil, "list_1", time.Now()); !ok {
+		t.Fatalf("first link should win")
+	}
+	if ok, _ := r.LinkPackingList(ctx, a, "room_1", nil, "list_2", time.Now()); ok {
+		t.Fatalf("second link with expect=nil must lose")
+	}
+	linked, _ := r.Get(ctx, a)
+	if linked.PackingListID == nil || *linked.PackingListID != "list_1" || linked.Version != 2 || linked.V != 2 {
+		t.Fatalf("link state: %+v", linked)
+	}
+
+	if err := r.MoveRoom(ctx, "room_1", "room_9", time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	moved, _ := r.Get(ctx, a)
+	if moved.RoomID != "room_9" || moved.Version != 3 {
+		t.Fatalf("move: %+v", moved)
+	}
+	if err := r.DeleteByRoom(ctx, "room_9"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := r.Get(ctx, a); !errors.Is(err, derr.ErrNotFound) {
+		t.Fatalf("DeleteByRoom left data: %v", err)
+	}
+}
+
+func TestMongoTripDocumentSizes(t *testing.T) {
+	c := connectOrSkip(t)
+	r := NewTripRepo(c)
+	ctx := context.Background()
+	_ = r.EnsureIndexes(ctx)
+	tr := newTestTrip("trip_"+randHex(16), "room_1")
+	tr.Notes = strings.Repeat("n", 16384)
+	for i := 0; i < trips.MaxTodos; i++ {
+		tr.Todos = append(tr.Todos, models.TripTodo{TodoID: "ttd_" + randHex(16), Title: strings.Repeat("t", 200), Notes: strings.Repeat("x", 2048),
+			Place: &models.Place{Name: strings.Repeat("p", 200), Address: strings.Repeat("a", 300), Source: "photon"}, FieldAt: map[string]int64{"title": 1}})
+	}
+	for i := 0; i < trips.MaxBookings; i++ {
+		tr.Bookings = append(tr.Bookings, models.Booking{BookingID: "tbk_" + randHex(16), Kind: "flight", Title: "x", Notes: strings.Repeat("x", 2048), FieldAt: map[string]int64{}})
+	}
+	if err := r.Insert(ctx, tr); err != nil {
+		t.Fatalf("a trip at every cap must be storable: %v", err)
+	}
+	raw, _ := json.Marshal(tr)
+	t.Logf("worst-case trip JSON: %d KB", len(raw)/1024)
+	if len(raw) > 2<<20 {
+		t.Fatalf("worst-case trip exceeds 2MB (%d bytes); the spec expects ~0.6MB", len(raw))
+	}
+}
+
+func TestMongoPlaceCacheRoundtripAndTTLIndex(t *testing.T) {
+	c := connectOrSkip(t)
+	r := NewPlaceCacheRepo(c)
+	ctx := context.Background()
+	if err := r.EnsureIndexes(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok, _ := r.Get(ctx, "k1"); ok {
+		t.Fatalf("empty cache hit")
+	}
+	_ = r.Put(ctx, "k1", []models.Place{{Name: "Kyoto", Source: "photon"}}, time.Now().UTC())
+	_ = r.Put(ctx, "k1", []models.Place{{Name: "Kyoto Station", Source: "photon"}}, time.Now().UTC()) // upsert
+	got, ok, _ := r.Get(ctx, "k1")
+	if !ok || len(got) != 1 || got[0].Name != "Kyoto Station" {
+		t.Fatalf("cache: %v %v", got, ok)
 	}
 }

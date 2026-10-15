@@ -11,11 +11,22 @@ import (
 	authmw "github.com/janvillarosa/gracie-app/backend/internal/http/middleware"
 )
 
-func NewRouter(userFinder authmw.UserFinder, authHandler *handlers.AuthHandler, userHandler *handlers.UserHandler, roomHandler *handlers.RoomHandler, listHandler *handlers.ListHandler) http.Handler {
+// Handlers groups the HTTP handlers the router wires up.
+type Handlers struct {
+	Auth   *handlers.AuthHandler
+	User   *handlers.UserHandler
+	Room   *handlers.RoomHandler
+	List   *handlers.ListHandler
+	Trip   *handlers.TripHandler
+	Places *handlers.PlacesHandler
+}
+
+func NewRouter(userFinder authmw.UserFinder, h Handlers) http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
+	r.Use(middleware.Compress(5, "application/json"))
 
 	// CORS for production (Vercel frontend → Railway API). Control via CORS_ORIGIN env.
 	// If CORS_ORIGIN is set, allow only that origin and credentials; otherwise allow all without credentials.
@@ -36,42 +47,51 @@ func NewRouter(userFinder authmw.UserFinder, authHandler *handlers.AuthHandler, 
 	}))
 
 	// Public endpoints
-	r.Post("/auth/register", authHandler.Register)
-	r.Post("/auth/login", authHandler.Login)
-	r.Post("/users", userHandler.CreateUser)
+	r.Post("/auth/register", h.Auth.Register)
+	r.Post("/auth/login", h.Auth.Login)
+	r.Post("/users", h.User.CreateUser)
 
 	// Authenticated endpoints
 	r.Group(func(ar chi.Router) {
 		ar.Use(authmw.AuthMiddleware(userFinder))
 
-		ar.Get("/me", userHandler.GetMe)
-		ar.Put("/me", userHandler.UpdateMe)
-		ar.Patch("/me", userHandler.UpdateMePartial)
-		ar.Post("/me/password", authHandler.ChangePassword)
-		ar.Delete("/me", userHandler.DeleteMe)
+		ar.Get("/me", h.User.GetMe)
+		ar.Put("/me", h.User.UpdateMe)
+		ar.Patch("/me", h.User.UpdateMePartial)
+		ar.Post("/me/password", h.Auth.ChangePassword)
+		ar.Delete("/me", h.User.DeleteMe)
 
-		ar.Get("/rooms/me", roomHandler.GetMyRoom)
-		ar.Get("/rooms/{room_id}/pantry", listHandler.GetPantry)
-		ar.Post("/rooms", roomHandler.CreateSoloRoom)
-		ar.Post("/rooms/share", roomHandler.ShareRoom)
-		ar.Post("/rooms/join", roomHandler.JoinByToken)
-		ar.Post("/rooms/{room_id}/join", roomHandler.JoinRoom)
-		ar.Put("/rooms/settings", roomHandler.UpdateSettings)
-		ar.Post("/rooms/deletion/vote", roomHandler.VoteDeletion)
-		ar.Post("/rooms/deletion/cancel", roomHandler.CancelDeletion)
+		ar.Get("/rooms/me", h.Room.GetMyRoom)
+		ar.Get("/rooms/{room_id}/pantry", h.List.GetPantry)
+		ar.Post("/rooms", h.Room.CreateSoloRoom)
+		ar.Post("/rooms/share", h.Room.ShareRoom)
+		ar.Post("/rooms/join", h.Room.JoinByToken)
+		ar.Post("/rooms/{room_id}/join", h.Room.JoinRoom)
+		ar.Put("/rooms/settings", h.Room.UpdateSettings)
+		ar.Post("/rooms/deletion/vote", h.Room.VoteDeletion)
+		ar.Post("/rooms/deletion/cancel", h.Room.CancelDeletion)
 
 		// Lists
-		ar.Post("/rooms/{room_id}/lists", listHandler.CreateList)
-		ar.Get("/rooms/{room_id}/lists", listHandler.ListLists)
-		ar.Patch("/rooms/{room_id}/lists/{list_id}", listHandler.UpdateList)
-		ar.Post("/rooms/{room_id}/lists/{list_id}/deletion/vote", listHandler.VoteListDeletion)
-		ar.Post("/rooms/{room_id}/lists/{list_id}/deletion/cancel", listHandler.CancelListDeletionVote)
-		ar.Post("/rooms/{room_id}/lists/{list_id}/clear", listHandler.ArchiveCompleted)
-		ar.Post("/rooms/{room_id}/lists/{list_id}/items", listHandler.CreateItem)
-		ar.Get("/rooms/{room_id}/lists/{list_id}/items", listHandler.ListItems)
-		ar.Patch("/rooms/{room_id}/lists/{list_id}/items/{item_id}", listHandler.UpdateItem)
-		ar.Patch("/rooms/{room_id}/lists/{list_id}/items/{item_id}/position", listHandler.UpdateItemPosition)
-		ar.Delete("/rooms/{room_id}/lists/{list_id}/items/{item_id}", listHandler.DeleteItem)
+		ar.Post("/rooms/{room_id}/lists", h.List.CreateList)
+		ar.Get("/rooms/{room_id}/lists", h.List.ListLists)
+		ar.Patch("/rooms/{room_id}/lists/{list_id}", h.List.UpdateList)
+		ar.Post("/rooms/{room_id}/lists/{list_id}/deletion/vote", h.List.VoteListDeletion)
+		ar.Post("/rooms/{room_id}/lists/{list_id}/deletion/cancel", h.List.CancelListDeletionVote)
+		ar.Post("/rooms/{room_id}/lists/{list_id}/clear", h.List.ArchiveCompleted)
+		ar.Post("/rooms/{room_id}/lists/{list_id}/items", h.List.CreateItem)
+		ar.Get("/rooms/{room_id}/lists/{list_id}/items", h.List.ListItems)
+		ar.Patch("/rooms/{room_id}/lists/{list_id}/items/{item_id}", h.List.UpdateItem)
+		ar.Patch("/rooms/{room_id}/lists/{list_id}/items/{item_id}/position", h.List.UpdateItemPosition)
+		ar.Delete("/rooms/{room_id}/lists/{list_id}/items/{item_id}", h.List.DeleteItem)
+		if h.Trip != nil {
+			ar.Post("/rooms/{room_id}/trips/sync", h.Trip.Sync)
+			ar.Post("/rooms/{room_id}/trips/ops", h.Trip.Ops)
+			ar.Post("/rooms/{room_id}/trips/{trip_id}/packing-list", h.Trip.PackingList)
+		}
+		if h.Places != nil {
+			ar.Get("/places/search", h.Places.Search)
+			ar.Get("/places/reverse", h.Places.Reverse)
+		}
 	})
 
 	return r

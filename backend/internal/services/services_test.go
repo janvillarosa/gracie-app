@@ -10,7 +10,8 @@ import (
 )
 
 func setupSvc(t *testing.T) (*UserService, *RoomService, func()) {
-	tx, users, rooms, lists, items := memstore.Compose()
+	m := memstore.Compose()
+	tx, users, rooms, lists, items := m.Tx, m.Users, m.Rooms, m.Lists, m.Items
 	rs := NewRoomService(users, rooms, tx)
 	rs.UseListRepos(lists, items)
 	return NewUserService(users, rooms, tx), rs, func() {}

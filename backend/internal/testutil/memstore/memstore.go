@@ -22,6 +22,8 @@ type Store struct {
 	byShareToken map[string]string // token -> roomID
 	lists        map[string]*models.List
 	items        map[string]*models.ListItem
+	trips        map[string]*models.Trip
+	places       map[string][]models.Place
 }
 
 func NewStore() *Store {
@@ -33,6 +35,8 @@ func NewStore() *Store {
 		byShareToken: map[string]string{},
 		lists:        map[string]*models.List{},
 		items:        map[string]*models.ListItem{},
+		trips:        map[string]*models.Trip{},
+		places:       map[string][]models.Place{},
 	}
 }
 
@@ -43,10 +47,21 @@ func (Tx) WithTransaction(ctx context.Context, fn func(ctx context.Context) erro
 	return fn(ctx)
 }
 
+// Repos bundles the in-memory repositories that share one Store.
+type Repos struct {
+	Tx     store.TxRunner
+	Users  store.UserRepository
+	Rooms  store.RoomRepository
+	Lists  store.ListRepository
+	Items  store.ListItemRepository
+	Trips  store.TripRepository
+	Places store.PlaceCacheRepository
+}
+
 // Compose returns in-memory repos + a no-op Tx runner.
-func Compose() (tx store.TxRunner, users store.UserRepository, rooms store.RoomRepository, lists store.ListRepository, items store.ListItemRepository) {
+func Compose() Repos {
 	st := NewStore()
-	return Tx{}, &UserRepo{st}, &RoomRepo{st}, &ListRepo{st}, &ListItemRepo{st}
+	return Repos{Tx: Tx{}, Users: &UserRepo{st}, Rooms: &RoomRepo{st}, Lists: &ListRepo{st}, Items: &ListItemRepo{st}, Trips: &TripRepo{st}, Places: &PlaceCacheRepo{st}}
 }
 
 // UserRepo

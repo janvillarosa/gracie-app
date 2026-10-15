@@ -10,7 +10,8 @@ import (
 )
 
 func TestUpdateProfileValidationAndConflicts(t *testing.T) {
-	tx, usersRepo, roomsRepo, _, _ := memstore.Compose()
+	m := memstore.Compose()
+	tx, usersRepo, roomsRepo := m.Tx, m.Users, m.Rooms
 	svc := NewUserService(usersRepo, roomsRepo, tx)
 
 	// Seed an existing user with a username
@@ -53,7 +54,8 @@ func TestUpdateProfileValidationAndConflicts(t *testing.T) {
 
 func TestDeleteAccountScenarios(t *testing.T) {
 	ctx := context.Background()
-	tx, usersRepo, roomsRepo, _, _ := memstore.Compose()
+	m := memstore.Compose()
+	tx, usersRepo, roomsRepo := m.Tx, m.Users, m.Rooms
 	svc := NewUserService(usersRepo, roomsRepo, tx)
 
 	// No room: delete user only

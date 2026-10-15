@@ -10,7 +10,7 @@ import (
 )
 
 func TestAuthRegisterLoginChangePassword(t *testing.T) {
-	_, users, _, _, _ := memstore.Compose()
+	users := memstore.Compose().Users
 	keyPath := filepath.Join(t.TempDir(), "enc.key")
 	auth, err := NewAuthService(users, keyPath, 1)
 	if err != nil {

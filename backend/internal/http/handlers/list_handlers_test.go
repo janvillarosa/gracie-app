@@ -15,7 +15,8 @@ import (
 )
 
 func TestListsFlow(t *testing.T) {
-	tx, usersRepo, roomsRepo, listsRepo, itemsRepo := memstore.Compose()
+	m := memstore.Compose()
+	tx, usersRepo, roomsRepo, listsRepo, itemsRepo := m.Tx, m.Users, m.Rooms, m.Lists, m.Items
 
 	userSvc := services.NewUserService(usersRepo, roomsRepo, tx)
 	roomSvc := services.NewRoomService(usersRepo, roomsRepo, tx)
@@ -29,7 +30,7 @@ func TestListsFlow(t *testing.T) {
 	uh := handlers.NewUserHandler(userSvc, []byte("salt"))
 	rh := handlers.NewRoomHandler(roomSvc, usersRepo, []byte("salt"))
 	lh := handlers.NewListHandler(listSvc)
-	r := router.NewRouter(usersRepo, ah, uh, rh, lh)
+	r := router.NewRouter(usersRepo, router.Handlers{Auth: ah, User: uh, Room: rh, List: lh})
 
 	// Create user A and B; B joins A via token
 	aResp := struct {

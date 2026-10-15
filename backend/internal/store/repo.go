@@ -71,3 +71,34 @@ type ListItemRepository interface {
 	UpdateOrder(ctx context.Context, itemID string, order float64, updatedAt time.Time) error
 	Delete(ctx context.Context, itemID string) error
 }
+
+// TripStub is the manifest projection used by sync.
+type TripStub struct {
+	TripID    string     `bson:"trip_id"`
+	Version   int64      `bson:"version"`
+	DeletedAt *time.Time `bson:"deleted_at"`
+	DeletedBy string     `bson:"deleted_by"`
+}
+
+type TripRepository interface {
+	// Get returns derr.ErrNotFound when the trip does not exist.
+	Get(ctx context.Context, tripID string) (*models.Trip, error)
+	// Insert returns derr.ErrConflict when trip_id already exists.
+	Insert(ctx context.Context, t *models.Trip) error
+	// ReplaceCAS replaces the stored trip only if its version still equals expectVersion.
+	ReplaceCAS(ctx context.Context, t *models.Trip, expectVersion int64) (bool, error)
+	// Manifest lists id/version/deleted state of every trip in the room (including soft-deleted).
+	Manifest(ctx context.Context, roomID string) ([]TripStub, error)
+	GetMany(ctx context.Context, roomID string, ids []string) ([]models.Trip, error)
+	// LinkPackingList sets packing_list_id (and bumps version) only if it currently equals expect (nil = unset).
+	LinkPackingList(ctx context.Context, tripID, roomID string, expect *string, listID string, at time.Time) (bool, error)
+	// MoveRoom re-homes every trip of fromRoomID into toRoomID and bumps their version.
+	MoveRoom(ctx context.Context, fromRoomID, toRoomID string, at time.Time) error
+	DeleteByRoom(ctx context.Context, roomID string) error
+}
+
+// PlaceCacheRepository caches geocoder results (TTL-expired by the datastore).
+type PlaceCacheRepository interface {
+	Get(ctx context.Context, key string) ([]models.Place, bool, error)
+	Put(ctx context.Context, key string, places []models.Place, at time.Time) error
+}

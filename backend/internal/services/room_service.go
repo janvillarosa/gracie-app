@@ -15,6 +15,7 @@ type RoomService struct {
 	rooms store.RoomRepository
 	lists store.ListRepository
 	items store.ListItemRepository
+	trips store.TripRepository
 	tx    store.TxRunner
 }
 
@@ -109,6 +110,12 @@ func (s *RoomService) JoinRoom(ctx context.Context, joiner *models.User, roomID,
 			return err
 		}
 		if deleteSolo != nil {
+			if s.trips != nil {
+				// keep the joiner's solo-room trips: they follow the user into the shared house
+				if err := s.trips.MoveRoom(txctx, deleteSolo.RoomID, rm.RoomID, now); err != nil {
+					return err
+				}
+			}
 			return s.rooms.Delete(txctx, deleteSolo.RoomID)
 		}
 		return nil
@@ -196,6 +203,9 @@ func (s *RoomService) UpdateRoomSettings(ctx context.Context, user *models.User,
 }
 
 func (s *RoomService) cleanupRoomResources(ctx context.Context, roomID string) {
+	if s.trips != nil {
+		_ = s.trips.DeleteByRoom(ctx, roomID)
+	}
 	if s.lists == nil {
 		return
 	}
@@ -207,3 +217,6 @@ func (s *RoomService) cleanupRoomResources(ctx context.Context, roomID string) {
 		_ = s.lists.Delete(ctx, l.ListID)
 	}
 }
+
+// UseTripRepo injects the optional trip repository used to re-home and clean up trips.
+func (s *RoomService) UseTripRepo(trips store.TripRepository) { s.trips = trips }
