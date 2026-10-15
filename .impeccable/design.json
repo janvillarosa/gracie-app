@@ -1,0 +1,1368 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-15T15:25:08+00:00",
+  "title": "Design System: Bauhouse",
+  "extensions": {
+    "colorMeta": {
+      "key-yellow": {
+        "role": "primary",
+        "displayName": "Key Yellow",
+        "cssVar": "--brand-yellow",
+        "canonical": "oklch(88.1% 0.177 93.7)",
+        "tonalRamp": [
+          "oklch(15% 0.177 93.7)",
+          "oklch(26% 0.177 93.7)",
+          "oklch(38% 0.177 93.7)",
+          "oklch(50% 0.177 93.7)",
+          "oklch(62% 0.177 93.7)",
+          "oklch(74% 0.16 93.7)",
+          "oklch(85% 0.111 93.7)",
+          "oklch(95% 0.067 93.7)"
+        ]
+      },
+      "key-yellow-deep": {
+        "role": "primary",
+        "displayName": "Key Yellow Deep",
+        "cssVar": "--brand-yellow-deep",
+        "canonical": "oklch(81.3% 0.167 93.5)",
+        "tonalRamp": [
+          "oklch(15% 0.167 93.5)",
+          "oklch(26% 0.167 93.5)",
+          "oklch(38% 0.167 93.5)",
+          "oklch(50% 0.167 93.5)",
+          "oklch(62% 0.167 93.5)",
+          "oklch(74% 0.15 93.5)",
+          "oklch(85% 0.104 93.5)",
+          "oklch(95% 0.062 93.5)"
+        ]
+      },
+      "stamp-red": {
+        "role": "secondary",
+        "displayName": "Stamp Red",
+        "cssVar": "--brand-red",
+        "canonical": "oklch(51.8% 0.192 23.4)",
+        "tonalRamp": [
+          "oklch(15% 0.192 23.4)",
+          "oklch(26% 0.192 23.4)",
+          "oklch(38% 0.192 23.4)",
+          "oklch(50% 0.192 23.4)",
+          "oklch(62% 0.192 23.4)",
+          "oklch(74% 0.173 23.4)",
+          "oklch(85% 0.12 23.4)",
+          "oklch(95% 0.072 23.4)"
+        ]
+      },
+      "ink-blue": {
+        "role": "secondary",
+        "displayName": "Ink Blue",
+        "cssVar": "--brand-blue",
+        "canonical": "oklch(43.4% 0.158 264.4)",
+        "tonalRamp": [
+          "oklch(15% 0.158 264.4)",
+          "oklch(26% 0.158 264.4)",
+          "oklch(38% 0.158 264.4)",
+          "oklch(50% 0.158 264.4)",
+          "oklch(62% 0.158 264.4)",
+          "oklch(74% 0.142 264.4)",
+          "oklch(85% 0.099 264.4)",
+          "oklch(95% 0.059 264.4)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "cssVar": "--ink",
+        "canonical": "oklch(21.8% 0 89.9)",
+        "tonalRamp": [
+          "oklch(15% 0 89.9)",
+          "oklch(26% 0 89.9)",
+          "oklch(38% 0 89.9)",
+          "oklch(50% 0 89.9)",
+          "oklch(62% 0 89.9)",
+          "oklch(74% 0 89.9)",
+          "oklch(85% 0 89.9)",
+          "oklch(95% 0 89.9)"
+        ]
+      },
+      "ink-heading": {
+        "role": "neutral",
+        "displayName": "Heading Ink",
+        "cssVar": "--ink-heading",
+        "canonical": "oklch(28.9% 0 89.9)",
+        "tonalRamp": [
+          "oklch(15% 0 89.9)",
+          "oklch(26% 0 89.9)",
+          "oklch(38% 0 89.9)",
+          "oklch(50% 0 89.9)",
+          "oklch(62% 0 89.9)",
+          "oklch(74% 0 89.9)",
+          "oklch(85% 0 89.9)",
+          "oklch(95% 0 89.9)"
+        ]
+      },
+      "text": {
+        "role": "neutral",
+        "displayName": "Body Text",
+        "cssVar": "--text",
+        "canonical": "oklch(35.2% 0 89.9)",
+        "tonalRamp": [
+          "oklch(15% 0 89.9)",
+          "oklch(26% 0 89.9)",
+          "oklch(38% 0 89.9)",
+          "oklch(50% 0 89.9)",
+          "oklch(62% 0 89.9)",
+          "oklch(74% 0 89.9)",
+          "oklch(85% 0 89.9)",
+          "oklch(95% 0 89.9)"
+        ]
+      },
+      "text-secondary": {
+        "role": "neutral",
+        "displayName": "Secondary Text",
+        "cssVar": "--text-secondary"
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Muted Pencil",
+        "cssVar": "--muted",
+        "canonical": "oklch(52.9% 0.021 261.3)",
+        "tonalRamp": [
+          "oklch(15% 0.021 261.3)",
+          "oklch(26% 0.021 261.3)",
+          "oklch(38% 0.021 261.3)",
+          "oklch(50% 0.021 261.3)",
+          "oklch(62% 0.021 261.3)",
+          "oklch(74% 0.019 261.3)",
+          "oklch(85% 0.013 261.3)",
+          "oklch(95% 0.008 261.3)"
+        ]
+      },
+      "desk": {
+        "role": "neutral",
+        "displayName": "Desk",
+        "cssVar": "--bg",
+        "canonical": "oklch(97.6% 0 89.9)",
+        "tonalRamp": [
+          "oklch(15% 0 89.9)",
+          "oklch(26% 0 89.9)",
+          "oklch(38% 0 89.9)",
+          "oklch(50% 0 89.9)",
+          "oklch(62% 0 89.9)",
+          "oklch(74% 0 89.9)",
+          "oklch(85% 0 89.9)",
+          "oklch(95% 0 89.9)"
+        ]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Paper",
+        "cssVar": "--panel",
+        "canonical": "oklch(100% 0 89.9)",
+        "tonalRamp": [
+          "oklch(15% 0 89.9)",
+          "oklch(26% 0 89.9)",
+          "oklch(38% 0 89.9)",
+          "oklch(50% 0 89.9)",
+          "oklch(62% 0 89.9)",
+          "oklch(74% 0 89.9)",
+          "oklch(85% 0 89.9)",
+          "oklch(95% 0 89.9)"
+        ]
+      },
+      "paper-tint": {
+        "role": "neutral",
+        "displayName": "Paper Tint",
+        "cssVar": "--panel-subtle",
+        "canonical": "oklch(98.5% 0 89.9)",
+        "tonalRamp": [
+          "oklch(15% 0 89.9)",
+          "oklch(26% 0 89.9)",
+          "oklch(38% 0 89.9)",
+          "oklch(50% 0 89.9)",
+          "oklch(62% 0 89.9)",
+          "oklch(74% 0 89.9)",
+          "oklch(85% 0 89.9)",
+          "oklch(95% 0 89.9)"
+        ]
+      },
+      "hairline": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "cssVar": "--border",
+        "canonical": "oklch(92.5% 0 89.9)",
+        "tonalRamp": [
+          "oklch(15% 0 89.9)",
+          "oklch(26% 0 89.9)",
+          "oklch(38% 0 89.9)",
+          "oklch(50% 0 89.9)",
+          "oklch(62% 0 89.9)",
+          "oklch(74% 0 89.9)",
+          "oklch(85% 0 89.9)",
+          "oklch(95% 0 89.9)"
+        ]
+      },
+      "edge": {
+        "role": "neutral",
+        "displayName": "Edge",
+        "cssVar": "--border-strong",
+        "canonical": "oklch(86.4% 0 89.9)",
+        "tonalRamp": [
+          "oklch(15% 0 89.9)",
+          "oklch(26% 0 89.9)",
+          "oklch(38% 0 89.9)",
+          "oklch(50% 0 89.9)",
+          "oklch(62% 0 89.9)",
+          "oklch(74% 0 89.9)",
+          "oklch(85% 0 89.9)",
+          "oklch(95% 0 89.9)"
+        ]
+      },
+      "warn-ground": {
+        "role": "tertiary",
+        "displayName": "Warn Ground",
+        "cssVar": "--warn-bg",
+        "canonical": "oklch(96.8% 0.041 90.2)",
+        "tonalRamp": [
+          "oklch(15% 0.041 90.2)",
+          "oklch(26% 0.041 90.2)",
+          "oklch(38% 0.041 90.2)",
+          "oklch(50% 0.041 90.2)",
+          "oklch(62% 0.041 90.2)",
+          "oklch(74% 0.037 90.2)",
+          "oklch(85% 0.026 90.2)",
+          "oklch(95% 0.015 90.2)"
+        ]
+      },
+      "warn-ink": {
+        "role": "tertiary",
+        "displayName": "Warn Ink",
+        "cssVar": "--warn-ink",
+        "canonical": "oklch(45.6% 0.099 69.1)",
+        "tonalRamp": [
+          "oklch(15% 0.099 69.1)",
+          "oklch(26% 0.099 69.1)",
+          "oklch(38% 0.099 69.1)",
+          "oklch(50% 0.099 69.1)",
+          "oklch(62% 0.099 69.1)",
+          "oklch(74% 0.089 69.1)",
+          "oklch(85% 0.062 69.1)",
+          "oklch(95% 0.037 69.1)"
+        ]
+      },
+      "ok-ink": {
+        "role": "tertiary",
+        "displayName": "OK Ink",
+        "cssVar": "--ok-ink",
+        "canonical": "oklch(47.3% 0.109 144.8)",
+        "tonalRamp": [
+          "oklch(15% 0.109 144.8)",
+          "oklch(26% 0.109 144.8)",
+          "oklch(38% 0.109 144.8)",
+          "oklch(50% 0.109 144.8)",
+          "oklch(62% 0.109 144.8)",
+          "oklch(74% 0.098 144.8)",
+          "oklch(85% 0.068 144.8)",
+          "oklch(95% 0.041 144.8)"
+        ]
+      },
+      "on-red": {
+        "role": "neutral",
+        "displayName": "On Red",
+        "cssVar": "--on-red",
+        "canonical": "oklch(100% 0 89.9)",
+        "tonalRamp": [
+          "oklch(15% 0 89.9)",
+          "oklch(26% 0 89.9)",
+          "oklch(38% 0 89.9)",
+          "oklch(50% 0 89.9)",
+          "oklch(62% 0 89.9)",
+          "oklch(74% 0 89.9)",
+          "oklch(85% 0 89.9)",
+          "oklch(95% 0 89.9)"
+        ]
+      },
+      "scrim": {
+        "role": "neutral",
+        "displayName": "Scrim",
+        "cssVar": "--sheet-scrim"
+      },
+      "day-0": {
+        "role": "tertiary",
+        "displayName": "Day 0",
+        "cssVar": "--trip-day-0",
+        "canonical": "oklch(43.4% 0.158 264.4)",
+        "tonalRamp": [
+          "oklch(15% 0.158 264.4)",
+          "oklch(26% 0.158 264.4)",
+          "oklch(38% 0.158 264.4)",
+          "oklch(50% 0.158 264.4)",
+          "oklch(62% 0.158 264.4)",
+          "oklch(74% 0.142 264.4)",
+          "oklch(85% 0.099 264.4)",
+          "oklch(95% 0.059 264.4)"
+        ]
+      },
+      "day-1": {
+        "role": "tertiary",
+        "displayName": "Day 1",
+        "cssVar": "--trip-day-1",
+        "canonical": "oklch(51.8% 0.192 23.4)",
+        "tonalRamp": [
+          "oklch(15% 0.192 23.4)",
+          "oklch(26% 0.192 23.4)",
+          "oklch(38% 0.192 23.4)",
+          "oklch(50% 0.192 23.4)",
+          "oklch(62% 0.192 23.4)",
+          "oklch(74% 0.173 23.4)",
+          "oklch(85% 0.12 23.4)",
+          "oklch(95% 0.072 23.4)"
+        ]
+      },
+      "day-2": {
+        "role": "tertiary",
+        "displayName": "Day 2",
+        "cssVar": "--trip-day-2",
+        "canonical": "oklch(55.9% 0.115 83.7)",
+        "tonalRamp": [
+          "oklch(15% 0.115 83.7)",
+          "oklch(26% 0.115 83.7)",
+          "oklch(38% 0.115 83.7)",
+          "oklch(50% 0.115 83.7)",
+          "oklch(62% 0.115 83.7)",
+          "oklch(74% 0.103 83.7)",
+          "oklch(85% 0.072 83.7)",
+          "oklch(95% 0.043 83.7)"
+        ]
+      },
+      "day-3": {
+        "role": "tertiary",
+        "displayName": "Day 3",
+        "cssVar": "--trip-day-3",
+        "canonical": "oklch(51.5% 0.129 149.6)",
+        "tonalRamp": [
+          "oklch(15% 0.129 149.6)",
+          "oklch(26% 0.129 149.6)",
+          "oklch(38% 0.129 149.6)",
+          "oklch(50% 0.129 149.6)",
+          "oklch(62% 0.129 149.6)",
+          "oklch(74% 0.116 149.6)",
+          "oklch(85% 0.08 149.6)",
+          "oklch(95% 0.048 149.6)"
+        ]
+      },
+      "day-4": {
+        "role": "tertiary",
+        "displayName": "Day 4",
+        "cssVar": "--trip-day-4",
+        "canonical": "oklch(53.6% 0.089 205)",
+        "tonalRamp": [
+          "oklch(15% 0.089 205)",
+          "oklch(26% 0.089 205)",
+          "oklch(38% 0.089 205)",
+          "oklch(50% 0.089 205)",
+          "oklch(62% 0.089 205)",
+          "oklch(74% 0.08 205)",
+          "oklch(85% 0.055 205)",
+          "oklch(95% 0.033 205)"
+        ]
+      },
+      "day-5": {
+        "role": "tertiary",
+        "displayName": "Day 5",
+        "cssVar": "--trip-day-5",
+        "canonical": "oklch(48.3% 0.178 295.8)",
+        "tonalRamp": [
+          "oklch(15% 0.178 295.8)",
+          "oklch(26% 0.178 295.8)",
+          "oklch(38% 0.178 295.8)",
+          "oklch(50% 0.178 295.8)",
+          "oklch(62% 0.178 295.8)",
+          "oklch(74% 0.16 295.8)",
+          "oklch(85% 0.111 295.8)",
+          "oklch(95% 0.067 295.8)"
+        ]
+      },
+      "trip-food-bg": {
+        "role": "tertiary",
+        "displayName": "Trip Food ground",
+        "cssVar": "--trip-cat-food-bg",
+        "canonical": "oklch(94% 0.037 66)",
+        "tonalRamp": [
+          "oklch(15% 0.037 66)",
+          "oklch(26% 0.037 66)",
+          "oklch(38% 0.037 66)",
+          "oklch(50% 0.037 66)",
+          "oklch(62% 0.037 66)",
+          "oklch(74% 0.033 66)",
+          "oklch(85% 0.023 66)",
+          "oklch(95% 0.014 66)"
+        ]
+      },
+      "trip-food-fg": {
+        "role": "tertiary",
+        "displayName": "Trip Food ink",
+        "cssVar": "--trip-cat-food-fg",
+        "canonical": "oklch(46.4% 0.116 51.1)",
+        "tonalRamp": [
+          "oklch(15% 0.116 51.1)",
+          "oklch(26% 0.116 51.1)",
+          "oklch(38% 0.116 51.1)",
+          "oklch(50% 0.116 51.1)",
+          "oklch(62% 0.116 51.1)",
+          "oklch(74% 0.104 51.1)",
+          "oklch(85% 0.072 51.1)",
+          "oklch(95% 0.043 51.1)"
+        ]
+      },
+      "trip-sight-bg": {
+        "role": "tertiary",
+        "displayName": "Trip Sight ground",
+        "cssVar": "--trip-cat-sight-bg",
+        "canonical": "oklch(92.1% 0.03 267.2)",
+        "tonalRamp": [
+          "oklch(15% 0.03 267.2)",
+          "oklch(26% 0.03 267.2)",
+          "oklch(38% 0.03 267.2)",
+          "oklch(50% 0.03 267.2)",
+          "oklch(62% 0.03 267.2)",
+          "oklch(74% 0.027 267.2)",
+          "oklch(85% 0.019 267.2)",
+          "oklch(95% 0.011 267.2)"
+        ]
+      },
+      "trip-sight-fg": {
+        "role": "tertiary",
+        "displayName": "Trip Sight ink",
+        "cssVar": "--trip-cat-sight-fg",
+        "canonical": "oklch(39.7% 0.144 264.2)",
+        "tonalRamp": [
+          "oklch(15% 0.144 264.2)",
+          "oklch(26% 0.144 264.2)",
+          "oklch(38% 0.144 264.2)",
+          "oklch(50% 0.144 264.2)",
+          "oklch(62% 0.144 264.2)",
+          "oklch(74% 0.13 264.2)",
+          "oklch(85% 0.09 264.2)",
+          "oklch(95% 0.054 264.2)"
+        ]
+      },
+      "trip-activity-bg": {
+        "role": "tertiary",
+        "displayName": "Trip Activity ground",
+        "cssVar": "--trip-cat-activity-bg",
+        "canonical": "oklch(93.7% 0.027 153.9)",
+        "tonalRamp": [
+          "oklch(15% 0.027 153.9)",
+          "oklch(26% 0.027 153.9)",
+          "oklch(38% 0.027 153.9)",
+          "oklch(50% 0.027 153.9)",
+          "oklch(62% 0.027 153.9)",
+          "oklch(74% 0.025 153.9)",
+          "oklch(85% 0.017 153.9)",
+          "oklch(95% 0.01 153.9)"
+        ]
+      },
+      "trip-activity-fg": {
+        "role": "tertiary",
+        "displayName": "Trip Activity ink",
+        "cssVar": "--trip-cat-activity-fg",
+        "canonical": "oklch(43.3% 0.106 150)",
+        "tonalRamp": [
+          "oklch(15% 0.106 150)",
+          "oklch(26% 0.106 150)",
+          "oklch(38% 0.106 150)",
+          "oklch(50% 0.106 150)",
+          "oklch(62% 0.106 150)",
+          "oklch(74% 0.095 150)",
+          "oklch(85% 0.066 150)",
+          "oklch(95% 0.04 150)"
+        ]
+      },
+      "trip-transport-bg": {
+        "role": "tertiary",
+        "displayName": "Trip Transport ground",
+        "cssVar": "--trip-cat-transport-bg",
+        "canonical": "oklch(93.1% 0 89.9)",
+        "tonalRamp": [
+          "oklch(15% 0 89.9)",
+          "oklch(26% 0 89.9)",
+          "oklch(38% 0 89.9)",
+          "oklch(50% 0 89.9)",
+          "oklch(62% 0 89.9)",
+          "oklch(74% 0 89.9)",
+          "oklch(85% 0 89.9)",
+          "oklch(95% 0 89.9)"
+        ]
+      },
+      "trip-transport-fg": {
+        "role": "tertiary",
+        "displayName": "Trip Transport ink",
+        "cssVar": "--trip-cat-transport-fg",
+        "canonical": "oklch(32.1% 0 89.9)",
+        "tonalRamp": [
+          "oklch(15% 0 89.9)",
+          "oklch(26% 0 89.9)",
+          "oklch(38% 0 89.9)",
+          "oklch(50% 0 89.9)",
+          "oklch(62% 0 89.9)",
+          "oklch(74% 0 89.9)",
+          "oklch(85% 0 89.9)",
+          "oklch(95% 0 89.9)"
+        ]
+      },
+      "trip-stay-bg": {
+        "role": "tertiary",
+        "displayName": "Trip Stay ground",
+        "cssVar": "--trip-cat-stay-bg",
+        "canonical": "oklch(95.5% 0.08 96.9)",
+        "tonalRamp": [
+          "oklch(15% 0.08 96.9)",
+          "oklch(26% 0.08 96.9)",
+          "oklch(38% 0.08 96.9)",
+          "oklch(50% 0.08 96.9)",
+          "oklch(62% 0.08 96.9)",
+          "oklch(74% 0.072 96.9)",
+          "oklch(85% 0.05 96.9)",
+          "oklch(95% 0.03 96.9)"
+        ]
+      },
+      "trip-stay-fg": {
+        "role": "tertiary",
+        "displayName": "Trip Stay ink",
+        "cssVar": "--trip-cat-stay-fg",
+        "canonical": "oklch(44.7% 0.092 86.1)",
+        "tonalRamp": [
+          "oklch(15% 0.092 86.1)",
+          "oklch(26% 0.092 86.1)",
+          "oklch(38% 0.092 86.1)",
+          "oklch(50% 0.092 86.1)",
+          "oklch(62% 0.092 86.1)",
+          "oklch(74% 0.082 86.1)",
+          "oklch(85% 0.057 86.1)",
+          "oklch(95% 0.034 86.1)"
+        ]
+      },
+      "trip-shopping-bg": {
+        "role": "tertiary",
+        "displayName": "Trip Shopping ground",
+        "cssVar": "--trip-cat-shopping-bg",
+        "canonical": "oklch(91.8% 0.032 303.5)",
+        "tonalRamp": [
+          "oklch(15% 0.032 303.5)",
+          "oklch(26% 0.032 303.5)",
+          "oklch(38% 0.032 303.5)",
+          "oklch(50% 0.032 303.5)",
+          "oklch(62% 0.032 303.5)",
+          "oklch(74% 0.029 303.5)",
+          "oklch(85% 0.02 303.5)",
+          "oklch(95% 0.012 303.5)"
+        ]
+      },
+      "trip-shopping-fg": {
+        "role": "tertiary",
+        "displayName": "Trip Shopping ink",
+        "cssVar": "--trip-cat-shopping-fg",
+        "canonical": "oklch(40.9% 0.15 297.2)",
+        "tonalRamp": [
+          "oklch(15% 0.15 297.2)",
+          "oklch(26% 0.15 297.2)",
+          "oklch(38% 0.15 297.2)",
+          "oklch(50% 0.15 297.2)",
+          "oklch(62% 0.15 297.2)",
+          "oklch(74% 0.135 297.2)",
+          "oklch(85% 0.093 297.2)",
+          "oklch(95% 0.056 297.2)"
+        ]
+      },
+      "trip-other-bg": {
+        "role": "tertiary",
+        "displayName": "Trip Other ground",
+        "cssVar": "--trip-cat-other-bg",
+        "canonical": "oklch(95.2% 0 89.9)",
+        "tonalRamp": [
+          "oklch(15% 0 89.9)",
+          "oklch(26% 0 89.9)",
+          "oklch(38% 0 89.9)",
+          "oklch(50% 0 89.9)",
+          "oklch(62% 0 89.9)",
+          "oklch(74% 0 89.9)",
+          "oklch(85% 0 89.9)",
+          "oklch(95% 0 89.9)"
+        ]
+      },
+      "trip-other-fg": {
+        "role": "tertiary",
+        "displayName": "Trip Other ink",
+        "cssVar": "--trip-cat-other-fg",
+        "canonical": "oklch(40.9% 0 89.9)",
+        "tonalRamp": [
+          "oklch(15% 0 89.9)",
+          "oklch(26% 0 89.9)",
+          "oklch(38% 0 89.9)",
+          "oklch(50% 0 89.9)",
+          "oklch(62% 0 89.9)",
+          "oklch(74% 0 89.9)",
+          "oklch(85% 0 89.9)",
+          "oklch(95% 0 89.9)"
+        ]
+      },
+      "pip-food": {
+        "role": "tertiary",
+        "displayName": "Pip Food",
+        "cssVar": "--pip-food",
+        "canonical": "oklch(58.4% 0.159 46.5)",
+        "tonalRamp": [
+          "oklch(15% 0.159 46.5)",
+          "oklch(26% 0.159 46.5)",
+          "oklch(38% 0.159 46.5)",
+          "oklch(50% 0.159 46.5)",
+          "oklch(62% 0.159 46.5)",
+          "oklch(74% 0.143 46.5)",
+          "oklch(85% 0.099 46.5)",
+          "oklch(95% 0.059 46.5)"
+        ]
+      },
+      "pip-sight": {
+        "role": "tertiary",
+        "displayName": "Pip Sight",
+        "cssVar": "--pip-sight",
+        "canonical": "oklch(43.4% 0.158 264.4)",
+        "tonalRamp": [
+          "oklch(15% 0.158 264.4)",
+          "oklch(26% 0.158 264.4)",
+          "oklch(38% 0.158 264.4)",
+          "oklch(50% 0.158 264.4)",
+          "oklch(62% 0.158 264.4)",
+          "oklch(74% 0.142 264.4)",
+          "oklch(85% 0.099 264.4)",
+          "oklch(95% 0.059 264.4)"
+        ]
+      },
+      "pip-activity": {
+        "role": "tertiary",
+        "displayName": "Pip Activity",
+        "cssVar": "--pip-activity",
+        "canonical": "oklch(51.5% 0.129 149.6)",
+        "tonalRamp": [
+          "oklch(15% 0.129 149.6)",
+          "oklch(26% 0.129 149.6)",
+          "oklch(38% 0.129 149.6)",
+          "oklch(50% 0.129 149.6)",
+          "oklch(62% 0.129 149.6)",
+          "oklch(74% 0.116 149.6)",
+          "oklch(85% 0.08 149.6)",
+          "oklch(95% 0.048 149.6)"
+        ]
+      },
+      "pip-transport": {
+        "role": "tertiary",
+        "displayName": "Pip Transport",
+        "cssVar": "--pip-transport",
+        "canonical": "oklch(49.9% 0.023 253)",
+        "tonalRamp": [
+          "oklch(15% 0.023 253)",
+          "oklch(26% 0.023 253)",
+          "oklch(38% 0.023 253)",
+          "oklch(50% 0.023 253)",
+          "oklch(62% 0.023 253)",
+          "oklch(74% 0.021 253)",
+          "oklch(85% 0.014 253)",
+          "oklch(95% 0.009 253)"
+        ]
+      },
+      "pip-stay": {
+        "role": "tertiary",
+        "displayName": "Pip Stay",
+        "cssVar": "--pip-stay",
+        "canonical": "oklch(55.9% 0.115 83.7)",
+        "tonalRamp": [
+          "oklch(15% 0.115 83.7)",
+          "oklch(26% 0.115 83.7)",
+          "oklch(38% 0.115 83.7)",
+          "oklch(50% 0.115 83.7)",
+          "oklch(62% 0.115 83.7)",
+          "oklch(74% 0.103 83.7)",
+          "oklch(85% 0.072 83.7)",
+          "oklch(95% 0.043 83.7)"
+        ]
+      },
+      "pip-shopping": {
+        "role": "tertiary",
+        "displayName": "Pip Shopping",
+        "cssVar": "--pip-shopping",
+        "canonical": "oklch(52% 0.185 310.8)",
+        "tonalRamp": [
+          "oklch(15% 0.185 310.8)",
+          "oklch(26% 0.185 310.8)",
+          "oklch(38% 0.185 310.8)",
+          "oklch(50% 0.185 310.8)",
+          "oklch(62% 0.185 310.8)",
+          "oklch(74% 0.166 310.8)",
+          "oklch(85% 0.115 310.8)",
+          "oklch(95% 0.069 310.8)"
+        ]
+      },
+      "pip-other": {
+        "role": "tertiary",
+        "displayName": "Pip Other",
+        "cssVar": "--pip-other",
+        "canonical": "oklch(56.6% 0 89.9)",
+        "tonalRamp": [
+          "oklch(15% 0 89.9)",
+          "oklch(26% 0 89.9)",
+          "oklch(38% 0 89.9)",
+          "oklch(50% 0 89.9)",
+          "oklch(62% 0 89.9)",
+          "oklch(74% 0 89.9)",
+          "oklch(85% 0 89.9)",
+          "oklch(95% 0 89.9)"
+        ]
+      },
+      "pip-done": {
+        "role": "tertiary",
+        "displayName": "Pip Done",
+        "cssVar": "--pip-done",
+        "canonical": "oklch(74.2% 0.011 131.4)",
+        "tonalRamp": [
+          "oklch(15% 0.011 131.4)",
+          "oklch(26% 0.011 131.4)",
+          "oklch(38% 0.011 131.4)",
+          "oklch(50% 0.011 131.4)",
+          "oklch(62% 0.011 131.4)",
+          "oklch(74% 0.01 131.4)",
+          "oklch(85% 0.007 131.4)",
+          "oklch(95% 0.004 131.4)"
+        ]
+      },
+      "map-ground": {
+        "role": "tertiary",
+        "displayName": "Map Ground",
+        "cssVar": "--trip-map-ground",
+        "canonical": "oklch(94.3% 0.012 133.4)",
+        "tonalRamp": [
+          "oklch(15% 0.012 133.4)",
+          "oklch(26% 0.012 133.4)",
+          "oklch(38% 0.012 133.4)",
+          "oklch(50% 0.012 133.4)",
+          "oklch(62% 0.012 133.4)",
+          "oklch(74% 0.011 133.4)",
+          "oklch(85% 0.007 133.4)",
+          "oklch(95% 0.004 133.4)"
+        ]
+      },
+      "map-earth": {
+        "role": "tertiary",
+        "displayName": "Map Earth",
+        "cssVar": "--trip-map-earth",
+        "canonical": "oklch(95.2% 0.01 119.6)",
+        "tonalRamp": [
+          "oklch(15% 0.01 119.6)",
+          "oklch(26% 0.01 119.6)",
+          "oklch(38% 0.01 119.6)",
+          "oklch(50% 0.01 119.6)",
+          "oklch(62% 0.01 119.6)",
+          "oklch(74% 0.009 119.6)",
+          "oklch(85% 0.006 119.6)",
+          "oklch(95% 0.004 119.6)"
+        ]
+      },
+      "map-water": {
+        "role": "tertiary",
+        "displayName": "Map Water",
+        "cssVar": "--trip-map-water",
+        "canonical": "oklch(88.9% 0.017 225.2)",
+        "tonalRamp": [
+          "oklch(15% 0.017 225.2)",
+          "oklch(26% 0.017 225.2)",
+          "oklch(38% 0.017 225.2)",
+          "oklch(50% 0.017 225.2)",
+          "oklch(62% 0.017 225.2)",
+          "oklch(74% 0.015 225.2)",
+          "oklch(85% 0.011 225.2)",
+          "oklch(95% 0.006 225.2)"
+        ]
+      },
+      "cat-produce": {
+        "role": "tertiary",
+        "displayName": "Cat Produce",
+        "cssVar": "--cat-produce",
+        "canonical": "oklch(67.3% 0.162 144.2)",
+        "tonalRamp": [
+          "oklch(15% 0.162 144.2)",
+          "oklch(26% 0.162 144.2)",
+          "oklch(38% 0.162 144.2)",
+          "oklch(50% 0.162 144.2)",
+          "oklch(62% 0.162 144.2)",
+          "oklch(74% 0.146 144.2)",
+          "oklch(85% 0.102 144.2)",
+          "oklch(95% 0.061 144.2)"
+        ]
+      },
+      "cat-dairy": {
+        "role": "tertiary",
+        "displayName": "Cat Dairy",
+        "cssVar": "--cat-dairy",
+        "canonical": "oklch(65.8% 0.169 248.8)",
+        "tonalRamp": [
+          "oklch(15% 0.169 248.8)",
+          "oklch(26% 0.169 248.8)",
+          "oklch(38% 0.169 248.8)",
+          "oklch(50% 0.169 248.8)",
+          "oklch(62% 0.169 248.8)",
+          "oklch(74% 0.152 248.8)",
+          "oklch(85% 0.106 248.8)",
+          "oklch(95% 0.063 248.8)"
+        ]
+      },
+      "cat-bakery": {
+        "role": "tertiary",
+        "displayName": "Cat Bakery",
+        "cssVar": "--cat-bakery",
+        "canonical": "oklch(77% 0.174 64.1)",
+        "tonalRamp": [
+          "oklch(15% 0.174 64.1)",
+          "oklch(26% 0.174 64.1)",
+          "oklch(38% 0.174 64.1)",
+          "oklch(50% 0.174 64.1)",
+          "oklch(62% 0.174 64.1)",
+          "oklch(74% 0.157 64.1)",
+          "oklch(85% 0.109 64.1)",
+          "oklch(95% 0.065 64.1)"
+        ]
+      },
+      "cat-meat": {
+        "role": "tertiary",
+        "displayName": "Cat Meat",
+        "cssVar": "--cat-meat",
+        "canonical": "oklch(64.3% 0.215 28.8)",
+        "tonalRamp": [
+          "oklch(15% 0.215 28.8)",
+          "oklch(26% 0.215 28.8)",
+          "oklch(38% 0.215 28.8)",
+          "oklch(50% 0.215 28.8)",
+          "oklch(62% 0.215 28.8)",
+          "oklch(74% 0.194 28.8)",
+          "oklch(85% 0.135 28.8)",
+          "oklch(95% 0.081 28.8)"
+        ]
+      },
+      "cat-frozen": {
+        "role": "tertiary",
+        "displayName": "Cat Frozen",
+        "cssVar": "--cat-frozen",
+        "canonical": "oklch(72.9% 0.126 210.8)",
+        "tonalRamp": [
+          "oklch(15% 0.126 210.8)",
+          "oklch(26% 0.126 210.8)",
+          "oklch(38% 0.126 210.8)",
+          "oklch(50% 0.126 210.8)",
+          "oklch(62% 0.126 210.8)",
+          "oklch(74% 0.114 210.8)",
+          "oklch(85% 0.079 210.8)",
+          "oklch(95% 0.047 210.8)"
+        ]
+      },
+      "cat-plant": {
+        "role": "tertiary",
+        "displayName": "Cat Plant",
+        "cssVar": "--cat-plant",
+        "canonical": "oklch(51.7% 0.215 321.2)",
+        "tonalRamp": [
+          "oklch(15% 0.215 321.2)",
+          "oklch(26% 0.215 321.2)",
+          "oklch(38% 0.215 321.2)",
+          "oklch(50% 0.215 321.2)",
+          "oklch(62% 0.215 321.2)",
+          "oklch(74% 0.194 321.2)",
+          "oklch(85% 0.134 321.2)",
+          "oklch(95% 0.081 321.2)"
+        ]
+      },
+      "cat-grains": {
+        "role": "tertiary",
+        "displayName": "Cat Grains",
+        "cssVar": "--cat-grains",
+        "canonical": "oklch(48.5% 0.053 40.7)",
+        "tonalRamp": [
+          "oklch(15% 0.053 40.7)",
+          "oklch(26% 0.053 40.7)",
+          "oklch(38% 0.053 40.7)",
+          "oklch(50% 0.053 40.7)",
+          "oklch(62% 0.053 40.7)",
+          "oklch(74% 0.047 40.7)",
+          "oklch(85% 0.033 40.7)",
+          "oklch(95% 0.02 40.7)"
+        ]
+      },
+      "cat-pantry": {
+        "role": "tertiary",
+        "displayName": "Cat Pantry",
+        "cssVar": "--cat-pantry",
+        "canonical": "oklch(57.2% 0.04 229)",
+        "tonalRamp": [
+          "oklch(15% 0.04 229)",
+          "oklch(26% 0.04 229)",
+          "oklch(38% 0.04 229)",
+          "oklch(50% 0.04 229)",
+          "oklch(62% 0.04 229)",
+          "oklch(74% 0.036 229)",
+          "oklch(85% 0.025 229)",
+          "oklch(95% 0.015 229)"
+        ]
+      },
+      "cat-beverages": {
+        "role": "tertiary",
+        "displayName": "Cat Beverages",
+        "cssVar": "--cat-beverages",
+        "canonical": "oklch(60.6% 0.23 9.6)",
+        "tonalRamp": [
+          "oklch(15% 0.23 9.6)",
+          "oklch(26% 0.23 9.6)",
+          "oklch(38% 0.23 9.6)",
+          "oklch(50% 0.23 9.6)",
+          "oklch(62% 0.23 9.6)",
+          "oklch(74% 0.207 9.6)",
+          "oklch(85% 0.144 9.6)",
+          "oklch(95% 0.086 9.6)"
+        ]
+      },
+      "cat-household": {
+        "role": "tertiary",
+        "displayName": "Cat Household",
+        "cssVar": "--cat-household",
+        "canonical": "oklch(63.9% 0.033 229.5)",
+        "tonalRamp": [
+          "oklch(15% 0.033 229.5)",
+          "oklch(26% 0.033 229.5)",
+          "oklch(38% 0.033 229.5)",
+          "oklch(50% 0.033 229.5)",
+          "oklch(62% 0.033 229.5)",
+          "oklch(74% 0.029 229.5)",
+          "oklch(85% 0.02 229.5)",
+          "oklch(95% 0.012 229.5)"
+        ]
+      },
+      "cat-general": {
+        "role": "tertiary",
+        "displayName": "Cat General",
+        "cssVar": "--cat-general",
+        "canonical": "oklch(69.9% 0 89.9)",
+        "tonalRamp": [
+          "oklch(15% 0 89.9)",
+          "oklch(26% 0 89.9)",
+          "oklch(38% 0 89.9)",
+          "oklch(50% 0 89.9)",
+          "oklch(62% 0 89.9)",
+          "oklch(74% 0 89.9)",
+          "oklch(85% 0 89.9)",
+          "oklch(95% 0 89.9)"
+        ]
+      },
+      "on-pin": {
+        "role": "neutral",
+        "displayName": "On Pin",
+        "cssVar": "--on-pin",
+        "canonical": "#FFFFFF",
+        "tonalRamp": [
+          "oklch(15% 0 0)",
+          "oklch(26% 0 0)",
+          "oklch(38% 0 0)",
+          "oklch(50% 0 0)",
+          "oklch(62% 0 0)",
+          "oklch(74% 0 0)",
+          "oklch(85% 0 0)",
+          "oklch(95% 0 0)"
+        ]
+      },
+      "transport-leg": {
+        "role": "tertiary",
+        "displayName": "Transport Leg Grey",
+        "cssVar": "--trip-transport",
+        "canonical": "oklch(44.6% 0.026 256.8)",
+        "tonalRamp": [
+          "oklch(15% 0.026 256.8)",
+          "oklch(26% 0.026 256.8)",
+          "oklch(38% 0.026 256.8)",
+          "oklch(50% 0.026 256.8)",
+          "oklch(62% 0.026 256.8)",
+          "oklch(74% 0.026 256.8)",
+          "oklch(85% 0.026 256.8)",
+          "oklch(95% 0.026 256.8)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "h1 page headings; bumped to clamp(42px, 4.8vw, 56px) below 768px."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "h2."
+      },
+      "title-page": {
+        "displayName": "Page title",
+        "purpose": "Inline-editable list or trip title in its settings sheet (--title-page)."
+      },
+      "title-sheet": {
+        "displayName": "Sheet title",
+        "purpose": "Tier 1 of every Sheet (--title-sheet); Outfit, inline-editable."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "h3 and section heads."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "All running text and controls (--size-body); context lines are 15px muted."
+      },
+      "item": {
+        "displayName": "Item",
+        "purpose": "A list item's text, in heading ink."
+      },
+      "meta": {
+        "displayName": "Meta",
+        "purpose": "Times, Added by, notes, text buttons (--size-meta); tabular numerals for times and counts."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "SectionLabel: uppercase, muted (--size-label)."
+      },
+      "stamp": {
+        "displayName": "Stamp",
+        "purpose": "Category and state stamps, uppercase."
+      },
+      "title-desk": {
+        "displayName": "Desk title",
+        "purpose": "The trip title in the desk header (32px, one line, ellipsis)."
+      },
+      "composer": {
+        "displayName": "Composer",
+        "purpose": "Text in the desk's floating add bar (17px)."
+      },
+      "map-pill": {
+        "displayName": "Map pill",
+        "purpose": "Stop names on map pills: Figtree 14/600, 13px on the phone."
+      }
+    },
+    "shadows": [
+      {
+        "name": "paper-edge",
+        "value": "inset 0 1px 0 rgba(255, 255, 255, 0.9)",
+        "purpose": "White top-edge highlight on every sheet and card."
+      },
+      {
+        "name": "lift-0",
+        "value": "0 1px 2px rgba(0, 0, 0, 0.04), 0 6px 18px -6px rgba(0, 0, 0, 0.08)",
+        "purpose": "A sheet resting on the desk: list header, a trip day."
+      },
+      {
+        "name": "lift-1",
+        "value": "0 -1px 0 rgba(0, 0, 0, 0.02), 0 12px 28px -8px rgba(0, 0, 0, 0.12)",
+        "purpose": "The sheet on top of a paper stack."
+      },
+      {
+        "name": "lift-2",
+        "value": "0 2px 4px rgba(0, 0, 0, 0.06), 0 18px 36px -10px rgba(0, 0, 0, 0.22)",
+        "purpose": "Bottom sheets, dialogs, the docked panel."
+      },
+      {
+        "name": "lift-3",
+        "value": "0 1px 2px rgba(0, 0, 0, 0.05), 0 12px 32px -8px rgba(0, 0, 0, 0.18)",
+        "purpose": "Popovers, dropdown menus, suggestion slips."
+      },
+      {
+        "name": "shadow-key",
+        "value": "inset 0 1px 0 rgba(255, 255, 255, 0.55), 0 1px 0 var(--brand-yellow-deep), 0 2px 6px -1px rgba(150, 115, 0, 0.28)",
+        "purpose": "The yellow key, open chips and pressed choice tiles; tinted from deep yellow."
+      },
+      {
+        "name": "shadow-key-hover",
+        "value": "inset 0 1px 0 rgba(255, 255, 255, 0.55), 0 1px 0 var(--brand-yellow-deep), 0 6px 14px -4px rgba(150, 115, 0, 0.38)",
+        "purpose": "The key on hover (hover-capable pointers only)."
+      },
+      {
+        "name": "shadow-soft",
+        "value": "0 1px 2px rgba(20, 20, 20, 0.05)",
+        "purpose": "Hairline lift under outlined Ant buttons."
+      },
+      {
+        "name": "focus-ring",
+        "value": "0 0 0 2px var(--panel), 0 0 0 4px color-mix(in srgb, var(--brand-blue) 70%, transparent)",
+        "purpose": "The one keyboard focus treatment; visible on white and on yellow."
+      },
+      {
+        "name": "map-pill",
+        "value": "0 1px 2px rgba(0,0,0,0.08), 0 6px 14px -6px rgba(0,0,0,0.28)",
+        "purpose": "A stop pill resting on the map."
+      },
+      {
+        "name": "map-pill-hot",
+        "value": "0 2px 3px rgba(0,0,0,0.1), 0 12px 18px -8px rgba(0,0,0,0.36)",
+        "purpose": "A pill whose row is hovered; it also lifts 3px."
+      },
+      {
+        "name": "map-pill-next",
+        "value": "0 1px 0 #E6BE00, 0 8px 16px -6px rgba(150,115,0,0.45)",
+        "purpose": "The yellow Next pill: the key's warm drop."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out",
+        "value": "cubic-bezier(0.22, 1, 0.36, 1)",
+        "purpose": "Exponential ease-out for every arrival and settle."
+      },
+      {
+        "name": "dur-press",
+        "value": "90ms",
+        "purpose": "A key settling under a press."
+      },
+      {
+        "name": "dur-fast",
+        "value": "160ms",
+        "purpose": "Colour and fill changes; the reduced-motion fade of sheets and dialogs."
+      },
+      {
+        "name": "dur-base",
+        "value": "240ms",
+        "purpose": "The docked panel sliding in; general state transitions."
+      },
+      {
+        "name": "dur-slow",
+        "value": "420ms",
+        "purpose": "A strike-through drawing across a ticked item; a sheet setting down."
+      },
+      {
+        "name": "pill-slide",
+        "value": "320ms var(--ease-out)",
+        "purpose": "The PillNav indicator moving between tabs."
+      },
+      {
+        "name": "stack-settle",
+        "value": "560ms var(--ease-out) 60ms",
+        "purpose": "The list sheet settling onto the paper stack on arrival."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "prefers-reduced-motion: no-preference",
+        "purpose": "Every animation is gated behind this; under reduce, overlays only fade and highlights stay static."
+      },
+      {
+        "name": "panel-in",
+        "value": "var(--dur-base) var(--ease-out), from translateX(24px)",
+        "purpose": "The desk inspector sliding in from the right."
+      },
+      {
+        "name": "pill-hover",
+        "value": "transform 120ms var(--ease-out)",
+        "purpose": "A map pill lifting 3px when its row is hovered."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "narrow",
+        "value": "480px"
+      },
+      {
+        "name": "modal-full-width",
+        "value": "640px"
+      },
+      {
+        "name": "phone-max",
+        "value": "767px"
+      },
+      {
+        "name": "tablet",
+        "value": "768px"
+      },
+      {
+        "name": "desk",
+        "value": "1024px",
+        "purpose": "WIDE: the planning desk (Ideas | Days), dialogs, popovers and the inspector."
+      },
+      {
+        "name": "desk-wide",
+        "value": "1200px",
+        "purpose": "Ideas | Days | Map; the inspector docks in the map column."
+      },
+      {
+        "name": "desk-map-full",
+        "value": "1360px",
+        "purpose": "The map column grows from 360px to 420px."
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Key Button",
+      "kind": "button",
+      "refersTo": "button-key",
+      "description": "The one yellow primary action on a sheet.",
+      "html": "<button class=\"ds-btn-key\">Open Maps</button>",
+      "css": ".ds-btn-key { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2, 8px); min-height: var(--control-lg, 44px); padding: 0 var(--space-5, 20px); border: 0; border-radius: var(--radius-pill, 999px); background: var(--brand-yellow, #FFD417); color: var(--ink, #1A1A1A); font: 650 15px var(--font-body, 'Figtree Variable', system-ui, sans-serif); cursor: pointer; box-shadow: var(--shadow-key, inset 0 1px 0 rgba(255,255,255,0.55), 0 1px 0 #E6BE00, 0 2px 6px -1px rgba(150,115,0,0.28)); transition: transform 90ms cubic-bezier(0.22,1,0.36,1), box-shadow 160ms ease; } .ds-btn-key:hover { box-shadow: var(--shadow-key-hover, inset 0 1px 0 rgba(255,255,255,0.55), 0 1px 0 #E6BE00, 0 6px 14px -4px rgba(150,115,0,0.38)); } .ds-btn-key:active { transform: translateY(1px); } .ds-btn-key:focus-visible { outline: none; box-shadow: var(--focus-ring, 0 0 0 2px #fff, 0 0 0 4px rgba(35,72,166,0.7)); }"
+    },
+    {
+      "name": "Quiet Button",
+      "kind": "button",
+      "refersTo": "button-quiet",
+      "description": "The secondary action: a white pill with an edge border.",
+      "html": "<button class=\"ds-btn-quiet\">Show code</button>",
+      "css": ".ds-btn-quiet { display: inline-flex; align-items: center; justify-content: center; min-height: var(--control-md, 36px); padding: 0 var(--space-4, 16px); border: 1px solid var(--border-strong, #D2D2D2); border-radius: var(--radius-pill, 999px); background: var(--panel, #FFFFFF); color: var(--ink, #1A1A1A); font: 650 15px var(--font-body, 'Figtree Variable', system-ui, sans-serif); cursor: pointer; } .ds-btn-quiet:hover { background: var(--panel-subtle, #FAFAFA); } .ds-btn-quiet:focus-visible { outline: none; box-shadow: var(--focus-ring, 0 0 0 2px #fff, 0 0 0 4px rgba(35,72,166,0.7)); }"
+    },
+    {
+      "name": "Text Button (danger)",
+      "kind": "button",
+      "refersTo": "button-text-danger",
+      "description": "The footer's red Delete: a text action with no fill.",
+      "html": "<button class=\"ds-btn-text ds-danger\">Delete</button>",
+      "css": ".ds-btn-text { display: inline-flex; align-items: center; min-height: var(--control-lg, 44px); padding: 0 var(--space-2, 8px); border: 0; border-radius: var(--radius-sm, 8px); background: none; color: var(--ink, #1A1A1A); font: 600 13px var(--font-body, 'Figtree Variable', system-ui, sans-serif); cursor: pointer; } .ds-btn-text.ds-danger { color: var(--brand-red, #BE1E2D); } .ds-btn-text:hover { background: var(--panel-subtle, #FAFAFA); } .ds-btn-text:focus-visible { outline: none; box-shadow: var(--focus-ring, 0 0 0 2px #fff, 0 0 0 4px rgba(35,72,166,0.7)); }"
+    },
+    {
+      "name": "Chip",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "A pill that opens a picker; yellow while its picker is open.",
+      "html": "<div style=\"display:flex;gap:8px\"><button class=\"ds-chip\">Thu 15</button><button class=\"ds-chip ds-empty\">+ Time</button><button class=\"ds-chip ds-open\">Food</button></div>",
+      "css": ".ds-chip { display: inline-flex; align-items: center; gap: var(--space-2, 8px); min-height: var(--control-md, 36px); padding: 0 var(--space-4, 16px); border: 1px solid var(--border, #E6E6E6); border-radius: var(--radius-pill, 999px); background: var(--panel, #FFFFFF); color: var(--ink, #1A1A1A); font: 400 15px var(--font-body, 'Figtree Variable', system-ui, sans-serif); white-space: nowrap; cursor: pointer; } .ds-chip.ds-empty { color: var(--muted, #656C78); } .ds-chip.ds-open { border-color: var(--brand-yellow-deep, #E6BE00); background: var(--brand-yellow, #FFD417); box-shadow: var(--shadow-key, inset 0 1px 0 rgba(255,255,255,0.55), 0 1px 0 #E6BE00, 0 2px 6px -1px rgba(150,115,0,0.28)); } .ds-chip:focus-visible { outline: none; box-shadow: var(--focus-ring, 0 0 0 2px #fff, 0 0 0 4px rgba(35,72,166,0.7)); }"
+    },
+    {
+      "name": "Field",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "Borderless text on the paper; a red ring and a line of problem text on error.",
+      "html": "<div><input class=\"ds-field\" placeholder=\"Add a note\"><input class=\"ds-field ds-error\" value=\"Too long\"><p class=\"ds-field-error\">That note is too long.</p></div>",
+      "css": ".ds-field { display: block; width: 100%; box-sizing: border-box; padding: var(--space-3, 12px) 0; border: 0; border-radius: var(--radius-sm, 8px); background: none; color: var(--ink, #1A1A1A); font: 400 16px var(--font-body, 'Figtree Variable', system-ui, sans-serif); outline: none; } .ds-field::placeholder { color: var(--muted, #656C78); } .ds-field:focus-visible { box-shadow: var(--focus-ring, 0 0 0 2px #fff, 0 0 0 4px rgba(35,72,166,0.7)); } .ds-field.ds-error { box-shadow: 0 0 0 2px var(--brand-red, #BE1E2D); } .ds-field-error { margin: var(--space-1, 4px) 0 0; color: var(--brand-red, #BE1E2D); font: 400 13px var(--font-body, 'Figtree Variable', system-ui, sans-serif); }"
+    },
+    {
+      "name": "PillNav",
+      "kind": "nav",
+      "refersTo": "pill-nav",
+      "description": "The one tab style: a tinted pill track with a white pill under the selected tab.",
+      "html": "<div class=\"ds-pillnav\" role=\"tablist\"><button class=\"ds-tab\" role=\"tab\" aria-selected=\"true\">Items</button><button class=\"ds-tab\" role=\"tab\" aria-selected=\"false\">Notes</button></div>",
+      "css": ".ds-pillnav { display: inline-flex; box-sizing: border-box; height: 44px; align-items: stretch; gap: 2px; padding: 3px; background: var(--panel-subtle, #FAFAFA); border: 1px solid var(--border-strong, #D2D2D2); border-radius: 999px; } .ds-tab { display: flex; align-items: center; padding: 0 16px; border: 0; border-radius: 999px; background: transparent; color: var(--muted, #656C78); font: 600 14px var(--font-body, 'Figtree Variable', system-ui, sans-serif); cursor: pointer; transition: color 160ms ease, background 320ms cubic-bezier(0.22,1,0.36,1); } .ds-tab[aria-selected='true'] { background: var(--panel, #FFFFFF); color: var(--ink, #1A1A1A); box-shadow: 0 1px 2px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.06); } .ds-tab:focus-visible { outline: none; box-shadow: var(--focus-ring, 0 0 0 2px #fff, 0 0 0 4px rgba(35,72,166,0.7)); }"
+    },
+    {
+      "name": "Detail Group",
+      "kind": "custom",
+      "refersTo": "detail-group",
+      "description": "Tier 3 of a sheet: a tinted group of 52px rows with label, value and a deep-yellow chevron.",
+      "html": "<div class=\"ds-group\"><button class=\"ds-navrow\"><span class=\"ds-l\">When</span><span class=\"ds-v\">Thu 15, 14:00 · 2 h</span><span class=\"ds-c\">›</span></button><button class=\"ds-navrow\"><span class=\"ds-l\">Note</span><span class=\"ds-v ds-empty\">Add a note</span><span class=\"ds-c\">›</span></button></div>",
+      "css": ".ds-group { display: grid; padding: 2px 0; background: var(--panel-subtle, #FAFAFA); border-radius: var(--radius-lg, 16px); } .ds-navrow { position: relative; display: grid; grid-template-columns: 96px minmax(0,1fr) 18px; align-items: center; gap: 12px; min-height: 52px; padding: 0 16px; border: 0; background: none; color: var(--ink, #1A1A1A); font: 400 15px var(--font-body, 'Figtree Variable', system-ui, sans-serif); text-align: left; cursor: pointer; } .ds-navrow + .ds-navrow::before { content: ''; position: absolute; left: 16px; right: 0; top: 0; height: 1px; background: var(--border, #E6E6E6); } .ds-l { color: var(--muted, #656C78); font-size: 14px; } .ds-v { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .ds-v.ds-empty { color: var(--muted, #656C78); font-weight: 400; } .ds-c { color: var(--brand-yellow-deep, #E6BE00); font-size: 20px; } .ds-navrow:focus-visible { outline: none; border-radius: 12px; box-shadow: var(--focus-ring, 0 0 0 2px #fff, 0 0 0 4px rgba(35,72,166,0.7)); }"
+    },
+    {
+      "name": "Stamps",
+      "kind": "chip",
+      "refersTo": "stamp",
+      "description": "Uppercase category and state tags: tinted ground with same-hue ink; done is yellow.",
+      "html": "<div style=\"display:flex;gap:6px\"><span class=\"ds-stamp ds-food\">Food</span><span class=\"ds-stamp ds-sight\">Sight</span><span class=\"ds-stamp ds-used\">Used</span><span class=\"ds-stamp ds-done\">Day done</span></div>",
+      "css": ".ds-stamp { display: inline-block; padding: 3px 7px; border-radius: 5px; font: 700 11px var(--font-body, 'Figtree Variable', system-ui, sans-serif); letter-spacing: 0.08em; text-transform: uppercase; background: var(--panel-subtle, #FAFAFA); color: var(--muted, #656C78); } .ds-food { background: var(--trip-cat-food-bg, #FDE7D2); color: var(--trip-cat-food-fg, #8A4209); } .ds-sight { background: var(--trip-cat-sight-bg, #DCE5FA); color: var(--trip-cat-sight-fg, #1D3F93); } .ds-used { border: 1px solid var(--border-strong, #D2D2D2); background: none; } .ds-done { background: var(--brand-yellow, #FFD417); color: var(--ink, #1A1A1A); }"
+    },
+    {
+      "name": "Paper Stack",
+      "kind": "card",
+      "refersTo": "paper-card",
+      "description": "The signature: a header sheet, the list sheet pulled over it, a third sheet's edge peeking below.",
+      "html": "<div class=\"ds-stack\"><div class=\"ds-paper ds-meta\"><strong>Groceries</strong></div><div class=\"ds-paper ds-top\">Oat milk<br>Lemons</div></div>",
+      "css": ".ds-stack { position: relative; max-width: 320px; padding-bottom: 8px; background: var(--bg, #F7F7F7); font: 400 15px var(--font-body, 'Figtree Variable', system-ui, sans-serif); color: var(--ink-heading, #2B2B2B); } .ds-paper { background: var(--panel, #FFFFFF); border: 1px solid var(--border-strong, #D2D2D2); border-radius: var(--radius-squircle, 16px); padding: 16px 20px; } .ds-meta { padding-bottom: 30px; border-bottom: none; border-bottom-left-radius: 0; border-bottom-right-radius: 0; box-shadow: var(--paper-edge, inset 0 1px 0 rgba(255,255,255,0.9)), var(--lift-0, 0 1px 2px rgba(0,0,0,0.04), 0 6px 18px -6px rgba(0,0,0,0.08)); } .ds-meta strong { font: 700 22px var(--font-headings, 'Outfit Variable', system-ui, sans-serif); color: var(--ink, #1A1A1A); } .ds-top { position: relative; z-index: 2; margin-top: -20px; box-shadow: var(--paper-edge, inset 0 1px 0 rgba(255,255,255,0.9)), var(--lift-1, 0 -1px 0 rgba(0,0,0,0.02), 0 12px 28px -8px rgba(0,0,0,0.12)); } .ds-stack::after { content: ''; position: absolute; z-index: 1; left: 14px; right: 14px; bottom: 0; height: 40px; background: var(--panel, #FFFFFF); border: 1px solid var(--border-strong, #D2D2D2); border-radius: 0 0 16px 16px; box-shadow: 0 4px 10px -4px rgba(0,0,0,0.1); }"
+    },
+    {
+      "name": "Map Pills",
+      "kind": "custom",
+      "refersTo": "map-pill",
+      "description": "Stops on the Google map: white paper pills with a tail and an anchor ring; Next is the yellow key pill; clusters are ink.",
+      "html": "<div class=\"ds-map\"><div class=\"ds-pin\" style=\"left:30%;top:78%;--c:#C4560C\"><span class=\"ds-anchor\"></span><span class=\"ds-pill\"><span class=\"ds-dot\"></span>Time Out Market<span class=\"ds-time\">12:30</span></span></div><div class=\"ds-pin ds-next\" style=\"left:70%;top:78%;--c:#2348A6\"><span class=\"ds-anchor\"></span><span class=\"ds-pill\"><span class=\"ds-dot\"></span><span class=\"ds-kicker\">Next</span>Pena Palace<span class=\"ds-time\">14:00</span></span></div><span class=\"ds-cluster\" style=\"left:88%;top:22%\">+3</span></div>",
+      "css": ".ds-map { position: relative; height: 120px; background: #E9EEE6; border-radius: 16px; font-family: var(--font-body, 'Figtree Variable', system-ui, sans-serif); } .ds-pin { position: absolute; width: 0; height: 0; } .ds-anchor { position: absolute; width: 10px; height: 10px; box-sizing: border-box; border: 3px solid var(--c, #2348A6); border-radius: 50%; background: #fff; transform: translate(-50%, -50%); box-shadow: 0 1px 2px rgba(0,0,0,0.28); } .ds-pill { position: absolute; bottom: 10px; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; height: 34px; box-sizing: border-box; padding: 0 14px 0 10px; border: 1px solid rgba(0,0,0,0.08); border-radius: 999px; background: #fff; color: #1A1A1A; white-space: nowrap; font-size: 14px; font-weight: 600; line-height: 1; box-shadow: 0 1px 2px rgba(0,0,0,0.08), 0 6px 14px -6px rgba(0,0,0,0.28); transition: transform 120ms cubic-bezier(0.22,1,0.36,1); cursor: pointer; } .ds-pill::after { content: ''; position: absolute; left: 50%; bottom: -6px; width: 10px; height: 10px; background: inherit; border-right: 1px solid rgba(0,0,0,0.08); border-bottom: 1px solid rgba(0,0,0,0.08); transform: translateX(-50%) rotate(45deg); } .ds-pill:hover { transform: translate(-50%, -3px); box-shadow: 0 2px 3px rgba(0,0,0,0.1), 0 12px 18px -8px rgba(0,0,0,0.36); } .ds-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--c, #2348A6); box-shadow: 0 0 0 2px #fff; } .ds-time { color: #5d635c; font-size: 12.5px; font-variant-numeric: tabular-nums; } .ds-kicker { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.75; } .ds-next .ds-pill { background: #FFD417; border-color: #E6BE00; box-shadow: 0 1px 0 #E6BE00, 0 8px 16px -6px rgba(150,115,0,0.45); } .ds-next .ds-pill::after { border-color: #E6BE00; } .ds-next .ds-anchor { border-color: #E6BE00; } .ds-next .ds-time { color: #5b4a00; } .ds-cluster { position: absolute; transform: translate(-50%, -50%); display: grid; place-items: center; min-width: 30px; height: 30px; box-sizing: border-box; padding: 0 11px; border-radius: 999px; background: #1A1A1A; color: #fff; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; box-shadow: 0 4px 10px -4px rgba(0,0,0,0.4); }"
+    },
+    {
+      "name": "Composer",
+      "kind": "input",
+      "refersTo": "composer",
+      "description": "The desk's one add bar: a floating 56px elevated pill with a target chip and a 48px yellow key.",
+      "html": "<form class=\"ds-composer\"><span class=\"ds-target\">Wed 25</span><input class=\"ds-composer-input\" placeholder=\"Add to Wed 25\"><button type=\"button\" class=\"ds-composer-key\" aria-label=\"Add\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.4\" stroke-linecap=\"round\"><path d=\"M12 5v14M5 12h14\"/></svg></button></form>",
+      "css": ".ds-composer { display: flex; align-items: center; gap: 8px; box-sizing: border-box; max-width: 520px; min-height: 56px; padding: 0 8px; background: var(--panel, #fff); border: 1px solid var(--border-strong, #D2D2D2); border-radius: 999px; box-shadow: var(--paper-edge, inset 0 1px 0 rgba(255,255,255,0.9)), var(--lift-2, 0 2px 4px rgba(0,0,0,0.06), 0 18px 36px -10px rgba(0,0,0,0.22)); font-family: var(--font-body, 'Figtree Variable', system-ui, sans-serif); } .ds-composer:focus-within { border-color: var(--brand-yellow-deep, #E6BE00); box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 2px 4px rgba(0,0,0,0.06), 0 18px 36px -10px rgba(0,0,0,0.22), 0 0 0 3px rgba(255,212,23,0.55); } .ds-target { display: inline-flex; align-items: center; min-height: 32px; padding: 0 12px; border: 1px solid var(--border, #E6E6E6); border-radius: 999px; font-size: 13px; font-weight: 600; color: var(--ink, #1A1A1A); white-space: nowrap; } .ds-composer-input { flex: 1; min-width: 0; min-height: 44px; border: 0; background: transparent; font: inherit; font-size: 17px; color: var(--ink, #1A1A1A); outline: none; } .ds-composer-input::placeholder { color: var(--muted, #656C78); } .ds-composer-key { display: grid; place-items: center; width: 48px; height: 48px; flex: none; border: 0; border-radius: 50%; background: var(--brand-yellow, #FFD417); color: var(--ink, #1A1A1A); cursor: pointer; box-shadow: var(--shadow-key, inset 0 1px 0 rgba(255,255,255,0.55), 0 1px 0 #E6BE00, 0 2px 6px -1px rgba(150,115,0,0.28)); } .ds-composer-key:focus-visible { outline: none; box-shadow: var(--focus-ring, 0 0 0 2px #fff, 0 0 0 4px rgba(35,72,166,0.7)); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Kitchen-Table Notebook",
+    "overview": "Bauhouse looks like the notebook a household keeps on the kitchen table: white sheets of paper on a pale desk, written in near-black ink, with one yellow key you press to make something happen. Every surface is a sheet of paper at a known height. A list is a short stack: a header sheet, the list sheet slid over it, and the edge of a third sheet peeking out below. A trip is the same stack. During the trip, today's next stop sits on top as a small deck of cards. On a desktop, the trip spreads out into a planning desk: an Ideas sheet, the Days stack and the map, side by side. Overlays are more paper: a sheet that rises from the bottom on a phone, and a dialog, an inspector or a popover on a wide screen.\n\nThe system is quiet by construction. Text fields have no boxes. Detail rows sit in a faintly tinted group, not in cards. Hairlines and spacing divide sections, and colour is spent on meaning (a day, a category, a warning), not on decoration. The only thing with real lift and saturation is Key Yellow, and a sheet has one of it. Motion behaves like paper: sheets set down with an exponential ease-out, rows lift when picked up, and a strike-through draws across a ticked item. All motion sits behind `prefers-reduced-motion: no-preference`. The reduced version keeps the meaning (the highlight, the finished logo) without the movement.\n\nDensity is phone-first. Every control is 44px tall or reaches 44px through an invisible hit area. Inputs are at least 16px so iOS never zooms, and hover effects exist only behind `(hover: hover)`. A wide screen gets the same paper with more of it side by side, not a different product. The map is the one surface that is not ours: a Google map with a quiet light style, on which our own paper pills and day-coloured routes carry the colour.",
+    "keyCharacteristics": [
+      "White paper on a pale desk, with 1px edges and a two-part contact and ambient shadow.",
+      "One yellow key per sheet. Red is for destructive actions only. Blue is the focus ring, the caret and links.",
+      "Outfit for titles, Figtree for everything else. Small-caps labels at 12px / 0.08em.",
+      "16px squircle corners on paper, pills on controls, 20px on the top of a bottom sheet.",
+      "One row grid `[lead 24] 12 [time 48] 12 [title] [trail]` for every line in a plan.",
+      "The four-tier sheet: identity, actions, details, footer, always in that order.",
+      "PillNav is the only tab style."
+    ],
+    "rules": [
+      {
+        "name": "The One Key Rule",
+        "body": "A sheet has at most one Key Yellow button (enforced by `ui.helpers.ts`). Yellow anywhere else means \"selected\", \"next\" or \"done\", never a second call to action.",
+        "section": "colors"
+      },
+      {
+        "name": "The Red Means Gone Rule",
+        "body": "Stamp Red is for deleting and for errors that block. Warnings are amber text with a glyph; they never borrow red.",
+        "section": "colors"
+      },
+      {
+        "name": "The No Raw Hex Rule",
+        "body": "Colours live on `:root` in `styles.css`. `ui.css` and `trips.css` have no hex values outside `:root` (enforced by `ui.enforcement.test.ts`); they reference tokens.",
+        "section": "colors"
+      },
+      {
+        "name": "The Outfit Is For Titles Rule",
+        "body": "Outfit appears only on headings, sheet and page titles, the empty-state line, modal titles and a ticket's confirmation code. Buttons, rows, chips, labels and map pills are Figtree.",
+        "section": "typography"
+      },
+      {
+        "name": "The Sixteen-Pixel Input Rule",
+        "body": "Every input renders at 16px or larger so mobile browsers never zoom on focus. A larger title input may override the rule upward, never downward.",
+        "section": "typography"
+      },
+      {
+        "name": "The One Grid Rule",
+        "body": "A new kind of line in a plan uses the row grid. If it has no time, it starts in the title column; it does not invent its own indent.",
+        "section": "layout"
+      },
+      {
+        "name": "The Still Desk Rule",
+        "body": "Nothing the user did not ask for moves a column. Opening the inspector, scrolling the Days or hovering a pill never scrolls another pane or moves the map's camera.",
+        "section": "layout"
+      },
+      {
+        "name": "The Paper Heights Rule",
+        "body": "A surface takes one of the four lifts, chosen by what it is (resting, on top, overlay, popover), never a bespoke shadow. Map pills are the one exception, because they sit on the map, not on the desk.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Only Lifted Control Rule",
+        "body": "Controls are flat. Only the yellow key (and yellow-selected chips and choices) carries a shadow.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** build every overlay from `Sheet` and its four tiers: identity, actions, details, footer, separated by 18px, 26px and 22px.",
+      "**Do** give a sheet at most one Key Yellow button. A second action is a quiet button or a text button.",
+      "**Do** place every line of a plan on the row grid `[24] 12 [48] 12 [title] [trail]`, dropping the time column to 0 when there are no times.",
+      "**Do** use the paper heights `--lift-0` … `--lift-3` with `--paper-edge`, chosen by what the surface is.",
+      "**Do** keep every control 44px tall or give it a 44px invisible hit area (`ui.css` widens targets under `pointer: coarse`), and keep inputs at 16px or more.",
+      "**Do** put hover effects behind `@media (hover: hover)` and animations behind `prefers-reduced-motion: no-preference`, with a reduced version that keeps the meaning.",
+      "**Do** use PillNav for every tab group.",
+      "**Do** show warnings as amber text with a glyph (`--warn-ink`), and errors and deletes in Stamp Red.",
+      "**Do** keep Google's logo and terms visible on the map, and keep map clicks to \"select this item\".",
+      "**Do** move the map's camera only on an explicit action: Fit day, Show all days, \"Show\", a day pick, or an opened item or drag preview that is off screen."
+    ],
+    "donts": [
+      "**Don't** import Ant `Modal`, `Drawer` or `Popover` in trip files, `RoomPage` or any `components/ui` file other than `Sheet.tsx`, or Ant `Input`, `Select`, `Button`, `Switch` or `DatePicker` in trip files. Use the `components/ui` primitives.",
+      "**Don't** write hex colours in `ui.css` or `trips.css` outside `:root`. Add a token to `:root` in `styles.css`, and don't use a `var(--…)` in `ui.css` that is not defined there.",
+      "**Don't** use a side-stripe accent border (`border-left` or `border-right` of 2px or more) to mark a row, note or card.",
+      "**Don't** add a second tab style, a bordered text field or a card inside a sheet. Group with tints, hairlines and spacing.",
+      "**Don't** use Outfit for buttons, rows, chips, labels or map pills.",
+      "**Don't** add numbers to map stops or rows; order is shown by the route's chevrons and the list.",
+      "**Don't** add click-to-add, place popovers or clickable Google place icons to the map.",
+      "**Don't** add a permanent `will-change`, a `filter` on an always-visible image, or a font or script origin other than Google Maps for the map."
+    ]
+  }
+}
