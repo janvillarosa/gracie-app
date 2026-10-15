@@ -108,3 +108,46 @@ describe('N5: only stamped ops are sent', () => {
     await store.dispose()
   })
 })
+
+describe('N3: one flush lock per user', () => {
+  it('names the lock by user, whatever the device id or house', async () => {
+    const names: string[] = []
+    Object.defineProperty(navigator, 'locks', {
+      configurable: true,
+      value: {
+        request: async (name: string, cb: () => Promise<void>) => {
+          names.push(name)
+          return cb()
+        },
+      },
+    })
+    try {
+      const srv = new MockTripServer()
+      const name = uniq('n3')
+      const a = new TripStore({
+        roomId: ROOM,
+        userId: ME,
+        api: direct(srv),
+        db: new IdbTripDB(name),
+      })
+      const b = new TripStore({
+        roomId: 'room_2',
+        userId: ME,
+        api: direct(srv, 'room_2'),
+        db: new IdbTripDB(name),
+      })
+      await Promise.all([a.hydrate(), b.hydrate()])
+      // The first flush runs before the database has a device id, the later ones after.
+      await a.flush()
+      a.createTrip({ title: 'T' })
+      await a.flush()
+      await b.flush()
+      expect(names.length).toBeGreaterThanOrEqual(3)
+      expect(new Set(names)).toEqual(new Set([`bauhouse-trips-flush-${ME}`]))
+      await Promise.all([a.dispose(), b.dispose()])
+      await new IdbTripDB(name).destroy()
+    } finally {
+      Reflect.deleteProperty(navigator, 'locks')
+    }
+  })
+})

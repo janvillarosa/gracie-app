@@ -464,7 +464,7 @@ export class TripStore {
     // in-tab guard in flush() is all there is.
     const locks = (navigator as unknown as { locks?: LockManager }).locks
     if (!locks) return this.runLocked()
-    await locks.request(`bauhouse-trips-flush-${this.deviceId || this.roomId}`, async () => {
+    await locks.request(`bauhouse-trips-flush-${this.userId}`, async () => {
       if (!this.disposed) await this.runLocked()
     })
   }
