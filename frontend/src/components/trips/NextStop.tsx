@@ -59,6 +59,7 @@ export const NextStopDeck: React.FC<Props> = ({
   const [leaving, setLeaving] = useState(false)
   const [stamp, setStamp] = useState(false)
   const cardRef = useRef<HTMLElement>(null)
+  const headRef = useRef<HTMLHeadingElement>(null)
   const dealt = useRef(false)
   const wasOpen = useRef(open.length)
 
@@ -67,7 +68,8 @@ export const NextStopDeck: React.FC<Props> = ({
     if (!dealt.current) return
     dealt.current = false
     if (top) {
-      cardRef.current?.focus({ preventScroll: true })
+      // The heading takes focus (not the whole card), so the ring hugs the words.
+      headRef.current?.focus({ preventScroll: true })
       announce(`Next stop: ${top.heading}${top.time ? `, ${top.time}` : ''}`)
     }
   }, [top, announce])
@@ -106,11 +108,10 @@ export const NextStopDeck: React.FC<Props> = ({
 
   return (
     <div className={`trip-deck-wrap ${more >= 2 ? 'has-2' : more === 1 ? 'has-1' : ''}`}>
-      <Card className="paper-card trip-deck" aria-label="Next stop" role="region">
+      <Card className="trip-deck" aria-label="Next stop" role="region">
         {top ? (
           <article
             ref={cardRef}
-            tabIndex={-1}
             key={top.id}
             className={leaving ? 'trip-deck-card is-leaving' : 'trip-deck-card'}
           >
@@ -124,7 +125,11 @@ export const NextStopDeck: React.FC<Props> = ({
                   aria-label={`${top.title}, done`}
                 />
               </span>
-              <h3 className={leaving ? 'trip-deck-title is-ticked' : 'trip-deck-title'}>
+              <h3
+                ref={headRef}
+                tabIndex={-1}
+                className={leaving ? 'trip-deck-title is-ticked' : 'trip-deck-title'}
+              >
                 <button
                   type="button"
                   className="trip-deck-titlebtn"
@@ -163,10 +168,10 @@ export const NextStopDeck: React.FC<Props> = ({
             )}
           </article>
         ) : (
-          <article ref={cardRef} tabIndex={-1} className="trip-deck-card trip-deck-end">
+          <article ref={cardRef} className="trip-deck-card trip-deck-end">
             {stamp && <span className="trip-stamp">Day done</span>}
             <p className="trip-kicker">That’s today</p>
-            <h3 className="trip-deck-title">
+            <h3 ref={headRef} tabIndex={-1} className="trip-deck-title">
               {tomorrow ? `Tomorrow: ${tomorrow.label}` : 'Nothing planned for tomorrow yet'}
             </h3>
             {tomorrow?.first && (

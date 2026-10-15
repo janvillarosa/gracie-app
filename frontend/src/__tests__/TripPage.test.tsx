@@ -249,7 +249,9 @@ describe('Next-stop deck', () => {
       expect(serverTodos().find((t) => t.title === 'Pena Palace')?.done).toBe(true),
     )
     expect(document.body.textContent).toContain('Next stop: Lunch at Tascantiga, 12:30')
-    await waitFor(() => expect(card.querySelector('article')).toHaveFocus())
+    await waitFor(() =>
+      expect(within(card).getByRole('heading', { name: 'Lunch at Tascantiga' })).toHaveFocus(),
+    )
   })
 
   it('deals at once with reduced motion', async () => {
@@ -364,6 +366,44 @@ describe('Next-stop deck', () => {
     await screen.findByRole('heading', { name: 'Later' })
     expect(screen.queryByRole('region', { name: 'Next stop' })).not.toBeInTheDocument()
     expect(await screen.findByRole('heading', { name: shortDay(rel(10)) })).toBeInTheDocument()
+  })
+})
+
+describe('Page order', () => {
+  it('puts the pills right under the header, with the deck as the first thing inside Plan', async () => {
+    seed(TRIP)
+    open()
+    const card = await deck()
+    const heading = screen.getByRole('heading', { name: 'Lisbon & Porto' })
+    const tablist = screen.getByRole('tablist')
+    const panel = screen.getByRole('tabpanel')
+    expect(heading.compareDocumentPosition(tablist) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(tablist.compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(panel).toContainElement(card)
+    // Ideas and Bookings do not show the deck.
+    await userEvent.click(screen.getByRole('tab', { name: 'Ideas' }))
+    expect(screen.queryByRole('region', { name: 'Next stop' })).not.toBeInTheDocument()
+  })
+
+  it('drops a booking stub once the todo it is linked to is ticked', async () => {
+    const t = lisbonTrip()
+    const id = `tbk_${'7'.padStart(32, '0')}`
+    t.bookings.push({
+      booking_id: id,
+      kind: 'ticket',
+      title: 'Timed entry',
+      starts_at: `${rel(0)}T23:00`,
+      created_by: MIA,
+    })
+    t.todos[3] = { ...t.todos[3], booking_id: id }
+    seed(t)
+    open()
+    const card = await deck()
+    expect(await screen.findByRole('button', { name: /Timed entry/ })).toBeInTheDocument()
+    await userEvent.click(within(card).getByRole('checkbox', { name: /Pena Palace, done/ }))
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: /^Timed entry/ })).not.toBeInTheDocument(),
+    )
   })
 })
 

@@ -409,11 +409,12 @@ const TripScreen: React.FC<{
     for (const d of schedule.days)
       for (const e of d.entries) {
         if (e.kind !== 'booking' || e.id === stay?.booking_id) continue
+        if (trip.todos.some((t) => t.booking_id === e.id && t.done)) continue
         if ((e.endMs ?? e.startMs ?? 0) < nowMs) continue
         if (!best || (e.startMs ?? 0) < best.at) best = { id: e.id, at: e.startMs ?? 0 }
       }
     return best?.id ?? null
-  }, [schedule.days, stay, nowMs])
+  }, [schedule.days, stay, nowMs, trip.todos])
   const planDates = schedule.days.filter((d) => !doneDays.has(d.date)).map((d) => d.date)
   const firstPlanDate = planDates[0]
   const secondPlanDate = planDates[1]
@@ -543,7 +544,7 @@ const TripScreen: React.FC<{
                     (e.kind === 'todo'
                       ? !e.todo.done
                       : e.id === nextBookingId && !dismissed.has(e.id))
-                  : e.kind === 'todo' || e.id === nextBookingId,
+                  : e.kind === 'todo' || (e.id === nextBookingId && e.id !== stay?.booking_id),
               ),
             },
             closed: !isOpenDay(d),
@@ -1113,6 +1114,22 @@ const TripScreen: React.FC<{
   )
   const planNode = (
     <>
+      {phase === 'during' && deckStops.length > 0 && (
+        <NextStopDeck
+          stops={deckStops}
+          tomorrow={tomorrow}
+          locked={locked}
+          announce={setAnnouncement}
+          onDone={(id) => {
+            if (deckStops.find((x) => x.id === id)?.kind === 'booking')
+              setDismissed((s) => new Set(s).add(id))
+            else rowActions.toggle(id, true)
+          }}
+          onSeeTomorrow={(d) => goToDay(d)}
+          onOpen={rowActions.open}
+          onCopy={bookingActions.copy}
+        />
+      )}
       {doneDays.size > 0 && !emptyPlan && (
         <button
           type="button"
@@ -1195,22 +1212,6 @@ const TripScreen: React.FC<{
                 onDaysOpen={setDaysOpen}
                 dayList={dayListNode}
               />
-              {phase === 'during' && tab === 'plan' && deckStops.length > 0 && (
-                <NextStopDeck
-                  stops={deckStops}
-                  tomorrow={tomorrow}
-                  locked={locked}
-                  announce={setAnnouncement}
-                  onDone={(id) => {
-                    if (deckStops.find((x) => x.id === id)?.kind === 'booking')
-                      setDismissed((s) => new Set(s).add(id))
-                    else rowActions.toggle(id, true)
-                  }}
-                  onSeeTomorrow={(d) => goToDay(d)}
-                  onOpen={rowActions.open}
-                  onCopy={bookingActions.copy}
-                />
-              )}
               <Card className="paper-card paper-list">
                 <div>
                   <PillNav

@@ -2252,3 +2252,57 @@ textarea.trip-field {
   display: inline-flex !important;
   visibility: hidden;
 }
+
+/* ---- the header: a 28px title (two lines at most), the day line left, avatars right ------- */
+.trip-title-text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  min-width: 0;
+}
+.paper-meta .list-header-grid {
+  align-items: start;
+}
+.trip-metaline {
+  flex-wrap: nowrap;
+  justify-content: space-between;
+}
+@media (max-width: 767px) {
+  .paper-meta h2.ant-typography {
+    font-size: 28px;
+    line-height: 1.15 !important;
+  }
+}
+
+/* ---- the deck lives inside Plan: a flat sheet, no second paper stack ------------------- */
+.trip-deck.ant-card {
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-squircle);
+  background: var(--panel);
+  box-shadow: var(--paper-edge), var(--lift-0);
+}
+.trip-deck-wrap {
+  margin: 0 0 24px;
+  z-index: auto;
+}
+.trip-deck-title:focus-visible {
+  box-shadow: var(--focus-ring);
+  border-radius: 8px;
+  outline: none;
+}
+.trip-deck-card:focus-visible {
+  box-shadow: none;
+}
+.trip-deck-actions {
+  flex-wrap: nowrap;
+}
+.trip-deck-actions .trip-go {
+  flex: none;
+  padding: 0 20px;
+}
+@media (max-width: 480px) {
+  .trip-deck-actions {
+    margin-left: 0;
+  }
+}

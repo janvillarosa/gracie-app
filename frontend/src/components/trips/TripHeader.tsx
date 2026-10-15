@@ -77,7 +77,7 @@ export const TripHeader: React.FC<HeaderProps> = ({
             <span className="list-icon list-icon-title" aria-hidden>
               {toTripEmoji(trip.icon)}
             </span>
-            {trip.title}
+            <span className="trip-title-text">{trip.title}</span>
           </Typography.Title>
           <div className="trip-metaline">
             {phase === 'draft' ? (
