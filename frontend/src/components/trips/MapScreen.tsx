@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { Button } from '@components/ui'
 import { CaretLeft, CaretRight, X } from '@phosphor-icons/react'
 import { mapsUrl } from '@lib/trips/schedule'
-import type { MapScene } from '@lib/trips/mapScene'
+import type { LatLng, MapScene } from '@lib/trips/mapScene'
 import { TripMap } from './TripMap'
 
 export type MapDay = { date: string; title: string; long: string }
@@ -19,6 +19,8 @@ type Props = {
   // Tapping a pill closes the map, then the list scrolls to that row and lights it.
   onPickRow: (id: string) => void
   onClose: () => void
+  // Where the map looks on a day with nothing placed (see MapViewProps.home).
+  home?: LatLng[]
   // Focus returns here when the map closes.
   opener?: React.RefObject<HTMLElement | null>
 }
@@ -35,6 +37,7 @@ export const MapScreen: React.FC<Props> = ({
   onPickRow,
   onClose,
   opener,
+  home,
 }) => {
   const start = Math.max(
     0,
@@ -178,6 +181,7 @@ export const MapScreen: React.FC<Props> = ({
           nextPrefix={false}
           following
           fitToken={index}
+          home={home}
           fitPadding={{ top: 90, bottom: 48, left: 72, right: 72 }}
           title={`Map of ${day.long}, ${shown.stops.length} ${shown.stops.length === 1 ? 'stop' : 'stops'}`}
           onPinClick={(id) => {

@@ -362,6 +362,27 @@ describe('what each pill looks like', () => {
     expect(map.setCenter).toHaveBeenCalledWith({ lat: 38.9, lng: -9.1 })
   })
 
+  it('looks at the trip, not the whole world, when the view has no stops at all', () => {
+    // Every place dated outside the trip: nothing to draw, but the trip still has places.
+    const home = [
+      { lat: 38.7, lng: -9.15 },
+      { lat: 41.1, lng: -8.6 },
+    ]
+    const { map } = make(props(scene([], { mode: 'all', route: false, emphasisDay: 0 }), { home }))
+    expect(map.fitBounds.mock.calls[0][0].points).toHaveLength(2)
+    // Only the destination known: centred on it.
+    const one = make(
+      props(scene([], { mode: 'all', route: false, emphasisDay: 0 }), {
+        home: [{ lat: 38.72, lng: -9.14 }],
+      }),
+    )
+    expect(one.map.setCenter).toHaveBeenCalledWith({ lat: 38.72, lng: -9.14 })
+    // Nothing at all: the map stays where it is rather than guessing.
+    const none = make(props(scene([], { mode: 'all', route: false, emphasisDay: 0 })))
+    expect(none.map.fitBounds).not.toHaveBeenCalled()
+    expect(none.map.setCenter).not.toHaveBeenCalled()
+  })
+
   it('has the same states as pure functions', () => {
     const s = scene([A], { mode: 'all' })
     expect(pipColours(A, s)).toEqual({ fill: '--trip-day-0' })

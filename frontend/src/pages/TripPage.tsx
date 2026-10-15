@@ -68,7 +68,7 @@ import { TripMap, type TripMapHandle } from '@components/trips/TripMap'
 import { MapScreen } from '@components/trips/MapScreen'
 import { useBrowserOnline, useMapFollow, useMapOk } from '@components/trips/useTripMap'
 import { hasPin } from '@lib/trips/places'
-import { buildScene, hasMapPlaces, type MapPreview } from '@lib/trips/mapScene'
+import { buildScene, hasMapPlaces, tripPoints, type MapPreview } from '@lib/trips/mapScene'
 import type { RowActions } from '@components/trips/TodoRow'
 import { DAY_COLOURS } from '@components/trips/tripUi'
 import { PillNav } from '@components/PillNav'
@@ -284,6 +284,8 @@ const TripScreen: React.FC<{
     const p = trip.destination ?? trip.stops?.[0]
     return hasPin(p) ? { lat: p.lat, lng: p.lng } : null
   }, [trip.destination, trip.stops])
+  // Where the map looks when the day in view has nothing placed: the trip's places, else where.
+  const mapHome = useMemo(() => tripPoints(trip, bias), [trip, bias])
 
   // ---- which days are cards, closed cards or slim "done" lines ---------------------------
   const stay = phase === 'during' ? tonightsStay(trip, today) : undefined
@@ -657,6 +659,7 @@ const TripScreen: React.FC<{
         title={mapTitle}
         focusPoint={focusPoint}
         focusInset={0}
+        home={mapHome}
         onPinClick={onPinClick}
         onPinHover={onPinHover}
         onShowDay={mapFollow.fit}
@@ -1249,6 +1252,7 @@ const TripScreen: React.FC<{
                 : (ids[0] ?? null)
             }
             scene={(date, sel) => sceneFor('day', date, sel)}
+            home={mapHome}
             onOpenItem={(id) => ctx.current.openItem(id)}
             onPickRow={onPickRow}
             onClose={() => setScreenOpen(false)}

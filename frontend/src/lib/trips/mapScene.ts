@@ -218,6 +218,22 @@ export function hasMapPlaces(trip: Pick<Trip, 'todos' | 'bookings'>): boolean {
   return trip.todos.some(todoOnMap) || trip.bookings.some(bookingOnMap)
 }
 
+/** Every place of the trip the map would draw (days, ideas and anything dated outside the trip),
+ *  else the trip's destination: where an empty view falls back to instead of the whole world. */
+export function tripPoints(
+  trip: Pick<Trip, 'todos' | 'bookings'>,
+  destination?: LatLng | null,
+): LatLng[] {
+  const out: LatLng[] = []
+  for (const t of trip.todos)
+    if (todoOnMap(t) && t.place)
+      out.push({ lat: t.place.lat as number, lng: t.place.lng as number })
+  for (const b of trip.bookings)
+    if (bookingOnMap(b) && b.place)
+      out.push({ lat: b.place.lat as number, lng: b.place.lng as number })
+  return out.length ? out : destination ? [destination] : []
+}
+
 /** "Quinta da Regaleira, Sintra" → "Quinta da Regaleira, Si…": cut at a limit, with an ellipsis. */
 export function shorten(text: string, limit: number): string {
   const t = text.trim()
