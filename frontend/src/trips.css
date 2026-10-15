@@ -2605,3 +2605,29 @@ textarea.trip-field {
   margin-inline: 0;
   padding-left: 0;
 }
+
+/* Packing, before the trip: one quiet line at the top of Plan, text at the lead edge. */
+.trip-packline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 44px;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: var(--muted);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.trip-packline svg {
+  color: var(--brand-yellow-deep);
+}
+.trip-packline:focus-visible {
+  box-shadow: var(--focus-ring);
+  outline: none;
+  border-radius: 8px;
+}

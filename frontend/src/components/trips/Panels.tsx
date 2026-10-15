@@ -3,7 +3,6 @@ import { Button } from 'antd'
 import { X } from '@phosphor-icons/react'
 import { useDroppable } from '@dnd-kit/core'
 import type { TripTodo } from '@api/tripTypes'
-import { TransitionLink } from '@components/TransitionLink'
 import type { Entry } from '@lib/trips/schedule'
 import { Sheet } from './Sheet'
 import { EntryRows, type Shared } from './Spine'
@@ -154,38 +153,5 @@ export const NotesPane: React.FC<{
         if (e.target.value !== notes) onSave(e.target.value)
       }}
     />
-  </section>
-)
-
-export const PackingPane: React.FC<{
-  listId?: string | null
-  online: boolean
-  busy: boolean
-  error: string
-  onCreate: () => void
-}> = ({ listId, online, busy, error, onCreate }) => (
-  <section className="trip-pane-body" aria-label="Packing">
-    {listId ? (
-      <p>
-        <TransitionLink to={`/app/lists/${listId}`} className="trip-link">
-          Open the packing list
-        </TransitionLink>
-      </p>
-    ) : (
-      <>
-        <p className="trip-empty-text">
-          The packing list is a normal Bauhouse list, shared with the House.
-        </p>
-        <Button type="primary" shape="round" disabled={!online || busy} onClick={onCreate}>
-          Create packing list
-        </Button>
-        {!online && <p className="trip-help">Needs a connection. Try again when you’re online.</p>}
-        {error && (
-          <p role="alert" className="trip-error">
-            {error}
-          </p>
-        )}
-      </>
-    )}
   </section>
 )

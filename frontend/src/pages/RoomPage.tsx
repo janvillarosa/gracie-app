@@ -277,6 +277,8 @@ export const RoomPage: React.FC<{
                 <Button
                   type="primary"
                   shape="round"
+                  // Not before the device's own copy has loaded, so nothing is made out of order.
+                  disabled={!tripState.ready}
                   onClick={() => setNewTripOpen(true)}
                   icon={<Plus />}
                 >

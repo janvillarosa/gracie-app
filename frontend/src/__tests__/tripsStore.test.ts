@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { OpsResponse, SyncResponse, TripOp } from '../api/tripTypes'
-import { MemoryTripDB } from '../lib/trips/db'
+import { IdbTripDB, MemoryTripDB } from '../lib/trips/db'
 import { applyOpLocal, mergeDelta, newId, renderTrip } from '../lib/trips/replay'
 import { TripStore, type TripApi } from '../lib/trips/store'
 import { MockTripServer } from '../mocks/tripsServer'
@@ -162,6 +162,7 @@ describe('TripStore', () => {
     expect(b.getState().pending).toBe(2)
     expect(b.getState().trips[id].todos).toHaveLength(1)
     const op = b.enqueue('trip.update', id, undefined, { notes: 'n' })
+    await b.settle()
     expect(op.seq).toBe(3)
     await b.flush()
     expect(srv.trips.get(id)?.todos).toHaveLength(1)
@@ -398,5 +399,294 @@ describe('TripStore', () => {
     expect(knownSeen.some((k) => !(id in k))).toBe(true)
     expect(store.getState().trips[id].title).toBe('Whole')
     expect(store.getState().trips[id].version).toBe(1)
+  })
+})
+
+describe('one device, many tabs', () => {
+  const quiet: TripApi = {
+    sync: () => Promise.reject(new Error('offline')),
+    ops: () => Promise.reject(new Error('offline')),
+  }
+
+  it('shares one client id between tabs and never reuses a seq', async () => {
+    const srv = new MockTripServer()
+    const name = `tabs_${Math.random().toString(16).slice(2)}`
+    const dbA = new IdbTripDB(name)
+    const dbB = new IdbTripDB(name)
+    const a = new TripStore({ roomId: ROOM, userId: ME, api: quiet, db: dbA })
+    const b = new TripStore({ roomId: ROOM, userId: ME, api: quiet, db: dbB })
+    await Promise.all([a.hydrate(), b.hydrate()])
+    const id = a.createTrip({ title: 'Shared' })
+    const ops = [
+      a.enqueue('trip.update', id, undefined, { notes: 'from a' }),
+      b.enqueue('trip.update', id, undefined, { notes: 'from b' }),
+      a.enqueue('trip.update', id, undefined, { notes: 'a again' }),
+      b.enqueue('trip.update', id, undefined, { notes: 'b again' }),
+    ]
+    await Promise.all([a.settle(), b.settle()])
+    expect(new Set(ops.map((o) => o.client_id)).size).toBe(1)
+    expect(ops[0].client_id).toMatch(/^dev_/)
+    expect(new Set(ops.map((o) => o.seq)).size).toBe(4)
+    // Either tab can send everything, in seq order: nothing is dropped as a duplicate.
+    const sender = new TripStore({
+      roomId: ROOM,
+      userId: ME,
+      api: direct(srv),
+      db: new IdbTripDB(name),
+    })
+    await sender.hydrate()
+    await sender.flush()
+    expect(sender.getState().pending).toBe(0)
+    expect(srv.trips.get(id)?.fields.title).toBe('Shared')
+    await Promise.all([a.dispose(), b.dispose(), sender.dispose()])
+    await new IdbTripDB(name).destroy()
+  })
+
+  it('a second tab does not lose its ops when the first has already sent them', async () => {
+    const srv = new MockTripServer()
+    const db = new MemoryTripDB()
+    const a = new TripStore({ roomId: ROOM, userId: ME, api: quiet, db })
+    await a.hydrate()
+    const id = a.createTrip({ title: 'T' })
+    await a.flush()
+    const b = new TripStore({ roomId: ROOM, userId: ME, api: direct(srv), db })
+    await b.hydrate()
+    expect(b.getState().pending).toBe(1)
+    await b.flush()
+    expect(srv.trips.get(id)).toBeDefined()
+    // The first tab still holds the op in memory; sending it again is a duplicate, then gone.
+    a.setApi(direct(srv))
+    await a.flush()
+    expect(a.getState().pending).toBe(0)
+  })
+})
+
+describe('when the device cannot keep our changes', () => {
+  class BrokenDB extends MemoryTripDB {
+    async appendOp(): Promise<TripOp> {
+      throw new Error('QuotaExceededError')
+    }
+  }
+
+  it('still syncs them under a new client id, and says they are not saved here', async () => {
+    const srv = new MockTripServer()
+    const { g, api } = gated(srv)
+    const store = new TripStore({ roomId: ROOM, userId: ME, api, db: new BrokenDB() })
+    await store.hydrate()
+    const id = store.createTrip({ title: 'Kept in memory' })
+    const second = store.enqueue('trip.update', id, undefined, { notes: 'n' })
+    await store.flush()
+    expect(store.getState().persistFailed).toBe(true)
+    // A reload from the (empty) database never drops what only this tab has.
+    expect(store.getState().pending).toBe(2)
+    expect(second.client_id).toMatch(/^dev_/)
+    expect(second.seq).toBe(2)
+    g.online = true
+    await store.flush()
+    expect(store.getState().pending).toBe(0)
+    expect(srv.trips.get(id)?.fields.notes).toBe('n')
+  })
+
+  it('opens again after a failed open instead of staying broken', async () => {
+    const db = new IdbTripDB('reopen')
+    const proto = indexedDB.open.bind(indexedDB)
+    let fail = true
+    const spy = vi.spyOn(indexedDB, 'open').mockImplementation((n, v) => {
+      if (fail) {
+        fail = false
+        const r = {} as IDBOpenDBRequest
+        setTimeout(() => {
+          Object.defineProperty(r, 'error', { value: new Error('denied') })
+          r.onerror?.(new Event('error'))
+        })
+        return r
+      }
+      return proto(n, v)
+    })
+    await expect(db.load('r')).rejects.toBeDefined()
+    await expect(db.load('r')).resolves.toBeDefined()
+    spy.mockRestore()
+    await db.destroy()
+  })
+})
+
+describe('signing in again', () => {
+  it('treats a refused key as sign-in, not as offline, and goes on with the new key', async () => {
+    const srv = new MockTripServer()
+    let refused = 0
+    const bad: TripApi = {
+      sync: () => Promise.reject(Object.assign(new Error('unauthorized'), { status: 401 })),
+      ops: () => Promise.reject(Object.assign(new Error('unauthorized'), { status: 401 })),
+    }
+    const store = new TripStore({
+      roomId: ROOM,
+      userId: ME,
+      api: bad,
+      db: new MemoryTripDB(),
+      onUnauthorized: () => refused++,
+    })
+    store.start()
+    await store.hydrate()
+    const id = store.createTrip({ title: 'Before' })
+    await store.flush()
+    expect(refused).toBeGreaterThan(0)
+    expect(store.getState().offline).toBe(false)
+    expect(store.getState().pending).toBe(1)
+    // The new key is used from the next call; the queued change goes out.
+    store.setApi(direct(srv))
+    await store.flush()
+    expect(store.getState().pending).toBe(0)
+    expect(srv.trips.get(id)?.fields.title).toBe('Before')
+    store.stop()
+    await store.dispose()
+  })
+})
+
+describe('conflict notes', () => {
+  const titleConflicts = (srv: MockTripServer): TripApi => ({
+    sync: async (_r, k) => srv.sync(ROOM, k),
+    ops: async (_r, ops) => {
+      const real = srv.ops(ROOM, ops)
+      const titled = new Set(
+        ops
+          .filter((o) => o.patch && 'title' in o.patch && o.type.endsWith('update'))
+          .map((o) => o.op_id),
+      )
+      return {
+        ...real,
+        results: real.results.map((r) =>
+          titled.has(r.op_id)
+            ? { ...r, status: 'conflicted' as const, skipped_fields: ['title'] }
+            : r,
+        ),
+      }
+    },
+  })
+
+  it('keeps a trip-level and a booking-level note, each with its kind, and expires them', async () => {
+    const srv = new MockTripServer()
+    let t = 1_000_000
+    const store = new TripStore({
+      roomId: ROOM,
+      userId: ME,
+      api: titleConflicts(srv),
+      db: new MemoryTripDB(),
+      now: () => t,
+    })
+    await store.hydrate()
+    const id = store.createTrip({ title: 'Trip' })
+    const bk = store.createBooking(id, { kind: 'train', title: 'Train' })
+    await store.flush()
+    store.updateTrip(id, { title: 'Renamed' })
+    store.updateBooking(id, bk, { title: 'Renamed train' })
+    await store.flush()
+    const notes = store.getState().notes
+    expect(notes[id]).toMatchObject({ kind: 'trip', tripId: id, fields: ['title'] })
+    expect(notes[bk]).toMatchObject({ kind: 'booking', tripId: id })
+    // Notes expire after a day (the next change to the store drops them).
+    t += 25 * 3600 * 1000
+    store.updateTrip(id, { notes: 'x' })
+    expect(store.getState().notes).toEqual({})
+    await store.dispose()
+  })
+
+  it('forgets a note when the trip changes again', async () => {
+    const srv = new MockTripServer()
+    const store = new TripStore({
+      roomId: ROOM,
+      userId: ME,
+      api: titleConflicts(srv),
+      db: new MemoryTripDB(),
+    })
+    await store.hydrate()
+    const id = store.createTrip({ title: 'Trip' })
+    await store.flush()
+    store.updateTrip(id, { title: 'Mine' })
+    await store.flush()
+    expect(store.getState().notes[id]).toBeDefined()
+    // A housemate edits the trip: the next sync delivers a delta for it.
+    srv.ops(ROOM, [
+      {
+        v: 1,
+        op_id: 'x',
+        client_id: 'other',
+        seq: 1,
+        at: Date.now() + 10_000,
+        type: 'trip.update',
+        trip_id: id,
+        patch: { notes: 'theirs' },
+      },
+    ])
+    await store.flush()
+    expect(store.getState().notes[id]).toBeUndefined()
+    await store.dispose()
+  })
+})
+
+describe('before the first load, retries and disposal', () => {
+  it('holds ops made before the load finished, and keeps their order', async () => {
+    const srv = new MockTripServer()
+    const store = new TripStore({
+      roomId: ROOM,
+      userId: ME,
+      api: direct(srv),
+      db: new MemoryTripDB(),
+    })
+    // No hydrate() yet.
+    const id = store.createTrip({ title: 'Early' })
+    store.updateTrip(id, { notes: 'later' })
+    await store.hydrate()
+    await store.flush()
+    expect(store.getState().pending).toBe(0)
+    expect(srv.trips.get(id)?.fields).toMatchObject({ title: 'Early', notes: 'later' })
+    await store.dispose()
+  })
+
+  it('still pulls after a partial retry, without calling it offline', async () => {
+    const srv = new MockTripServer()
+    let pulls = 0
+    const api: TripApi = {
+      sync: async (_r, k) => {
+        pulls++
+        return srv.sync(ROOM, k)
+      },
+      ops: async (_r, ops) => ({
+        server_time: Date.now(),
+        results: ops.map((o) => ({ op_id: o.op_id, status: 'retry' as const })),
+        trips: [],
+      }),
+    }
+    const store = new TripStore({ roomId: ROOM, userId: ME, api, db: new MemoryTripDB() })
+    await store.hydrate()
+    store.createTrip({ title: 'Busy' })
+    await store.flush()
+    expect(pulls).toBeGreaterThan(0)
+    expect(store.getState().offline).toBe(false)
+    expect(store.getState().pending).toBe(1)
+    await store.dispose()
+  })
+
+  it('ignores results that arrive after it was disposed', async () => {
+    const srv = new MockTripServer()
+    let release: () => void = () => {}
+    const api: TripApi = {
+      sync: async (_r, k) => srv.sync(ROOM, k),
+      ops: (_r, ops) =>
+        new Promise((resolve) => {
+          release = () => resolve(srv.ops(ROOM, ops))
+        }),
+    }
+    const db = new MemoryTripDB()
+    const store = new TripStore({ roomId: ROOM, userId: ME, api, db })
+    await store.hydrate()
+    store.createTrip({ title: 'Late' })
+    await store.settle()
+    const run = store.flush()
+    await new Promise((r) => setTimeout(r, 10))
+    const gone = store.dispose()
+    release()
+    await Promise.all([run, gone])
+    // The late answer wrote nothing: the op is still in the database for the next session.
+    expect((await db.load(ROOM)).outbox).toHaveLength(1)
   })
 })

@@ -10,6 +10,7 @@ import { Dashboard, TripsDashboard } from '@pages/Dashboard'
 import { TripSettings } from '@pages/TripSettings'
 import { UserSettings } from '@pages/UserSettings'
 import type { Trip, TripTodo } from '@api/tripTypes'
+import { wipeTripDatabases } from '@lib/trips/db'
 import { resetTripStores } from '@lib/trips/store'
 import { addDays, localDateKey } from '@lib/trips/schedule'
 import { server, tripServer } from '../testServer'
@@ -84,6 +85,11 @@ export function mockHouse() {
 
 const Where: React.FC = () => <div data-testid="where">{useLocation().pathname}</div>
 
+// Stands in for the List page: shows the router state a trip passed along.
+const ListArrival: React.FC = () => (
+  <div data-testid="arrival">{JSON.stringify(useLocation().state)}</div>
+)
+
 export function renderTrips(path: string) {
   localStorage.setItem('gracie_api_key', 'k_test')
   mockHouse()
@@ -99,6 +105,7 @@ export function renderTrips(path: string) {
             <Route path="/app/trips" element={<TripsDashboard />} />
             <Route path="/app/trips/:tripId/settings" element={<TripSettings />} />
             <Route path="/app/trips/:tripId" element={<TripPage />} />
+            <Route path="/app/lists/:listId" element={<ListArrival />} />
             <Route path="/app/account" element={<UserSettings />} />
           </Routes>
         </QueryClientProvider>
@@ -118,12 +125,9 @@ export function freezeClock() {
 
 export async function resetTripsWorld() {
   vi.useRealTimers()
-  resetTripStores()
+  await resetTripStores()
   tripServer.trips.clear()
-  await new Promise<void>((resolve) => {
-    const r = indexedDB.deleteDatabase('bauhouse-trips')
-    r.onsuccess = r.onerror = r.onblocked = () => resolve()
-  })
+  await wipeTripDatabases()
   sessionStorage.clear()
   meState.prefs = { trips_show_next_stop: true }
   meState.lists = []

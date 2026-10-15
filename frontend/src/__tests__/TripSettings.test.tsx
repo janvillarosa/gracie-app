@@ -258,12 +258,12 @@ describe('Trip settings: packing list', () => {
 
   it('shows a linked list as a row with its item count, and opens it', async () => {
     meState.lists = [list]
-    meState.items = [{ item_id: 'a' }, { item_id: 'b' }, { item_id: 'c' }]
+    meState.items = [{ item_id: 'a', completed: true }, { item_id: 'b' }, { item_id: 'c' }]
     seed({ ...TRIP, packing_list_id: 'list_packing' })
     settings()
     const row = (await screen.findByText('Packing list')).closest('a') as HTMLElement
     expect(row).toHaveAttribute('href', '/app/lists/list_packing')
-    expect(await within(row).findByText('3 items')).toBeInTheDocument()
+    expect(await within(row).findByText('1 of 3 packed')).toBeInTheDocument()
     expect(screen.queryByText('Make a packing list')).not.toBeInTheDocument()
   })
 

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { errorMessage } from '@lib/errors'
-import { useParams } from 'react-router-dom'
+import { useLocation, useParams } from 'react-router-dom'
 import { useTransitionNavigate } from '@lib/viewTransition'
 import { useAuth } from '@auth/AuthProvider'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -76,6 +76,11 @@ export const ListPage: React.FC = () => {
   const { apiKey } = useAuth()
   const navigate = useTransitionNavigate()
   const { listId = '' } = useParams()
+  // Arrived from a trip (its packing list): the way back is the trip.
+  const arrival = useLocation().state as { from?: string; fromLabel?: string } | null
+  const fromTrip = arrival?.from?.startsWith('trip:')
+    ? { id: arrival.from.slice(5), label: arrival.fromLabel || 'Trip' }
+    : null
   const [includeCompleted, setIncludeCompleted] = useState(false)
   const [groupByCat, setGroupByCat] = useState(() => {
     const saved = localStorage.getItem('gracie_group_by_cat')
@@ -687,7 +692,13 @@ export const ListPage: React.FC = () => {
 
   return (
     <div className="container">
-      <TopNav back={{ to: '/app', label: houseQuery.data?.display_name || 'House' }} />
+      <TopNav
+        back={
+          fromTrip
+            ? { to: `/app/trips/${fromTrip.id}`, label: fromTrip.label }
+            : { to: '/app', label: houseQuery.data?.display_name || 'House' }
+        }
+      />
       {contextHolder}
       <div className="paper-stack">
         {/* Bottom sheet: title + details + actions */}

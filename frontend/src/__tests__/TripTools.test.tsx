@@ -5,6 +5,8 @@ import { tripServer } from '../testServer'
 import {
   MIA,
   lisbonTrip,
+  makeTrip,
+  meState,
   rel,
   renderTrips,
   resetTripsWorld,
@@ -350,12 +352,112 @@ describe('Notes and packing from the menu', () => {
     await waitFor(() => expect(serverTrip()?.fields.notes).toBe('Meet at Rossio, platform 2'))
   })
 
-  it('opens the packing list panel', async () => {
+  const packList = {
+    list_id: 'list_packing',
+    room_id: 'room_1',
+    name: 'Packing',
+    is_deleted: false,
+  }
+  const menu = async () =>
+    userEvent.click(await screen.findByRole('button', { name: 'More trip options' }))
+
+  it('carries the packing state in the menu and goes straight to the list', async () => {
+    meState.lists = [packList]
+    meState.items = [
+      { item_id: 'a', completed: true },
+      { item_id: 'b', completed: false },
+      { item_id: 'c', completed: false },
+    ]
+    seed({ ...TRIP, packing_list_id: 'list_packing' })
+    open()
+    await menu()
+    await userEvent.click(
+      await screen.findByRole('menuitem', { name: 'Packing list · 1 of 3 packed' }),
+    )
+    // No sheet in between: the List page, told where we came from.
+    await waitFor(() =>
+      expect(screen.getByTestId('where').textContent).toBe('/app/lists/list_packing'),
+    )
+    expect(JSON.parse(screen.getByTestId('arrival').textContent ?? '{}')).toEqual({
+      from: `trip:${TRIP.trip_id}`,
+      fromLabel: 'Lisbon & Porto',
+    })
+  })
+
+  it('makes the list when there is none, then goes to it', async () => {
     seed(TRIP)
     open()
-    await userEvent.click(await screen.findByRole('button', { name: 'More trip options' }))
-    await userEvent.click(await screen.findByText('Packing list'))
-    expect(await screen.findByRole('button', { name: 'Create packing list' })).toBeInTheDocument()
+    await menu()
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Make a packing list' }))
+    await waitFor(() =>
+      expect(screen.getByTestId('where').textContent).toBe('/app/lists/list_packing'),
+    )
+    await waitFor(() => expect(serverTrip()?.fields.packing_list_id).toBe('list_packing'))
+    expect(screen.queryByRole('button', { name: 'Create packing list' })).not.toBeInTheDocument()
+  })
+
+  it('is disabled offline, with a reason', async () => {
+    vi.spyOn(window.navigator, 'onLine', 'get').mockReturnValue(false)
+    seed(TRIP)
+    open()
+    await menu()
+    const item = await screen.findByRole('menuitem', { name: 'Connect to make one' })
+    expect(item).toHaveAttribute('aria-disabled', 'true')
+  })
+})
+
+describe('Packing line before the trip', () => {
+  const list = { list_id: 'list_packing', room_id: 'room_1', name: 'Packing', is_deleted: false }
+  const trip = (startIn: number) => ({
+    ...makeTrip(9, {
+      title: 'Ghent',
+      start_date: rel(startIn),
+      end_date: rel(startIn + 2),
+      packing_list_id: 'list_packing',
+    }),
+  })
+  const items = (n: number, packed: number) =>
+    Array.from({ length: n }, (_, i) => ({ item_id: `i${i}`, completed: i < packed }))
+
+  it('shows one quiet line within three days of leaving, and goes to the list', async () => {
+    meState.lists = [list]
+    meState.items = items(12, 4)
+    seed(trip(2))
+    renderTrips(`/app/trips/${trip(2).trip_id}`)
+    const line = await screen.findByRole('button', { name: /Packing · 4 of 12 packed/ })
+    await userEvent.click(line)
+    await waitFor(() =>
+      expect(screen.getByTestId('where').textContent).toBe('/app/lists/list_packing'),
+    )
+  })
+
+  it('stays away when it is early, when all is packed, and once the trip has started', async () => {
+    meState.lists = [list]
+    meState.items = items(12, 4)
+    seed(trip(5))
+    renderTrips(`/app/trips/${trip(5).trip_id}`)
+    await screen.findByRole('heading', { name: 'Ghent' })
+    expect(screen.queryByRole('button', { name: /Packing ·/ })).not.toBeInTheDocument()
+  })
+
+  it('is hidden when everything is packed', async () => {
+    meState.lists = [list]
+    meState.items = items(3, 3)
+    seed(trip(1))
+    renderTrips(`/app/trips/${trip(1).trip_id}`)
+    await screen.findByRole('heading', { name: 'Ghent' })
+    await waitFor(() => expect(meState.items).toHaveLength(3))
+    expect(screen.queryByRole('button', { name: /Packing ·/ })).not.toBeInTheDocument()
+  })
+
+  it('is hidden once the trip has started', async () => {
+    meState.lists = [list]
+    meState.items = items(12, 4)
+    const started = { ...trip(0), start_date: rel(-1), end_date: rel(2) }
+    seed(started)
+    renderTrips(`/app/trips/${started.trip_id}`)
+    await screen.findByRole('heading', { name: 'Ghent' })
+    expect(screen.queryByRole('button', { name: /Packing ·/ })).not.toBeInTheDocument()
   })
 })
 

@@ -236,29 +236,57 @@ describe('phases and copy', () => {
 })
 
 describe('IdbTripDB', () => {
-  it('round-trips snapshots, ops and the device counter', async () => {
-    const db = new IdbTripDB()
+  const draft = (id: string) => ({
+    v: 1 as const,
+    op_id: id,
+    at: 1,
+    type: 'trip.update' as const,
+    trip_id: 'trip_a',
+  })
+
+  it('stamps ops with one device id and the next seq, and keeps houses apart', async () => {
+    const db = new IdbTripDB('u_round_trip')
     const t = { ...trip(), room_id: 'r' }
     await db.putTrip(t)
-    await db.appendOp(
-      { v: 1, op_id: 'o1', client_id: 'c', seq: 7, at: 1, type: 'trip.update', trip_id: 'trip_a' },
-      { client_id: 'c', seq: 7 },
-    )
-    await db.appendOp(
-      { v: 1, op_id: 'o2', client_id: 'c', seq: 8, at: 1, type: 'trip.update', trip_id: 'trip_a' },
-      { client_id: 'c', seq: 8 },
-    )
-    let loaded = await db.load('c')
+    const a = await db.appendOp(draft('o1'), 'r')
+    const b = await db.appendOp(draft('o2'), 'r')
+    await db.appendOp(draft('other-house'), 'r2')
+    expect(a.client_id).toMatch(/^dev_[0-9a-f]{32}$/)
+    expect(b.client_id).toBe(a.client_id)
+    expect([a.seq, b.seq]).toEqual([1, 2])
+    let loaded = await db.load('r')
     expect(loaded.trips[0].title).toBe('Lisbon')
-    expect(loaded.outbox.map((o) => o.seq)).toEqual([7, 8])
-    expect(loaded.meta).toEqual({ client_id: 'c', seq: 8 })
+    expect(loaded.outbox.map((o) => o.op_id)).toEqual(['o1', 'o2'])
+    expect(loaded.meta).toEqual({ client_id: a.client_id, seq: 3 })
     await db.deleteOps(['o1'])
     await db.deleteTrip('trip_a')
-    await db.putMeta({ client_id: 'c', seq: 9 })
-    loaded = await db.load('c')
+    loaded = await db.load('r')
     expect(loaded.trips).toHaveLength(0)
-    expect(loaded.outbox.map((o) => o.seq)).toEqual([8])
-    expect(loaded.meta?.seq).toBe(9)
+    expect(loaded.outbox.map((o) => o.seq)).toEqual([2])
+    await db.destroy()
+  })
+
+  it('never hands the same seq to two connections (two tabs, or a duplicated tab)', async () => {
+    const one = new IdbTripDB('u_two_tabs')
+    const two = new IdbTripDB('u_two_tabs')
+    const stamped = await Promise.all(
+      Array.from({ length: 6 }, (_, i) => (i % 2 ? two : one).appendOp(draft(`op${i}`), 'r')),
+    )
+    expect(new Set(stamped.map((o) => o.client_id)).size).toBe(1)
+    expect(new Set(stamped.map((o) => o.seq)).size).toBe(6)
+    expect(Math.max(...stamped.map((o) => o.seq))).toBe(6)
+    await one.destroy()
+  })
+
+  it('keeps each user in their own database', async () => {
+    const a = new IdbTripDB('u_a')
+    const b = new IdbTripDB('u_b')
+    await a.appendOp(draft('mine'), 'r')
+    expect((await b.load('r')).outbox).toHaveLength(0)
+    expect((await b.load('r')).meta).toBeNull()
+    await a.destroy()
+    await b.destroy()
+    expect((await new IdbTripDB('u_a').load('r')).outbox).toHaveLength(0)
   })
 })
 

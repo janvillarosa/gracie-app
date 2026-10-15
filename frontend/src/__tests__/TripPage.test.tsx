@@ -61,7 +61,7 @@ describe('The stack', () => {
     open()
     await userEvent.click(await screen.findByRole('button', { name: 'More trip options' }))
     expect(await screen.findByText('Notes')).toBeInTheDocument()
-    expect(screen.getByText('Packing list')).toBeInTheDocument()
+    expect(screen.getByText('Make a packing list')).toBeInTheDocument()
     await userEvent.click(screen.getByText('Trip settings'))
     await waitFor(() => expect(screen.getByTestId('where').textContent).toMatch(/\/settings$/))
     expect(await screen.findByLabelText('Trip name')).toBeInTheDocument()
@@ -697,6 +697,18 @@ describe('Rows', () => {
     })
   })
 
+  it('says plainly when the device is not keeping our changes', async () => {
+    seed(TRIP)
+    open()
+    await screen.findByText('Lunch at Tascantiga')
+    act(() => {
+      const s = store()
+      s['persistFailed'] = true
+      s['emit']()
+    })
+    expect(await screen.findByText('Not saved on this device')).toBeInTheDocument()
+  })
+
   it('shows a conflict note on the row, with See theirs', async () => {
     const t = lisbonTrip()
     t.todos[4] = { ...t.todos[4], updated_by: MIA }
@@ -706,7 +718,9 @@ describe('Rows', () => {
     const id = TRIP.todos[4].todo_id
     act(() => {
       const s = store()
-      s['notes'] = { [id]: { key: id, tripId: TRIP.trip_id, fields: ['title'] } }
+      s['notes'] = {
+        [id]: { key: id, tripId: TRIP.trip_id, kind: 'todo', fields: ['title'], at: Date.now() },
+      }
       s['emit']()
     })
     expect(await screen.findByText('Mia changed this after your offline edit')).toBeInTheDocument()

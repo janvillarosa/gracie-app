@@ -2,7 +2,6 @@ import React, { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Card, Divider, Modal, Typography } from 'antd'
 import { CaretRight, PencilSimple } from '@phosphor-icons/react'
-import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@auth/AuthProvider'
 import { HouseLoader } from '@components/HouseLoader'
 import { IconPicker } from '@components/IconPicker'
@@ -12,12 +11,12 @@ import { WhenSheet } from '@components/trips/WhenSheet'
 import { TripsPreference } from '@components/trips/TripsPreference'
 import { WhereSheet } from '@components/trips/WhereSheet'
 import { TransitionLink } from '@components/TransitionLink'
-import { getListItems, getLists } from '@api/endpoints'
 import { createPackingList } from '@api/tripEndpoints'
 import type { Place } from '@api/tripTypes'
 import { errorMessage } from '@lib/errors'
 import { useDocumentTitle } from '@lib/useDocumentTitle'
 import { useTrips } from '@lib/trips/hooks'
+import { usePacking } from '@lib/trips/usePacking'
 import { diffDays, routeText, shortRange } from '@lib/trips/schedule'
 import { useTransitionNavigate } from '@lib/viewTransition'
 import { TRIP_ICONS, TRIP_ICON_EMOJI, toTripEmoji, type TripIcon } from '../icons'
@@ -71,20 +70,9 @@ export const TripSettings: React.FC = () => {
   useDocumentTitle('Trip settings')
 
   const roomId = store?.roomId
-  const lists = useQuery({
-    queryKey: ['lists', roomId],
-    queryFn: () => getLists(apiKey as string, roomId as string),
-    enabled: !!roomId && !!apiKey,
-  })
   // The link counts only if the list still exists.
-  const linked = trip?.packing_list_id
-    ? lists.data?.find((l) => l.list_id === trip.packing_list_id && !l.is_deleted)
-    : undefined
-  const items = useQuery({
-    queryKey: ['list-items', linked?.list_id],
-    queryFn: () => getListItems(apiKey as string, roomId as string, linked?.list_id as string),
-    enabled: !!linked && !!roomId,
-  })
+  const pack = usePacking(roomId, trip?.packing_list_id)
+  const linked = pack.listId ? { list_id: pack.listId } : undefined
 
   if (loading || !store || (!trip && !state.synced)) {
     return (
@@ -130,7 +118,7 @@ export const TripSettings: React.FC = () => {
     try {
       await createPackingList(apiKey as string, store.roomId, trip.trip_id)
       await store.flush()
-      await lists.refetch()
+      await pack.refresh()
     } catch (e) {
       setPackError(errorMessage(e, 'Couldn’t make the list. Try again.'))
     } finally {
@@ -138,7 +126,6 @@ export const TripSettings: React.FC = () => {
     }
   }
 
-  const count = items.data?.length
   return (
     <div className="container">
       <TopNav back={{ to: `/app/trips/${trip.trip_id}`, label: trip.title }} />
@@ -181,13 +168,7 @@ export const TripSettings: React.FC = () => {
           {linked ? (
             <SettingRow
               label="Packing list"
-              value={
-                count === undefined
-                  ? 'Open the list'
-                  : count === 0
-                    ? 'Empty · add items'
-                    : `${count} ${count === 1 ? 'item' : 'items'}`
-              }
+              value={pack.text || 'Open the list'}
               to={`/app/lists/${linked.list_id}`}
             />
           ) : (

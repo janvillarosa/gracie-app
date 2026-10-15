@@ -14,12 +14,16 @@ type HeaderProps = {
   today: string
   offline: boolean
   pending: number
+  // The device would not keep our changes: they sync, but a reload would lose them.
+  persistFailed: boolean
   deletedBy: string
   readOnlyOver: boolean
   members: Member[]
   onUnlock: () => void
   onRestore: () => void
   onMenu: (key: 'notes' | 'packing' | 'details') => void
+  // The packing list carries its state in the menu: "Packing list · 4 of 12 packed".
+  packing: { label: string; disabled: boolean }
   // The friendly line opens a list of days: a popover on desktop, a sheet (owned by the page)
   // elsewhere.
   desktop: boolean
@@ -34,12 +38,14 @@ export const TripHeader: React.FC<HeaderProps> = ({
   today,
   offline,
   pending,
+  persistFailed,
   deletedBy,
   readOnlyOver,
   members,
   onUnlock,
   onRestore,
   onMenu,
+  packing,
   desktop,
   daysOpen,
   onDaysOpen,
@@ -55,7 +61,7 @@ export const TripHeader: React.FC<HeaderProps> = ({
         : [route, shortRange(trip.start_date, trip.end_date)].filter(Boolean).join(' · ')
   const items: MenuProps['items'] = [
     { key: 'notes', label: 'Notes' },
-    { key: 'packing', label: 'Packing list' },
+    { key: 'packing', label: packing.label, disabled: packing.disabled },
     { key: 'details', label: 'Trip settings' },
   ]
   return (
@@ -138,11 +144,16 @@ export const TripHeader: React.FC<HeaderProps> = ({
           </Dropdown>
         </div>
       </div>
-      {(offline || pending > 0 || readOnlyOver) && (
+      {(offline || pending > 0 || readOnlyOver || persistFailed) && (
         <div className="trip-header-row">
           {(offline || pending > 0) && (
             <span className="trip-offline" role="status">
               {offline ? 'Saved on this device · syncs when online' : 'Syncing…'}
+            </span>
+          )}
+          {persistFailed && (
+            <span className="trip-offline" role="status">
+              Not saved on this device
             </span>
           )}
           {readOnlyOver && (

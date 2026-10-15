@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useSyncExternalStore } from 'react'
+import { useEffect, useMemo, useRef, useSyncExternalStore } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getMe, getMyRoom } from '@api/endpoints'
 import { postTripOps, syncTrips } from '@api/tripEndpoints'
 import { useAuth } from '@auth/AuthProvider'
+import type { TripOp } from '../../api/tripTypes'
 import { getTripStore, TripStore, type StoreState } from './store'
 
 /** The house's trip store (one per user and house), started while the component is mounted. */
@@ -12,27 +13,46 @@ export function useTripStoreFor(
   apiKey: string | null,
 ) {
   const qc = useQueryClient()
+  // The store outlives a sign-in: it is keyed by user and house, and only the credentials
+  // it talks with are swapped (never captured), so a new key is used from the next call on.
+  const api = useMemo(
+    () =>
+      apiKey
+        ? {
+            sync: (room: string, known: Record<string, number>) => syncTrips(apiKey, room, known),
+            ops: (room: string, ops: TripOp[]) => postTripOps(apiKey, room, ops),
+          }
+        : null,
+    [apiKey],
+  )
+  const apiRef = useRef(api)
+  apiRef.current = api
   const store = useMemo(() => {
-    if (!roomId || !userId || !apiKey) return null
+    if (!roomId || !userId || !apiRef.current) return null
     return getTripStore(
       `${userId}:${roomId}`,
       () =>
         new TripStore({
           roomId,
           userId,
-          api: {
-            sync: (room, known) => syncTrips(apiKey, room, known),
-            ops: (room, ops) => postTripOps(apiKey, room, ops),
-          },
+          api: apiRef.current as NonNullable<typeof api>,
           // After joining another house the old room answers 403: re-read who we are, and
           // the store for the new house picks the saved outbox up.
           onForbidden: () => {
             void qc.invalidateQueries({ queryKey: ['me'] })
             void qc.invalidateQueries({ queryKey: ['my-room'] })
           },
+          // A key that is no longer accepted is not "offline": re-check who we are, which is
+          // what signs the user out and back to the login.
+          onUnauthorized: () => {
+            void qc.invalidateQueries({ queryKey: ['me'] })
+          },
         }),
     )
-  }, [roomId, userId, apiKey, qc])
+  }, [roomId, userId, qc, !!apiKey])
+  useEffect(() => {
+    if (store && api) store.setApi(api)
+  }, [store, api])
   useEffect(() => {
     if (!store) return
     store.start()
@@ -49,6 +69,7 @@ const EMPTY: StoreState = {
   offline: false,
   notes: {},
   toasts: [],
+  persistFailed: false,
 }
 const noop = () => () => {}
 

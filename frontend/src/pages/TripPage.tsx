@@ -11,12 +11,13 @@ import {
   type DragStartEvent,
 } from '@dnd-kit/core'
 import { Button, Card, message } from 'antd'
-import { Check, MapTrifold } from '@phosphor-icons/react'
+import { CaretRight, Check, MapTrifold } from '@phosphor-icons/react'
 import { useAuth } from '@auth/AuthProvider'
 import { TopNav } from '@components/TopNav'
 import { reorderLock } from '@components/ItemRow'
 import { HouseLoader } from '@components/HouseLoader'
 import { createPackingList } from '@api/tripEndpoints'
+import { usePacking } from '@lib/trips/usePacking'
 import type { Booking, Trip } from '@api/tripTypes'
 import { errorMessage } from '@lib/errors'
 import { useDocumentTitle } from '@lib/useDocumentTitle'
@@ -25,6 +26,7 @@ import type { TripStore } from '@lib/trips/store'
 import {
   addDays,
   buildSchedule,
+  diffDays,
   fullDay,
   longDay,
   shortRange,
@@ -45,7 +47,7 @@ import { BookingDetail, TodoDetail } from '@components/trips/ItemDetail'
 import { DayList, type DayRow } from '@components/trips/DayList'
 import { NextStopDeck, type Stop, type Tomorrow } from '@components/trips/NextStop'
 import { useMedia } from '@components/trips/Phone'
-import { IdeasPanel, NotesPane, PackingPane, Panel, type TabId } from '@components/trips/Panels'
+import { IdeasPanel, NotesPane, Panel, type TabId } from '@components/trips/Panels'
 import { AddBar, type QuickAddItem } from '@components/trips/QuickAdd'
 import { DaySection, EntryRows, bylineFor, dayDone, type Shared } from '@components/trips/Spine'
 import { TripHeader } from '@components/trips/TripHeader'
@@ -56,7 +58,7 @@ import { DAY_COLOURS } from '@components/trips/tripUi'
 import { PillNav } from '@components/PillNav'
 import '../trips.css'
 
-type Extra = 'notes' | 'packing' | null
+type Extra = 'notes' | null
 const UNDO_MS = 5000
 const CELEBRATE_MS = 1100
 const MAX_TODOS = 150
@@ -321,7 +323,6 @@ const TripScreen: React.FC<{
   const [enteringId, setEnteringId] = useState<string | null>(null)
   const [freshId, setFreshId] = useState<string | null>(null)
   const [packBusy, setPackBusy] = useState(false)
-  const [packError, setPackError] = useState('')
   const [dragging, setDragging] = useState<string | null>(null)
   // The item whose time field opens ready (from an overlap line).
   const [focusTime, setFocusTime] = useState<string | null>(null)
@@ -835,18 +836,41 @@ const TripScreen: React.FC<{
     return wallToUtc(d, t || '00:00', b.start_tz || trip.tz)
   }
 
-  const onCreatePacking = async () => {
+  // The packing list is the List page's: the menu says how packed it is and goes straight there.
+  const packing = usePacking(store.roomId, trip.packing_list_id)
+  const toList = (listId: string) =>
+    navigate(`/app/lists/${listId}`, {
+      state: { from: `trip:${trip.trip_id}`, fromLabel: trip.title },
+    })
+  const onPacking = async () => {
+    if (packing.listId) return toList(packing.listId)
+    if (!online || packBusy) return
     setPackBusy(true)
-    setPackError('')
     try {
-      await createPackingList(apiKey as string, store.roomId, trip.trip_id)
+      const made = await createPackingList(apiKey as string, store.roomId, trip.trip_id)
       await store.flush()
+      toList(made.list_id)
     } catch (e) {
-      setPackError(errorMessage(e, 'Couldn’t create the list. Try again.'))
+      message.error(errorMessage(e, 'Couldn’t make the list. Try again.'))
     } finally {
       setPackBusy(false)
     }
   }
+  const packingMenu = packing.listId
+    ? { label: `Packing list${packing.text ? ` · ${packing.text}` : ''}`, disabled: false }
+    : online
+      ? { label: 'Make a packing list', disabled: packBusy }
+      : { label: 'Connect to make one', disabled: true }
+  // Within three days of leaving, with things still to pack: one quiet line at the top of Plan.
+  const toPack =
+    phase === 'before' &&
+    !!trip.start_date &&
+    diffDays(trip.start_date, today) <= 3 &&
+    packing.listId &&
+    packing.total !== undefined &&
+    packing.packed !== undefined &&
+    packing.total > 0 &&
+    packing.packed < packing.total
 
   // ---- drag between days ---------------------------------------------------------------
   const sensors = useSensors(
@@ -1007,14 +1031,6 @@ const TripScreen: React.FC<{
         locked={locked}
         onSave={(v) => store.updateTrip(trip.trip_id, { notes: v })}
       />
-    ) : extra === 'packing' ? (
-      <PackingPane
-        listId={trip.packing_list_id}
-        online={online}
-        busy={packBusy}
-        error={packError}
-        onCreate={onCreatePacking}
-      />
     ) : null
 
   // One panel at a time: an item's detail wins, then notes or packing, then (desktop) the tab.
@@ -1036,7 +1052,7 @@ const TripScreen: React.FC<{
   } else if (extraNode) {
     panel = {
       key: `extra-${extra}`,
-      title: extra === 'notes' ? 'Notes' : 'Packing',
+      title: 'Notes',
       node: extraNode,
       close: () => setExtra(null),
     }
@@ -1129,6 +1145,18 @@ const TripScreen: React.FC<{
   )
   const planNode = (
     <>
+      {toPack && packing.listId && (
+        <button
+          type="button"
+          className="trip-packline"
+          onClick={() => toList(packing.listId as string)}
+        >
+          <span>
+            Packing · {packing.packed} of {packing.total} packed
+          </span>
+          <CaretRight aria-hidden />
+        </button>
+      )}
       {phase === 'during' && tab === 'plan' && deckStops.length > 0 && (
         <NextStopDeck
           stops={deckStops}
@@ -1216,12 +1244,16 @@ const TripScreen: React.FC<{
                 today={today}
                 offline={state.offline}
                 pending={state.pending}
+                persistFailed={state.persistFailed}
                 deletedBy={deletedBy}
                 readOnlyOver={phase === 'after' && !unlocked && !trip.deleted}
                 members={members}
                 onUnlock={() => setUnlocked(true)}
                 onRestore={() => store.restoreTrip(trip.trip_id)}
-                onMenu={(k) => (k === 'details' ? goSettings() : setExtra(k))}
+                onMenu={(k) =>
+                  k === 'details' ? goSettings() : k === 'packing' ? onPacking() : setExtra(k)
+                }
+                packing={packingMenu}
                 desktop={desktop}
                 daysOpen={daysOpen}
                 onDaysOpen={setDaysOpen}
