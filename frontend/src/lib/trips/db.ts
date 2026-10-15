@@ -133,12 +133,28 @@ const forget = (names: string[]) => {
   } catch {}
 }
 
+// Before the databases were per user there was one shared `bauhouse-trips` (with every user's
+// booking codes in it). Remove it once, on the first open or wipe, so old codes don't linger.
+const LEGACY_DB = 'bauhouse-trips'
+const LEGACY_FLAG = 'bauhouse_trips_legacy_removed'
+
+async function removeLegacyOnce(): Promise<void> {
+  if (typeof indexedDB === 'undefined') return
+  try {
+    if (localStorage.getItem(LEGACY_FLAG)) return
+  } catch {}
+  await deleteDb(LEGACY_DB)
+  try {
+    localStorage.setItem(LEGACY_FLAG, '1')
+  } catch {}
+}
+
 /** Deletes one user's trips database (sign-out of that user; never anyone else's). */
 export async function wipeTripDatabase(userId: string): Promise<void> {
   if (typeof indexedDB === 'undefined') return
   const name = `${DB_PREFIX}${userId}`
   forget([name])
-  await deleteDb(name)
+  await Promise.all([deleteDb(name), removeLegacyOnce()])
 }
 
 /** Deletes every trips database this browser made for any user (tests; never on sign-out). */
@@ -146,7 +162,7 @@ export async function wipeTripDatabases(): Promise<void> {
   if (typeof indexedDB === 'undefined') return
   const names = registered()
   forget(names)
-  await Promise.all(names.map(deleteDb))
+  await Promise.all([...names.map(deleteDb), removeLegacyOnce()])
 }
 
 const req = <T>(r: IDBRequest<T>) =>
@@ -187,6 +203,7 @@ export class IdbTripDB implements TripDB {
     if (this.invalidated) throw new Error('The trips database was removed')
     // Never open a name that has a delete in flight (sign-out, then a quick sign-in).
     await pendingDeletes.get(this.name)
+    await removeLegacyOnce()
     if (this.invalidated) throw new Error('The trips database was removed')
     return new Promise<IDBDatabase>((resolve, reject) => {
       const r = indexedDB.open(this.name, 1)

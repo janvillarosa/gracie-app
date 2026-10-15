@@ -105,6 +105,43 @@ describe('N7: the database disappears under a store', () => {
   })
 })
 
+describe('N8: the old shared database is removed once', () => {
+  const plant = () =>
+    new Promise<void>((resolve) => {
+      const r = indexedDB.open('bauhouse-trips', 1)
+      r.onupgradeneeded = () => r.result.createObjectStore('outbox')
+      r.onsuccess = () => {
+        r.result.close()
+        resolve()
+      }
+    })
+
+  it('deletes it on first open, then leaves a later one alone', async () => {
+    localStorage.removeItem('bauhouse_trips_legacy_removed')
+    await plant()
+    expect(await dbNames()).toContain('bauhouse-trips')
+    const db = new IdbTripDB('n8_open')
+    await db.load()
+    expect(await dbNames()).not.toContain('bauhouse-trips')
+    expect(localStorage.getItem('bauhouse_trips_legacy_removed')).toBe('1')
+    // Done once: a database that appears later is not touched by another open.
+    await plant()
+    const again = new IdbTripDB('n8_open_2')
+    await again.load()
+    expect(await dbNames()).toContain('bauhouse-trips')
+    db.close()
+    await again.destroy()
+    await wipeTripDatabase('n8_open')
+  })
+
+  it('deletes it on wipe when it has not been removed yet', async () => {
+    localStorage.removeItem('bauhouse_trips_legacy_removed')
+    await plant()
+    await wipeTripDatabase('anyone')
+    expect(await dbNames()).not.toContain('bauhouse-trips')
+  })
+})
+
 describe('wiping one user', () => {
   it('deletes only that user and leaves the others alone', async () => {
     const a = new IdbTripDB('wipe_a')
