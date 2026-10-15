@@ -399,9 +399,9 @@ export function tonightsStay(trip: Trip, today: string): Booking | undefined {
 }
 
 export function routeText(trip: Trip): string {
-  const names = (trip.stops ?? []).map((s) => s.locality || s.name)
+  const names = (trip.stops ?? []).map((s) => s.locality || s.name || '')
   if (names.length) return names.join(' → ')
-  return trip.destination ? trip.destination.locality || trip.destination.name : ''
+  return trip.destination ? trip.destination.locality || trip.destination.name || '' : ''
 }
 
 // ---- quick add parsing ----------------------------------------------------------------
@@ -435,8 +435,25 @@ export function endClock(start: string, minutes?: number | null): string {
   return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`
 }
 
-export function mapsUrl(lat: number, lng: number): string {
-  return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
+/** "Open Maps" (brief 6t): Apple Maps on iOS and iPadOS (including the installed PWA), so it opens
+ *  the Maps app; Google Maps elsewhere (a universal link on Android, a new tab on desktop). A
+ *  Google place opens by `query_place_id`, which is exact. */
+export function mapsUrl(lat: number, lng: number, placeId?: string | null): string {
+  if (isApple()) return `https://maps.apple.com/?ll=${lat},${lng}&q=${lat},${lng}`
+  return googleMapsUrl(lat, lng, placeId)
+}
+
+/** Always Google Maps (the link says so), exact by `query_place_id` for a Google place. */
+export function googleMapsUrl(lat: number, lng: number, placeId?: string | null): string {
+  const id = placeId ? `&query_place_id=${encodeURIComponent(placeId)}` : ''
+  return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}${id}`
+}
+
+function isApple(): boolean {
+  if (typeof navigator === 'undefined') return false
+  const ua = navigator.userAgent
+  // iPadOS reports a Mac with touch points.
+  return /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)
 }
 
 export type TripGroups = { now: Trip[]; upcoming: Trip[]; drafts: Trip[]; past: Trip[] }

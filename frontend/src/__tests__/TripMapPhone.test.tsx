@@ -15,7 +15,7 @@ const place = (name: string, lat: number, lng: number) => ({
   name,
   lat,
   lng,
-  source: 'photon' as const,
+  source: 'pin' as const,
   locality: 'Sintra',
 })
 const withPlaces = () => {

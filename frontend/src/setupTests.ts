@@ -3,6 +3,8 @@ import '@testing-library/jest-dom'
 import { afterEach, vi } from 'vitest'
 import { cleanup, configure } from '@testing-library/react'
 import { server, tripServer } from './testServer'
+import { setPlacesSource } from './lib/trips/placesOverride'
+import { resetPlaceInfo } from './lib/trips/places'
 
 // The trips screens are heavy to mount; a slower machine should not turn that into a flake.
 configure({ asyncUtilTimeout: 4000 })
@@ -11,7 +13,8 @@ beforeAll(() => server.listen({ onUnhandledRequest: 'error' }))
 afterEach(() => {
   server.resetHandlers()
   tripServer.trips.clear()
-  tripServer.degradedPlaces = false
+  setPlacesSource(null)
+  resetPlaceInfo()
   cleanup()
   // Registered first, so it runs last: a test that froze the clock never leaks it to the next file.
   vi.useRealTimers()

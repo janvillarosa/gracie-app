@@ -123,7 +123,7 @@ describe('the drag, as a hook', () => {
     todo('2', 'Idea', {
       day: null,
       order: 1,
-      place: { name: 'Fado', lat: 38.7, lng: -9.1, source: 'photon' },
+      place: { name: 'Fado', lat: 38.7, lng: -9.1, source: 'pin' },
     }),
   ])
   const id = (n: string) => `ttd_${n.padStart(32, '0')}`

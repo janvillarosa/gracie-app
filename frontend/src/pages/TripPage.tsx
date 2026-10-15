@@ -67,6 +67,7 @@ import { TripHeader } from '@components/trips/TripHeader'
 import { TripMap, type TripMapHandle } from '@components/trips/TripMap'
 import { MapScreen } from '@components/trips/MapScreen'
 import { useMapFollow, useMapOk } from '@components/trips/useTripMap'
+import { hasPin } from '@lib/trips/places'
 import { buildScene, hasMapPlaces, type MapPreview } from '@lib/trips/mapScene'
 import type { RowActions } from '@components/trips/TodoRow'
 import { DAY_COLOURS } from '@components/trips/tripUi'
@@ -266,7 +267,8 @@ const TripScreen: React.FC<{
       foldDay: (d) => dragBridge.current.foldDay(d),
       currentDay: dragBridge.current.currentDay,
       setCurrentDay: (d) => dragBridge.current.setCurrentDay(d),
-      setPreview: (p) => setBarPreview(p ? { lat: p.lat, lng: p.lng, label: p.name } : null),
+      setPreview: (p) =>
+        setBarPreview(hasPin(p) ? { lat: p.lat, lng: p.lng, label: p.name } : null),
       scrollers: desktop ? panes : undefined,
     })
 
@@ -279,7 +281,7 @@ const TripScreen: React.FC<{
 
   const bias = useMemo(() => {
     const p = trip.destination ?? trip.stops?.[0]
-    return p && p.source !== 'manual' ? { lat: p.lat, lng: p.lng } : null
+    return hasPin(p) ? { lat: p.lat, lng: p.lng } : null
   }, [trip.destination, trip.stops])
 
   // ---- which days are cards, closed cards or slim "done" lines ---------------------------
@@ -551,10 +553,7 @@ const TripScreen: React.FC<{
   const selTodo = selected ? trip.todos.find((t) => t.todo_id === selected) : undefined
   const selBooking = selected ? trip.bookings.find((b) => b.booking_id === selected) : undefined
   const focusPlace = (selTodo?.place ?? selBooking?.place) || null
-  const focusPoint =
-    focusPlace && focusPlace.source !== 'manual'
-      ? { lat: focusPlace.lat, lng: focusPlace.lng }
-      : null
+  const focusPoint = hasPin(focusPlace) ? { lat: focusPlace.lat, lng: focusPlace.lng } : null
 
   // A pill selects its item (brief 6v). The Days pane scrolls to the row only if it is off
   // screen, the row gets the highlighter sweep, and on the desk the item opens in the inspector.
@@ -1090,7 +1089,7 @@ const TripScreen: React.FC<{
       onLaunch={(typed) => setBookingDraft({ title: typed, n: ++draftCount.current })}
       onPreview={
         mapCol
-          ? (pl) => setBarPreview(pl ? { lat: pl.lat, lng: pl.lng, label: pl.name } : null)
+          ? (pl) => setBarPreview(hasPin(pl) ? { lat: pl.lat, lng: pl.lng, label: pl.name } : null)
           : undefined
       }
       onExpand={(item) => {

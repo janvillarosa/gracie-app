@@ -23,7 +23,7 @@ const place = (name: string, lat = 38.7, lng = -9.1) => ({
   name,
   lat,
   lng,
-  source: 'photon' as const,
+  source: 'pin' as const,
 })
 
 beforeEach(async () => {
@@ -132,22 +132,30 @@ describe('Trip settings: Where', () => {
     const sheet = await screen.findByRole('dialog')
     for (const name of ['Lisbon', 'Porto']) {
       await userEvent.type(within(sheet).getByRole('combobox', { name: 'Add a place' }), name)
-      await userEvent.click(await within(sheet).findByRole('option', { name: new RegExp(name) }))
+      await userEvent.click(
+        await within(sheet).findByRole('option', { name: new RegExp(`^${name}, `) }),
+      )
       await within(sheet).findByText(name, { selector: '.trip-stop-name' })
     }
     const t = () => tripServer.trips.get(makeTrip(7).trip_id)?.fields
-    await waitFor(() => expect(t()?.stops?.map((s) => s.name)).toEqual(['Lisbon', 'Porto']))
-    expect(t()?.destination?.name).toBe('Lisbon')
+    // Google places store their id, never their name.
+    await waitFor(() =>
+      expect(t()?.stops?.map((s) => s.place_id)).toEqual(['demo:lisbon', 'demo:porto']),
+    )
+    expect(t()?.destination?.place_id).toBe('demo:lisbon')
+    expect(t()?.destination?.name).toBeUndefined()
 
     await userEvent.click(within(sheet).getByRole('button', { name: 'Move Porto earlier' }))
-    await waitFor(() => expect(t()?.stops?.map((s) => s.name)).toEqual(['Porto', 'Lisbon']))
-    expect(t()?.destination?.name).toBe('Porto')
+    await waitFor(() =>
+      expect(t()?.stops?.map((s) => s.place_id)).toEqual(['demo:porto', 'demo:lisbon']),
+    )
+    expect(t()?.destination?.place_id).toBe('demo:porto')
 
     await userEvent.click(
       within(sheet).getByRole('button', { name: 'Remove Porto from the route' }),
     )
-    await waitFor(() => expect(t()?.stops?.map((s) => s.name)).toEqual(['Lisbon']))
-    expect(t()?.destination?.name).toBe('Lisbon')
+    await waitFor(() => expect(t()?.stops?.map((s) => s.place_id)).toEqual(['demo:lisbon']))
+    expect(t()?.destination?.place_id).toBe('demo:lisbon')
     await userEvent.click(
       within(sheet).getByRole('button', { name: 'Remove Lisbon from the route' }),
     )

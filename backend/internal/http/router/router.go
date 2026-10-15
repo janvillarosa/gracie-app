@@ -14,12 +14,11 @@ import (
 
 // Handlers groups the HTTP handlers the router wires up.
 type Handlers struct {
-	Auth   *handlers.AuthHandler
-	User   *handlers.UserHandler
-	Room   *handlers.RoomHandler
-	List   *handlers.ListHandler
-	Trip   *handlers.TripHandler
-	Places *handlers.PlacesHandler
+	Auth *handlers.AuthHandler
+	User *handlers.UserHandler
+	Room *handlers.RoomHandler
+	List *handlers.ListHandler
+	Trip *handlers.TripHandler
 }
 
 // redactPlacesQuery keeps /places/* query strings (search text, exact coordinates) out of
@@ -100,10 +99,6 @@ func NewRouter(userFinder authmw.UserFinder, h Handlers) http.Handler {
 			ar.Post("/rooms/{room_id}/trips/sync", h.Trip.Sync)
 			ar.Post("/rooms/{room_id}/trips/ops", h.Trip.Ops)
 			ar.Post("/rooms/{room_id}/trips/{trip_id}/packing-list", h.Trip.PackingList)
-		}
-		if h.Places != nil {
-			ar.Get("/places/search", h.Places.Search)
-			ar.Get("/places/reverse", h.Places.Reverse)
 		}
 	})
 

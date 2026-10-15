@@ -18,7 +18,7 @@ const P = (name: string, lat: number, lng: number, locality: string, address = '
   lat,
   lng,
   tz: TZ,
-  source: 'photon',
+  source: 'pin',
 })
 
 const L = {

@@ -21,7 +21,9 @@ is the only implementation (uses `go.mongodb.org/mongo-driver`). See
   `trip_id`; `(room_id, deleted_at, trip_id, version, deleted_by)` so the sync manifest
   is served from the index; TTL `purge_at_ttl` (`purge_at`, expireAfterSeconds 0).
   Writes go only through `ReplaceCAS` / `Insert` / `LinkPackingList`.
-- **`place_cache`** — geocoder results; unique `key`; 30-day TTL on `created_at`.
+- `trips.coords_expire_at` — earliest expiry of any stored Google coordinate; **partial
+  index** (only trips that have it) serving the daily 30-day purge. The `place_cache`
+  collection no longer exists (Photon was removed); drop it manually from old databases.
 
 ## Rules & pitfalls (learned the hard way)
 

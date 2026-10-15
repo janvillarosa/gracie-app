@@ -3,6 +3,7 @@ import { Button } from '@components/ui'
 import { Card, Checkbox } from 'antd'
 import type { Place } from '@api/tripTypes'
 import { confettiAt } from '@lib/confetti'
+import { hasPin } from '@lib/trips/places'
 import { mapsUrl } from '@lib/trips/schedule'
 import { CodeReveal } from './CodeReveal'
 
@@ -115,7 +116,7 @@ export const NextStopDeck: React.FC<Props> = ({
   }
 
   const more = open.length - 1
-  const pin = top?.place && top.place.source !== 'manual' ? top.place : null
+  const pin = hasPin(top?.place) ? top.place : null
   const note = top?.notes && top.notes.length <= 80 && !top.notes.includes('\n') ? top.notes : ''
 
   const content = (
@@ -158,7 +159,7 @@ export const NextStopDeck: React.FC<Props> = ({
               {pin && (
                 <a
                   className="ant-btn ant-btn-primary ant-btn-round ant-btn-lg trip-go"
-                  href={mapsUrl(pin.lat, pin.lng)}
+                  href={mapsUrl(pin.lat, pin.lng, pin.place_id)}
                   target="_blank"
                   rel="noreferrer noopener"
                 >

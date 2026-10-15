@@ -22,10 +22,7 @@ type Config struct {
 	// CategoryIndexEnabled toggles the Mongo-backed category cache.
 	CategoryIndexEnabled bool
 	// Trips & places
-	PhotonBaseURL   string
-	TripsUserRPS    float64
-	PlacesUserRPS   float64
-	PlacesServerRPS float64
+	TripsUserRPS float64
 }
 
 func getEnv(key, def string) string {
@@ -50,10 +47,7 @@ func Load() (*Config, error) {
 	cfg.EmbedThreshold = getEnvFloat("EMBED_THRESHOLD", 0.45)
 	cfg.EmbedTopK = getEnvInt("EMBED_TOPK", 5)
 	cfg.CategoryIndexEnabled = getEnv("CATEGORY_INDEX_ENABLED", "true") == "true"
-	cfg.PhotonBaseURL = getEnv("PHOTON_BASE_URL", "")
 	cfg.TripsUserRPS = getEnvFloat("TRIPS_USER_RPS", 5)
-	cfg.PlacesUserRPS = getEnvFloat("PLACES_USER_RPS", 2)
-	cfg.PlacesServerRPS = getEnvFloat("PLACES_SERVER_RPS", 5)
 
 	if cfg.MongoURI == "" || cfg.MongoDB == "" {
 		return nil, fmt.Errorf("missing Mongo configuration (MONGODB_URI, MONGODB_DB)")

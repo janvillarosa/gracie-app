@@ -18,6 +18,7 @@ import { CSS } from '@dnd-kit/utilities'
 import { ArrowDown, ArrowUp, DotsSixVertical, X } from '@phosphor-icons/react'
 import type { Place } from '@api/tripTypes'
 import { useSwipeToDelete } from '@components/ItemRow'
+import { hasPin, placeText } from '@lib/trips/places'
 import { PlacePicker } from './PlacePicker'
 
 type Props = {
@@ -38,7 +39,8 @@ type RowProps = {
   onRemove: () => void
 }
 
-const StopRow: React.FC<RowProps> = ({ id, place, first, last, onMove, onRemove }) => {
+const StopRow: React.FC<RowProps> = ({ id, place: raw, first, last, onMove, onRemove }) => {
+  const place = { name: placeText(raw).name || 'Saved place' }
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition } =
     useSortable({ id })
   const swipe = useSwipeToDelete(onRemove, false)
@@ -141,11 +143,7 @@ export const WhereSheet: React.FC<Props> = ({ stops, tz, onChange }) => {
           placeholder="Add a place"
           value={null}
           tz={tz}
-          bias={
-            stops[0] && stops[0].source !== 'manual'
-              ? { lat: stops[0].lat, lng: stops[0].lng }
-              : null
-          }
+          bias={hasPin(stops[0]) ? { lat: stops[0].lat, lng: stops[0].lng } : null}
           onChange={(p) => {
             if (!p) return
             onChange([...stops, p])

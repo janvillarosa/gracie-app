@@ -1,4 +1,5 @@
-package places
+// Package tzlookup derives IANA time zones from coordinates with an embedded offline dataset.
+package tzlookup
 
 import (
 	"log"
@@ -7,15 +8,15 @@ import (
 	"github.com/ringsaturn/tzf"
 )
 
-// TZResolver maps coordinates to an IANA zone using an embedded offline dataset.
-type TZResolver interface{ TZ(lat, lng float64) string }
+// Resolver maps coordinates to an IANA zone using an embedded offline dataset.
+type Resolver interface{ TZ(lat, lng float64) string }
 
 type tzfResolver struct{ f tzf.F }
 
 func (r tzfResolver) TZ(lat, lng float64) string { return r.f.GetTimezoneName(lng, lat) }
 
-// NewTZF loads the embedded timezone finder. Measure its RAM and binary-size cost in the build log.
-func NewTZF() (TZResolver, error) {
+// NewFinder loads the embedded timezone finder (~34 MB heap, ~150 ms).
+func NewFinder() (Resolver, error) {
 	f, err := tzf.NewDefaultFinder()
 	if err != nil {
 		return nil, err
@@ -26,13 +27,13 @@ func NewTZF() (TZResolver, error) {
 // lazyTZ defers loading the finder (~34 MB heap, ~150 ms) until the first lookup.
 type lazyTZ struct {
 	once sync.Once
-	load func() (TZResolver, error)
-	r    TZResolver
+	load func() (Resolver, error)
+	r    Resolver
 }
 
-// NewLazyTZF returns a resolver that loads the embedded dataset on first use. A load
+// NewLazy returns a resolver that loads the embedded dataset on first use. A load
 // failure is logged once and every lookup then returns "" (the client keeps its own zone).
-func NewLazyTZF() TZResolver { return &lazyTZ{load: NewTZF} }
+func NewLazy() Resolver { return &lazyTZ{load: NewFinder} }
 
 func (l *lazyTZ) TZ(lat, lng float64) string {
 	l.once.Do(func() {

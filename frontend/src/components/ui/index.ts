@@ -10,6 +10,14 @@ export type { ComboboxInputProps } from './Combobox'
 export { DetailGroup } from './DetailGroup'
 export { EmptyState } from './EmptyState'
 export { Field } from './Field'
+export {
+  InlinePlace,
+  PoweredBy,
+  renderSuggestion,
+  SEARCH_UNAVAILABLE,
+  suggestionKey,
+  suggestionLabel,
+} from './InlinePlace'
 export { InlineSelect } from './InlineSelect'
 export { InlineWhen } from './InlineWhen'
 export { NavRow } from './NavRow'

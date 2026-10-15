@@ -20,7 +20,7 @@ const place = (name: string, lat: number, lng: number) => ({
   name,
   lat,
   lng,
-  source: 'photon' as const,
+  source: 'pin' as const,
   locality: 'Sintra',
 })
 const withPlaces = () => {
@@ -184,7 +184,8 @@ describe('click to add a stop', () => {
     const map = await ready()
     click(map)
     const card = await screen.findByRole('dialog', { name: /^Add .* to / })
-    expect(await within(card).findByRole('heading')).toBeInTheDocument()
+    // No name came with the click: a dropped pin the person can name.
+    expect(await within(card).findByLabelText('Place name')).toBeInTheDocument()
     // The temporary pin is the hollow ring.
     expect(
       tripServer.trips
@@ -279,7 +280,6 @@ describe('click to add a stop', () => {
   it('says "Dropped pin" with a name to type when the place cannot be found', async () => {
     const t = withPlaces()
     seed(t)
-    tripServer.degradedPlaces = true
     renderTrips(`/app/trips/${t.trip_id}`)
     const map = await ready()
     click(map)

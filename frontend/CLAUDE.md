@@ -123,6 +123,29 @@ why the config forces a single fork.
     stay near 50 KB. On phones the map is a full-screen view (history `#map`). Offline the map pane
     and its button are not rendered (5 s debounce), the plan widens, and nothing is requested.
   - **Tests** mock the loader and clusterer with `__tests__/googleFake.ts`.
+- **Places (Google Places API (New), `lib/trips/places*.ts`):**
+  - **Storage rules** (the backend enforces them; the mock mirrors them): a Google place stores only
+    `{source:'google', place_id, lat, lng, coords_fetched_at}` (and `tz` when known). **No name, no
+    address.** Coordinates may be at most 30 days old; `lat`/`lng` may be missing once purged. A
+    todo title is user content only: picking a place leaves it blank (a blank title is allowed only
+    with a Google place). `osm_ref` and the `photon` source are gone; the `/places/*` proxy too.
+  - **Search** (`placesSource.ts`, `usePlaces.ts`): `AutocompleteSuggestion.fetchAutocompleteSuggestions`
+    with one session token per search session, biased to the trip's area (rounded to 0.1 degree),
+    250 ms debounce, at least 2 characters. A pick calls `fetchFields` on the prediction's place
+    (same token), which ends the session. No key: a small labelled demo list stands in.
+  - **Display cache** (`places.ts`): name, address and locality for a place_id live in **session
+    memory only**, filled while online (de-duplicated, paced about 5 calls a second). `useTrips`
+    enriches rendered trips from it, so rows show `title || name`, and offline or before the fetch,
+    the title or "Saved place". **Never persist the cache** (not IndexedDB, not localStorage), and
+    every op goes through `sanitizePatch` (in `store.enqueue`) so an enriched name can never be sent.
+  - **Coordinate refresh:** online, current and upcoming trips refresh Google coordinates that are
+    missing or older than 25 days (an ordinary `todo/booking/trip.update`, on load and on focus).
+  - **Open Maps** (brief 6t): `mapsUrl` (Apple Maps on iOS and iPadOS, Google Maps elsewhere) and
+    `MapsLink`; a Google place opens by `query_place_id`.
+  - **Place fields in the UI:** `InlinePlace` (`components/ui/InlinePlace.tsx`) is the inline place
+    field with slips below (the desktop inspector mounts it); `PlacePicker` serves the phone sheet,
+    booking From/To and trip Where; `QuickAdd` is the add bar (its highlighted suggestion previews as
+    a hollow pin after a short dwell and one `location` lookup). All use the shared `Combobox`.
 - **Desktop planning desk (`pages/TripPage.tsx`, brief 6n):** at 1200px and wider the trip is three
   columns, Ideas (300) | Days | Map (~420); at 1024-1199px it is Ideas | Days, and the map opens
   over them from the Map pill (`trip-side is-over`). Below 1024px nothing changes (phones keep the

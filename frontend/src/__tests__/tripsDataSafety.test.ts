@@ -31,7 +31,7 @@ describe('N2: a lower seq never goes out after a higher one', () => {
         if (calls === 1) {
           // Tab B queues the lower seq, then tab A (which is flushing) queues the higher one.
           tabB?.updateTrip(id, {
-            destination: { name: 'Lisbon', lat: 38.72, lng: -9.14, source: 'photon' },
+            destination: { name: 'Lisbon', lat: 38.72, lng: -9.14, source: 'pin' },
           })
           await tabB?.settle()
           tabA?.updateTrip(id, { notes: 'from A' })

@@ -1,5 +1,5 @@
 import { importLibrary, setOptions } from '@googlemaps/js-api-loader'
-import { isOnline, type MapsConfig } from './config'
+import { isOnline, mapsConfig, type MapsConfig } from './config'
 
 export type Google = {
   maps: google.maps.MapsLibrary
@@ -12,13 +12,16 @@ let pending: Promise<Google> | null = null
 
 /** Loads the Maps JavaScript API on first use, from maps.googleapis.com only. Never offline.
  *  The key goes to the loader and nowhere else: it is not logged, stored or rendered. */
+function configure(config: MapsConfig) {
+  if (configured) return
+  setOptions({ key: config.key, v: 'weekly' })
+  configured = true
+}
+
 export function loadGoogle(config: MapsConfig): Promise<Google> {
   if (!isOnline()) return Promise.reject(new Error('offline'))
   if (!pending) {
-    if (!configured) {
-      setOptions({ key: config.key, v: 'weekly' })
-      configured = true
-    }
+    configure(config)
     const p = Promise.all([importLibrary('maps'), importLibrary('marker'), importLibrary('core')])
       .then(([maps, marker, core]) => ({ maps, marker, core }))
       .catch((e) => {
@@ -31,6 +34,13 @@ export function loadGoogle(config: MapsConfig): Promise<Google> {
   return pending
 }
 
+/** The places library (search suggestions, place details) loads on the first search or click, not
+ *  with the map. It needs the same key, so it configures the loader too. Never offline. */
+export function loadPlaces(config: MapsConfig = mapsConfig()) {
+  if (!isOnline()) return Promise.reject(new Error('offline'))
+  configure(config)
+  return importLibrary('places')
+}
 /** Test hook: forget a loaded API. */
 export function resetGoogleLoader() {
   pending = null

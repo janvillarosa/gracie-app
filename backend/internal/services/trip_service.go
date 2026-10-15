@@ -12,6 +12,7 @@ import (
 	"github.com/janvillarosa/gracie-app/backend/internal/models"
 	"github.com/janvillarosa/gracie-app/backend/internal/store"
 	"github.com/janvillarosa/gracie-app/backend/internal/trips"
+	"github.com/janvillarosa/gracie-app/backend/internal/tzlookup"
 )
 
 const (
@@ -38,10 +39,21 @@ type TripService struct {
 	lists    *ListService
 	listRepo store.ListRepository
 	now      func() time.Time
+	tz       tzlookup.Resolver // optional: derives tz for Google places sent without one
 }
 
 func NewTripService(rooms store.RoomRepository, tripRepo store.TripRepository, lists *ListService, listRepo store.ListRepository) *TripService {
 	return &TripService{rooms: rooms, trips: tripRepo, lists: lists, listRepo: listRepo, now: time.Now}
+}
+
+// UseTZ injects the (lazy) coordinate-to-zone resolver used for Google places without a tz.
+func (s *TripService) UseTZ(r tzlookup.Resolver) { s.tz = r }
+
+func (s *TripService) tzFunc() func(lat, lng float64) string {
+	if s.tz == nil {
+		return nil
+	}
+	return s.tz.TZ
 }
 
 // ApplyOps applies a batch of client ops. Each op gets its own result; the batch only
@@ -137,7 +149,7 @@ func (s *TripService) applyGroup(ctx context.Context, user *models.User, roomID 
 			return nil, nil
 		}
 		base := t.Version
-		c := trips.Ctx{Actor: user.UserID, Now: now, NewV: base + 1}
+		c := trips.Ctx{Actor: user.UserID, Now: now, NewV: base + 1, TZ: s.tzFunc()}
 		dirty, bump := false, false
 		newClients := map[string]bool{}
 		for _, i := range idx {

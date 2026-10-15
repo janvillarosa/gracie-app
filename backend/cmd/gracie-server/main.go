@@ -16,8 +16,8 @@ import (
 	"github.com/janvillarosa/gracie-app/backend/internal/ratelimit"
 	"github.com/janvillarosa/gracie-app/backend/internal/services"
 	"github.com/janvillarosa/gracie-app/backend/internal/services/categorization"
-	"github.com/janvillarosa/gracie-app/backend/internal/services/places"
 	mongostore "github.com/janvillarosa/gracie-app/backend/internal/store/mongo"
+	"github.com/janvillarosa/gracie-app/backend/internal/tzlookup"
 )
 
 func main() {
@@ -40,12 +40,8 @@ func main() {
 	_ = listsRepo.EnsureIndexes(ctx)
 	_ = itemsRepo.EnsureIndexes(ctx)
 	tripsRepo := mongostore.NewTripRepo(mcli)
-	placeCacheRepo := mongostore.NewPlaceCacheRepo(mcli)
 	if err := tripsRepo.EnsureIndexes(ctx); err != nil {
 		log.Fatalf("trips: ensure indexes: %v", err)
-	}
-	if err := placeCacheRepo.EnsureIndexes(ctx); err != nil {
-		log.Printf("place_cache: ensure indexes failed: %v (continuing)", err)
 	}
 	tx := mongostore.NewTx(mcli)
 
@@ -81,19 +77,9 @@ func main() {
 	listSvc := services.NewListService(usersRepo, roomsRepo, listsRepo, itemsRepo, categorizers["grocery"])
 	tripSvc := services.NewTripService(roomsRepo, tripsRepo, listSvc, listsRepo)
 
-	var geo places.Geocoder
-	if cfg.PhotonBaseURL != "" {
-		geo = places.NewPhoton(cfg.PhotonBaseURL, "Bauhouse/1.0 (+https://github.com/janvillarosa/gracie-app)", 2*time.Second, nil)
-	} else {
-		log.Printf("places: PHOTON_BASE_URL unset; place search will report degraded")
-	}
-	// The timezone finder costs ~34 MB of heap and ~150 ms to load, so it is built lazily on
-	// the first place lookup and not at all when no geocoder is configured.
-	var tz places.TZResolver
-	if geo != nil {
-		tz = places.NewLazyTZF()
-	}
-	placesSvc := places.NewService(geo, tz, placeCacheRepo, ratelimit.New(cfg.PlacesServerRPS, ratelimit.Burst(cfg.PlacesServerRPS)))
+	// Coordinates -> time zone for Google places sent without one. The tzf dataset
+	// (~34 MB heap, ~150 ms) loads lazily on the first such place, never at startup.
+	tripSvc.UseTZ(tzlookup.NewLazy())
 
 	authSvc, err := services.NewAuthService(usersRepo, cfg.EncKeyFile, cfg.APIKeyTTLHours)
 	if err != nil {
@@ -106,9 +92,14 @@ func main() {
 	listHandler := handlers.NewListHandler(listSvc)
 
 	tripHandler := handlers.NewTripHandler(tripSvc, ratelimit.New(cfg.TripsUserRPS, ratelimit.Burst(cfg.TripsUserRPS)))
-	placesHandler := handlers.NewPlacesHandler(placesSvc, ratelimit.New(cfg.PlacesUserRPS, ratelimit.Burst(cfg.PlacesUserRPS)))
 
-	r := router.NewRouter(usersRepo, router.Handlers{Auth: authHandler, User: userHandler, Room: roomHandler, List: listHandler, Trip: tripHandler, Places: placesHandler})
+	r := router.NewRouter(usersRepo, router.Handlers{Auth: authHandler, User: userHandler, Room: roomHandler, List: listHandler, Trip: tripHandler})
+
+	// Google Maps Platform allows storing coordinates for 30 days: purge stale ones at startup
+	// and daily (plus up to an hour of jitter so instances do not fire together).
+	purgeCtx, stopPurge := context.WithCancel(context.Background())
+	defer stopPurge()
+	go tripSvc.RunCoordsPurge(purgeCtx, 24*time.Hour, time.Hour)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,

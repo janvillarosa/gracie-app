@@ -5,6 +5,7 @@ import { postTripOps, syncTrips } from '@api/tripEndpoints'
 import { useAuth } from '@auth/AuthProvider'
 import type { TripOp } from '../../api/tripTypes'
 import { getTripStore, TripStore, type StoreState } from './store'
+import { usePlaceMaintenance, useEnrichedTrips } from './usePlaces'
 
 export { flushAndDispose, getPendingOnLogout, subscribePendingOnLogout } from './store'
 
@@ -104,7 +105,11 @@ export function useTrips() {
     retry: false,
   })
   const store = useTripStoreFor(me.data?.room_id ?? undefined, me.data?.user_id, apiKey)
-  const state = useTripState(store)
+  const raw = useTripState(store)
+  // Google places get their name and address from the session cache, for display only.
+  const trips = useEnrichedTrips(raw.trips)
+  const state = useMemo(() => (trips === raw.trips ? raw : { ...raw, trips }), [raw, trips])
+  usePlaceMaintenance(store, raw.trips, raw.offline)
   const members: Member[] = useMemo(
     () =>
       room.data?.members_meta?.map((m) => ({

@@ -50,7 +50,7 @@ var (
 	bookingKinds = map[string]bool{"flight": true, "stay": true, "train": true, "car": true, "ticket": true, "other": true}
 	tripIcons    = map[string]bool{"SUITCASE": true, "PLANE": true, "BEACH": true, "MOUNTAIN": true, "CITY": true, "TRAIN": true,
 		"ROAD_TRIP": true, "CAMPING": true, "MAP": true, "LANDMARK": true, "WINE": true, "SKI": true}
-	placeSources = map[string]bool{"photon": true, "pin": true, "manual": true}
+	placeSources = map[string]bool{models.SourceGoogle: true, models.SourcePin: true, models.SourceManual: true}
 )
 
 func okTitle(s string, max int) bool {
@@ -78,14 +78,42 @@ func validTZ(s string) bool {
 	return err == nil
 }
 
-func validPlace(p *models.Place) bool {
+// clockSkew tolerates a client clock slightly ahead of the server when stamping coords_fetched_at.
+const clockSkew = 5 * time.Minute
+
+// validPlace enforces the Google Maps Platform storage rules (see models.Place).
+func validPlace(p *models.Place, now time.Time) bool {
 	if p == nil {
 		return true
 	}
-	return okTitle(p.Name, 200) && utf8.RuneCountInString(p.Address) <= 300 && utf8.RuneCountInString(p.Locality) <= maxLocality &&
-		p.Lat >= -90 && p.Lat <= 90 && p.Lng >= -180 && p.Lng <= 180 &&
-		!math.IsNaN(p.Lat) && !math.IsNaN(p.Lng) &&
-		len(p.OSMRef) <= 64 && placeSources[p.Source] && (p.TZ == "" || validTZ(p.TZ))
+	if !placeSources[p.Source] || len(p.PlaceID) > 256 ||
+		utf8.RuneCountInString(p.Name) > 200 || utf8.RuneCountInString(p.Address) > 300 ||
+		utf8.RuneCountInString(p.Locality) > maxLocality || (p.TZ != "" && !validTZ(p.TZ)) {
+		return false
+	}
+	if (p.Lat == nil) != (p.Lng == nil) {
+		return false
+	}
+	hasCoords := p.Lat != nil
+	if hasCoords {
+		lat, lng := *p.Lat, *p.Lng
+		if math.IsNaN(lat) || math.IsNaN(lng) || math.IsInf(lat, 0) || math.IsInf(lng, 0) ||
+			lat < -90 || lat > 90 || lng < -180 || lng > 180 {
+			return false
+		}
+	}
+	if p.Source != models.SourceGoogle {
+		// user content: a name and coordinates are required, Google fields are not allowed
+		return p.PlaceID == "" && p.CoordsFetchedAt == nil && hasCoords && okTitle(p.Name, 200)
+	}
+	if p.PlaceID == "" || p.Name != "" || p.Address != "" {
+		return false // Google names and addresses may not be stored
+	}
+	if !hasCoords {
+		return p.CoordsFetchedAt == nil // purged / never fetched: only place_id and tz remain
+	}
+	f := p.CoordsFetchedAt
+	return f != nil && !f.After(now.Add(clockSkew)) && now.Sub(*f) <= models.CoordsMaxAge
 }
 
 // optOK validates an Opt[string] with fn when it carries a value (null clears and is always fine).
@@ -93,14 +121,14 @@ func optOK(o Opt[string], fn func(string) bool) bool {
 	return !o.Set || o.Val == nil || fn(*o.Val)
 }
 
-func validTripPatch(p TripPatch, create bool) bool {
+func validTripPatch(p TripPatch, create bool, now time.Time) bool {
 	if create && p.Title == nil {
 		return false
 	}
 	if p.Title != nil && !okTitle(*p.Title, maxTripTitle) {
 		return false
 	}
-	if p.Destination.Set && !validPlace(p.Destination.Val) {
+	if p.Destination.Set && !validPlace(p.Destination.Val, now) {
 		return false
 	}
 	if p.Notes != nil && !okBytes(*p.Notes, maxTripNotes) {
@@ -112,7 +140,7 @@ func validTripPatch(p TripPatch, create bool) bool {
 	if p.Stops.Set && p.Stops.Val != nil {
 		for i := range *p.Stops.Val {
 			pl := (*p.Stops.Val)[i]
-			if pl.Name == "" || !validPlace(&pl) {
+			if pl.Source == "" || !validPlace(&pl, now) {
 				return false
 			}
 		}
@@ -131,11 +159,13 @@ func validTripPatch(p TripPatch, create bool) bool {
 	return p.TZ == nil || validTZ(*p.TZ)
 }
 
-func validTodoPatch(p TodoPatch, create bool) bool {
+func validTodoPatch(p TodoPatch, create bool, now time.Time) bool {
 	if create && p.Title == nil {
 		return false
 	}
-	if p.Title != nil && !okTitle(*p.Title, maxItemTitle) {
+	// A blank title is allowed here (a Google place can stand in for one); the apply step
+	// requires a non-blank title unless the todo has a Google place.
+	if p.Title != nil && utf8.RuneCountInString(*p.Title) > maxItemTitle {
 		return false
 	}
 	if !optOK(p.Day, validDate) || !optOK(p.StartTime, validClock) ||
@@ -154,10 +184,10 @@ func validTodoPatch(p TodoPatch, create bool) bool {
 	if p.Notes != nil && !okBytes(*p.Notes, maxItemNotes) {
 		return false
 	}
-	return !p.Place.Set || validPlace(p.Place.Val)
+	return !p.Place.Set || validPlace(p.Place.Val, now)
 }
 
-func validBookingPatch(p BookingPatch, create bool) bool {
+func validBookingPatch(p BookingPatch, create bool, now time.Time) bool {
 	if create && (p.Kind == nil || p.Title == nil) {
 		return false
 	}
@@ -177,7 +207,7 @@ func validBookingPatch(p BookingPatch, create bool) bool {
 	if p.Notes != nil && !okBytes(*p.Notes, maxItemNotes) {
 		return false
 	}
-	return (!p.Place.Set || validPlace(p.Place.Val)) && (!p.EndPlace.Set || validPlace(p.EndPlace.Val))
+	return (!p.Place.Set || validPlace(p.Place.Val, now)) && (!p.EndPlace.Set || validPlace(p.EndPlace.Val, now))
 }
 
 var knownTypes = map[string]bool{
