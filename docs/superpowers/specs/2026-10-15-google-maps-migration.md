@@ -1,6 +1,6 @@
 # Trips: migrate maps and places to Google Maps Platform (plan)
 
-**Status:** draft, awaiting approval. No code changes until this is approved.
+**Status:** approved 2026-10-15. Decisions are recorded under "Open decisions" below.
 
 **Decision (2026-10-15):** the product owner chose full Google Maps over keeping Protomaps and Photon,
 having seen the trade-offs in `2026-10-15-google-maps-option.md`. This plan replaces brief sections
@@ -52,9 +52,8 @@ tokens), called from the browser with a referrer-restricted key.
 - **Google-sourced places store** `place_id`, `lat`, `lng`, `tz` and `coords_fetched_at`. They store
   **no** Google name or address.
 - **Manual and dropped-pin places** keep name and address (user content), as today.
-- **The todo title is user content.** Autofill copies the Google name into the title field as a
-  suggestion the user accepts. This is flagged for the terms review; the alternative is leaving the
-  title blank.
+- **The todo title is user content only.** Picking a Google place leaves the title **blank** unless the
+  user types one (decided). The row shows the Google display name while online.
 - **The display name** of a Google place comes from Place Details fetched while online, held in memory
   or the session only.
 - **Offline,** rows show the user's title, and the place line shows only the locality the user typed,
@@ -104,8 +103,8 @@ harness. It must not block the trip route (about 50 KB).
    - add `place_id`, `source: google` and `coords_fetched_at` to `Place`;
    - the validation rules and the 30-day coordinate rule;
    - the purge job;
-   - remove Photon, `/places/*` and `place_cache`;
-   - migrate existing `photon` places, which keep their names as legacy.
+   - remove Photon, `/places/*` and `place_cache`. No migration: Trips hasn't shipped, so the `photon`
+     source is simply removed.
    - Tests and integration tests.
 2. **Frontend map** (`components/trips/map*`, the `MapView` adapter):
    - the Google map implementation behind the adapter: markers, labels, clustering, route,
@@ -118,11 +117,9 @@ harness. It must not block the trip route (about 50 KB).
 
 Steps 1 and 2 can run in parallel in separate worktrees. Step 3 follows step 2.
 
-## Open decisions for the owner
+## Decisions (2026-10-15)
 
-1. **Title autofill:** copy the Google name into the editable title (flagged for the terms review), or
-   leave it blank and show the Google name only while online.
-2. **Legacy Photon places:** keep their stored names as they are (user-equivalent content), or
-   re-resolve them to Google `place_id`s.
-3. **Map ID style:** use Google's "light" preset with muted POIs, or a custom style. Either can be
-   tweaked later in the Cloud console without code.
+1. **Title autofill:** none. The title stays blank unless the user types one.
+2. **Legacy Photon places:** no migration, since nothing has shipped. Drop the `photon` source.
+3. **Map ID style:** start with Google's light preset with muted POIs, using `DEMO_MAP_ID` in dev
+   until the owner's Map ID exists. It can be tuned in the Cloud console without code.
