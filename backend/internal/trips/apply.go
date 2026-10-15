@@ -552,6 +552,15 @@ func bookingChanges(b *models.Booking, p BookingPatch) []change {
 		v := p.Place.Val
 		ch = append(ch, change{"place", func() { b.Place = v }})
 	}
+	if p.EndPlace.Set {
+		v := p.EndPlace.Val
+		ch = append(ch, change{"end_place", func() { b.EndPlace = v }})
+		// end_tz follows the arrival place unless the patch names it (start_tz is not derived).
+		if !p.EndTZ.Set && v != nil && v.TZ != "" {
+			tz := v.TZ
+			ch = append(ch, change{"end_tz", func() { b.EndTZ = &tz }})
+		}
+	}
 	if p.Notes != nil {
 		v := *p.Notes
 		ch = append(ch, change{"notes", func() { b.Notes = v }})

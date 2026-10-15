@@ -177,7 +177,7 @@ func validBookingPatch(p BookingPatch, create bool) bool {
 	if p.Notes != nil && !okBytes(*p.Notes, maxItemNotes) {
 		return false
 	}
-	return !p.Place.Set || validPlace(p.Place.Val)
+	return (!p.Place.Set || validPlace(p.Place.Val)) && (!p.EndPlace.Set || validPlace(p.EndPlace.Val))
 }
 
 var knownTypes = map[string]bool{
