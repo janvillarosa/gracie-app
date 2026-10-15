@@ -37,12 +37,12 @@ jobs:
       - name: Unit tests + coverage
         working-directory: backend
         run: go test ./... -count=1 -covermode=atomic -coverprofile=cover.out
-      - name: Coverage gate (ratchet floor 27%; raise as coverage grows)
+      - name: Coverage gate (ratchet floor 50%; raise as coverage grows)
         working-directory: backend
         run: |
           total=$(go tool cover -func=cover.out | awk '/^total:/ {print $3}' | tr -d '%')
-          echo "backend total coverage: ${total}% (floor 27%)"
-          awk -v t="$total" 'BEGIN { exit (t+0 < 27) ? 1 : 0 }'
+          echo "backend total coverage: ${total}% (floor 50%)"
+          awk -v t="$total" 'BEGIN { exit (t+0 < 50) ? 1 : 0 }'
 
   frontend:
     name: Frontend (Vitest)

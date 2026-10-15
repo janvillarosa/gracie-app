@@ -31,6 +31,10 @@ const (
 	maxTripNotes      = 16384
 	maxItemNotes      = 2048
 	maxConfirmation   = 64
+	MaxStops          = 12
+	MaxDays           = 60
+	maxDayLabel       = 40
+	maxLocality       = 120
 )
 
 var (
@@ -73,7 +77,7 @@ func validPlace(p *models.Place) bool {
 	if p == nil {
 		return true
 	}
-	return okTitle(p.Name, 200) && utf8.RuneCountInString(p.Address) <= 300 &&
+	return okTitle(p.Name, 200) && utf8.RuneCountInString(p.Address) <= 300 && utf8.RuneCountInString(p.Locality) <= maxLocality &&
 		p.Lat >= -90 && p.Lat <= 90 && p.Lng >= -180 && p.Lng <= 180 &&
 		!math.IsNaN(p.Lat) && !math.IsNaN(p.Lng) &&
 		len(p.OSMRef) <= 64 && placeSources[p.Source] && (p.TZ == "" || validTZ(p.TZ))
@@ -99,6 +103,19 @@ func validTripPatch(p TripPatch, create bool) bool {
 	}
 	if !optOK(p.StartDate, validDate) || !optOK(p.EndDate, validDate) {
 		return false
+	}
+	if p.Stops.Set && p.Stops.Val != nil {
+		for i := range *p.Stops.Val {
+			pl := (*p.Stops.Val)[i]
+			if pl.Name == "" || !validPlace(&pl) {
+				return false
+			}
+		}
+	}
+	for date, label := range p.Days {
+		if !validDate(date) || utf8.RuneCountInString(label) > maxDayLabel {
+			return false
+		}
 	}
 	return p.TZ == nil || validTZ(*p.TZ)
 }

@@ -54,7 +54,7 @@ func cacheKey(q string, lat, lng *float64, lang string) string {
 	if lat != nil && lng != nil {
 		loc = fmt.Sprintf("%.1f,%.1f", round1(*lat), round1(*lng))
 	}
-	sum := sha256.Sum256([]byte(q + "|" + loc + "|" + lang))
+	sum := sha256.Sum256([]byte("v2|" + q + "|" + loc + "|" + lang))
 	return hex.EncodeToString(sum[:])
 }
 

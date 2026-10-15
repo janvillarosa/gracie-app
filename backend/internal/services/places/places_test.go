@@ -61,6 +61,27 @@ func TestSearchParsesPhotonAndFillsTZ(t *testing.T) {
 	if !strings.Contains(p.Address, "Kyoto") {
 		t.Fatalf("address: %q", p.Address)
 	}
+	if p.Locality != "Kyoto" {
+		t.Fatalf("locality: %q", p.Locality)
+	}
+}
+
+func TestLocalityPrefersCityTownVillageThenSettlementName(t *testing.T) {
+	cases := []struct{ city, town, village, name, osmValue, want string }{
+		{"Porto", "Gaia", "", "Cafe", "cafe", "Porto"},
+		{"", "Sintra", "", "Palace", "castle", "Sintra"},
+		{"", "", "Monsaraz", "Inn", "hotel", "Monsaraz"},
+		{"", "", "", "Evora", "city", "Evora"},
+		{"", "", "", "Some Cafe", "cafe", ""},
+	}
+	for _, c := range cases {
+		if got := locality(c.city, c.town, c.village, c.name, c.osmValue); got != c.want {
+			t.Errorf("%+v: got %q", c, got)
+		}
+	}
+	if got := locality(strings.Repeat("x", 200), "", "", "", ""); len([]rune(got)) != 120 {
+		t.Errorf("not truncated: %d", len([]rune(got)))
+	}
 }
 
 func TestSearchIsCachedAndKeyIsNormalised(t *testing.T) {

@@ -63,6 +63,13 @@ Spec: `docs/superpowers/specs/2026-10-14-trips-api-persistence-design.md`.
   acked; surface `conflicted` with its `skipped_fields`.
 - Invariants: never add a write path to `trips` that bypasses `ApplyOp` + `ReplaceCAS`;
   trip handlers use `tripStatus` (500 default), not `statusFromErr` (400 default).
+- **Amendment 2026-10-15:** `TripTodo`/`Booking` carry server-set `created_by`/`updated_by`
+  (never patch fields; a patch naming them is `unsupported`). `Place.locality` is filled from
+  Photon `city`/`town`/`village`. The trip has `stops` (ordered `[]Place`, cap 12, replaced
+  whole via `trip.update`, clock `field_at["stops"]`) and `days` (date -> label <=40 chars,
+  cap 60; `""` removes; clock `field_at["days.<date>"]`, so labelling different days never
+  conflicts). Over-cap patches are rejected with code `cap`. `field_at` keys with dots are
+  fine because trips are only ever written as whole documents (`ReplaceCAS`).
 - Places: `PHOTON_BASE_URL` unset or upstream failure => `200 {"results":[],"degraded":true}`.
 
 ## Testing

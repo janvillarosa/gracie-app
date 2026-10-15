@@ -166,7 +166,49 @@ func tripChanges(t *models.Trip, p TripPatch) []change {
 		v := *p.TZ
 		ch = append(ch, change{"tz", func() { t.TZ = v }})
 	}
+	if p.Stops.Set {
+		var v []models.Place
+		if p.Stops.Val != nil {
+			v = append(v, *p.Stops.Val...)
+		}
+		ch = append(ch, change{"stops", func() { t.Stops = v }})
+	}
+	dates := make([]string, 0, len(p.Days))
+	for d := range p.Days {
+		dates = append(dates, d)
+	}
+	sort.Strings(dates)
+	for _, d := range dates {
+		date, label := d, p.Days[d]
+		ch = append(ch, change{"days." + date, func() {
+			if label == "" {
+				delete(t.Days, date)
+				if len(t.Days) == 0 {
+					t.Days = nil
+				}
+				return
+			}
+			if t.Days == nil {
+				t.Days = map[string]string{}
+			}
+			t.Days[date] = label
+		}})
+	}
 	return ch
+}
+
+// tripCapExceeded reports whether the patch would push stops or day labels over their caps.
+func tripCapExceeded(t *models.Trip, p TripPatch) bool {
+	if p.Stops.Set && p.Stops.Val != nil && len(*p.Stops.Val) > MaxStops {
+		return true
+	}
+	added := 0
+	for d, label := range p.Days {
+		if _, exists := t.Days[d]; label != "" && !exists {
+			added++
+		}
+	}
+	return len(t.Days)+added > MaxDays
 }
 
 func tripCreate(t *models.Trip, op models.Op, at int64, c Ctx, res *models.OpResult) bool {
@@ -179,6 +221,9 @@ func tripCreate(t *models.Trip, op models.Op, at int64, c Ctx, res *models.OpRes
 	}
 	if !validTripPatch(p, true) || !datesOrdered(pick(p.StartDate, nil), pick(p.EndDate, nil)) {
 		return fail(res, models.CodeInvalid)
+	}
+	if tripCapExceeded(t, p) {
+		return fail(res, models.CodeCap)
 	}
 	commit(&t.FieldAt, at, tripChanges(t, p), res)
 	if t.TZ == "" && t.Destination != nil {
@@ -195,6 +240,9 @@ func tripUpdate(t *models.Trip, op models.Op, at int64, c Ctx, res *models.OpRes
 	}
 	if !validTripPatch(p, false) || !datesOrdered(pick(p.StartDate, t.StartDate), pick(p.EndDate, t.EndDate)) {
 		return fail(res, models.CodeInvalid)
+	}
+	if tripCapExceeded(t, p) {
+		return fail(res, models.CodeCap)
 	}
 	if !commit(&t.FieldAt, at, tripChanges(t, p), res) {
 		return false
@@ -371,7 +419,7 @@ func todoCreate(t *models.Trip, op models.Op, at int64, c Ctx, res *models.OpRes
 	if !validTodoPatch(p, true) {
 		return fail(res, models.CodeInvalid)
 	}
-	td := models.TripTodo{TodoID: op.EntityID, Category: "other", FieldAt: map[string]int64{}}
+	td := models.TripTodo{TodoID: op.EntityID, Category: "other", CreatedBy: c.Actor, UpdatedBy: c.Actor, FieldAt: map[string]int64{}}
 	commit(&td.FieldAt, at, todoChanges(&td, p, c.Actor, c.Now), res)
 	if p.Order == nil {
 		td.Order = nextOrder(t, td.Day)
@@ -400,6 +448,7 @@ func todoUpdate(t *models.Trip, op models.Op, at int64, c Ctx, res *models.OpRes
 		return false
 	}
 	td.V = c.NewV
+	td.UpdatedBy = c.Actor
 	resolveTodoTZ(t, td)
 	if p.Order != nil || p.Day.Set {
 		renumberIfCramped(t, c.NewV)
@@ -484,7 +533,7 @@ func bookingCreate(t *models.Trip, op models.Op, at int64, c Ctx, res *models.Op
 	if !validBookingPatch(p, true) {
 		return fail(res, models.CodeInvalid)
 	}
-	b := models.Booking{BookingID: op.EntityID, FieldAt: map[string]int64{}}
+	b := models.Booking{BookingID: op.EntityID, CreatedBy: c.Actor, UpdatedBy: c.Actor, FieldAt: map[string]int64{}}
 	commit(&b.FieldAt, at, bookingChanges(&b, p), res)
 	b.V = c.NewV
 	t.Bookings = append(t.Bookings, b)
@@ -508,6 +557,7 @@ func bookingUpdate(t *models.Trip, op models.Op, at int64, c Ctx, res *models.Op
 		return false
 	}
 	b.V = c.NewV
+	b.UpdatedBy = c.Actor
 	return true
 }
 

@@ -22,13 +22,15 @@ const (
 
 // Place is a self-contained snapshot of a location.
 type Place struct {
-	Name    string  `bson:"name" json:"name"`
-	Address string  `bson:"address,omitempty" json:"address,omitempty"`
-	Lat     float64 `bson:"lat" json:"lat"`
-	Lng     float64 `bson:"lng" json:"lng"`
-	TZ      string  `bson:"tz,omitempty" json:"tz,omitempty"`
-	OSMRef  string  `bson:"osm_ref,omitempty" json:"osm_ref,omitempty"`
-	Source  string  `bson:"source" json:"source"` // photon | pin | manual
+	Name    string `bson:"name" json:"name"`
+	Address string `bson:"address,omitempty" json:"address,omitempty"`
+	// Locality is the town or city (from Photon city/town/village); empty for manual places.
+	Locality string  `bson:"locality,omitempty" json:"locality,omitempty"`
+	Lat      float64 `bson:"lat" json:"lat"`
+	Lng      float64 `bson:"lng" json:"lng"`
+	TZ       string  `bson:"tz,omitempty" json:"tz,omitempty"`
+	OSMRef   string  `bson:"osm_ref,omitempty" json:"osm_ref,omitempty"`
+	Source   string  `bson:"source" json:"source"` // photon | pin | manual
 }
 
 // TripTodo is a checkbox item inside a trip. Day == nil means "Ideas".
@@ -46,6 +48,8 @@ type TripTodo struct {
 	Category    string           `bson:"category" json:"category"`
 	Notes       string           `bson:"notes,omitempty" json:"notes,omitempty"`
 	Place       *Place           `bson:"place,omitempty" json:"place,omitempty"`
+	CreatedBy   string           `bson:"created_by,omitempty" json:"created_by,omitempty"`
+	UpdatedBy   string           `bson:"updated_by,omitempty" json:"updated_by,omitempty"`
 	V           int64            `bson:"v" json:"v"`
 	FieldAt     map[string]int64 `bson:"field_at" json:"-"`
 }
@@ -62,6 +66,8 @@ type Booking struct {
 	EndTZ            *string          `bson:"end_tz,omitempty" json:"end_tz,omitempty"`
 	Place            *Place           `bson:"place,omitempty" json:"place,omitempty"`
 	Notes            string           `bson:"notes,omitempty" json:"notes,omitempty"`
+	CreatedBy        string           `bson:"created_by,omitempty" json:"created_by,omitempty"`
+	UpdatedBy        string           `bson:"updated_by,omitempty" json:"updated_by,omitempty"`
 	V                int64            `bson:"v" json:"v"`
 	FieldAt          map[string]int64 `bson:"field_at" json:"-"`
 }
@@ -82,6 +88,10 @@ type TripFields struct {
 	EndDate       *string `bson:"end_date,omitempty" json:"end_date,omitempty"`
 	TZ            string  `bson:"tz,omitempty" json:"tz,omitempty"`
 	PackingListID *string `bson:"packing_list_id,omitempty" json:"packing_list_id,omitempty"`
+	// Stops is a hand-entered ordered route (cap 12). Display only; replaced as a whole list.
+	Stops []Place `bson:"stops,omitempty" json:"stops,omitempty"`
+	// Days maps "YYYY-MM-DD" to a short label (cap 60 entries); each date has its own clock.
+	Days map[string]string `bson:"days,omitempty" json:"days,omitempty"`
 }
 
 // Trip is the persisted aggregate (collection "trips").
@@ -121,6 +131,12 @@ func cloneClock(m map[string]int64) map[string]int64 {
 // Clone returns a copy that is safe to mutate (maps and slices are copied).
 func (t *Trip) Clone() *Trip {
 	c := *t
+	if t.Days != nil {
+		c.Days = make(map[string]string, len(t.Days))
+		for k, v := range t.Days {
+			c.Days[k] = v
+		}
+	}
 	c.FieldAt = cloneClock(t.FieldAt)
 	c.Acked = cloneClock(t.Acked)
 	c.Tombstones = append([]Tombstone(nil), t.Tombstones...)
