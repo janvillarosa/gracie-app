@@ -57,7 +57,7 @@ describe('the planning desk layout', () => {
     open(t.trip_id)
     await screen.findByRole('heading', { name: 'Weekend in Ghent' })
     const shell = document.querySelector('.trip-shell') as HTMLElement
-    expect(shell).toHaveClass('is-desk', 'is-wide')
+    expect(shell).toHaveClass('is-desk', 'has-map')
     const kids = [...shell.children].map((c) => c.className)
     expect(kids[0]).toContain('trip-ideas-col')
     expect(kids[1]).toContain('trip-days-col')
@@ -69,7 +69,45 @@ describe('the planning desk layout', () => {
     expect(within(col).getByText('Drag onto a day')).toBeInTheDocument()
   })
 
-  it('is two columns at 1100: Ideas and Days, with the map behind a Map pill', async () => {
+  it('is one paper stack: the header with its band, then the plan sheet; the add bar floats', async () => {
+    setViewport('desktop')
+    const t = ghent()
+    seed(t)
+    open(t.trip_id)
+    await screen.findByRole('heading', { name: 'Weekend in Ghent' })
+    const stack = document.querySelector('.trip-days-col .paper-stack') as HTMLElement
+    const top = stack.querySelector('.paper-meta') as HTMLElement
+    const plan = stack.querySelector('.paper-list') as HTMLElement
+    expect(top.compareDocumentPosition(plan) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    // Ready to go? is the band inside the header sheet, not a card of its own.
+    const band = top.querySelector('.trip-head-band') as HTMLElement
+    expect(within(band).getByRole('region', { name: 'Ready to go?' })).toBeInTheDocument()
+    // The add bar is a floating composer, never inside the sheet.
+    expect(plan.querySelector('.add-bar')).toBeNull()
+    const composer = document.querySelector('.trip-composer') as HTMLElement
+    expect(composer.querySelector('.add-bar')).not.toBeNull()
+    expect(screen.getByPlaceholderText('Add a place, plan or idea')).toBeInTheDocument()
+    // One row: icon, title over the day line, avatars, menu.
+    const row = top.querySelector('.trip-desk-head') as HTMLElement
+    expect(
+      [...row.children].map((c) => c.className.split(' ')[0].replace(/^list-icon$/, 'icon')),
+    ).toEqual(['icon', 'trip-desk-text', 'trip-avatars', 'ui-btn'])
+  })
+
+  it('has no map column without places: the plan widens and says where places will show up', async () => {
+    setViewport('desktop')
+    const t = ghent()
+    seed(t)
+    open(t.trip_id)
+    await screen.findByRole('heading', { name: 'Weekend in Ghent' })
+    expect(document.querySelector('.trip-shell')).not.toHaveClass('has-map')
+    expect(screen.queryByTestId('trip-map-pane')).not.toBeInTheDocument()
+    expect(screen.getByText('Places you add show up on a map.')).toBeInTheDocument()
+    expect(screen.queryByText('Map preview')).not.toBeInTheDocument()
+    expect(document.querySelector('.trip-ideas-col')).not.toBeNull()
+  })
+
+  it('is two columns at 1100: Ideas and Days, with the map in a dialog from the Map pill', async () => {
     setViewport('mid')
     const t = ghent()
     t.todos[0] = { ...t.todos[0], place }
@@ -78,12 +116,14 @@ describe('the planning desk layout', () => {
     await screen.findByRole('heading', { name: 'Weekend in Ghent' })
     const shell = document.querySelector('.trip-shell') as HTMLElement
     expect(shell).toHaveClass('is-desk')
-    expect(shell).not.toHaveClass('is-wide')
+    expect(shell).not.toHaveClass('has-map')
     expect(document.querySelector('.trip-side')).toBeNull()
     await userEvent.click(screen.getByRole('button', { name: /^Show map for/ }))
-    expect(await screen.findByLabelText('Map')).toHaveClass('is-over')
-    await userEvent.click(screen.getByRole('button', { name: 'Close map' }))
-    await waitFor(() => expect(document.querySelector('.trip-side')).toBeNull())
+    // The one overlay: a dialog with a scrim that closes with Esc.
+    expect(await screen.findByRole('dialog')).toBeInTheDocument()
+    expect(document.querySelector('.ui-dialog')).not.toBeNull()
+    await userEvent.keyboard('{Escape}')
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
   })
 
   it('shows every date of a trip with nothing planned, each as a slot', async () => {
@@ -113,19 +153,6 @@ describe('the planning desk layout', () => {
     open(t.trip_id)
     expect(await screen.findByRole('heading', { name: 'Where to first?' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'When are you going?' })).toBeInTheDocument()
-  })
-
-  it('has a quiet empty state instead of a map until there are places', async () => {
-    setViewport('desktop')
-    const t = ghent()
-    seed(t)
-    open(t.trip_id)
-    await screen.findByRole('heading', { name: 'Weekend in Ghent' })
-    const pane = screen.getByTestId('trip-map-pane')
-    expect(within(pane).getByText('Places you add show up here')).toBeInTheDocument()
-    // No map, no controls: nothing of the map was drawn (or loaded).
-    expect(pane.querySelector('.trip-map-plain, .trip-map-gl, button')).toBeNull()
-    expect(screen.queryByText('Map preview')).not.toBeInTheDocument()
   })
 
   it('moves an idea onto a day from its row, and a day item back to Ideas', async () => {
@@ -202,6 +229,11 @@ describe('Ready to go?', () => {
     open(t.trip_id)
     const ready = await screen.findByRole('region', { name: 'Ready to go?' })
     expect(within(ready).getByText('Train to Ghent booked')).toBeInTheDocument()
+    // Every line is one size; the fixes are the system's text buttons.
+    expect(within(ready).getByRole('button', { name: 'Add a stay' })).toHaveClass(
+      'ui-btn',
+      'is-text',
+    )
     expect(within(ready).getByText(/^No stay for /)).toBeInTheDocument()
     expect(within(ready).getByText('2 days still empty')).toBeInTheDocument()
     expect(within(ready).getByText('No packing list yet')).toBeInTheDocument()
@@ -240,7 +272,10 @@ describe('Ready to go?', () => {
     const during = lisbonTrip()
     seed(during)
     open(during.trip_id)
-    expect(await screen.findByRole('region', { name: 'Next stop' })).toBeInTheDocument()
+    const next = await screen.findByRole('region', { name: 'Next stop' })
+    // The deck takes the header sheet's band: no card of its own.
+    expect(next.closest('.trip-head-band')).not.toBeNull()
+    expect(next.closest('.ant-card.trip-deck')).toBeNull()
     expect(screen.queryByRole('region', { name: 'Ready to go?' })).not.toBeInTheDocument()
   })
 

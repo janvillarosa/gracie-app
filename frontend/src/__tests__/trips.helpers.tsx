@@ -173,7 +173,13 @@ export function lisbonTrip(): Trip {
     end_date: day(2),
     days: { [day(-2)]: 'Arrival' },
     todos: [
-      todo('1', 'Arrive and unpack', { day: day(-2), done: true, order: 1 }),
+      // One place, so the desk has its map column from the start (it only exists with places).
+      todo('1', 'Arrive and unpack', {
+        day: day(-2),
+        done: true,
+        order: 1,
+        place: { name: 'Flat in Alfama', lat: 38.71, lng: -9.13, source: 'photon' },
+      }),
       todo('2', 'Castelo de São Jorge', {
         day: day(-1),
         done: true,

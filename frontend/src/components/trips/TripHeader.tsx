@@ -33,6 +33,8 @@ type HeaderProps = {
   dayList: React.ReactNode
   // On a desk the line also says how long until the trip, and the title never wraps.
   desk?: boolean
+  // Desk only: the band at the foot of the same sheet (Ready to go?, or the Next stop card).
+  band?: React.ReactNode
 }
 
 const sharedWith = (members: Member[]) => {
@@ -62,6 +64,7 @@ export const TripHeader: React.FC<HeaderProps> = ({
   onDaysOpen,
   dayList,
   desk,
+  band,
 }) => {
   const route = routeText(trip)
   const phase = tripPhase(trip, today)
@@ -82,16 +85,126 @@ export const TripHeader: React.FC<HeaderProps> = ({
     { key: 'packing', label: packing.label, disabled: packing.disabled },
     { key: 'details', label: 'Trip settings' },
   ]
-  return (
-    <Card className={desk ? 'paper-card paper-meta is-desk' : 'paper-card paper-meta'}>
-      {deletedBy && (
-        <div className="trip-banner" role="status">
-          <span>{deletedBy} deleted this trip.</span>
-          <Button kind="key" onClick={onRestore}>
-            Restore
-          </Button>
-        </div>
+  const menuNode = (
+    <Dropdown
+      trigger={['click']}
+      menu={{ items, onClick: ({ key }) => onMenu(key as 'notes' | 'packing' | 'details') }}
+    >
+      <Button kind="text" iconOnly icon={<DotsThreeVertical />} aria-label="More trip options" />
+    </Dropdown>
+  )
+  const dayLineNode =
+    phase === 'draft' ? (
+      <Typography.Text className="list-meta">{line}</Typography.Text>
+    ) : (
+      <Sheet
+        variant="chips"
+        open={daysOpen}
+        onOpen={() => onDaysOpen(true)}
+        onClose={() => onDaysOpen(false)}
+        label="Days"
+        title="Days"
+        anchor={
+          <button type="button" className="list-meta trip-dayline">
+            {line}
+            <CaretDown aria-hidden />
+          </button>
+        }
+      >
+        {daysOpen ? dayList : null}
+      </Sheet>
+    )
+  const avatarsNode = (
+    <span className="trip-avatars" role="img" aria-label={sharedWith(members)}>
+      {members.slice(0, members.length > 4 ? 3 : 4).map((m) => (
+        <Avatar
+          key={m.user_id ?? m.name}
+          seed={m.avatar_key ?? m.name}
+          size={24}
+          alt=""
+          className="trip-avatar"
+        />
+      ))}
+      {members.length > 4 && (
+        <span className="trip-avatar-more" aria-hidden>
+          +{members.length - 3}
+        </span>
       )}
+    </span>
+  )
+  const banner = deletedBy && (
+    <div className="trip-banner" role="status">
+      <span>{deletedBy} deleted this trip.</span>
+      <Button kind="key" onClick={onRestore}>
+        Restore
+      </Button>
+    </div>
+  )
+  const noteNodes = notes.map((n) => (
+    <Note
+      key={n.key}
+      role="status"
+      className="trip-note-trip"
+      action={
+        <Button kind="text" onClick={() => onDismissNote(n.key)}>
+          Got it
+        </Button>
+      }
+    >
+      {n.text}
+    </Note>
+  ))
+  const status = (offline || pending > 0 || readOnlyOver || persistFailed) && (
+    <div className="trip-header-row">
+      {(offline || pending > 0) && (
+        <span className="trip-offline" role="status">
+          {offline ? 'Saved on this device · syncs when online' : 'Syncing…'}
+        </span>
+      )}
+      {persistFailed && (
+        <span className="trip-offline" role="status">
+          Not saved on this device
+        </span>
+      )}
+      {readOnlyOver && (
+        <span className="trip-offline">
+          This trip is over.{' '}
+          <button type="button" className="trip-inline-link" onClick={onUnlock}>
+            Edit anyway
+          </button>
+        </span>
+      )}
+    </div>
+  )
+
+  // A desk: one row, [icon] [title over the day line] ... [avatars] [menu], and the sheet's
+  // band (Ready to go?, or the Next stop card) at its foot.
+  if (desk)
+    return (
+      <Card className="paper-card paper-meta is-desk">
+        {banner}
+        <div className="trip-desk-head">
+          <span className="list-icon trip-desk-icon" aria-hidden>
+            {toTripEmoji(trip.icon)}
+          </span>
+          <div className="trip-desk-text">
+            <Typography.Title level={2} className="trip-desk-title">
+              <span className="trip-title-text">{trip.title}</span>
+            </Typography.Title>
+            <div className="trip-desk-meta">{dayLineNode}</div>
+          </div>
+          {avatarsNode}
+          {menuNode}
+        </div>
+        {noteNodes}
+        {status}
+        {band && <div className="trip-head-band">{band}</div>}
+      </Card>
+    )
+
+  return (
+    <Card className="paper-card paper-meta">
+      {banner}
       <div className="list-header-grid">
         <div className="list-header-title">
           <Typography.Title
@@ -104,94 +217,14 @@ export const TripHeader: React.FC<HeaderProps> = ({
             <span className="trip-title-text">{trip.title}</span>
           </Typography.Title>
         </div>
-        <div className="list-actions">
-          <Dropdown
-            trigger={['click']}
-            menu={{ items, onClick: ({ key }) => onMenu(key as 'notes' | 'packing' | 'details') }}
-          >
-            <Button
-              kind="text"
-              iconOnly
-              icon={<DotsThreeVertical />}
-              aria-label="More trip options"
-            />
-          </Dropdown>
-        </div>
+        <div className="list-actions">{menuNode}</div>
         <div className="trip-metaline">
-          {phase === 'draft' ? (
-            <Typography.Text className="list-meta">{line}</Typography.Text>
-          ) : (
-            <Sheet
-              variant="chips"
-              open={daysOpen}
-              onOpen={() => onDaysOpen(true)}
-              onClose={() => onDaysOpen(false)}
-              label="Days"
-              title="Days"
-              anchor={
-                <button type="button" className="list-meta trip-dayline">
-                  {line}
-                  <CaretDown aria-hidden />
-                </button>
-              }
-            >
-              {daysOpen ? dayList : null}
-            </Sheet>
-          )}
-          <span className="trip-avatars" role="img" aria-label={sharedWith(members)}>
-            {members.slice(0, members.length > 4 ? 3 : 4).map((m) => (
-              <Avatar
-                key={m.user_id ?? m.name}
-                seed={m.avatar_key ?? m.name}
-                size={24}
-                alt=""
-                className="trip-avatar"
-              />
-            ))}
-            {members.length > 4 && (
-              <span className="trip-avatar-more" aria-hidden>
-                +{members.length - 3}
-              </span>
-            )}
-          </span>
+          {dayLineNode}
+          {avatarsNode}
         </div>
       </div>
-      {notes.map((n) => (
-        <Note
-          key={n.key}
-          role="status"
-          className="trip-note-trip"
-          action={
-            <Button kind="text" onClick={() => onDismissNote(n.key)}>
-              Got it
-            </Button>
-          }
-        >
-          {n.text}
-        </Note>
-      ))}
-      {(offline || pending > 0 || readOnlyOver || persistFailed) && (
-        <div className="trip-header-row">
-          {(offline || pending > 0) && (
-            <span className="trip-offline" role="status">
-              {offline ? 'Saved on this device · syncs when online' : 'Syncing…'}
-            </span>
-          )}
-          {persistFailed && (
-            <span className="trip-offline" role="status">
-              Not saved on this device
-            </span>
-          )}
-          {readOnlyOver && (
-            <span className="trip-offline">
-              This trip is over.{' '}
-              <button type="button" className="trip-inline-link" onClick={onUnlock}>
-                Edit anyway
-              </button>
-            </span>
-          )}
-        </div>
-      )}
+      {noteNodes}
+      {status}
     </Card>
   )
 }

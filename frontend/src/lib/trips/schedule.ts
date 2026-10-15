@@ -290,9 +290,15 @@ export function suggestLabel(todos: TripTodo[]): string {
 const entryTitle = (e: Entry) => (e.kind === 'todo' ? e.todo.title : e.booking.title)
 const clockOf = (dt?: string | null) => (dt ? (dt.split('T')[1] ?? '') : '')
 
-/** The first pair of timed entries that run into each other (back-to-back is fine). */
-export function findClash(entries: Entry[]): Clash | undefined {
-  const timed = entries.filter((e) => e.startMs !== null).sort(compareEntries)
+/** The first pair of timed entries that run into each other (back-to-back is fine). Finished
+ *  things do not clash: a todo that is done, a booking that has passed (when `nowMs` is given).
+ *  So ticking either of two clashing todos clears the warning, and unticking brings it back. */
+export function findClash(entries: Entry[], nowMs?: number): Clash | undefined {
+  const live = (e: Entry) =>
+    e.kind === 'todo'
+      ? !e.todo.done
+      : nowMs === undefined || (e.endMs ?? e.startMs ?? Number.POSITIVE_INFINITY) >= nowMs
+  const timed = entries.filter((e) => e.startMs !== null && live(e)).sort(compareEntries)
   let end = -Infinity
   let reach: Entry | undefined
   let last: Entry | undefined
@@ -316,7 +322,7 @@ export function findClash(entries: Entry[]): Clash | undefined {
   return undefined
 }
 
-export function buildSchedule(trip: Trip): Schedule {
+export function buildSchedule(trip: Trip, nowMs?: number): Schedule {
   const dates = eachDay(trip.start_date, trip.end_date)
   const inRange = new Set(dates)
   const byDay = new Map<string, Entry[]>()
@@ -350,7 +356,7 @@ export function buildSchedule(trip: Trip): Schedule {
       label: trip.days?.[date] ?? '',
       suggested: trip.days?.[date] ? '' : suggestLabel(todos),
       entries,
-      clash: findClash(entries),
+      clash: findClash(entries, nowMs),
     }
   })
 

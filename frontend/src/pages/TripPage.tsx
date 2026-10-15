@@ -11,7 +11,7 @@ import {
   type DragStartEvent,
 } from '@dnd-kit/core'
 import { Card, message } from 'antd'
-import { CaretRight, Check, MapTrifold, X } from '@phosphor-icons/react'
+import { CaretRight, Check, MapTrifold } from '@phosphor-icons/react'
 import { useAuth } from '@auth/AuthProvider'
 import { TopNav } from '@components/TopNav'
 import { reorderLock } from '@components/ItemRow'
@@ -73,12 +73,14 @@ import type { RowActions } from '@components/trips/TodoRow'
 import { DAY_COLOURS } from '@components/trips/tripUi'
 import { PillNav } from '@components/PillNav'
 import { ReadyToGo } from '@components/trips/ReadyToGo'
+import { DateRail } from '@components/trips/DateRail'
 import { readiness, type CheckLine } from '@lib/trips/readiness'
 import { reduced, scrollToEl } from './trip/scroll'
 import { listFor, useScreenActions, type Ctx } from './trip/useScreenActions'
 import { useDayFolding } from './trip/useDayFolding'
 import { useDayInView } from './trip/useDayInView'
 import { useAddBarShortcut } from './trip/useAddBarShortcut'
+import { panes, useDeskScroll } from './trip/useDeskScroll'
 import { useDeck } from './trip/useDeck'
 import { useItemSheet } from './trip/useItemSheet'
 import { usePackingLine } from './trip/usePackingLine'
@@ -150,6 +152,25 @@ const TripScreen: React.FC<{
   // 1200px and wider: Ideas, Days and the Map side by side. 1024-1199: Ideas and Days, and the
   // map opens over them from the Map pill. Either way Ideas is a column, not a tab.
   const wide = useMedia('(min-width: 1200px)')
+  // The desk's composer floats over the Days column: it takes that column's left edge and width.
+  const daysCol = useRef<HTMLDivElement>(null)
+  const [composerBox, setComposerBox] = useState<{ left: number; width: number } | null>(null)
+  useEffect(() => {
+    const el = daysCol.current
+    if (!el) return
+    const measure = () => {
+      const r = el.getBoundingClientRect()
+      setComposerBox({ left: r.left + 24, width: Math.max(280, r.width - 48) })
+    }
+    measure()
+    const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure)
+    ro?.observe(el)
+    window.addEventListener('resize', measure)
+    return () => {
+      ro?.disconnect()
+      window.removeEventListener('resize', measure)
+    }
+  }, [desktop])
   const [mapOver, setMapOver] = useState(false)
   const tab: TabId = desktop && rawTab === 'ideas' ? 'plan' : rawTab
 
@@ -161,7 +182,7 @@ const TripScreen: React.FC<{
         : rawTrip,
     [rawTrip, hidden],
   )
-  const schedule = useMemo(() => buildSchedule(trip), [trip])
+  const schedule = useMemo(() => buildSchedule(trip, nowMs), [trip, nowMs])
   const today = localDateKey(new Date(nowMs))
   const online = !state.offline && (typeof navigator === 'undefined' || navigator.onLine !== false)
   // The map is shown only while online (it needs tiles), hiding a few seconds after a drop.
@@ -222,13 +243,34 @@ const TripScreen: React.FC<{
   }
   const { add, rowActions, bookingActions, setDayLabel } = useScreenActions(ctx)
   // ---- drag between days ---------------------------------------------------------------
-  const { dragging, sensors, onDragStart, onDragEnd, dragTitle } = useTripDrag({
-    trip,
-    store,
-    ctx,
-    rowActions,
-    announce: setAnnouncement,
+  // The drag reads the day folding and the day in view, which are set up further down.
+  const dragBridge = useRef<{
+    isClosed: (date: string) => boolean
+    openDay: (date: string) => void
+    foldDay: (date: string) => void
+    currentDay: string | null
+    setCurrentDay: (date: string | null) => void
+  }>({
+    isClosed: () => false,
+    openDay: () => {},
+    foldDay: () => {},
+    currentDay: null,
+    setCurrentDay: () => {},
   })
+  const { dragging, drop, sensors, onDragStart, onDragOver, onDragEnd, onDragCancel, dragTitle } =
+    useTripDrag({
+      trip,
+      store,
+      ctx,
+      announce: setAnnouncement,
+      isClosed: (d) => dragBridge.current.isClosed(d),
+      openDay: (d) => dragBridge.current.openDay(d),
+      foldDay: (d) => dragBridge.current.foldDay(d),
+      currentDay: dragBridge.current.currentDay,
+      setCurrentDay: (d) => dragBridge.current.setCurrentDay(d),
+      setPreview: (p) => setBarPreview(p ? { lat: p.lat, lng: p.lng, label: p.name } : null),
+      scrollers: desktop ? panes : undefined,
+    })
 
   const draftCount = useRef(0)
   const [bookingDraft, setBookingDraft] = useState<{
@@ -262,6 +304,7 @@ const TripScreen: React.FC<{
     isOpenDay,
     toggleDay,
     openDay,
+    foldDay,
     showDay: showDayOpen,
   } = useDayFolding({
     days: schedule.days,
@@ -329,7 +372,9 @@ const TripScreen: React.FC<{
   const hasPlaces = hasMapPlaces(trip)
   // Wide and online: the map is a pane beside the plan; item panels dock over it. Otherwise
   // (phone, or no connection) panels are bottom sheets.
-  const docked = desktop && mapOk && (wide || mapOver)
+  // The map column exists on wide screens, online, once there is a place to show.
+  const mapCol = wide && mapOk && hasPlaces
+  const docked = mapCol
   const moveTargets = useMemo(
     () => [
       ...schedule.days.map((d) => ({ value: d.date as string | null, label: fullDay(d.date) })),
@@ -350,6 +395,7 @@ const TripScreen: React.FC<{
       now: nowMs,
       lazyDnd: trip.todos.length > 40,
       dragging: dragging !== null,
+      drop,
       onClash: (id: string) => {
         ctx.current.openItem(id)
         setFocusTime(id)
@@ -366,6 +412,7 @@ const TripScreen: React.FC<{
       nowMs,
       trip.todos.length,
       dragging,
+      drop,
     ],
   )
 
@@ -377,7 +424,18 @@ const TripScreen: React.FC<{
     phase,
     today,
     wantedDay: search.get('day'),
+    getScroller: desktop ? () => daysCol.current : undefined,
   })
+  dragBridge.current = {
+    isClosed: (date) => {
+      const d = schedule.days.find((x) => x.date === date)
+      return d ? !isOpenDay(d) : false
+    },
+    openDay,
+    foldDay,
+    currentDay,
+    setCurrentDay,
+  }
   const goToDay = useCallback(
     (date: string, focus = true) => {
       mapFollow.resume()
@@ -620,6 +678,18 @@ const TripScreen: React.FC<{
   })
 
   useAddBarShortcut(desktop)
+  // The desk is an app shell: the window itself does not scroll, each pane does.
+  useEffect(() => {
+    if (!desktop) return
+    document.documentElement.classList.add('trip-desk-shell')
+    return () => document.documentElement.classList.remove('trip-desk-shell')
+  }, [desktop])
+  useDeskScroll(
+    trip.trip_id,
+    desktop,
+    schedule.days.length > 0 || schedule.ideas.length > 0,
+    !!search.get('day'),
+  )
 
   // ---- sheets --------------------------------------------------------------------------
   // One at a time: an item, a new booking, the notes, or (wide screens) the ideas. Docked over
@@ -795,6 +865,23 @@ const TripScreen: React.FC<{
       }}
     />
   )
+  const deckNode = (flat: boolean) => (
+    <NextStopDeck
+      flat={flat}
+      stops={deckStops}
+      tomorrow={tomorrow}
+      locked={locked}
+      announce={setAnnouncement}
+      onDone={(id) => {
+        if (deckStops.find((x) => x.id === id)?.kind === 'booking')
+          setDismissed((s) => new Set(s).add(id))
+        else rowActions.toggle(id, true)
+      }}
+      onSeeTomorrow={(d) => goToDay(d)}
+      onOpen={rowActions.open}
+      onCopy={bookingActions.copy}
+    />
+  )
   const planNode = (
     <>
       {toPack && packing.listId && !desktop && (
@@ -809,22 +896,7 @@ const TripScreen: React.FC<{
           <CaretRight aria-hidden />
         </button>
       )}
-      {phase === 'during' && tab === 'plan' && deckStops.length > 0 && (
-        <NextStopDeck
-          stops={deckStops}
-          tomorrow={tomorrow}
-          locked={locked}
-          announce={setAnnouncement}
-          onDone={(id) => {
-            if (deckStops.find((x) => x.id === id)?.kind === 'booking')
-              setDismissed((s) => new Set(s).add(id))
-            else rowActions.toggle(id, true)
-          }}
-          onSeeTomorrow={(d) => goToDay(d)}
-          onOpen={rowActions.open}
-          onCopy={bookingActions.copy}
-        />
-      )}
+      {phase === 'during' && tab === 'plan' && deckStops.length > 0 && !desktop && deckNode(false)}
       {doneDays.size > 0 && !emptyPlan && (
         <button
           type="button"
@@ -876,6 +948,9 @@ const TripScreen: React.FC<{
           {spine}
         </>
       )}
+      {desktop && !hasPlaces && !noDays && (
+        <p className="trip-map-note">Places you add show up on a map.</p>
+      )}
     </>
   )
 
@@ -888,12 +963,27 @@ const TripScreen: React.FC<{
   const addPlaceholder =
     tab === 'bookings'
       ? 'Add a booking'
-      : target === 'ideas'
-        ? 'Add an idea'
-        : `Add to ${targetLabel}`
+      : desktop
+        ? 'Add a place, plan or idea'
+        : target === 'ideas'
+          ? 'Add an idea'
+          : `Add to ${targetLabel}`
 
+  const readyNode =
+    readyLines.length > 0 && tab === 'plan' ? (
+      <ReadyToGo lines={readyLines} locked={locked} onFix={fixReady} />
+    ) : null
+  // The sheet's band on a desk: Ready to go? before the trip, the Next stop card during it.
+  const bandNode = !desktop
+    ? null
+    : phase === 'before'
+      ? readyNode
+      : phase === 'during' && tab === 'plan' && deckStops.length > 0
+        ? deckNode(true)
+        : null
   const headerNode = (
     <TripHeader
+      band={bandNode}
       trip={trip}
       today={today}
       desk={desktop}
@@ -967,31 +1057,10 @@ const TripScreen: React.FC<{
       }}
     />
   ) : null
-  // The map column: the map once there are places; until then a quiet note on the map ground,
-  // with no controls and no map code loaded.
+  // The map column, only while there are places: sticky, with the docked item panels over it.
   const sideNode = (
-    <aside
-      className={wide ? 'trip-side' : 'trip-side is-over'}
-      aria-label="Map"
-      data-testid="trip-map-pane"
-    >
-      {!wide && (
-        <Button
-          kind="text"
-          iconOnly
-          className="trip-side-close"
-          aria-label="Close map"
-          icon={<X aria-hidden />}
-          onClick={() => setMapOver(false)}
-        />
-      )}
-      {hasPlaces ? (
-        mapNode
-      ) : (
-        <div className="trip-map is-empty">
-          <p>Places you add show up here</p>
-        </div>
-      )}
+    <aside className="trip-side" aria-label="Map" data-testid="trip-map-pane">
+      {mapNode}
       {docked && shownSheet}
     </aside>
   )
@@ -1011,38 +1080,73 @@ const TripScreen: React.FC<{
       />
     </aside>
   )
-  const readyNode =
-    readyLines.length > 0 && tab === 'plan' ? (
-      <ReadyToGo lines={readyLines} locked={locked} onFix={fixReady} />
-    ) : null
-
   return (
-    <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
-      <div className={dragging ? 'trip-page is-dragging' : 'trip-page'}>
+    <DndContext
+      sensors={sensors}
+      // The page scrolls itself while a drag is held near an edge (useTripDrag): dnd-kit's own
+      // only scrolls the nearest scrollable box, not the window.
+      autoScroll={false}
+      onDragStart={onDragStart}
+      onDragOver={onDragOver}
+      onDragEnd={onDragEnd}
+      onDragCancel={onDragCancel}
+    >
+      <div
+        className={['trip-page', dragging ? 'is-dragging' : '', desktop ? 'is-desk-shell' : '']
+          .filter(Boolean)
+          .join(' ')}
+      >
         {desktop ? (
-          <>
+          <div className="trip-desk-frame">
             <TopNav back={{ to: '/app/trips', label: roomName }} />
-            <div
-              className={[
-                'trip-shell',
-                'is-desk',
-                wide ? 'is-wide' : '',
-                wide && !mapOk ? 'is-mapless' : '',
-              ]
-                .filter(Boolean)
-                .join(' ')}
-            >
+            <div className={mapCol ? 'trip-shell is-desk has-map' : 'trip-shell is-desk'}>
               {ideasColumn}
-              <div className="trip-col trip-days-col">
-                {!mapOk && <p className="trip-map-off">The map comes back when you’re online.</p>}
-                {headerNode}
-                {readyNode}
-                <Card className="paper-card trip-plan-sheet">{pillNode}</Card>
-                {addBarNode && <div className="trip-desk-add">{addBarNode}</div>}
+              <div className="trip-col trip-days-col" ref={daysCol}>
+                {!mapOk && hasPlaces && (
+                  <p className="trip-map-off">The map comes back when you’re online.</p>
+                )}
+                {dragging && schedule.days.length > 5 && (
+                  <DateRail
+                    days={schedule.days.map((d) => d.date)}
+                    onJump={(d) => scrollToEl(document.getElementById(`day-${d}`), false)}
+                  />
+                )}
+                <div className="paper-stack">
+                  {headerNode}
+                  <Card className="paper-card paper-list">
+                    <div>{pillNode}</div>
+                  </Card>
+                </div>
               </div>
-              {mapOk && (wide || mapOver) && sideNode}
+              {mapCol && sideNode}
             </div>
-          </>
+            {addBarNode && (
+              <div
+                className="trip-composer"
+                style={
+                  composerBox
+                    ? ({
+                        '--composer-left': `${composerBox.left}px`,
+                        '--composer-width': `${composerBox.width}px`,
+                      } as React.CSSProperties)
+                    : undefined
+                }
+              >
+                {addBarNode}
+              </div>
+            )}
+            {!wide && hasPlaces && mapOk && (
+              <Sheet
+                open={mapOver}
+                label="Map"
+                title="Map"
+                width={640}
+                onClose={() => setMapOver(false)}
+              >
+                {mapNode}
+              </Sheet>
+            )}
+          </div>
         ) : (
           <div className="trip-shell">
             <div className="trip-col">
@@ -1088,7 +1192,7 @@ const TripScreen: React.FC<{
           {announcement}
         </div>
       </div>
-      <DragOverlay>
+      <DragOverlay dropAnimation={reduced() ? null : undefined}>
         {dragTitle ? <div className="trip-drag-chip">{dragTitle}</div> : null}
       </DragOverlay>
     </DndContext>

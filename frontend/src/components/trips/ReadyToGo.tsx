@@ -21,6 +21,7 @@ const Line: React.FC<{ line: CheckLine; locked?: boolean; onFix: (l: CheckLine) 
       <Circle className="trip-ready-mark" weight="bold" aria-label="Still to do" />
     )}
     <span className="trip-ready-text">{line.text}</span>
+    {line.meta && <span className="trip-ready-meta">· {line.meta}</span>}
     {line.fix && !locked && (
       <Button kind="text" onClick={() => onFix(line)}>
         {line.fix.label}

@@ -39,6 +39,8 @@ type Props = {
   // Something small beside the close key (a "more" menu).
   menu?: React.ReactNode
   className?: string
+  // Dialog width on wide screens (default 440; 380 for a confirm).
+  width?: number
 }
 
 const SWIPE_PX = 60
@@ -148,6 +150,7 @@ export const Sheet: React.FC<Props> = ({
   discardTitle = 'Discard this?',
   menu,
   className,
+  width,
 }) => {
   const wide = useMedia(WIDE)
   const [asking, setAsking] = useState(false)
@@ -288,7 +291,7 @@ export const Sheet: React.FC<Props> = ({
           footer={null}
           closable={false}
           title={hiddenTitle}
-          width={variant === 'confirm' ? 380 : 440}
+          width={width ?? (variant === 'confirm' ? 380 : 440)}
           className={`ui-dialog is-${variant}`}
           onCancel={requestClose}
           destroyOnHidden

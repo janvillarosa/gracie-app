@@ -39,6 +39,8 @@ type Props = {
   onOpen: (id: string) => void
   onCopy: (code: string) => void
   announce: (text: string) => void
+  // The band of a header sheet: no card of its own, no peeking cards behind it.
+  flat?: boolean
 }
 
 const reduced = () => !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
@@ -54,6 +56,7 @@ export const NextStopDeck: React.FC<Props> = ({
   onOpen,
   onCopy,
   announce,
+  flat,
 }) => {
   const open = stops.filter((s) => !s.done)
   const top = open[0]
@@ -115,88 +118,99 @@ export const NextStopDeck: React.FC<Props> = ({
   const pin = top?.place && top.place.source !== 'manual' ? top.place : null
   const note = top?.notes && top.notes.length <= 80 && !top.notes.includes('\n') ? top.notes : ''
 
+  const content = (
+    <>
+      {top ? (
+        <article
+          ref={cardRef}
+          key={top.id}
+          className={leaving ? 'trip-deck-card is-leaving' : 'trip-deck-card'}
+        >
+          <p className="trip-kicker">Next stop</p>
+          <div className="trip-deck-head">
+            <span className="trip-check trip-deck-check">
+              <Checkbox
+                checked={leaving}
+                disabled={locked}
+                onChange={done}
+                aria-label={`${top.title}, done`}
+              />
+            </span>
+            <h3
+              ref={headRef}
+              tabIndex={-1}
+              className={leaving ? 'trip-deck-title is-ticked' : 'trip-deck-title'}
+            >
+              <button
+                type="button"
+                className="trip-deck-titlebtn"
+                aria-haspopup="dialog"
+                onClick={() => onOpen(top.id)}
+              >
+                {top.heading}
+              </button>
+            </h3>
+          </div>
+          <p className="trip-deck-sub">{top.sub}</p>
+          {note && <p className="trip-deck-note">{note}</p>}
+          {(pin || top.code) && (
+            <div className="trip-deck-actions">
+              {pin && (
+                <a
+                  className="ant-btn ant-btn-primary ant-btn-round ant-btn-lg trip-go"
+                  href={mapsUrl(pin.lat, pin.lng)}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                >
+                  Open Maps
+                </a>
+              )}
+              {top.code && (
+                <CodeReveal
+                  code={top.code}
+                  title={top.linked?.title ?? top.title}
+                  kind={top.linked?.kind ?? top.bookingKind}
+                  line={top.linked?.line ?? top.line}
+                  onCopy={onCopy}
+                />
+              )}
+            </div>
+          )}
+        </article>
+      ) : (
+        <article ref={cardRef} className="trip-deck-card trip-deck-end">
+          {stamp && <span className="trip-stamp">Day done</span>}
+          <p className="trip-kicker">That’s today</p>
+          <h3 ref={headRef} tabIndex={-1} className="trip-deck-title">
+            {tomorrow ? `Tomorrow: ${tomorrow.label}` : 'Nothing planned for tomorrow yet'}
+          </h3>
+          {tomorrow?.first && (
+            <p className="trip-deck-sub">
+              First stop {tomorrow.first}
+              {tomorrow.time ? ` at ${tomorrow.time}` : ''}
+            </p>
+          )}
+          {tomorrow && (
+            <div className="trip-deck-actions">
+              <Button kind="key" onClick={() => onSeeTomorrow(tomorrow.date)}>
+                See tomorrow
+              </Button>
+            </div>
+          )}
+        </article>
+      )}
+    </>
+  )
+  if (flat)
+    return (
+      <section className="trip-deck-flat" aria-label="Next stop">
+        {content}
+      </section>
+    )
   return (
     <div className={`trip-deck-wrap ${more >= 2 ? 'has-2' : more === 1 ? 'has-1' : ''}`}>
       <Card className="trip-deck" aria-label="Next stop" role="region">
-        {top ? (
-          <article
-            ref={cardRef}
-            key={top.id}
-            className={leaving ? 'trip-deck-card is-leaving' : 'trip-deck-card'}
-          >
-            <p className="trip-kicker">Next stop</p>
-            <div className="trip-deck-head">
-              <span className="trip-check trip-deck-check">
-                <Checkbox
-                  checked={leaving}
-                  disabled={locked}
-                  onChange={done}
-                  aria-label={`${top.title}, done`}
-                />
-              </span>
-              <h3
-                ref={headRef}
-                tabIndex={-1}
-                className={leaving ? 'trip-deck-title is-ticked' : 'trip-deck-title'}
-              >
-                <button
-                  type="button"
-                  className="trip-deck-titlebtn"
-                  aria-haspopup="dialog"
-                  onClick={() => onOpen(top.id)}
-                >
-                  {top.heading}
-                </button>
-              </h3>
-            </div>
-            <p className="trip-deck-sub">{top.sub}</p>
-            {note && <p className="trip-deck-note">{note}</p>}
-            {(pin || top.code) && (
-              <div className="trip-deck-actions">
-                {pin && (
-                  <a
-                    className="ant-btn ant-btn-primary ant-btn-round ant-btn-lg trip-go"
-                    href={mapsUrl(pin.lat, pin.lng)}
-                    target="_blank"
-                    rel="noreferrer noopener"
-                  >
-                    Open Maps
-                  </a>
-                )}
-                {top.code && (
-                  <CodeReveal
-                    code={top.code}
-                    title={top.linked?.title ?? top.title}
-                    kind={top.linked?.kind ?? top.bookingKind}
-                    line={top.linked?.line ?? top.line}
-                    onCopy={onCopy}
-                  />
-                )}
-              </div>
-            )}
-          </article>
-        ) : (
-          <article ref={cardRef} className="trip-deck-card trip-deck-end">
-            {stamp && <span className="trip-stamp">Day done</span>}
-            <p className="trip-kicker">That’s today</p>
-            <h3 ref={headRef} tabIndex={-1} className="trip-deck-title">
-              {tomorrow ? `Tomorrow: ${tomorrow.label}` : 'Nothing planned for tomorrow yet'}
-            </h3>
-            {tomorrow?.first && (
-              <p className="trip-deck-sub">
-                First stop {tomorrow.first}
-                {tomorrow.time ? ` at ${tomorrow.time}` : ''}
-              </p>
-            )}
-            {tomorrow && (
-              <div className="trip-deck-actions">
-                <Button kind="key" onClick={() => onSeeTomorrow(tomorrow.date)}>
-                  See tomorrow
-                </Button>
-              </div>
-            )}
-          </article>
-        )}
+        {content}
       </Card>
     </div>
   )

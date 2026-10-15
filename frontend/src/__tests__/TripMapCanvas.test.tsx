@@ -392,7 +392,7 @@ describe('without a connection', () => {
     renderTrips(`/app/trips/${t.trip_id}`)
     await screen.findByRole('heading', { name: 'Lisbon & Porto' })
     expect(FakeMap.made).toBe(0)
-    expect(document.querySelector('.trip-shell')).toHaveClass('is-mapless')
+    expect(document.querySelector('.trip-shell')).not.toHaveClass('has-map')
     expect(screen.getByText('The map comes back when you’re online.')).toBeInTheDocument()
     expect(screen.queryByRole('complementary', { name: 'Map' })).not.toBeInTheDocument()
   })
