@@ -83,6 +83,12 @@ Spec: `docs/superpowers/specs/2026-10-14-trips-api-persistence-design.md`.
 - Packing-list link is stale (and relinked) only for not-found, soft-deleted, or a list in
   another room (e.g. left behind in a deleted solo room after a join); other lookup errors
   surface. Lists are not moved on join.
+- Places privacy/limits: `lang` is mapped to Photon's set (en/de/fr/it, else omitted);
+  upstream names/addresses are truncated (200/300) and out-of-range coordinates dropped;
+  `/places/*` query strings are redacted from the access log; the tz finder (tzf, ~34 MB
+  heap) loads lazily on the first lookup and never when `PHOTON_BASE_URL` is unset. Rate
+  limiter burst is `ratelimit.Burst(rps)` (>= 1). All trip endpoints, including
+  packing-list, share the per-user trips limiter.
 - Places: `PHOTON_BASE_URL` unset or upstream failure => `200 {"results":[],"degraded":true}`.
 
 ## Testing

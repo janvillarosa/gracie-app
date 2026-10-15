@@ -3,6 +3,7 @@ package router
 import (
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -21,9 +22,21 @@ type Handlers struct {
 	Places *handlers.PlacesHandler
 }
 
+// redactPlacesQuery keeps /places/* query strings (search text, exact coordinates) out of
+// the access log. Logger reads RequestURI; handlers read URL.RawQuery, which is untouched.
+func redactPlacesQuery(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasPrefix(r.URL.Path, "/places/") {
+			r.RequestURI = r.URL.Path
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 func NewRouter(userFinder authmw.UserFinder, h Handlers) http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
+	r.Use(redactPlacesQuery)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Compress(5, "application/json"))

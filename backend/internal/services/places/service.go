@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math"
-	"regexp"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -17,7 +16,9 @@ import (
 	"github.com/janvillarosa/gracie-app/backend/internal/store"
 )
 
-var reLang = regexp.MustCompile(`^[a-z]{2}(-[A-Za-z]{2})?$`)
+// photonLangs is the set Photon supports for localised names; anything else is left out
+// of the upstream request (and the cache key) so it cannot cause upstream errors.
+var photonLangs = map[string]bool{"en": true, "de": true, "fr": true, "it": true}
 
 // Result is the places API payload.
 type Result struct {
@@ -42,11 +43,13 @@ func validCoords(lat, lng float64) bool {
 	return lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180 && !math.IsNaN(lat) && !math.IsNaN(lng)
 }
 
+// normLang maps a client language tag ("de-AT") to a Photon language, or "" to omit it.
 func normLang(l string) string {
-	if reLang.MatchString(l) {
-		return l
+	base, _, _ := strings.Cut(strings.ToLower(l), "-")
+	if photonLangs[base] {
+		return base
 	}
-	return "en"
+	return ""
 }
 
 func cacheKey(q string, lat, lng *float64, lang string) string {

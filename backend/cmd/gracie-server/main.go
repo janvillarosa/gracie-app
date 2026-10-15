@@ -87,12 +87,13 @@ func main() {
 	} else {
 		log.Printf("places: PHOTON_BASE_URL unset; place search will report degraded")
 	}
-	tz, err := places.NewTZF()
-	if err != nil {
-		log.Printf("places: timezone finder unavailable: %v", err)
-		tz = nil
+	// The timezone finder costs ~34 MB of heap and ~150 ms to load, so it is built lazily on
+	// the first place lookup and not at all when no geocoder is configured.
+	var tz places.TZResolver
+	if geo != nil {
+		tz = places.NewLazyTZF()
 	}
-	placesSvc := places.NewService(geo, tz, placeCacheRepo, ratelimit.New(cfg.PlacesServerRPS, int(cfg.PlacesServerRPS)*4))
+	placesSvc := places.NewService(geo, tz, placeCacheRepo, ratelimit.New(cfg.PlacesServerRPS, ratelimit.Burst(cfg.PlacesServerRPS)))
 
 	authSvc, err := services.NewAuthService(usersRepo, cfg.EncKeyFile, cfg.APIKeyTTLHours)
 	if err != nil {
@@ -104,8 +105,8 @@ func main() {
 	roomHandler := handlers.NewRoomHandler(roomSvc, usersRepo, []byte(cfg.AvatarSalt))
 	listHandler := handlers.NewListHandler(listSvc)
 
-	tripHandler := handlers.NewTripHandler(tripSvc, ratelimit.New(cfg.TripsUserRPS, int(cfg.TripsUserRPS)*4))
-	placesHandler := handlers.NewPlacesHandler(placesSvc, ratelimit.New(cfg.PlacesUserRPS, int(cfg.PlacesUserRPS)*4))
+	tripHandler := handlers.NewTripHandler(tripSvc, ratelimit.New(cfg.TripsUserRPS, ratelimit.Burst(cfg.TripsUserRPS)))
+	placesHandler := handlers.NewPlacesHandler(placesSvc, ratelimit.New(cfg.PlacesUserRPS, ratelimit.Burst(cfg.PlacesUserRPS)))
 
 	r := router.NewRouter(usersRepo, router.Handlers{Auth: authHandler, User: userHandler, Room: roomHandler, List: listHandler, Trip: tripHandler, Places: placesHandler})
 
