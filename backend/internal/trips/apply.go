@@ -175,6 +175,10 @@ func tripChanges(t *models.Trip, p TripPatch) []change {
 		v := *p.TZ
 		ch = append(ch, change{"tz", func() { t.TZ = v }})
 	}
+	if p.Icon != nil {
+		v := *p.Icon
+		ch = append(ch, change{"icon", func() { t.Icon = v }})
+	}
 	if p.Stops.Set {
 		var v []models.Place
 		if p.Stops.Val != nil {

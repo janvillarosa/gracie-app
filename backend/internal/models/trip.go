@@ -90,6 +90,8 @@ type TripFields struct {
 	EndDate       *string `bson:"end_date,omitempty" json:"end_date,omitempty"`
 	TZ            string  `bson:"tz,omitempty" json:"tz,omitempty"`
 	PackingListID *string `bson:"packing_list_id,omitempty" json:"packing_list_id,omitempty"`
+	// Icon is one of the trips icon enum values (see package trips); empty means none.
+	Icon string `bson:"icon,omitempty" json:"icon,omitempty"`
 	// Stops is a hand-entered ordered route (cap 12). Display only; replaced as a whole list.
 	Stops []Place `bson:"stops,omitempty" json:"stops,omitempty"`
 	// Days maps "YYYY-MM-DD" to a short label (cap 60 entries); each date has its own clock.
