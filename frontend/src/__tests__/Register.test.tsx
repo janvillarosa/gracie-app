@@ -5,6 +5,15 @@ import { MemoryRouter } from 'react-router-dom'
 import { Register } from '@pages/Register'
 
 describe('Register page', () => {
+  it('links the logo back to the landing page', () => {
+    render(
+      <MemoryRouter>
+        <Register />
+      </MemoryRouter>,
+    )
+    expect(screen.getByRole('link', { name: 'Bauhouse home' })).toHaveAttribute('href', '/')
+  })
+
   it('disables submit until valid and calls API on submit', async () => {
     render(
       <MemoryRouter>

@@ -46,7 +46,6 @@ export const Login: React.FC = () => {
   return (
     <AuthShell
       title="Log in"
-      logoTo="/login"
       footer={
         <Typography.Text type="secondary">
           New here?{' '}
