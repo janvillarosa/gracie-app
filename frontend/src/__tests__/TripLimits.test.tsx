@@ -62,8 +62,8 @@ describe('limits in the editors', () => {
     renderTrips(`/app/trips/${TRIP.trip_id}`)
     await userEvent.click(await screen.findByRole('button', { name: 'Pack the daypack' }))
     const panel = await screen.findByRole('dialog', { name: 'Pack the daypack' })
-    await userEvent.click(within(panel).getByRole('button', { name: /^Note/ }))
-    const notes = await screen.findByLabelText('Notes')
+    // The note is on show in the desk's inspector: no picker to open.
+    const notes = within(panel).getByLabelText('Notes')
     await userEvent.click(notes)
     await userEvent.paste('é'.repeat(1100))
     await userEvent.tab()

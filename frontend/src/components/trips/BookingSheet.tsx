@@ -18,6 +18,7 @@ import {
   Button,
   DetailGroup,
   Field,
+  InlineWhen,
   NavRow,
   Sheet,
   SheetActions,
@@ -144,6 +145,8 @@ export const BookingSheet: React.FC<Props> = ({
   const [codeOpen, setCodeOpen] = useState(false)
   const [kindOpen, setKindOpen] = useState(false)
   const isNew = mode === 'new'
+  // The desktop inspector edits in place (no picker sheets); the phone sheet opens pickers.
+  const inline = variant === 'panel'
   const b: Draft = isNew ? draft : (booking as Booking)
   const kind = b.kind
   const rows = KIND_ROWS[kind ?? 'ticket']
@@ -387,34 +390,66 @@ export const BookingSheet: React.FC<Props> = ({
                 kind={k}
                 line={[start.t, b.place?.name].filter(Boolean).join(' · ')}
                 onCopy={onCopy}
-                onEdit={locked ? undefined : () => setCodeOpen(true)}
+                onEdit={locked || inline ? undefined : () => setCodeOpen(true)}
               />
             )}
           </SheetActions>
         }
         details={
           <DetailGroup label="Details">
-            <NavRow
-              label={rows.start}
-              value={whenText(start.d, start.t, b.start_tz) || 'Add a time'}
-              empty={!start.d}
-              disabled={locked}
-              defaultOpen={focusTime}
-              picker={{
-                title: rows.start,
-                content: () => (
-                  <WhenPick
-                    days={days}
-                    day={start.d || null}
-                    time={start.t || null}
-                    timeLabel="Starts"
-                    onDay={setStartDay}
-                    onTime={setStartTime}
-                  />
-                ),
-              }}
-            />
-            {rows.hasEnd && (
+            {inline && (
+              <InlineWhen
+                label={rows.start}
+                days={days}
+                day={start.d || firstDay || null}
+                time={start.t || null}
+                dayLabel={`${rows.start} day`}
+                timeLabel={`${rows.start} time`}
+                suffix={zoneSuffix(b.start_tz).trim()}
+                disabled={locked}
+                autoFocusTime={focusTime}
+                onDay={setStartDay}
+                onTime={setStartTime}
+              />
+            )}
+            {inline && rows.hasEnd && (
+              <InlineWhen
+                label={rows.end}
+                days={days}
+                day={end.d || start.d || firstDay || null}
+                time={end.t || null}
+                clearableTime
+                dayLabel={`${rows.end} day`}
+                timeLabel={`${rows.end} time`}
+                suffix={zoneSuffix(b.end_tz || b.end_place?.tz || b.start_tz).trim()}
+                disabled={locked}
+                onDay={setEndDay}
+                onTime={setEndTime}
+              />
+            )}
+            {!inline && (
+              <NavRow
+                label={rows.start}
+                value={whenText(start.d, start.t, b.start_tz) || 'Add a time'}
+                empty={!start.d}
+                disabled={locked}
+                defaultOpen={focusTime}
+                picker={{
+                  title: rows.start,
+                  content: () => (
+                    <WhenPick
+                      days={days}
+                      day={start.d || null}
+                      time={start.t || null}
+                      timeLabel="Starts"
+                      onDay={setStartDay}
+                      onTime={setStartTime}
+                    />
+                  ),
+                }}
+              />
+            )}
+            {!inline && rows.hasEnd && (
               <NavRow
                 label={rows.end}
                 value={
@@ -482,51 +517,86 @@ export const BookingSheet: React.FC<Props> = ({
                 }}
               />
             )}
-            <NavRow
-              label="Code"
-              value={code ? mask(code) : 'Add confirmation code'}
-              empty={!code}
-              disabled={locked}
-              open={codeOpen}
-              onOpenChange={setCodeOpen}
-              picker={{
-                title: 'Confirmation code',
-                content: (close) => (
-                  <Field
-                    aria-label="Confirmation code"
-                    defaultValue={code ?? ''}
-                    maxLength={64}
-                    placeholder="Confirmation code"
-                    // biome-ignore lint/a11y/noAutofocus: the picker opens to type in it
-                    autoFocus
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
-                    }}
-                    onBlur={(e) => {
-                      const v = e.target.value.trim()
-                      if (v !== (code ?? '')) apply({ confirmation_code: v })
-                      close()
-                    }}
-                  />
-                ),
-              }}
-            />
-            <NavRow
-              label="Note"
-              value={b.notes ? b.notes.split('\n')[0] : 'Add a note'}
-              empty={!b.notes}
-              disabled={locked}
-              picker={{
-                title: 'Note',
-                content: () => (
-                  <NotePick
-                    value={b.notes ?? ''}
-                    max={LIMITS.itemNotesBytes}
-                    onCommit={(v) => apply({ notes: v })}
-                  />
-                ),
-              }}
-            />
+            {inline && (
+              <div className="ui-inline-row">
+                <span className="ui-navrow-label" aria-hidden>
+                  Code
+                </span>
+                <Field
+                  aria-label="Confirmation code"
+                  className="ui-inline-input"
+                  defaultValue={code ?? ''}
+                  disabled={locked}
+                  maxLength={64}
+                  placeholder="Add confirmation code"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+                  }}
+                  onBlur={(e) => {
+                    const v = e.target.value.trim()
+                    if (v !== (code ?? '')) apply({ confirmation_code: v })
+                  }}
+                />
+              </div>
+            )}
+            {!inline && (
+              <NavRow
+                label="Code"
+                value={code ? mask(code) : 'Add confirmation code'}
+                empty={!code}
+                disabled={locked}
+                open={codeOpen}
+                onOpenChange={setCodeOpen}
+                picker={{
+                  title: 'Confirmation code',
+                  content: (close) => (
+                    <Field
+                      aria-label="Confirmation code"
+                      defaultValue={code ?? ''}
+                      maxLength={64}
+                      placeholder="Confirmation code"
+                      // biome-ignore lint/a11y/noAutofocus: the picker opens to type in it
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+                      }}
+                      onBlur={(e) => {
+                        const v = e.target.value.trim()
+                        if (v !== (code ?? '')) apply({ confirmation_code: v })
+                        close()
+                      }}
+                    />
+                  ),
+                }}
+              />
+            )}
+            {inline ? (
+              <div className="ui-inline-note">
+                <NotePick
+                  value={b.notes ?? ''}
+                  max={LIMITS.itemNotesBytes}
+                  autoFocus={false}
+                  onCommit={(v) => apply({ notes: v })}
+                />
+              </div>
+            ) : (
+              <NavRow
+                label="Note"
+                value={b.notes ? b.notes.split('\n')[0] : 'Add a note'}
+                empty={!b.notes}
+                disabled={locked}
+                picker={{
+                  title: 'Note',
+                  content: () => (
+                    <NotePick
+                      value={b.notes ?? ''}
+                      max={LIMITS.itemNotesBytes}
+                      onCommit={(v) => apply({ notes: v })}
+                    />
+                  ),
+                }}
+              />
+            )}
             {!isNew && linked && linked.length > 0 && (
               <NavRow
                 label="Linked to"

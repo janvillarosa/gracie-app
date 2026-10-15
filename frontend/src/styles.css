@@ -2881,6 +2881,8 @@ textarea.notes-textarea {
   --lead-col: calc(var(--lead) + var(--gap));
   --time-w: 48px;
   --detail-label-w: 96px;
+  --stamp-fg: var(--ink);
+  --stamp-bg: var(--panel-subtle);
   --detail-inset: 16px;
   /* Sheets: side inset, scrim, tallest content, and the space between the four tiers. */
   --sheet-inset: 20px;

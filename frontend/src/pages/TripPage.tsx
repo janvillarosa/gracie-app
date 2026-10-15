@@ -80,6 +80,7 @@ import { listFor, useScreenActions, type Ctx } from './trip/useScreenActions'
 import { useDayFolding } from './trip/useDayFolding'
 import { useDayInView } from './trip/useDayInView'
 import { useAddBarShortcut } from './trip/useAddBarShortcut'
+import { useInspectorKeys } from './trip/useInspectorKeys'
 import { panes, useDeskScroll } from './trip/useDeskScroll'
 import { useDeck } from './trip/useDeck'
 import { useItemSheet } from './trip/useItemSheet'
@@ -680,6 +681,15 @@ const TripScreen: React.FC<{
   })
 
   useAddBarShortcut(desktop)
+  // J/K and Alt+Up/Down: the next or previous item in the inspector.
+  useInspectorKeys(desktop, selected, (id, position, total) => {
+    ctx.current.openItem(id)
+    const title =
+      trip.todos.find((t) => t.todo_id === id)?.title ??
+      trip.bookings.find((b) => b.booking_id === id)?.title ??
+      ''
+    setAnnouncement(`${title}, ${position} of ${total}`)
+  })
   // Opening, switching or closing the inspector never moves the Days pane. Only a selected row
   // that is hidden (under the sticky header or the composer) is brought just into view.
   useEffect(() => {
