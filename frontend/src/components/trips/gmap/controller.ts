@@ -215,9 +215,14 @@ export class MapController {
   /** Fit the stops in view, clear of the view's own chrome. */
   fit(force: boolean) {
     const p = this.props
-    const stops = this.fitStops(force)
+    let stops: { lat: number; lng: number }[] = this.fitStops(force)
+    let key = p.scene.stops.map((s) => `${s.id}:${s.lat}:${s.lng}`).join('|')
+    // Nothing in this view: look at the trip's places rather than stay on the whole world.
+    if (!stops.length) {
+      stops = p.home ?? []
+      key = `home:${stops.map((s) => `${s.lat}:${s.lng}`).join('|')}`
+    }
     if (!stops.length) return
-    const key = p.scene.stops.map((s) => `${s.id}:${s.lat}:${s.lng}`).join('|')
     if (!force && (!p.following || key === this.lastFit)) return
     if (!this.ready) {
       this.pendingFit = force || this.pendingFit === 'forced' ? 'forced' : 'auto'

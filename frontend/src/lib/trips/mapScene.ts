@@ -66,8 +66,14 @@ const KIND_CATEGORY: Record<BookingKind, TripCategory> = {
 
 const pinnable = hasPin
 
+// Getting there and sleeping are not stops: flights, trains, cars and stays (and todos filed as
+// transport or stay) stay off the map, which is for the places you go to.
+const OFF_MAP: ReadonlySet<TripCategory> = new Set<TripCategory>(['transport', 'stay'])
+const todoOnMap = (t: TripTodo) => pinnable(t.place) && !OFF_MAP.has(t.category)
+const bookingOnMap = (b: Booking) => pinnable(b.place) && !OFF_MAP.has(KIND_CATEGORY[b.kind])
+
 const todoStop = (t: TripTodo, order: number, dayIndex: number): MapStop | null =>
-  pinnable(t.place)
+  pinnable(t.place) && !OFF_MAP.has(t.category)
     ? {
         id: t.todo_id,
         lat: t.place.lat,
@@ -83,7 +89,7 @@ const todoStop = (t: TripTodo, order: number, dayIndex: number): MapStop | null 
     : null
 
 const bookingStop = (b: Booking, order: number, dayIndex: number): MapStop | null =>
-  pinnable(b.place)
+  pinnable(b.place) && !OFF_MAP.has(KIND_CATEGORY[b.kind])
     ? {
         id: b.booking_id,
         lat: b.place.lat,
@@ -209,7 +215,23 @@ function dedupeByPlace(stops: MapStop[], selectedId: string | null, nextId: stri
 
 /** Whether the trip has anything to put on a map at all (idea or day place). */
 export function hasMapPlaces(trip: Pick<Trip, 'todos' | 'bookings'>): boolean {
-  return trip.todos.some((t) => pinnable(t.place)) || trip.bookings.some((b) => pinnable(b.place))
+  return trip.todos.some(todoOnMap) || trip.bookings.some(bookingOnMap)
+}
+
+/** Every place of the trip the map would draw (days, ideas and anything dated outside the trip),
+ *  else the trip's destination: where an empty view falls back to instead of the whole world. */
+export function tripPoints(
+  trip: Pick<Trip, 'todos' | 'bookings'>,
+  destination?: LatLng | null,
+): LatLng[] {
+  const out: LatLng[] = []
+  for (const t of trip.todos)
+    if (todoOnMap(t) && t.place)
+      out.push({ lat: t.place.lat as number, lng: t.place.lng as number })
+  for (const b of trip.bookings)
+    if (bookingOnMap(b) && b.place)
+      out.push({ lat: b.place.lat as number, lng: b.place.lng as number })
+  return out.length ? out : destination ? [destination] : []
 }
 
 /** "Quinta da Regaleira, Sintra" → "Quinta da Regaleira, Si…": cut at a limit, with an ellipsis. */

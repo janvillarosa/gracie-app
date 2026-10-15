@@ -26,6 +26,9 @@ export type MapViewProps = {
   hotId?: string | null
   // The item open in a docked panel: the map centres on it in the space that is left.
   focusPoint?: LatLng | null
+  // Where to look when the scene has no stops (e.g. a day with nothing placed, or every place
+  // dated outside the trip): the trip's places, else its destination. Never the whole world.
+  home?: LatLng[]
   focusInset?: number
   // Space the view's own chrome covers, so fitted pins never sit under it.
   fitPadding?: { top: number; bottom: number; left: number; right: number }
