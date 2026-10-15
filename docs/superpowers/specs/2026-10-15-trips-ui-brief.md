@@ -298,8 +298,9 @@ flagged done days, and it didn't say which items clashed. Gaps now show where th
   Esc, an outside click or a pan dismisses it.
 - Highlighting a place slip in the add bar previews its pin on the map.
 - **Phone map sheet:** pinch-zoom and pan; a long-press (not a tap) drops the temporary pin.
-- **Tiles:** development uses Protomaps' public demo PMTiles. The production host is still an open
-  decision.
+- **Tiles (decided 2026-10-15): the Protomaps hosted API** (TileJSON, key in `VITE_PROTOMAPS_API_KEY`,
+  restricted by domain). This supersedes self-hosted PMTiles in 7.1. There is no offline tile
+  prefetch (the API terms forbid it); offline, the map shows pins on a plain ground.
 
 ## 7. Constraints and open decisions
 

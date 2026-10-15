@@ -54,7 +54,7 @@ objects: a trip's packing list is a normal Bauhouse List.
 
 - Stack: Go + chi API, MongoDB; React 18 + Vite + TypeScript, Ant Design + Tailwind v4,
   TanStack Query, React Router. Self-hosted fonts; no third-party font or script origins.
-  Map tiles will need one explicit allowlisted origin (decision open).
+  Map tiles come from one allowed origin, `api.protomaps.com`.
 - Places come from an OSM geocoder (Photon) via a backend proxy. The UI must show OSM/ODbL
   attribution. Search can degrade; manual place or dropped pin is the fallback.
 - Times are wall-clock + IANA zone. A flight can start and end in different zones.
@@ -66,8 +66,8 @@ objects: a trip's packing list is a normal Bauhouse List.
 - Multi-city trips: the trip keeps one destination and one zone. The route ("Lisbon → Porto") is
   a hand-entered list of stops. Todos store their own place and zone. Todos and bookings
   record who added and last changed them. Days can carry labels.
-- Maps: MapLibre GL with self-hosted Protomaps (PMTiles) vector tiles. No third-party tile
-  origin.
+- Maps: MapLibre GL with the Protomaps hosted API (one allowed third-party origin,
+  `api.protomaps.com`). No offline tile prefetch.
 
 ## Brand Commitments
 
