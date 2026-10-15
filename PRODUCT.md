@@ -53,10 +53,12 @@ objects: a trip's packing list is a normal Bauhouse List.
 ## Capabilities and Constraints
 
 - Stack: Go + chi API, MongoDB; React 18 + Vite + TypeScript, Ant Design + Tailwind v4,
-  TanStack Query, React Router. Self-hosted fonts; no third-party font or script origins.
-  Map tiles come from one allowed origin, `api.protomaps.com`.
-- Places come from an OSM geocoder (Photon) via a backend proxy. The UI must show OSM/ODbL
-  attribution. Search can degrade; manual place or dropped pin is the fallback.
+  TanStack Query, React Router. Self-hosted fonts. The only third-party origins are Google Maps
+  Platform (`maps.googleapis.com`, `maps.gstatic.com`), loaded only when the map is shown.
+- Places come from Google Places (New) Autocomplete and Geocoding, called in the browser. By
+  Google's terms, only `place_id` is stored indefinitely. Google coordinates are cached for at most
+  30 days (refreshed online, purged on the server). Google names and addresses are never stored, so
+  todo titles are user text. Manual places and dropped pins remain the fallback.
 - Times are wall-clock + IANA zone. A flight can start and end in different zones.
 - Packing list linking is online-only.
 - Trip delete is soft; any member can restore within 30 days.
@@ -66,8 +68,7 @@ objects: a trip's packing list is a normal Bauhouse List.
 - Multi-city trips: the trip keeps one destination and one zone. The route ("Lisbon → Porto") is
   a hand-entered list of stops. Todos store their own place and zone. Todos and bookings
   record who added and last changed them. Days can carry labels.
-- Maps: MapLibre GL with the Protomaps hosted API (one allowed third-party origin,
-  `api.protomaps.com`). No offline tile prefetch.
+- Maps: the Google Maps JavaScript API with a cloud-styled Map ID. No map when offline.
 
 ## Brand Commitments
 
