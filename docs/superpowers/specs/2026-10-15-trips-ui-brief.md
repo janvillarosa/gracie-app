@@ -446,6 +446,21 @@ view" as a camera move.
   - opening an item, and only if its pin is off-screen;
   - previewing a drag, and only if the place is off-screen.
 
+## 6r. Days stack and playful drag (2026-10-15)
+
+- **The Days column stack** uses exactly the List page's stack:
+  - the same overlap with no corner notches;
+  - the same borders and lift;
+  - a peek sheet at the end of the scroll.
+  - The Ideas and Map columns share the same radius and lift, with their tops and bottoms aligned.
+- **Dragging an idea is playful:**
+  - It lifts into a paper slip with a −2° tilt and follows the pointer with a slight spring, swaying with
+    speed.
+  - The day header gets the highlighter sweep, and empty slots gently "breathe".
+  - The drop tucks in with a small settle, and the counts tick up or down.
+  - A cancel floats back to where it started.
+  - All of it uses transform and opacity only, holds 60fps at 6× CPU, and turns off under reduced motion.
+
 ## 7. Constraints and open decisions
 
 Constraints:
