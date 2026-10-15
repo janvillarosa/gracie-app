@@ -433,6 +433,19 @@ and Esc closes. At 1200px and wider it takes the map column's place while open. 
 time, place and category takes 5 clicks or fewer. The phone keeps the existing row-to-picker flow.
 Context lines leave an 8px gap before the stamp.
 
+## 6q. The map stays put (2026-10-15)
+
+User feedback: the map jumped while the list scrolled. This supersedes "the map follows the day in
+view" as a camera move.
+- **No camera moves on scroll.** The map fits the whole trip on load, and scrolling only changes
+  emphasis: the day in view gets its colour, and other days dim.
+- **The camera moves only on explicit actions:**
+  - Fit day or Show all days;
+  - "Show on map";
+  - picking a day in the day list;
+  - opening an item, and only if its pin is off-screen;
+  - previewing a drag, and only if the place is off-screen.
+
 ## 7. Constraints and open decisions
 
 Constraints:
