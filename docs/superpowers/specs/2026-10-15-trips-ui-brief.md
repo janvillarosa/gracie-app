@@ -361,6 +361,34 @@ Every sheet fills the same four tiers, in order (reference: `.impeccable/mocks/s
 This supersedes the no-labels anatomy in 6f and the booking edit layout in 6l. Booking creation
 still starts with the kind chips.
 
+## 6n. Desktop planning desk (2026-10-15)
+
+User feedback: the desktop view was the phone layout stretched wide (a 410px column plus a mostly
+empty map), and planning before the trip happens on desktop. The user chose option A
+(sketch: `.impeccable/mocks/desktop-planning.html`).
+
+- **At 1200px and wider, three columns:** Ideas (300px), then Days (fills the rest), then Map
+  (about 420px). All three are visible at once. Ideas sits in its own column instead of a tab or
+  drawer; you drag an idea onto a day, and "Move to…" still works. PillNav on desktop is
+  **Plan · Bookings**. Everything below 1200px keeps the current layouts.
+- **Every date in the trip shows on desktop,** including empty days. An empty day is a dashed slot,
+  "Nothing planned yet", which turns into a yellow drop target while an idea is being dragged.
+  Days before today fold as before.
+- **Before the trip,** a **"Ready to go?"** checklist sits above the days and replaces the Next stop
+  card. Each line links to the fix:
+  - bookings added (flights, trains);
+  - a stay covering every night (this check returns here only; it is not an inline gap);
+  - empty days;
+  - packing progress.
+
+  During the trip, the Next stop card shows there instead.
+- **The map column** only claims space when the trip has places. Before that it shows a quiet
+  empty state ("Places you add show up here"). It follows the day in view as before.
+- **One add bar** sits under the Days column, with the target chip including Ideas. The Ideas column
+  has no add field of its own.
+- **The header** spans the Days column: icon, title on one line, route · dates · countdown, and
+  avatars on the right.
+
 ## 7. Constraints and open decisions
 
 Constraints:
