@@ -27,7 +27,7 @@ const bk = (n: number, p: Partial<Booking>): Booking => ({
   created_by: MIA,
   ...p,
 })
-const place = { name: 'Tasca', lat: 38.78, lng: -9.39, source: 'photon' as const }
+const place = { name: 'Tasca', lat: 38.78, lng: -9.39, source: 'pin' as const }
 
 beforeEach(async () => {
   await resetTripsWorld()

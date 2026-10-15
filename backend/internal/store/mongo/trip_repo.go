@@ -24,6 +24,10 @@ func (r *TripRepo) EnsureIndexes(ctx context.Context) error {
 		{Keys: bson.D{{Key: "room_id", Value: 1}, {Key: "deleted_at", Value: 1}, {Key: "trip_id", Value: 1}, {Key: "version", Value: 1}, {Key: "deleted_by", Value: 1}}},
 		// purge_at is only set on soft delete; Mongo removes the trip 30 days later.
 		{Keys: bson.D{{Key: "purge_at", Value: 1}}, Options: options.Index().SetName("purge_at_ttl").SetExpireAfterSeconds(0)},
+		// Only trips holding Google coordinates carry coords_expire_at, so the daily purge reads
+		// just the due ones (partial index: trips without it are not indexed at all).
+		{Keys: bson.D{{Key: "coords_expire_at", Value: 1}}, Options: options.Index().SetName("coords_expire_at").
+			SetPartialFilterExpression(bson.D{{Key: "coords_expire_at", Value: bson.D{{Key: "$exists", Value: true}}}})},
 	})
 	return err
 }
@@ -73,6 +77,20 @@ func (r *TripRepo) Manifest(ctx context.Context, roomID string) ([]store.TripStu
 
 func (r *TripRepo) GetMany(ctx context.Context, roomID string, ids []string) ([]models.Trip, error) {
 	cur, err := r.col().Find(ctx, bson.D{{Key: "room_id", Value: roomID}, {Key: "trip_id", Value: bson.D{{Key: "$in", Value: ids}}}})
+	if err != nil {
+		return nil, err
+	}
+	var out []models.Trip
+	if err := cur.All(ctx, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (r *TripRepo) ListCoordsExpired(ctx context.Context, before time.Time, limit int) ([]models.Trip, error) {
+	cur, err := r.col().Find(ctx,
+		bson.D{{Key: "coords_expire_at", Value: bson.D{{Key: "$lt", Value: before.UTC()}}}},
+		options.Find().SetSort(bson.D{{Key: "coords_expire_at", Value: 1}}).SetLimit(int64(limit)).SetHint("coords_expire_at"))
 	if err != nil {
 		return nil, err
 	}

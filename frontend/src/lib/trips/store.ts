@@ -24,6 +24,7 @@ import {
   type StoredTrip,
   type TripDB,
 } from './db'
+import { sanitizePatch } from './places'
 import { mergeDelta, newId, newOpId, renderTrip } from './replay'
 
 export type TripApi = {
@@ -379,7 +380,8 @@ export class TripStore {
       type,
       trip_id: tripId,
       ...(entityId ? { entity_id: entityId } : {}),
-      ...(patch ? { patch } : {}),
+      // Google names and addresses are display-only: never stored, never sent.
+      ...(patch ? { patch: sanitizePatch(patch) } : {}),
     }
     // Until the database stamps it, the op carries a placeholder identity.
     const op: TripOp = { ...draft, client_id: '', seq: 0 }

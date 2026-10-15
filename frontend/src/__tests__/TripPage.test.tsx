@@ -1,3 +1,4 @@
+import { demoSource, setPlacesSource } from '../lib/trips/placesSource'
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
@@ -240,7 +241,7 @@ describe('Next-stop deck', () => {
     const t = lisbonTrip()
     t.todos[3] = {
       ...t.todos[3],
-      place: { name: 'Pena Palace', lat: 38.78, lng: -9.39, source: 'photon' },
+      place: { name: 'Pena Palace', lat: 38.78, lng: -9.39, source: 'pin' },
     }
     seed(t)
     open()
@@ -288,7 +289,7 @@ describe('Next-stop deck', () => {
     t.todos[4] = {
       ...t.todos[4],
       title: 'Lunch',
-      place: { name: 'Tascantiga', lat: 38.8, lng: -9.38, source: 'photon' },
+      place: { name: 'Tascantiga', lat: 38.8, lng: -9.38, source: 'pin' },
     }
     t.todos[3] = { ...t.todos[3], done: true }
     seed(t)
@@ -307,7 +308,7 @@ describe('Next-stop deck', () => {
       confirmation_code: 'CP-77120',
       starts_at: `${rel(0)}T23:59`,
       start_tz: 'Europe/Lisbon',
-      place: { name: 'Rossio station', lat: 38.714, lng: -9.1409, source: 'photon' },
+      place: { name: 'Rossio station', lat: 38.714, lng: -9.1409, source: 'pin' },
       created_by: MIA,
     })
     seed(t)
@@ -656,7 +657,7 @@ describe('Rows', () => {
     const t = lisbonTrip()
     t.todos[4] = {
       ...t.todos[4],
-      place: { name: 'Tascantiga', lat: 38.8, lng: -9.38, source: 'photon' },
+      place: { name: 'Tascantiga', lat: 38.8, lng: -9.38, source: 'pin' },
     }
     seed(t)
     open()
@@ -947,19 +948,39 @@ describe('The add bar', () => {
     open()
     await userEvent.type(await screen.findByRole('combobox', { name: 'Add to today' }), 'Pena')
     await userEvent.click(await screen.findByRole('option', { name: /Pena Palace/ }))
+    // Stored without a name (Google content): a blank title, the place id and coordinates.
     await waitFor(() => {
-      const added = serverTodos().filter((x) => x.title === 'Pena Palace' && x.place)
+      const added = serverTodos().filter((x) => x.place?.place_id === 'demo:pena')
       expect(added.length).toBe(1)
+      expect(added[0].title).toBe('')
+      expect(added[0].place?.name).toBeUndefined()
+      expect(added[0].place?.coords_fetched_at).toBeTruthy()
     })
+    // The row shows the place's name from the session cache.
+    expect(await screen.findByText('Pena Palace', { selector: '.trip-title' })).toBeInTheDocument()
+  })
+
+  it('shows Powered by Google under the suggestions (the demo list says it is a demo)', async () => {
+    seed(TRIP)
+    open()
+    await userEvent.type(await screen.findByRole('combobox', { name: 'Add to today' }), 'Pena')
+    await screen.findByRole('option', { name: /Pena Palace/ })
+    expect(screen.getByText('Demo places (no Google key)')).toBeInTheDocument()
+    expect(screen.queryByText(/OpenStreetMap/)).not.toBeInTheDocument()
   })
 
   it('falls back when place search is unavailable, and the typed text still adds', async () => {
-    tripServer.degradedPlaces = true
+    setPlacesSource({
+      ...demoSource,
+      suggest: async () => {
+        throw new Error('search is down')
+      },
+    })
     seed(TRIP)
     open()
     await userEvent.type(await screen.findByRole('combobox', { name: 'Add to today' }), 'Lisbon')
     expect(
-      await screen.findByText('Search is unavailable. Drop a pin or type the address.'),
+      await screen.findByText('Search is unavailable. Type the address instead.'),
     ).toBeInTheDocument()
     await userEvent.keyboard('{Enter}')
     expect(await screen.findByRole('button', { name: 'Lisbon' })).toBeInTheDocument()
@@ -1072,7 +1093,7 @@ describe('Phone', () => {
     const t = lisbonTrip()
     t.todos[4] = {
       ...t.todos[4],
-      place: { name: 'Tascantiga', lat: 38.8, lng: -9.38, source: 'photon' },
+      place: { name: 'Tascantiga', lat: 38.8, lng: -9.38, source: 'pin' },
     }
     seed(t)
     open()

@@ -2,6 +2,7 @@ import React from 'react'
 import { Checkbox } from 'antd'
 import type { Booking, TripCategory, TripTodo } from '@api/tripTypes'
 import { LIMITS } from '@lib/trips/limits'
+import { hasPin, todoTitle } from '@lib/trips/places'
 import { endClock, mapsUrl, shortDay } from '@lib/trips/schedule'
 import {
   Button,
@@ -68,7 +69,7 @@ export const TodoSheet: React.FC<Props> = ({
 }) => {
   // The desktop inspector edits in place (no picker sheets); the phone sheet opens pickers.
   const inline = variant === 'panel'
-  const pin = todo.place && todo.place.source !== 'manual' ? todo.place : null
+  const pin = hasPin(todo.place) ? todo.place : null
   const linked = bookings.find((b) => b.booking_id === todo.booking_id)
   const end = todo.start_time ? endClock(todo.start_time, todo.duration_min) : ''
   const when = [
@@ -80,7 +81,8 @@ export const TodoSheet: React.FC<Props> = ({
     .join(' · ')
   // A place named like the item says only where it is: "Sintra", not the name twice.
   const sameName =
-    !!todo.place && todo.place.name.trim().toLowerCase() === todo.title.trim().toLowerCase()
+    !!todo.place &&
+    (todo.place.name ?? '').trim().toLowerCase() === (todo.title ?? '').trim().toLowerCase()
   const placeText = todo.place
     ? sameName
       ? (todo.place.locality ?? todo.place.name)
@@ -99,7 +101,7 @@ export const TodoSheet: React.FC<Props> = ({
       variant={variant}
       open={open}
       onClose={onClose}
-      label={todo.title}
+      label={todoTitle(todo)}
       identity={
         <SheetIdentity
           leading={
@@ -108,7 +110,7 @@ export const TodoSheet: React.FC<Props> = ({
                 checked={todo.done}
                 disabled={locked}
                 onChange={(e) => onPatch({ done: e.target.checked })}
-                aria-label={`${todo.title}, done`}
+                aria-label={`${todoTitle(todo)}, done`}
               />
             </span>
           }
@@ -128,7 +130,7 @@ export const TodoSheet: React.FC<Props> = ({
             {pin && (
               <Button
                 kind="key"
-                href={mapsUrl(pin.lat, pin.lng)}
+                href={mapsUrl(pin.lat, pin.lng, pin.place_id)}
                 target="_blank"
                 rel="noreferrer noopener"
               >

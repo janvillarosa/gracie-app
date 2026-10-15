@@ -7,7 +7,7 @@ import (
 )
 
 func place(name, tz string) map[string]any {
-	m := map[string]any{"name": name, "lat": 35.0, "lng": 135.0, "source": "photon", "locality": name}
+	m := map[string]any{"name": name, "lat": 35.0, "lng": 135.0, "source": "manual", "locality": name}
 	if tz != "" {
 		m["tz"] = tz
 	}

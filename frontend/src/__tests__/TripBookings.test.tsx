@@ -266,7 +266,9 @@ describe('adding a booking', () => {
     await waitFor(() => {
       const made = serverTrip()?.bookings.find((x) => x.title === 'Flight home')
       expect(made?.start_tz).toBe('Europe/London')
-      expect(made?.place?.name).toBe('Heathrow Airport')
+      // A Google place stores its id and coordinates, never its name.
+      expect(made?.place?.place_id).toBe('demo:heathrow')
+      expect(made?.place?.name).toBeUndefined()
     })
   })
 
@@ -303,14 +305,14 @@ describe('a booking with a start and an end place', () => {
     locality: 'Lisbon',
     lat: 38.77,
     lng: -9.13,
-    source: 'photon' as const,
+    source: 'pin' as const,
   }
   const opo = {
     name: 'Porto OPO',
     locality: 'Porto',
     lat: 41.24,
     lng: -8.68,
-    source: 'photon' as const,
+    source: 'pin' as const,
   }
   const flight = (over: Partial<Booking> = {}) =>
     bk(9, { kind: 'flight', title: 'Hop', place: lis, end_place: opo, ...over })
@@ -355,7 +357,8 @@ describe('a booking with a start and an end place', () => {
     await userEvent.click(within(sheet).getByRole('button', { name: 'Add booking' }))
     await waitFor(() => {
       const made = serverTrip()?.bookings.find((x) => x.title === 'Flight home')
-      expect(made?.end_place?.name).toBe('Heathrow Airport')
+      expect(made?.end_place?.place_id).toBe('demo:heathrow')
+      expect(made?.end_place?.name).toBeUndefined()
       expect(made?.place ?? null).toBeNull()
     })
   })

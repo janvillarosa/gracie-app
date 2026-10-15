@@ -86,7 +86,7 @@ func TestStopsCapAndValidation(t *testing.T) {
 
 func TestLocalityValidated(t *testing.T) {
 	h := newTripH(t)
-	pl := map[string]any{"name": "Cafe", "locality": "Lisbon", "lat": 38.7, "lng": -9.1, "source": "photon"}
+	pl := map[string]any{"name": "Cafe", "locality": "Lisbon", "lat": 38.7, "lng": -9.1, "source": "manual"}
 	mustStatus(t, h.do("dev-a", TypeTripUpdate, "", map[string]any{"destination": pl}, t0+100), models.OpApplied, "")
 	if h.trip.Destination.Locality != "Lisbon" {
 		t.Fatalf("locality lost")

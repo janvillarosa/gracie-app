@@ -1,16 +1,23 @@
 // Trips wire types. Contract: docs/superpowers/specs/2026-10-14-trips-api-persistence-design.md
 // (including the 2026-10-15 amendment). Field names are snake_case exactly as the API sends them.
 
-export type PlaceSource = 'photon' | 'pin' | 'manual'
+export type PlaceSource = 'google' | 'pin' | 'manual'
 
+// google: `place_id` is required and Google's name and address are never stored; lat/lng exist
+// only with `coords_fetched_at` (at most 30 days old) and may be missing once purged.
+// pin / manual: user content (name, address, lat, lng), no place_id.
+// `locality` is whatever the user typed. A rendered trip may carry a Google place's name and
+// address filled in from the session cache for display; they are stripped from every op
+// (lib/trips/places.ts `sanitizePatch`) and never persisted.
 export type Place = {
-  name: string
+  place_id?: string
+  name?: string
   address?: string
   locality?: string
-  lat: number
-  lng: number
+  lat?: number
+  lng?: number
   tz?: string
-  osm_ref?: string
+  coords_fetched_at?: string
   source: PlaceSource
 }
 
@@ -143,5 +150,3 @@ export type SyncResponse = {
 }
 
 export type OpsResponse = { server_time: number; results: OpResult[]; trips: TripDelta[] }
-
-export type PlacesResponse = { results: Place[]; degraded?: boolean }

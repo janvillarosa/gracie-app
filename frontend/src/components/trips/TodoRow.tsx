@@ -1,3 +1,4 @@
+import { todoTitle } from '@lib/trips/places'
 import React, { useEffect, useRef, useState } from 'react'
 import { Button } from '@components/ui'
 import { Checkbox } from 'antd'
@@ -150,7 +151,11 @@ export const TodoRow = React.memo<Props>(function TodoRow({
     }
   }
 
-  const sub = todo.place?.name && todo.place.name !== todo.title ? todo.place.name : ''
+  const shown = todoTitle(todo)
+  const sub =
+    (todo.title ?? '').trim() && todo.place?.name && todo.place.name !== todo.title
+      ? todo.place.name
+      : ''
   const second = [sub, dayLabel].filter(Boolean).join(' · ')
 
   return (
@@ -205,7 +210,7 @@ export const TodoRow = React.memo<Props>(function TodoRow({
                   checked={todo.done}
                   disabled={locked}
                   onChange={onToggle}
-                  aria-label={`${todo.title}, done`}
+                  aria-label={`${shown}, done`}
                 />
               </span>
             )}
@@ -222,8 +227,8 @@ export const TodoRow = React.memo<Props>(function TodoRow({
               onClick={() => actions.open(id)}
             >
               <span className="trip-titleline">
-                <span className="trip-title" title={idea ? todo.title : undefined}>
-                  {todo.title}
+                <span className="trip-title" title={idea ? shown : undefined}>
+                  {shown}
                 </span>
               </span>
               {second && <span className="trip-sub">{second}</span>}
@@ -246,7 +251,7 @@ export const TodoRow = React.memo<Props>(function TodoRow({
                   <Button
                     kind="text"
                     iconOnly
-                    aria-label={`Delete ${todo.title}`}
+                    aria-label={`Delete ${shown}`}
                     onClick={() => actions.remove(id)}
                     icon={<Trash />}
                   />
@@ -257,7 +262,7 @@ export const TodoRow = React.memo<Props>(function TodoRow({
                   kind="text"
                   iconOnly
                   className="trip-addday"
-                  aria-label={`Add ${todo.title} to a day`}
+                  aria-label={`Add ${shown} to a day`}
                   aria-haspopup="menu"
                   aria-expanded={moveOpen}
                   onClick={() => actions.openMove(moveOpen ? null : id)}
@@ -272,7 +277,7 @@ export const TodoRow = React.memo<Props>(function TodoRow({
             </span>
             {moveOpen && (
               <MoveMenu
-                title={todo.title}
+                title={shown}
                 targets={days}
                 current={todo.day ?? null}
                 onPick={(d) => actions.move(id, d)}

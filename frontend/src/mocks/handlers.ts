@@ -31,16 +31,5 @@ export function tripHandlers(server: MockTripServer, opts: { latencyMs?: number 
       const l = server.packingList(String(params.roomId), String(params.tripId))
       return l ? HttpResponse.json(l) : HttpResponse.json({ error: 'not found' }, { status: 404 })
     }),
-    http.get('/api/places/search', async ({ request }) => {
-      await wait()
-      const u = new URL(request.url).searchParams
-      return answer(() =>
-        server.searchPlaces(u.get('q') ?? '', Number(u.get('limit')) || undefined),
-      )
-    }),
-    http.get('/api/places/reverse', async ({ request }) => {
-      const u = new URL(request.url).searchParams
-      return answer(() => server.reverse(Number(u.get('lat')), Number(u.get('lng'))))
-    }),
   ]
 }

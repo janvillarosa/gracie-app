@@ -30,9 +30,9 @@ import { TRIP_ICONS, TRIP_ICON_EMOJI, toTripEmoji, type TripIcon } from '../icon
 import { ChipGroup } from '@components/ui'
 import '../trips.css'
 
-/** The same place by identity (OSM ref, else coordinates), never by name: two places can share one. */
+/** The same place by identity (place id, else coordinates), never by name: two places can share one. */
 const samePlace = (a: Place, b?: Place) =>
-  !!b && (a.osm_ref && b.osm_ref ? a.osm_ref === b.osm_ref : a.lat === b.lat && a.lng === b.lng)
+  !!b && (a.place_id && b.place_id ? a.place_id === b.place_id : a.lat === b.lat && a.lng === b.lng)
 
 type SheetKind = 'icon' | 'where' | 'when' | null
 

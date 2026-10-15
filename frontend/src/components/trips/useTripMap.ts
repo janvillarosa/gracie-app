@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { reversePlace } from '@api/tripEndpoints'
 import type { Place } from '@api/tripTypes'
 import type { MapClick } from '@lib/trips/mapScene'
 
@@ -57,8 +56,10 @@ export function useClickAdd(apiKey: string | null, tripTz?: string) {
         let place: Place | null = null
         let degraded = false
         try {
-          const r = await reversePlace(apiKey as string, c.lat, c.lng)
-          const p = r.results?.[0]
+          // The Photon reverse-geocoding proxy is gone; the map's own click gives the name (a POI)
+          // or nothing (a dropped pin the person names). The map work replaces this whole flow.
+          const r: { results: Place[]; degraded?: boolean } = { results: [], degraded: true }
+          const p = r.results[0]
           if (p && !r.degraded)
             place = {
               ...p,
@@ -67,7 +68,7 @@ export function useClickAdd(apiKey: string | null, tripTz?: string) {
               source: 'pin',
               tz: p.tz || tripTz,
               // A label under the click names it; the geocoder fills in the rest.
-              name: c.name ?? p.name,
+              name: c.name ?? p.name ?? 'Dropped pin',
             }
           else degraded = true
         } catch {

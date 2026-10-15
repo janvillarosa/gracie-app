@@ -1,17 +1,19 @@
-import React, { useId, useState } from 'react'
-import { Button, Field } from '@components/ui'
-import { MapPin, X } from '@phosphor-icons/react'
-import { useAuth } from '@auth/AuthProvider'
-import type { Place } from '@api/tripTypes'
+import React, { useState, useSyncExternalStore } from 'react'
 import {
-  DEGRADED_TEXT,
-  MIN_QUERY,
-  OSM_ATTRIBUTION,
-  PlaceSlip,
-  parseCoords,
-  pinFromCoords,
-  usePlaceSearch,
-} from './places'
+  Button,
+  Combobox,
+  Field,
+  PoweredBy,
+  renderSuggestion,
+  SEARCH_UNAVAILABLE,
+  suggestionKey,
+  suggestionLabel,
+} from '@components/ui'
+import { MapPin, X } from '@phosphor-icons/react'
+import type { Place } from '@api/tripTypes'
+import { hasPin, placeInfoVersion, placeText, subscribePlaceInfo } from '@lib/trips/places'
+import type { Suggestion } from '@lib/trips/placesSource'
+import { MIN_QUERY, parseCoords, usePlaceSuggest } from '@lib/trips/usePlaces'
 
 type Props = {
   value: Place | null | undefined
@@ -23,6 +25,8 @@ type Props = {
   placeholder?: string
 }
 
+/** One place: Google Places autocomplete (one search session per pick, "Powered by Google"
+ *  under the slips), with typing an address or dropping a pin on coordinates as fallbacks. */
 export const PlacePicker: React.FC<Props> = ({
   value,
   onChange,
@@ -31,28 +35,29 @@ export const PlacePicker: React.FC<Props> = ({
   label,
   placeholder = 'Search for a place',
 }) => {
-  const { apiKey } = useAuth()
-  const uid = useId()
   const [text, setText] = useState('')
-  const [active, setActive] = useState(-1)
-  const search = usePlaceSearch(value ? '' : text, bias)
+  // Names arrive from the session cache after the row first draws.
+  useSyncExternalStore(subscribePlaceInfo, placeInfoVersion, placeInfoVersion)
+  const search = usePlaceSuggest(value ? '' : text, bias)
   const coords = parseCoords(text)
   const typed = text.trim()
   const fresh = search.forQuery === typed
   // Search feedback shows only once a search has run for what is typed.
   const ran = fresh && typed.length >= MIN_QUERY
-  const slips = fresh ? search.results : []
+  const slips = fresh && !search.degraded ? search.suggestions : []
   const noHits = ran && !search.loading && slips.length === 0
   const showManual = ran && !coords && (noHits || search.degraded)
-  const open = slips.length > 0
 
-  const pick = (p: Place) => {
+  const pickPlace = (p: Place) => {
     onChange(p)
     setText('')
-    setActive(-1)
+  }
+  const pick = async (s: Suggestion) => {
+    const place = await search.pick(s)
+    if (place) pickPlace(place)
   }
   const chooseManual = () =>
-    pick({
+    pickPlace({
       name: typed,
       address: typed,
       lat: bias?.lat ?? 0,
@@ -60,41 +65,32 @@ export const PlacePicker: React.FC<Props> = ({
       tz,
       source: 'manual',
     })
-  const dropPin = async () => {
+  const dropPin = () => {
     if (!coords) return
-    pick(await pinFromCoords(apiKey as string, coords.lat, coords.lng, tz))
+    pickPlace({
+      name: `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`,
+      lat: coords.lat,
+      lng: coords.lng,
+      tz,
+      source: 'pin',
+    })
   }
-
-  const onKeyDown = (e: React.KeyboardEvent) => {
-    if (e.nativeEvent.isComposing) return
-    if (open && e.key === 'ArrowDown') {
-      e.preventDefault()
-      setActive((i) => Math.min(i + 1, slips.length - 1))
-    } else if (open && e.key === 'ArrowUp') {
-      e.preventDefault()
-      setActive((i) => Math.max(i - 1, -1))
-    } else if (e.key === 'Escape') {
-      setText('')
-      setActive(-1)
-    } else if (e.key === 'Enter') {
-      e.preventDefault()
-      if (open && active >= 0) pick(slips[active])
-      else if (coords) void dropPin()
-      else if (showManual) chooseManual()
-    }
+  const submit = () => {
+    if (coords) dropPin()
+    else if (showManual) chooseManual()
   }
 
   if (value) {
-    const hasPin = value.source !== 'manual'
+    const shown = placeText(value)
     return (
       <div className="place-chosen">
         <MapPin aria-hidden />
         <span className="place-chosen-text">
-          <span className="place-chosen-name">{value.name}</span>
-          {(value.address || value.locality) && value.address !== value.name && (
-            <span className="place-chosen-sub">{value.address || value.locality}</span>
+          <span className="place-chosen-name">{shown.name}</span>
+          {shown.sub && <span className="place-chosen-sub">{shown.sub}</span>}
+          {!hasPin(value) && value.source === 'manual' && (
+            <span className="place-chosen-sub">Address only, not on the map</span>
           )}
-          {!hasPin && <span className="place-chosen-sub">Address only, not on the map</span>}
         </span>
         <Button
           kind="text"
@@ -109,37 +105,30 @@ export const PlacePicker: React.FC<Props> = ({
 
   return (
     <div className="place-picker">
-      <Field
-        role="combobox"
-        aria-label={label}
-        aria-expanded={open}
-        aria-controls={open ? `${uid}-slips` : undefined}
-        aria-autocomplete="list"
-        aria-activedescendant={open && active >= 0 ? `${uid}-slip-${active}` : undefined}
-        value={text}
-        placeholder={placeholder}
-        onChange={(e) => {
-          setText(e.target.value)
-          setActive(-1)
-        }}
-        onKeyDown={onKeyDown}
-      />
-      {open && (
-        <div id={`${uid}-slips`} role="listbox" aria-label="Places" className="place-slips">
-          {slips.map((p, i) => (
-            <PlaceSlip
-              key={`${p.osm_ref ?? p.name}-${p.lat}-${p.lng}`}
-              place={p}
-              id={`${uid}-slip-${i}`}
-              active={i === active}
-              onPick={pick}
-            />
-          ))}
-          <div className="place-attrib">{OSM_ATTRIBUTION}</div>
-        </div>
-      )}
+      <Combobox
+        options={slips}
+        getKey={suggestionKey}
+        getLabel={suggestionLabel}
+        renderOption={renderSuggestion}
+        onPick={pick}
+        onSubmitText={submit}
+        query={text}
+        footer={<PoweredBy source={search.attribution} />}
+        listLabel="Places"
+        placement="below"
+      >
+        {({ input }) => (
+          <Field
+            aria-label={label}
+            value={text}
+            placeholder={placeholder}
+            onChange={(e) => setText(e.target.value)}
+            {...input}
+          />
+        )}
+      </Combobox>
       <div className="place-help" role="status">
-        {ran && search.degraded ? DEGRADED_TEXT : ''}
+        {ran && search.degraded ? SEARCH_UNAVAILABLE : ''}
         {ran && !search.degraded && noHits && !coords ? 'No match. Type the address instead.' : ''}
       </div>
       {coords && (

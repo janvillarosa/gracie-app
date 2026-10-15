@@ -42,6 +42,8 @@ type Props<T> = {
   // Non-option content inside the listbox (an attribution line).
   footer?: React.ReactNode
   listLabel?: string
+  // 'above' (an add bar: slips rise, best nearest the field) or 'below' (an inline field).
+  placement?: 'above' | 'below'
   autoComplete?: 'list' | 'both'
   children: (r: ComboboxRender) => React.ReactNode
 }
@@ -100,6 +102,7 @@ export function Combobox<T>({
   onHighlight,
   footer,
   listLabel = 'Suggestions',
+  placement = 'above',
   autoComplete = 'list',
   children,
 }: Props<T>) {
@@ -121,7 +124,7 @@ export function Combobox<T>({
   const current = open && active >= 0 ? (options[active] ?? null) : null
   const effectiveGhost = open && active < 0 ? ghost : ''
 
-  useVisualViewportFit(open, listRef)
+  useVisualViewportFit(open && placement === 'above', listRef)
 
   // (The callback is read through a ref, so a new function each render cannot loop.)
   const highlightRef = useRef(onHighlight)
@@ -135,10 +138,13 @@ export function Combobox<T>({
     (e: React.KeyboardEvent) => {
       if (e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229) return
       if (onKeyDown?.(e)) return
-      if (open && e.key === 'ArrowUp') {
+      // The slips rise above a bar (best nearest the field), so up is "next"; below, down is.
+      const nextKey = placement === 'above' ? 'ArrowUp' : 'ArrowDown'
+      const prevKey = placement === 'above' ? 'ArrowDown' : 'ArrowUp'
+      if (open && e.key === nextKey) {
         e.preventDefault()
         setActive((i) => Math.min(i + 1, options.length - 1))
-      } else if (open && e.key === 'ArrowDown') {
+      } else if (open && e.key === prevKey) {
         e.preventDefault()
         setActive((i) => Math.max(i - 1, -1))
       } else if (open && e.key === 'Escape') {
@@ -155,7 +161,17 @@ export function Combobox<T>({
         else onSubmitText()
       }
     },
-    [onKeyDown, open, options.length, effectiveGhost, onAcceptGhost, current, onPick, onSubmitText],
+    [
+      onKeyDown,
+      placement,
+      open,
+      options.length,
+      effectiveGhost,
+      onAcceptGhost,
+      current,
+      onPick,
+      onSubmitText,
+    ],
   )
 
   const input: ComboboxInputProps = {
@@ -176,7 +192,7 @@ export function Combobox<T>({
           id={listId}
           role="listbox"
           aria-label={listLabel}
-          className="pantry-slips"
+          className={placement === 'below' ? 'pantry-slips is-below' : 'pantry-slips'}
         >
           {options.map((o, i) => (
             // Options aren't focusable by design: focus stays in the field.

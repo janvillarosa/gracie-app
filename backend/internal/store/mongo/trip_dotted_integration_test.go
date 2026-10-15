@@ -19,7 +19,7 @@ func TestMongoTripRoundtripsDaysStopsAndDottedClocks(t *testing.T) {
 	tr := newTestTrip(id, "room_1")
 	tr.Days = map[string]string{"2026-10-24": "Sintra"}
 	tr.FieldAt["days.2026-10-24"] = 42
-	tr.Stops = []models.Place{{Name: "Lisbon", Locality: "Lisbon", Lat: 38.7, Lng: -9.1, Source: "manual"}}
+	tr.Stops = []models.Place{{Name: "Lisbon", Locality: "Lisbon", Lat: fptr(38.7), Lng: fptr(-9.1), Source: "manual"}}
 	if err := r.Insert(ctx, tr); err != nil {
 		t.Fatal(err)
 	}
@@ -39,3 +39,5 @@ func TestMongoTripRoundtripsDaysStopsAndDottedClocks(t *testing.T) {
 		t.Fatalf("second write lost: %+v", again)
 	}
 }
+
+func fptr(v float64) *float64 { return &v }

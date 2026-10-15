@@ -20,17 +20,36 @@ const (
 	CodeUnsupported        = "unsupported"
 )
 
+// Place sources.
+const (
+	SourceGoogle = "google"
+	SourcePin    = "pin"
+	SourceManual = "manual"
+)
+
+// SystemActor is written to updated_by by background jobs (the coordinate purge). It is
+// not a user id, so clients should render it as "Bauhouse" or nothing.
+const SystemActor = "system:coords-purge"
+
+// CoordsMaxAge is how long Google-sourced coordinates may be stored (Google Maps Platform terms).
+const CoordsMaxAge = 30 * 24 * time.Hour
+
 // Place is a self-contained snapshot of a location.
+//
+// source "google": place_id is required; name and address are never stored (Google content);
+// lat/lng exist only with a coords_fetched_at no older than CoordsMaxAge; tz survives a purge.
+// source "pin" / "manual": user content (name, address, lat, lng, tz), no place_id.
+// Locality is user-typed content for every source; the server never fills it.
 type Place struct {
-	Name    string `bson:"name" json:"name"`
-	Address string `bson:"address,omitempty" json:"address,omitempty"`
-	// Locality is the town or city (from Photon city/town/village); empty for manual places.
-	Locality string  `bson:"locality,omitempty" json:"locality,omitempty"`
-	Lat      float64 `bson:"lat" json:"lat"`
-	Lng      float64 `bson:"lng" json:"lng"`
-	TZ       string  `bson:"tz,omitempty" json:"tz,omitempty"`
-	OSMRef   string  `bson:"osm_ref,omitempty" json:"osm_ref,omitempty"`
-	Source   string  `bson:"source" json:"source"` // photon | pin | manual
+	PlaceID         string     `bson:"place_id,omitempty" json:"place_id,omitempty"`
+	Name            string     `bson:"name,omitempty" json:"name,omitempty"`
+	Address         string     `bson:"address,omitempty" json:"address,omitempty"`
+	Locality        string     `bson:"locality,omitempty" json:"locality,omitempty"`
+	Lat             *float64   `bson:"lat,omitempty" json:"lat,omitempty"`
+	Lng             *float64   `bson:"lng,omitempty" json:"lng,omitempty"`
+	TZ              string     `bson:"tz,omitempty" json:"tz,omitempty"`
+	CoordsFetchedAt *time.Time `bson:"coords_fetched_at,omitempty" json:"coords_fetched_at,omitempty"`
+	Source          string     `bson:"source" json:"source"` // google | pin | manual
 }
 
 // TripTodo is a checkbox item inside a trip. Day == nil means "Ideas".
@@ -123,6 +142,9 @@ type Trip struct {
 	DeletedAt *time.Time `bson:"deleted_at,omitempty" json:"deleted_at,omitempty"`
 	DeletedBy string     `bson:"deleted_by,omitempty" json:"deleted_by,omitempty"`
 	PurgeAt   *time.Time `bson:"purge_at,omitempty" json:"-"`
+	// CoordsExpireAt is the earliest time any stored Google coordinate on this trip turns 30
+	// days old (nil when there are none). Indexed so the daily purge only reads due trips.
+	CoordsExpireAt *time.Time `bson:"coords_expire_at,omitempty" json:"-"`
 
 	CreatedBy string    `bson:"created_by" json:"created_by"`
 	CreatedAt time.Time `bson:"created_at" json:"created_at"`

@@ -44,7 +44,7 @@ export const MapAddPopover: React.FC<Props> = ({
 }) => {
   const root = useRef<HTMLDivElement>(null)
   const ready = !!place
-  const title = ready ? (degraded ? 'Dropped pin' : place.name) : 'Finding the place…'
+  const title = ready ? (degraded ? 'Dropped pin' : (place.name ?? '')) : 'Finding the place…'
 
   // Focus moves in; Esc and a press outside close it; Tab stays inside.
   useEffect(() => {
