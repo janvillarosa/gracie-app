@@ -35,23 +35,25 @@ type Place struct {
 
 // TripTodo is a checkbox item inside a trip. Day == nil means "Ideas".
 type TripTodo struct {
-	TodoID      string           `bson:"todo_id" json:"todo_id"`
-	Title       string           `bson:"title" json:"title"`
-	Done        bool             `bson:"done" json:"done"`
-	DoneBy      string           `bson:"done_by,omitempty" json:"done_by,omitempty"`
-	DoneAt      *time.Time       `bson:"done_at,omitempty" json:"done_at,omitempty"`
-	Day         *string          `bson:"day,omitempty" json:"day,omitempty"`
-	StartTime   *string          `bson:"start_time,omitempty" json:"start_time,omitempty"`
-	DurationMin *int             `bson:"duration_min,omitempty" json:"duration_min,omitempty"`
-	TZ          string           `bson:"tz,omitempty" json:"tz,omitempty"`
-	Order       float64          `bson:"order" json:"order"`
-	Category    string           `bson:"category" json:"category"`
-	Notes       string           `bson:"notes,omitempty" json:"notes,omitempty"`
-	Place       *Place           `bson:"place,omitempty" json:"place,omitempty"`
-	CreatedBy   string           `bson:"created_by,omitempty" json:"created_by,omitempty"`
-	UpdatedBy   string           `bson:"updated_by,omitempty" json:"updated_by,omitempty"`
-	V           int64            `bson:"v" json:"v"`
-	FieldAt     map[string]int64 `bson:"field_at" json:"-"`
+	TodoID      string     `bson:"todo_id" json:"todo_id"`
+	Title       string     `bson:"title" json:"title"`
+	Done        bool       `bson:"done" json:"done"`
+	DoneBy      string     `bson:"done_by,omitempty" json:"done_by,omitempty"`
+	DoneAt      *time.Time `bson:"done_at,omitempty" json:"done_at,omitempty"`
+	Day         *string    `bson:"day,omitempty" json:"day,omitempty"`
+	StartTime   *string    `bson:"start_time,omitempty" json:"start_time,omitempty"`
+	DurationMin *int       `bson:"duration_min,omitempty" json:"duration_min,omitempty"`
+	TZ          string     `bson:"tz,omitempty" json:"tz,omitempty"`
+	Order       float64    `bson:"order" json:"order"`
+	Category    string     `bson:"category" json:"category"`
+	Notes       string     `bson:"notes,omitempty" json:"notes,omitempty"`
+	Place       *Place     `bson:"place,omitempty" json:"place,omitempty"`
+	// BookingID optionally links the todo to a booking of the same trip; cleared when that booking is deleted.
+	BookingID *string          `bson:"booking_id,omitempty" json:"booking_id,omitempty"`
+	CreatedBy string           `bson:"created_by,omitempty" json:"created_by,omitempty"`
+	UpdatedBy string           `bson:"updated_by,omitempty" json:"updated_by,omitempty"`
+	V         int64            `bson:"v" json:"v"`
+	FieldAt   map[string]int64 `bson:"field_at" json:"-"`
 }
 
 // Booking is a vault entry (flight, stay, ticket...).

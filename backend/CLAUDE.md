@@ -70,6 +70,11 @@ Spec: `docs/superpowers/specs/2026-10-14-trips-api-persistence-design.md`.
   cap 60; `""` removes; clock `field_at["days.<date>"]`, so labelling different days never
   conflicts). Over-cap patches are rejected with code `cap`. `field_at` keys with dots are
   fine because trips are only ever written as whole documents (`ReplaceCAS`).
+- **Todo -> booking link:** `TripTodo.booking_id` (optional, `null` clears) is set through
+  todo.create/update. It must name a live booking of the same trip, else `invalid`; it has
+  the normal clock `field_at["booking_id"]`. `booking.delete` clears the link on every todo
+  that references it in the same write (todo `v` bumped, `updated_by` set), so those todos
+  appear in the delta.
 - **Batch semantics:** ops are grouped per trip and applied in `seq` order per `client_id`
   (array order across clients is kept). **Only one flusher may run per `client_id`**: seqs
   are a per-device total order, and a lower seq arriving after a higher one is `duplicate`.

@@ -133,7 +133,8 @@ func validTodoPatch(p TodoPatch, create bool) bool {
 	if p.Title != nil && !okTitle(*p.Title, maxItemTitle) {
 		return false
 	}
-	if !optOK(p.Day, validDate) || !optOK(p.StartTime, validClock) {
+	if !optOK(p.Day, validDate) || !optOK(p.StartTime, validClock) ||
+		!optOK(p.BookingID, reBooking.MatchString) {
 		return false
 	}
 	if p.DurationMin.Set && p.DurationMin.Val != nil && (*p.DurationMin.Val < 1 || *p.DurationMin.Val > 1440) {
