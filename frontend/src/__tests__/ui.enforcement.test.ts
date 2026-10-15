@@ -121,4 +121,15 @@ describe('trip and ui styles use tokens, not literals', () => {
     const local = new Set(['--cols', '--pip', '--tcol'])
     expect(used.filter((v) => !defined.has(v) && !local.has(v))).toEqual([])
   })
+
+  it('presses animate only when motion is allowed, and touch targets reach 44px', () => {
+    const css = read(join(SRC, 'components/ui/ui.css'))
+    // Every transition on a ui-btn sits inside a no-preference media block.
+    const loose = css
+      .replace(/@media \(prefers-reduced-motion: no-preference\)\s*\{[\s\S]*?\n\}/g, '')
+      .match(/\.ui-btn\s*\{[^}]*transition:/)
+    expect(loose).toBeNull()
+    expect(css).toMatch(/@media \(pointer: coarse\)[\s\S]*max\(100%, 44px\)/)
+    expect(css).toMatch(/\.trip-check \.ant-checkbox-wrapper\s*\{[^}]*padding: 11px/)
+  })
 })
