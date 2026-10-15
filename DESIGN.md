@@ -526,6 +526,55 @@ The list page is a stack: a meta sheet (header, PillNav) with its bottom edge hi
 ### Motion
 Arrivals use an exponential ease-out (`--ease-out: cubic-bezier(0.22, 1, 0.36, 1)`). Durations are 90ms press, 160ms fast, 240ms base and 420ms slow. Every animation sits behind `prefers-reduced-motion: no-preference`. Under `reduce`, sheets and dialogs only fade (160ms linear), a just-added row keeps its highlighter without moving, and the House loader shows the finished house with a softly glowing window. Page loads show the House loader only after 250ms. In-sheet loads show skeleton rows drawn to the real rows' geometry.
 
+## Landing page (Persuade surface)
+
+The marketing page at `/` (logged-out visitors) is the same paper turned up to poster scale. It keeps the
+app's ground, ink, faces, stamps, highlighter and yellow key. Direction contract:
+`.impeccable/surfaces/frontend-src-pages-landing-tsx.md`; build notes in `frontend/CLAUDE.md`.
+
+**Thesis.** There is nothing to fiddle with: no template to build, no spreadsheet to share, one simple app on
+every device, offline. So its demonstrations show less work, not more features. The page is divided plainly in
+two: two link blocks under the first screen (ink for the House's lists, blue for trip planning), then a section
+for each, then the claims that cover both (every device and offline, free).
+
+**Type.** Outfit 800 for display and headings, Figtree for text, in five steps only: display `clamp(46px, 6.4vw, 96px)`,
+heading `clamp(36px, 4.4vw, 66px)`, title `clamp(22px, 2vw, 30px)`, text 18px, small 14px. The headline's last
+word cycles (life, groceries, chores, trips, shopping, lists) with the highlighter swiping under each; the
+heading's accessible name stays "Manage your life together.".
+
+**Colour.** Whole-section fields are Ink, House Blue or House Red, with white text. Yellow is never a section
+or sheet field; it stays on keys, the highlighter and the switch's on-state. Landing tone `#ECECEC` is the
+toned paper (the blank in the closing sentence, the secondary key).
+
+**Shapes and paper.** Paper has shaped edges instead of boxes: the peeking sheet under the hero list, folder-like
+stacking sheets (sticky, each as tall as the tallest so a taller sheet never pokes out beneath a shorter one), a
+zigzag-torn itinerary slip, and a torn till receipt with a tilted red "Nothing due" rubber stamp that lands once.
+Controls are 12px-cornered on the landing (full pills in the app).
+
+**Product pictures** are the app's own rows, tabs, add bar, day plan, bookings and packing list, copied from the
+real screens (`components/landing/appUi.tsx`), marked `data-ui`, never a device frame. They show only what the app
+does (list rows carry no "added by" line). The hero list and the typing list are live: a line is typed, another
+housemate ticks the bottom item, the new line lands with the highlighter and its aisle stamp, and the ticked one
+folds into "Show checked-off items" so the list stays balanced. Example housemates (Mia, Sam, Jo) are never
+labelled "demo": the page sells the product.
+
+**Photographs** are credited open-licence pictures (CC BY, Wikimedia Commons) in `frontend/src/assets/landing/`
+with provenance in `credits.json` and in each file. Every photo carries a caption naming the line of the plan it
+shows, and that line carries the highlighter; a photo with no line to point to does not go on the page.
+
+**Motion** is the paper's own: stamps land one after another, the highlighter inks in, ticks pop with confetti in
+brand colours, the footer wordmark rises, "start." wakes once there's a name in the blank. All of it sits behind
+`prefers-reduced-motion: no-preference`. On phones a sticky "Try Bauhouse free" key stays within thumb reach once
+the first one has scrolled away and steps aside for the closing sentence and the footer.
+
+**Calls to action** say what they do for a stranger: "Try Bauhouse free" ("Try it free" in the nav), never
+"Start your House"; the House is explained once, in the closing note.
+
+**Landing Don'ts.** Don't fill a section or sheet with yellow (the app's sign-in screens are the only yellow
+field). Don't add a sixth type size. Don't put an eyebrow label above a heading. Don't invent a feature the app
+lacks in a mockup. The sidecar `.impeccable/design.json` does not yet carry the landing tokens; refresh it with
+`/impeccable document`.
+
 ## Do's and Don'ts
 
 ### Do:
