@@ -23,7 +23,7 @@ const place = (name: string, lat = 38.7, lng = -9.1) => ({
   name,
   lat,
   lng,
-  source: 'photon' as const,
+  source: 'pin' as const,
 })
 
 beforeEach(async () => {

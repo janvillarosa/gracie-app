@@ -68,6 +68,7 @@ import { TripMap, type TripMapHandle } from '@components/trips/TripMap'
 import { MapAddPopover } from '@components/trips/MapAddPopover'
 import { MapScreen } from '@components/trips/MapScreen'
 import { pinPlace, useClickAdd, useMapFollow, useMapOk } from '@components/trips/useTripMap'
+import { findExisting, hasPin } from '@lib/trips/places'
 import { buildScene, hasMapPlaces, type MapPreview } from '@lib/trips/mapScene'
 import type { RowActions } from '@components/trips/TodoRow'
 import { DAY_COLOURS } from '@components/trips/tripUi'
@@ -268,7 +269,8 @@ const TripScreen: React.FC<{
       foldDay: (d) => dragBridge.current.foldDay(d),
       currentDay: dragBridge.current.currentDay,
       setCurrentDay: (d) => dragBridge.current.setCurrentDay(d),
-      setPreview: (p) => setBarPreview(p ? { lat: p.lat, lng: p.lng, label: p.name } : null),
+      setPreview: (p) =>
+        setBarPreview(hasPin(p) ? { lat: p.lat, lng: p.lng, label: p.name } : null),
       scrollers: desktop ? panes : undefined,
     })
 
@@ -281,7 +283,7 @@ const TripScreen: React.FC<{
 
   const bias = useMemo(() => {
     const p = trip.destination ?? trip.stops?.[0]
-    return p && p.source !== 'manual' ? { lat: p.lat, lng: p.lng } : null
+    return hasPin(p) ? { lat: p.lat, lng: p.lng } : null
   }, [trip.destination, trip.stops])
 
   // ---- which days are cards, closed cards or slim "done" lines ---------------------------
@@ -531,10 +533,7 @@ const TripScreen: React.FC<{
   const selTodo = selected ? trip.todos.find((t) => t.todo_id === selected) : undefined
   const selBooking = selected ? trip.bookings.find((b) => b.booking_id === selected) : undefined
   const focusPlace = (selTodo?.place ?? selBooking?.place) || null
-  const focusPoint =
-    focusPlace && focusPlace.source !== 'manual'
-      ? { lat: focusPlace.lat, lng: focusPlace.lng }
-      : null
+  const focusPoint = hasPin(focusPlace) ? { lat: focusPlace.lat, lng: focusPlace.lng } : null
 
   const onPinClick = useCallback((id: string) => {
     const row = document.getElementById(`row-${id}`)
@@ -556,18 +555,55 @@ const TripScreen: React.FC<{
   const clickDefault = ideasOpen ? 'ideas' : (currentDay ?? 'ideas')
   const clickDay = clickTarget ?? clickDefault
   const clickLabel = clickDay === 'ideas' ? 'Ideas' : shortDay(clickDay)
-  const addFromPin = (more: boolean) => {
+  // The card's split key adds to its day; the caret's list adds to the day picked. The row enters
+  // with the highlighter and a toast offers Undo; editing happens from the row.
+  const addFromPin = (to: string = clickDay) => {
     const pin = clickAdd.pin
     const place = pin ? pinPlace(pin) : null
     if (!pin || !place) return
-    const id = add(clickDay === 'ideas' ? null : clickDay, { title: place.name, place })
+    const id = add(to === 'ideas' ? null : to, {
+      title: place.source === 'google' ? '' : (place.name ?? ''),
+      place,
+    })
     clickAdd.dismiss()
     setClickTarget(null)
-    if (more && id) {
-      setFreshId(id)
-      ctx.current.openItem(id)
-    }
+    if (!id) return
+    const where = to === 'ideas' ? 'Ideas' : shortDay(to)
+    message.open({
+      key: 'map-added',
+      duration: 5,
+      content: (
+        <span>
+          Added to {where} ·{' '}
+          <button
+            type="button"
+            className="ui-btn is-text"
+            onClick={() => {
+              store.deleteTodo(trip.trip_id, id)
+              message.destroy('map-added')
+            }}
+          >
+            Undo
+          </button>
+        </span>
+      ),
+    })
   }
+  // Already in the trip: the same place id, or the same pin within 30 m.
+  const existing = useMemo(() => {
+    const pin = clickAdd.pin
+    if (!pin) return null
+    const f = findExisting(trip, { place_id: pin.pos.place_id, lat: pin.pos.lat, lng: pin.pos.lng })
+    if (!f) return null
+    return {
+      label: f.day ? `On ${shortDay(f.day)}` : 'In Ideas',
+      onShow: () => {
+        clickAdd.dismiss()
+        ctx.current.openItem(f.id)
+        onPinClick(f.id)
+      },
+    }
+  }, [clickAdd, trip, onPinClick])
   const preview: MapPreview | null = clickAdd.pin
     ? { lat: clickAdd.pin.pos.lat, lng: clickAdd.pin.pos.lng }
     : barPreview
@@ -634,9 +670,10 @@ const TripScreen: React.FC<{
             label: t.value === 'ideas' ? 'Ideas' : t.label,
           }))}
           target={clickDay}
-          onTarget={setClickTarget}
-          onAdd={() => addFromPin(false)}
-          onMore={() => addFromPin(true)}
+          typeName={clickAdd.pin.pos.typeName}
+          existing={existing}
+          onAdd={() => addFromPin()}
+          onAddTo={(v) => addFromPin(v)}
           onDismiss={clickAdd.dismiss}
         />
       )}
@@ -1062,7 +1099,7 @@ const TripScreen: React.FC<{
       onLaunch={(typed) => setBookingDraft({ title: typed, n: ++draftCount.current })}
       onPreview={
         mapCol
-          ? (pl) => setBarPreview(pl ? { lat: pl.lat, lng: pl.lng, label: pl.name } : null)
+          ? (pl) => setBarPreview(hasPin(pl) ? { lat: pl.lat, lng: pl.lng, label: pl.name } : null)
           : undefined
       }
       onExpand={(item) => {

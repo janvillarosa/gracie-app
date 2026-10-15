@@ -411,16 +411,24 @@ export class MapController {
     let lng = e.latLng.lng()
     const placeId = (e as google.maps.IconMouseEvent).placeId ?? undefined
     let displayName: string | undefined
+    let typeName: string | undefined
     let place_id: string | undefined
     try {
       if (placeId) {
         const { Place } = await loadPlaces()
         const place = new Place({ id: placeId })
         await place.fetchFields({
-          fields: ['id', 'displayName', 'formattedAddress', 'location'],
+          fields: [
+            'id',
+            'displayName',
+            'formattedAddress',
+            'location',
+            'primaryTypeDisplayName',
+          ],
         })
         place_id = placeId
         displayName = place.displayName ?? undefined
+        typeName = place.primaryTypeDisplayName ?? undefined
         if (place.location) {
           lat = place.location.lat()
           lng = place.location.lng()
@@ -446,6 +454,7 @@ export class MapController {
       y: at.y,
       ...(place_id ? { place_id } : {}),
       ...(displayName ? { displayName, name: displayName } : {}),
+      ...(typeName ? { typeName } : {}),
     }
     this.props.onMapClick?.(click)
   }

@@ -1,11 +1,22 @@
 import React, { useRef, useState } from 'react'
-import { Button, Chip, Combobox, Field } from '@components/ui'
+import {
+  Button,
+  Chip,
+  Combobox,
+  Field,
+  PoweredBy,
+  renderSuggestion,
+  SEARCH_UNAVAILABLE,
+  suggestionKey,
+  suggestionLabel,
+} from '@components/ui'
 import { ArrowsOutSimple, Plus } from '@phosphor-icons/react'
 import type { Place } from '@api/tripTypes'
 import { parseQuickAdd } from '@lib/trips/schedule'
 import { titleProblem } from '@lib/trips/limits'
 import { DayPick } from './pickers'
-import { DEGRADED_TEXT, OSM_ATTRIBUTION, usePlaceSearch } from './places'
+import { usePlaceSuggest } from '@lib/trips/usePlaces'
+import type { Suggestion } from '@lib/trips/placesSource'
 
 export type QuickAddItem = { title: string; start_time?: string; place?: Place }
 
@@ -25,27 +36,11 @@ type Props = {
   // 'booking': what is typed becomes the title of a new booking, which opens in its own sheet.
   mode?: 'todo' | 'booking'
   onLaunch?: (typed: string) => void
-  // A place suggestion is highlighted (or not): the map shows a hollow pin for it.
+  // Kept for the page: autocomplete suggestions carry no coordinates, so nothing previews.
   onPreview?: (place: Place | null) => void
 }
 
 const MAX_SLIPS = 5
-
-const placeKey = (p: Place) => `${p.osm_ref ?? p.name}-${p.lat}-${p.lng}`
-const placeDetail = (p: Place) => p.address || p.locality || ''
-const placeLabel = (p: Place) => {
-  const detail = placeDetail(p)
-  return detail ? `${p.name}, ${detail}` : p.name
-}
-const renderPlace = (p: Place) => {
-  const detail = placeDetail(p)
-  return (
-    <>
-      <span className="slip-name">{p.name}</span>
-      {detail && <span className="slip-usual">{detail}</span>}
-    </>
-  )
-}
 
 // The one add control on a trip, matching the list page's add bar: a field and a round yellow
 // button. Owns the draft so keystrokes re-render only this bar. "14:00 Pena Palace" sets the
@@ -62,16 +57,15 @@ export const AddBar: React.FC<Props> = ({
   onExpand,
   mode = 'todo',
   onLaunch,
-  onPreview,
 }) => {
   const [value, setValue] = useState('')
   const [adds, setAdds] = useState(0)
   const ref = useRef<{ focus: () => void } | null>(null)
   const parsed = parseQuickAdd(value)
-  const search = usePlaceSearch(mode === 'booking' ? '' : parsed.title, bias)
+  const search = usePlaceSuggest(mode === 'booking' ? '' : parsed.title, bias)
   const fresh = search.forQuery === parsed.title.trim()
   // A degraded search offers no slips (just the status line below).
-  const slips = fresh && !search.degraded ? search.results.slice(0, MAX_SLIPS) : []
+  const slips = fresh && !search.degraded ? search.suggestions.slice(0, MAX_SLIPS) : []
   const problem = titleProblem(parsed.title)
   const armed = parsed.title.length > 0 && !problem
   const current = targets.find((t) => t.value === target)
@@ -96,9 +90,13 @@ export const AddBar: React.FC<Props> = ({
     onExpand?.({ title: parsed.title, start_time: parsed.start_time })
     reset()
   }
-  const pick = (p: Place) => {
+  // A pick stores only the Google place (id, coordinates, fetch time). The title stays blank:
+  // the row shows the place's name while online.
+  const pick = async (s: Suggestion) => {
+    const place = await search.pick(s)
+    if (!place) return
     navigator.vibrate?.(8)
-    onAdd({ title: p.name, start_time: parsed.start_time, place: p })
+    onAdd({ title: '', start_time: parsed.start_time, place })
     reset()
   }
   // Shift+Enter opens the full editor; the combobox handles every other key.
@@ -122,16 +120,14 @@ export const AddBar: React.FC<Props> = ({
     <div className="add-bar" role="region" aria-label="Add to trip">
       <Combobox
         options={slips}
-        getKey={placeKey}
-        getLabel={placeLabel}
-        renderOption={renderPlace}
+        getKey={suggestionKey}
+        getLabel={suggestionLabel}
+        renderOption={renderSuggestion}
         onPick={pick}
         onSubmitText={mode === 'booking' ? launch : submit}
         query={value}
         onKeyDown={onKeyDown}
-        // The highlighted suggestion previews on the map; nothing highlighted clears it.
-        onHighlight={onPreview}
-        footer={<div className="place-attrib">{OSM_ATTRIBUTION}</div>}
+        footer={<PoweredBy source={search.attribution} />}
         listLabel="Places"
       >
         {({ input }) => (
@@ -204,7 +200,7 @@ export const AddBar: React.FC<Props> = ({
         )}
       </Combobox>
       <div className="trip-add-status" role="status">
-        {problem || (fresh && search.degraded ? DEGRADED_TEXT : '')}
+        {problem || (fresh && search.degraded ? SEARCH_UNAVAILABLE : '')}
       </div>
     </div>
   )

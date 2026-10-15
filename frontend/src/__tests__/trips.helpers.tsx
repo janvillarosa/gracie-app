@@ -178,7 +178,7 @@ export function lisbonTrip(): Trip {
         day: day(-2),
         done: true,
         order: 1,
-        place: { name: 'Flat in Alfama', lat: 38.71, lng: -9.13, source: 'photon' },
+        place: { name: 'Flat in Alfama', lat: 38.71, lng: -9.13, source: 'pin' },
       }),
       todo('2', 'Castelo de São Jorge', {
         day: day(-1),

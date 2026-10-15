@@ -13,6 +13,7 @@ import {
   splitDt,
 } from '@lib/trips/bookings'
 import { LIMITS } from '@lib/trips/limits'
+import { hasPin, placeText } from '@lib/trips/places'
 import { addDays, mapsUrl, shortDay, zoneLabel } from '@lib/trips/schedule'
 import {
   Button,
@@ -275,7 +276,6 @@ export const BookingSheet: React.FC<Props> = ({
   const context = [bookingRoute(full), state].filter(Boolean).join(' · ')
   const underway = s0 !== null && s0 <= nowMs
 
-  const hasPin = (p?: Place | null): p is Place => !!p && p.source !== 'manual'
   // Open Maps goes to where it ends once it is under way (arriving), else to where it starts.
   const pin = underway && hasPin(b.end_place) ? b.end_place : hasPin(b.place) ? b.place : null
   const placeLine = (p?: Place | null) =>
@@ -372,7 +372,7 @@ export const BookingSheet: React.FC<Props> = ({
               pin && (
                 <Button
                   kind="key"
-                  href={mapsUrl(pin.lat, pin.lng)}
+                  href={mapsUrl(pin.lat, pin.lng, pin.place_id)}
                   target="_blank"
                   rel="noreferrer noopener"
                 >

@@ -188,7 +188,7 @@ export const MapScreen: React.FC<Props> = ({
           </button>
           <a
             className="ant-btn ant-btn-primary ant-btn-round ant-btn-lg trip-go"
-            href={mapsUrl(stop.lat, stop.lng)}
+            href={mapsUrl(stop.lat, stop.lng, stop.placeId)}
             target="_blank"
             rel="noreferrer noopener"
           >

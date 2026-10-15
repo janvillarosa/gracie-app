@@ -2,6 +2,7 @@
 // (Google Maps today, the SVG preview when there is no key, any other provider later) draws it.
 // Nothing here knows about a provider, React or the DOM.
 import type { Booking, BookingKind, Trip, TripCategory, TripTodo } from '../../api/tripTypes'
+import { hasPin, SAVED_PLACE } from './places'
 import type { DayModel, Schedule } from './schedule'
 
 export type LatLng = { lat: number; lng: number }
@@ -18,6 +19,8 @@ export type MapStop = {
   priority: number
   // Which of the day colours (all-days mode colours pips by day).
   dayIndex: number
+  // The Google place id, for "Open Maps" by query_place_id.
+  placeId?: string
   // One muted line for a card: "12:30 · Sintra".
   meta: string
 }
@@ -47,6 +50,8 @@ export type MapPreview = LatLng & { label?: string }
 export type MapClick = LatLng & {
   place_id?: string
   displayName?: string
+  // The Google place type in plain words ("Palace"), display only.
+  typeName?: string
   name?: string
   x: number
   y: number
@@ -70,15 +75,16 @@ const KIND_CATEGORY: Record<BookingKind, TripCategory> = {
   other: 'other',
 }
 
-const pinnable = (p?: { source?: string } | null) => !!p && p.source !== 'manual'
+const pinnable = hasPin
 
 const todoStop = (t: TripTodo, order: number, dayIndex: number): MapStop | null =>
-  t.place && pinnable(t.place)
+  pinnable(t.place)
     ? {
         id: t.todo_id,
         lat: t.place.lat,
         lng: t.place.lng,
-        label: t.place.name || t.title,
+        ...(t.place.place_id ? { placeId: t.place.place_id } : {}),
+        label: t.place.name || t.title || SAVED_PLACE,
         category: t.category,
         done: t.done,
         priority: order + 2,
@@ -88,12 +94,13 @@ const todoStop = (t: TripTodo, order: number, dayIndex: number): MapStop | null 
     : null
 
 const bookingStop = (b: Booking, order: number, dayIndex: number): MapStop | null =>
-  b.place && pinnable(b.place)
+  pinnable(b.place)
     ? {
         id: b.booking_id,
         lat: b.place.lat,
         lng: b.place.lng,
-        label: b.place.name || b.title,
+        ...(b.place.place_id ? { placeId: b.place.place_id } : {}),
+        label: b.place.name || b.title || SAVED_PLACE,
         category: KIND_CATEGORY[b.kind],
         done: false,
         priority: order + 2,

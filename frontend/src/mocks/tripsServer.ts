@@ -9,7 +9,6 @@ import type {
   OpResult,
   OpsResponse,
   Place,
-  PlacesResponse,
   SyncResponse,
   Trip,
   TripDelta,
@@ -87,7 +86,11 @@ export const TRIP_ICONS = new Set([
 ])
 const CATEGORIES = new Set(['food', 'sight', 'activity', 'transport', 'stay', 'shopping', 'other'])
 const KINDS = new Set(['flight', 'stay', 'train', 'car', 'ticket', 'other'])
-const PLACE_SOURCES = new Set(['photon', 'pin', 'manual'])
+const PLACE_SOURCES = new Set(['google', 'pin', 'manual'])
+// Google coordinates live at most 30 days (Google Maps Platform terms); a client clock may run
+// a little ahead.
+const COORDS_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000
+const CLOCK_SKEW_MS = 5 * 60 * 1000
 
 const RE_TRIP = /^trip_[0-9a-f]{32}$/
 const RE_TODO = /^ttd_[0-9a-f]{32}$/
@@ -154,7 +157,8 @@ const PLACE_SPEC: Record<string, 'str' | 'num'> = {
   lat: 'num',
   lng: 'num',
   tz: 'str',
-  osm_ref: 'str',
+  place_id: 'str',
+  coords_fetched_at: 'str',
   source: 'str',
 }
 
@@ -251,24 +255,34 @@ function validTZ(s: string): boolean {
   }
 }
 
-function validPlace(p: Place | null | undefined): boolean {
+/** The backend's validPlace: google places carry a place_id and no name or address, coordinates
+ *  only with a fresh coords_fetched_at; pin and manual places are user content with coordinates. */
+let placeClock: () => number = () => Date.now()
+function validPlace(p: Place | null | undefined, now = placeClock()): boolean {
   if (p === null || p === undefined) return true
-  const name = p.name ?? ''
-  const lat = p.lat ?? 0
-  const lng = p.lng ?? 0
-  return (
-    okTitle(name, 200) &&
-    runes(p.address ?? '') <= 300 &&
-    runes(p.locality ?? '') <= MAX_LOCALITY &&
-    lat >= -90 &&
-    lat <= 90 &&
-    lng >= -180 &&
-    lng <= 180 &&
-    (p.osm_ref ?? '').length <= 64 &&
-    PLACE_SOURCES.has(p.source ?? '') &&
-    (!p.tz || validTZ(p.tz))
+  if (
+    !PLACE_SOURCES.has(p.source ?? '') ||
+    runes(p.place_id ?? '') > 256 ||
+    runes(p.name ?? '') > 200 ||
+    runes(p.address ?? '') > 300 ||
+    runes(p.locality ?? '') > MAX_LOCALITY ||
+    (p.tz && !validTZ(p.tz))
   )
+    return false
+  const hasLat = typeof p.lat === 'number'
+  if (hasLat !== (typeof p.lng === 'number')) return false
+  if (hasLat && (Math.abs(p.lat as number) > 90 || Math.abs(p.lng as number) > 180)) return false
+  if (p.source !== 'google')
+    return !p.place_id && !p.coords_fetched_at && hasLat && okTitle(p.name ?? '', 200)
+  if (!p.place_id || p.name || p.address) return false
+  if (!hasLat) return !p.coords_fetched_at
+  const at = p.coords_fetched_at ? Date.parse(p.coords_fetched_at) : Number.NaN
+  return !Number.isNaN(at) && at <= now + CLOCK_SKEW_MS && now - at <= COORDS_MAX_AGE_MS
 }
+
+/** A todo needs a title unless it has a Google place (the client shows the place's name). */
+const todoTitleOK = (title: string, place: Place | null | undefined) =>
+  title.trim() !== '' || place?.source === 'google'
 
 /** An Opt string that carries a value must pass fn; an explicit null always passes. */
 const optOK = (p: Patch, k: string, fn: (s: string) => boolean) =>
@@ -281,7 +295,7 @@ function validTripPatch(p: Patch, create: boolean): boolean {
   if ('notes' in p && !okBytes(p.notes as string, MAX_TRIP_NOTES)) return false
   if (!optOK(p, 'start_date', validDate) || !optOK(p, 'end_date', validDate)) return false
   if ('stops' in p && p.stops !== null) {
-    for (const pl of p.stops as Place[]) if (!pl || pl.name === '' || !validPlace(pl)) return false
+    for (const pl of p.stops as Place[]) if (!pl || !pl.source || !validPlace(pl)) return false
   }
   const days = (p.days ?? {}) as Record<string, string | null>
   if (Object.keys(days).length > LIMITS.days) return false
@@ -293,7 +307,8 @@ function validTripPatch(p: Patch, create: boolean): boolean {
 
 function validTodoPatch(p: Patch, create: boolean): boolean {
   if (create && !('title' in p)) return false
-  if ('title' in p && !okTitle(p.title as string, MAX_ITEM_TITLE)) return false
+  // A blank title is allowed here; the apply step requires one unless the todo has a Google place.
+  if ('title' in p && runes(p.title as string) > MAX_ITEM_TITLE) return false
   if (
     !optOK(p, 'day', validDate) ||
     !optOK(p, 'start_time', validClock) ||
@@ -423,66 +438,12 @@ function omitEmpty<T>(v: T): T {
 
 const iso = (ms: number) => new Date(ms).toISOString()
 
-export const PLACE_BOOK: Place[] = [
-  {
-    name: 'Lisbon',
-    locality: 'Lisbon',
-    lat: 38.7223,
-    lng: -9.1393,
-    tz: 'Europe/Lisbon',
-    source: 'photon',
-  },
-  {
-    name: 'Porto',
-    locality: 'Porto',
-    lat: 41.1579,
-    lng: -8.6291,
-    tz: 'Europe/Lisbon',
-    source: 'photon',
-  },
-  {
-    name: 'Sintra',
-    locality: 'Sintra',
-    lat: 38.8029,
-    lng: -9.3817,
-    tz: 'Europe/Lisbon',
-    source: 'photon',
-  },
-  {
-    name: 'Pena Palace',
-    address: 'Estrada da Pena, Sintra',
-    locality: 'Sintra',
-    lat: 38.7876,
-    lng: -9.3906,
-    tz: 'Europe/Lisbon',
-    source: 'photon',
-  },
-  {
-    name: 'Heathrow Airport',
-    locality: 'London',
-    lat: 51.47,
-    lng: -0.4543,
-    tz: 'Europe/London',
-    source: 'photon',
-  },
-  {
-    name: 'Livraria Lello',
-    address: 'Rua das Carmelitas, Porto',
-    locality: 'Porto',
-    lat: 41.1469,
-    lng: -8.6149,
-    tz: 'Europe/Lisbon',
-    source: 'photon',
-  },
-]
-
 type Change = { name: string; apply: () => void }
 type Ctx = { actor: string; now: number; newV: number }
 type Outcome = { res: OpResult; dirty: boolean; bump: boolean }
 
 export class MockTripServer {
   trips = new Map<string, STrip>()
-  degradedPlaces = false
   nowMs = () => Date.now()
   /** Ids of members, for `updated_by`. */
   me = 'user_me'
@@ -578,6 +539,7 @@ export class MockTripServer {
 
   /** ApplyOps: per trip, in seq order per client_id; one version bump per trip per batch. */
   ops(roomId: string, rawOps: unknown[], as = this.me): OpsResponse {
+    placeClock = this.nowMs
     this.room(roomId)
     if (!Array.isArray(rawOps) || rawOps.length === 0 || rawOps.length > LIMITS.opsPerBatch)
       throw new MockHttpError(400, { error: 'bad request' })
@@ -971,6 +933,8 @@ export class MockTripServer {
     if ('code' in d) return reject(d.code)
     const p = d.patch
     if (!validTodoPatch(p, true) || !this.bookingLinkOK(t, p)) return reject('invalid')
+    if (!todoTitleOK((p.title as string) ?? '', p.place as Place | null | undefined))
+      return reject('invalid')
     const td: TripTodo = {
       todo_id: op.entity_id,
       title: '',
@@ -1007,6 +971,14 @@ export class MockTripServer {
     const p = d.patch
     if (!validTodoPatch(p, false) || !this.bookingLinkOK(t, p)) return reject('invalid')
     const td = t.todos[i]
+    if (
+      ('title' in p || 'place' in p) &&
+      !todoTitleOK(
+        'title' in p ? (p.title as string) : td.title,
+        'place' in p ? (p.place as Place | null) : td.place,
+      )
+    )
+      return reject('invalid')
     t.child_at[op.entity_id] ??= {}
     if (!this.commit(t.child_at[op.entity_id], at, this.todoChanges(td, p, c), res)) return false
     td.v = c.newV
@@ -1161,25 +1133,6 @@ export class MockTripServer {
       ],
       by,
     )
-  }
-
-  // ---- places (services/places) ---------------------------------------------------------------
-  searchPlaces(q: string, limit?: number): PlacesResponse {
-    const needle = q.trim().toLowerCase()
-    if (runes(needle) < 3 || runes(needle) > 100)
-      throw new MockHttpError(400, { error: 'bad request' })
-    if (this.degradedPlaces) return { results: [], degraded: true }
-    const n = limit && limit >= 1 && limit <= 10 ? limit : 5
-    return { results: PLACE_BOOK.filter((p) => p.name.toLowerCase().includes(needle)).slice(0, n) }
-  }
-
-  reverse(lat: number, lng: number): PlacesResponse {
-    if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180)
-      throw new MockHttpError(400, { error: 'bad request' })
-    if (this.degradedPlaces) return { results: [], degraded: true }
-    return {
-      results: [{ name: `${lat.toFixed(4)}, ${lng.toFixed(4)}`, lat, lng, source: 'pin' }],
-    }
   }
 
   packingList(roomId: string, tripId: string) {

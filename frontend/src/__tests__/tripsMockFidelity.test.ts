@@ -15,7 +15,7 @@ const place = (name: string, tz = '') => ({
   name,
   lat: 35,
   lng: 135,
-  source: 'photon',
+  source: 'pin',
   locality: name,
   ...(tz ? { tz } : {}),
 })
@@ -673,18 +673,121 @@ describe('sync', () => {
   })
 })
 
-describe('/places', () => {
-  it('degraded is exactly {results: [], degraded: true}; healthy answers omit degraded', () => {
-    srv.degradedPlaces = true
-    expect(srv.searchPlaces('lisbon')).toEqual({ results: [], degraded: true })
-    expect(srv.reverse(38.7, -9.1)).toEqual({ results: [], degraded: true })
-    srv.degradedPlaces = false
-    expect(srv.searchPlaces('lisbon')).not.toHaveProperty('degraded')
+describe('Google places (backend models.Place rules)', () => {
+  const iso = (msAgo: number) => new Date(NOW - msAgo).toISOString()
+  const DAY = 24 * 60 * 60 * 1000
+  const google = (extra: Record<string, unknown> = {}) => ({
+    source: 'google',
+    place_id: 'ChIJabc',
+    lat: 38.7,
+    lng: -9.1,
+    coords_fetched_at: iso(DAY),
+    ...extra,
+  })
+  const todo = (n: number, patch: Record<string, unknown>) =>
+    run('dev-a', 'todo.create', todoId(n), patch)
+
+  beforeEach(() => {
+    mk()
   })
 
-  it('a query under 3 characters, or bad coordinates, is a 400', () => {
-    expect(() => srv.searchPlaces(' li ')).toThrow(MockHttpError)
-    expect(() => srv.reverse(123, 0)).toThrow(MockHttpError)
+  it('stores a google place with its id, coordinates and fetch time, and a blank title', () => {
+    expect(stateRec(todo(2, { title: '', place: google() }))).toBe('applied/')
+    expect(state()?.todos[0].place?.place_id).toBe('ChIJabc')
+    expect(state()?.todos[0].title).toBe('')
+  })
+
+  it('rejects a name or an address on a google place (Google content is never stored)', () => {
+    expect(stateRec(todo(2, { title: 'x', place: google({ name: 'Sé' }) }))).toBe(
+      'rejected/invalid',
+    )
+    expect(stateRec(todo(3, { title: 'x', place: google({ address: 'Rua 1' }) }))).toBe(
+      'rejected/invalid',
+    )
+  })
+
+  it('needs a place_id, and rejects osm_ref and the photon source as gone', () => {
+    expect(stateRec(todo(2, { title: 'x', place: google({ place_id: '' }) }))).toBe(
+      'rejected/invalid',
+    )
+    expect(stateRec(todo(3, { title: 'x', place: google({ osm_ref: 'n1' }) }))).toBe(
+      'rejected/unsupported',
+    )
+    expect(stateRec(todo(4, { title: 'x', place: google({ source: 'photon' }) }))).toBe(
+      'rejected/invalid',
+    )
+  })
+
+  it('keeps coordinates at most 30 days, and needs coords_fetched_at with them', () => {
+    expect(
+      stateRec(todo(2, { title: 'x', place: google({ coords_fetched_at: iso(31 * DAY) }) })),
+    ).toBe('rejected/invalid')
+    expect(stateRec(todo(3, { title: 'x', place: google({ coords_fetched_at: undefined }) }))).toBe(
+      'rejected/invalid',
+    )
+    // The server clock may be a little behind the client's, but not by hours.
+    expect(
+      stateRec(
+        todo(4, { title: 'x', place: google({ coords_fetched_at: iso(-2 * 60 * 60 * 1000) }) }),
+      ),
+    ).toBe('rejected/invalid')
+  })
+
+  it('accepts a purged place (id only), but not a fetch time without coordinates', () => {
+    expect(stateRec(todo(2, { title: '', place: { source: 'google', place_id: 'ChIJabc' } }))).toBe(
+      'applied/',
+    )
+    expect(
+      stateRec(
+        todo(3, {
+          title: '',
+          place: { source: 'google', place_id: 'x', coords_fetched_at: iso(DAY) },
+        }),
+      ),
+    ).toBe('rejected/invalid')
+  })
+
+  it('allows a blank title only with a google place', () => {
+    expect(stateRec(todo(2, { title: '   ' }))).toBe('rejected/invalid')
+    expect(stateRec(todo(3, { title: '', place: place('Cafe') }))).toBe('rejected/invalid')
+    expect(stateRec(todo(4, { title: 'x' }))).toBe('applied/')
+    // Clearing the title of a todo that has no google place is rejected too.
+    expect(stateRec(run('dev-a', 'todo.update', todoId(4), { title: '' }))).toBe('rejected/invalid')
+    expect(stateRec(run('dev-a', 'todo.update', todoId(4), { title: '', place: google() }))).toBe(
+      'applied/',
+    )
+  })
+
+  it('keeps pin and manual places as user content: a name and coordinates, no place_id', () => {
+    expect(stateRec(todo(2, { title: 'x', place: place('Dropped') }))).toBe('applied/')
+    expect(
+      stateRec(todo(3, { title: 'x', place: { ...place('Dropped'), place_id: 'ChIJ' } })),
+    ).toBe('rejected/invalid')
+    expect(stateRec(todo(4, { title: 'x', place: { source: 'pin', lat: 1, lng: 2 } }))).toBe(
+      'rejected/invalid',
+    )
+  })
+
+  it('validates trip stops and booking places the same way', () => {
+    expect(stateRec(run('dev-a', 'trip.update', undefined, { stops: [google()] }))).toBe('applied/')
+    expect(
+      stateRec(run('dev-a', 'trip.update', undefined, { stops: [google({ name: 'x' })] })),
+    ).toBe('rejected/invalid')
+    expect(
+      stateRec(
+        run('dev-a', 'booking.create', bookingId(2), {
+          kind: 'flight',
+          title: 'F',
+          place: google(),
+          end_place: google({ place_id: 'B' }),
+        }),
+      ),
+    ).toBe('applied/')
+  })
+
+  it('has no places endpoints any more', () => {
+    expect((srv as unknown as Record<string, unknown>).searchPlaces).toBeUndefined()
+    expect((srv as unknown as Record<string, unknown>).reverse).toBeUndefined()
   })
 })
 

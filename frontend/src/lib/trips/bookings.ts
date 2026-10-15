@@ -69,8 +69,8 @@ export function nextMeta(b: Booking): string {
   return d ? `Next · ${shortDay(d)}${t ? ` ${t}` : ''}` : 'Next'
 }
 
-const placeShort = (p?: { name: string; locality?: string } | null) =>
-  p ? p.locality || p.name : ''
+const placeShort = (p?: { name?: string; locality?: string } | null) =>
+  p ? p.locality || p.name || '' : ''
 
 /** "Lisbon → Porto" for a booking that has both a start and an end place, else "". */
 export function bookingRoute(b: Booking): string {

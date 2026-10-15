@@ -767,3 +767,56 @@ input.ui-sheet-title:focus-visible {
     margin: -11px;
   }
 }
+
+/* ---- InlinePlace: an inline place field with slips below --------------------------------- */
+.pantry-slips.is-below {
+  top: calc(100% + 6px);
+  right: 0;
+  bottom: auto;
+  left: 0;
+  z-index: 5;
+  flex-direction: column;
+}
+.ui-inline-place {
+  position: relative;
+  display: grid;
+  gap: var(--space-1);
+}
+.ui-inline-place-value {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--control-md);
+}
+.ui-inline-place-text {
+  display: grid;
+  min-width: 0;
+  flex: 1;
+  text-align: left;
+}
+.ui-inline-place-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink);
+  font-weight: 600;
+}
+.ui-inline-place-sub {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: var(--size-meta);
+}
+.ui-inline-place-value > button.ui-inline-place-text {
+  padding: 0;
+  background: none;
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+}
+.ui-inline-place-attrib {
+  padding: 6px 12px 2px;
+  color: var(--muted);
+  font-size: var(--size-meta);
+}

@@ -298,14 +298,14 @@ describe('a booking with a start and an end place', () => {
     locality: 'Lisbon',
     lat: 38.77,
     lng: -9.13,
-    source: 'photon' as const,
+    source: 'pin' as const,
   }
   const opo = {
     name: 'Porto OPO',
     locality: 'Porto',
     lat: 41.24,
     lng: -8.68,
-    source: 'photon' as const,
+    source: 'pin' as const,
   }
   const flight = (over: Partial<Booking> = {}) =>
     bk(9, { kind: 'flight', title: 'Hop', place: lis, end_place: opo, ...over })

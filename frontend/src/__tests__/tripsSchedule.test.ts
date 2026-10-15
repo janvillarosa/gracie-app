@@ -158,11 +158,11 @@ describe('buildSchedule', () => {
       todos: [
         todo('a', {
           day: '2026-10-24',
-          place: { name: 'Pena', locality: 'Sintra', lat: 1, lng: 1, source: 'photon' },
+          place: { name: 'Pena', locality: 'Sintra', lat: 1, lng: 1, source: 'pin' },
         }),
         todo('b', {
           day: '2026-10-24',
-          place: { name: 'Quinta', locality: 'Sintra', lat: 1, lng: 1, source: 'photon' },
+          place: { name: 'Quinta', locality: 'Sintra', lat: 1, lng: 1, source: 'pin' },
         }),
       ],
     })
@@ -212,9 +212,9 @@ describe('phases and copy', () => {
     expect(tonightsStay(t, '2026-10-24')?.title).toBe('Hotel')
     expect(tonightsStay(t, '2026-10-25')).toBeUndefined()
     expect(routeText(t)).toBe('Lisbon → Porto')
-    expect(
-      routeText(trip({ destination: { name: 'Faro', lat: 1, lng: 1, source: 'photon' } })),
-    ).toBe('Faro')
+    expect(routeText(trip({ destination: { name: 'Faro', lat: 1, lng: 1, source: 'pin' } }))).toBe(
+      'Faro',
+    )
   })
 
   it('parses a time off the front of a quick add', () => {

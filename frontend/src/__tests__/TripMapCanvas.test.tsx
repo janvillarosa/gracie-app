@@ -1,3 +1,4 @@
+import { demoSource, setPlacesSource } from '../lib/trips/placesSource'
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -20,7 +21,7 @@ const place = (name: string, lat: number, lng: number) => ({
   name,
   lat,
   lng,
-  source: 'photon' as const,
+  source: 'pin' as const,
   locality: 'Sintra',
 })
 const withPlaces = () => {
@@ -279,7 +280,12 @@ describe('click to add a stop', () => {
   it('says "Dropped pin" with a name to type when the place cannot be found', async () => {
     const t = withPlaces()
     seed(t)
-    tripServer.degradedPlaces = true
+    setPlacesSource({
+      ...demoSource,
+      suggest: async () => {
+        throw new Error('search is down')
+      },
+    })
     renderTrips(`/app/trips/${t.trip_id}`)
     const map = await ready()
     click(map)

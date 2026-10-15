@@ -1,3 +1,4 @@
+import { demoSource, setPlacesSource } from '../lib/trips/placesSource'
 import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -114,7 +115,7 @@ describe('Item sheet fields and places', () => {
         locality: 'Sintra',
         lat: 38.79,
         lng: -9.39,
-        source: 'photon',
+        source: 'pin',
       },
     }
     seed(t)
@@ -209,14 +210,19 @@ describe('Item sheet fields and places', () => {
   })
 
   it('names the fallback when search is down and still offers the address', async () => {
-    tripServer.degradedPlaces = true
+    setPlacesSource({
+      ...demoSource,
+      suggest: async () => {
+        throw new Error('search is down')
+      },
+    })
     seed(TRIP)
     open()
     const panel = await openRow('Pack the daypack')
     await userEvent.click(within(panel).getByRole('button', { name: /^Place Add a place/ }))
     await userEvent.type(await screen.findByRole('combobox', { name: 'Place' }), 'Rossio')
     expect(
-      await screen.findByText('Search is unavailable. Drop a pin or type the address.'),
+      await screen.findByText('Search is unavailable. Type the address instead.'),
     ).toBeInTheDocument()
     expect(await screen.findByRole('button', { name: /as the address/ })).toBeInTheDocument()
   })
@@ -362,7 +368,7 @@ describe('Map', () => {
     const t = lisbonTrip()
     t.todos[4] = {
       ...t.todos[4],
-      place: { name: 'Tasca', lat: 38.78, lng: -9.39, source: 'photon' },
+      place: { name: 'Tasca', lat: 38.78, lng: -9.39, source: 'pin' },
     }
     seed(t)
     open()
@@ -392,11 +398,11 @@ describe('Map', () => {
     // Pena (10:15) leads the deck; give it and the lunch a place.
     t.todos[3] = {
       ...t.todos[3],
-      place: { name: 'Pena', lat: 38.78, lng: -9.39, source: 'photon' },
+      place: { name: 'Pena', lat: 38.78, lng: -9.39, source: 'pin' },
     }
     t.todos[4] = {
       ...t.todos[4],
-      place: { name: 'Tasca', lat: 38.8, lng: -9.38, source: 'photon' },
+      place: { name: 'Tasca', lat: 38.8, lng: -9.38, source: 'pin' },
     }
     seed(t)
     open()
