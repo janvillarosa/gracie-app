@@ -40,6 +40,7 @@ import { ShareCodeModal } from '@components/ShareCodeModal'
 import { TopNav } from '@components/TopNav'
 import { TransitionLink } from '@components/TransitionLink'
 import { RowSkeleton } from '@components/RowSkeleton'
+import { TripsSection } from '@components/trips/TripsSection'
 import { toEmoji } from '../icons'
 import type { ListIcon } from '@api/types'
 import { useDocumentTitle } from '@lib/useDocumentTitle'
@@ -312,6 +313,8 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
           </Space>
         </Card>
       </div>
+
+      <TripsSection roomId={roomId} userId={userId} />
 
       <ShareCodeModal
         open={shareOpen}

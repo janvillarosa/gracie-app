@@ -20,6 +20,8 @@ const RoomSettings = lazyPage(() => import('@pages/RoomSettings'), 'RoomSettings
 const UserSettings = lazyPage(() => import('@pages/UserSettings'), 'UserSettings')
 const ListPage = lazyPage(() => import('@pages/ListPage'), 'ListPage')
 const ListsIndex = lazyPage(() => import('@pages/ListsIndex'), 'ListsIndex')
+const TripsIndex = lazyPage(() => import('@pages/TripsIndex'), 'TripsIndex')
+const TripPage = lazyPage(() => import('@pages/TripPage'), 'TripPage')
 
 const RequireAuth: React.FC<React.PropsWithChildren> = ({ children }) => {
   const { isAuthed } = useAuth()
@@ -102,6 +104,22 @@ export const AppRoutes: React.FC = () => {
             element={
               <RequireAuth>
                 <ListsIndex />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/app/trips/:tripId"
+            element={
+              <RequireAuth>
+                <TripPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/app/trips"
+            element={
+              <RequireAuth>
+                <TripsIndex />
               </RequireAuth>
             }
           />

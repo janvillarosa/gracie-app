@@ -2912,3 +2912,44 @@ textarea.notes-textarea {
     padding: 0 14px !important;
   }
 }
+
+/* Trips: day colours and category stamps.
+   The day cycle is brand blue, red and a deep yellow plus green, teal and violet. Each is at
+   least 3:1 against the map ground (--trip-map-ground), so a route reads on the map. Day 7
+   reuses day 1. */
+:root {
+  --trip-map-ground: #E9EEE6;
+  --trip-day-0: #2348A6;
+  --trip-day-1: #BE1E2D;
+  --trip-day-2: #946D00;
+  --trip-day-3: #1E7B3C;
+  --trip-day-4: #0E7C86;
+  --trip-day-5: #6A3FB5;
+
+  /* Category stamps: tinted ground, darker ink of the same hue (4.5:1 on the tint). */
+  --trip-cat-food-bg: #FDE7D2;
+  --trip-cat-food-fg: #8A4209;
+  --trip-cat-sight-bg: #DCE5FA;
+  --trip-cat-sight-fg: #1D3F93;
+  --trip-cat-activity-bg: #DDF0E2;
+  --trip-cat-activity-fg: #17602F;
+  --trip-cat-transport-bg: #E8E8E8;
+  --trip-cat-transport-fg: #333333;
+  --trip-cat-stay-bg: #FFF1B3;
+  --trip-cat-stay-fg: #6B5000;
+  --trip-cat-shopping-bg: #E8DFF6;
+  --trip-cat-shopping-fg: #55308F;
+  --trip-cat-other-bg: #EFEFEF;
+  --trip-cat-other-fg: #4A4A4A;
+}
+
+.trip-cat {
+  text-transform: uppercase;
+}
+.trip-cat-food { background: var(--trip-cat-food-bg) !important; color: var(--trip-cat-food-fg) !important; }
+.trip-cat-sight { background: var(--trip-cat-sight-bg) !important; color: var(--trip-cat-sight-fg) !important; }
+.trip-cat-activity { background: var(--trip-cat-activity-bg) !important; color: var(--trip-cat-activity-fg) !important; }
+.trip-cat-transport { background: var(--trip-cat-transport-bg) !important; color: var(--trip-cat-transport-fg) !important; }
+.trip-cat-stay { background: var(--trip-cat-stay-bg) !important; color: var(--trip-cat-stay-fg) !important; }
+.trip-cat-shopping { background: var(--trip-cat-shopping-bg) !important; color: var(--trip-cat-shopping-fg) !important; }
+.trip-cat-other { background: var(--trip-cat-other-bg) !important; color: var(--trip-cat-other-fg) !important; }
