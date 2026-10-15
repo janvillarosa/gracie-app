@@ -194,3 +194,26 @@ For every operation, check both columns:
 - One user deletes a booking while the other is linking it. The link is rejected, and the optimistic state reverts with a toast.
 
 **Record the results** for each row as works pass/fail plus UX pass/fail, with notes, in the dated results file.
+
+### S14. Alignment audit (run on every screen, at 375 and 1280)
+
+Every line inside a sheet follows one row grid: `[lead 24] 12 [time 44] 12 [title 1fr] [trail]`. Paste this into the console on the trip page and on each sheet. It prints the left x of each column for every row-like line. Within one sheet, all values in a column must be equal (±1px).
+
+```js
+(() => {
+  const L = (e) => (e ? Math.round(e.getBoundingClientRect().left) : null)
+  const lines = [...document.querySelectorAll('[data-row], .trip-row-line, [class*="stub"], [class*="day-head"]')]
+  return lines.map((l) => ({
+    text: l.innerText.trim().split('\n')[0].slice(0, 30),
+    lead: L(l.querySelector('input[type=checkbox], svg')),
+    time: L(l.querySelector('[class*="time"]')),
+    title: L(l.querySelector('[class*="title"], strong, b')),
+  }))
+})()
+```
+
+Also check by eye:
+- Day headers, section titles and the "N days done" line start at the lead column.
+- The Next stop card's checkbox, heading, subheading and buttons align to its own lead and title columns.
+- The left and right inner padding of each card or sheet is equal.
+- Nothing touches a card edge.
