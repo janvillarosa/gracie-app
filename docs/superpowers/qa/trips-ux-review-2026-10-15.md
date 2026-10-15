@@ -101,3 +101,17 @@ Severity: **B** blocker · **Ma** major · **Mi** minor · **N** nit. Viewport: 
 | ID | VP | Lens | Sev | What I saw | What it should be |
 |---|---|---|---|---|---|
 | T18 | M | L1 L3 L6 | **B** | The pill floats under the header and its popover is clipped. Both entries are overlaps, one on a done day. Tapping "Sun 18 has two things at the same time" scrolls to Sun 18 but marks nothing. | Remove the pill. Show gaps inline (brief 6i). This supersedes T9 and the gaps part of T3. |
+
+## Addendum: Bookings tab, add and edit (user: "kinda looks and feels clunky")
+
+Checked at 375px on a later build: K1 and K2 were already fixed (one add bar, one-line rows).
+
+| ID | VP | Lens | Sev | What I saw | What it should be |
+|---|---|---|---|---|---|
+| K5 | M+D | L3 L7 | **B** | The add booking form has 9 labelled boxed inputs: Kind select, Confirmation code, Title, Starts, Start time zone, Ends, End time zone, Place, Notes. It ignores the editor guidance. | Kind chips first, then the todo-editor anatomy with kind-adaptive when/where rows. |
+| K6 | M | L1 | Ma | Text typed in the add bar does not carry into Title. | The typed text becomes the title; kind is preselected from the text when it's obvious. |
+| K7 | M+D | L3 L1 | Ma | Time zones are typed free text ("Europe/Lisbon"), shown as pills under every time in edit. | Zones come from the places' tz. Show a muted suffix only when the zone differs from the trip's. Manual override sits in the sheet's ⋯. |
+| K8 | M+D | L3 | Mi | "Show code" and "Change the code" are two controls for one thing. | One code row: Add / Show (slip with Edit). |
+| K9 | M | L4 L6 | Ma | The add form's inputs and the Cancel/Save buttons touch the sheet edges. | 20px insets; a full-width "Add booking" key, enabled when kind + title exist. |
+| K10 | M+D | L2 | Mi | A stay reads "From / To", and the kind is a native select. | "Check-in / Check-out"; the kind is a chip ("STAY ▾"). |
+| K11 | M+D | L2 L4 | Mi | The list is grouped by kind, so the current stay doesn't stand out, and there's an empty gap above the first group. | Chronological order: Now, then Next, then upcoming, then used (folded). The kind is the leading icon. |
