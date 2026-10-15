@@ -827,7 +827,21 @@ const TripScreen: React.FC<{
         )
       })}
       {schedule.outside.length > 0 && (
-        <section id="outside-dates" className="trip-day is-open" aria-label="Outside trip dates">
+        <section
+          id="outside-dates"
+          // Same row grid as a day: a time column when any of its lines has a time, else the
+          // times would sit on top of the titles.
+          className={
+            schedule.outside.some(
+              (e) =>
+                e.startMs !== null ||
+                (e.kind === 'todo' ? !!e.todo.start_time : !!e.booking.starts_at?.includes('T')),
+            )
+              ? 'trip-day has-time is-open'
+              : 'trip-day is-open'
+          }
+          aria-label="Outside trip dates"
+        >
           <header className="trip-day-head">
             <h3 tabIndex={-1}>Outside the trip dates</h3>
           </header>

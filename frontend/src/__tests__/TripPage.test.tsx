@@ -537,6 +537,16 @@ describe('Days', () => {
     expect(within(section).getByText('Christmas market')).toBeInTheDocument()
     expect(within(section).getByText(/^These are dated outside /)).toBeInTheDocument()
   })
+
+  it('keeps a time column there too, so a time never sits on its title', async () => {
+    const t = lisbonTrip()
+    t.todos.push(todo('11', 'Christmas market', { day: rel(40), start_time: '18:00' }))
+    seed(t)
+    open()
+    const section = await screen.findByRole('region', { name: 'Outside trip dates' })
+    expect(within(section).getByText('18:00')).toBeInTheDocument()
+    expect(section).toHaveClass('has-time')
+  })
 })
 
 describe('Rows', () => {

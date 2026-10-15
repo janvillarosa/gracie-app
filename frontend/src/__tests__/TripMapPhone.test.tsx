@@ -2,7 +2,7 @@ import { act, fireEvent, renderHook, screen, waitFor, within } from '@testing-li
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { placeLabels } from '@lib/trips/mapLabels'
-import { buildScene, shorten } from '@lib/trips/mapScene'
+import { buildScene, hasMapPlaces, shorten } from '@lib/trips/mapScene'
 import { buildSchedule } from '@lib/trips/schedule'
 import { useMapOk } from '@components/trips/useTripMap'
 import { FakeMap, FakeMarker, fakeLayout, resetGoogleFake } from './googleFake'
@@ -260,6 +260,35 @@ describe('what the map is told', () => {
     expect(all.route).toBe(false)
     expect(new Set(all.stops.map((s) => s.dayIndex)).size).toBeGreaterThan(1)
     expect(buildScene({ mode: 'ideas', schedule }).stops).toHaveLength(0)
+  })
+
+  it('leaves getting there and sleeping off: flights, trains, cars, stays and those todos', () => {
+    const t = withPlaces()
+    const day = rel(0)
+    const at = { lat: 38.75, lng: -9.2, source: 'pin' as const }
+    const bk = (id: string, kind: 'flight' | 'train' | 'car' | 'stay' | 'ticket') => ({
+      booking_id: `tbk_${id.padStart(32, '0')}`,
+      kind,
+      title: kind,
+      starts_at: `${day}T09:00`,
+      place: { ...at, name: kind },
+    })
+    t.bookings = [
+      bk('a1', 'flight'),
+      bk('a2', 'train'),
+      bk('a3', 'car'),
+      bk('a4', 'stay'),
+      bk('a5', 'ticket'),
+    ] as typeof t.bookings
+    t.todos = [
+      { ...t.todos[3], category: 'transport', place: { ...at, lat: 38.6, name: 'Taxi rank' } },
+      { ...t.todos[4], category: 'stay', place: { ...at, lat: 38.65, name: 'Flat' } },
+    ]
+    const ids = buildScene({ mode: 'all', schedule: buildSchedule(t) }).stops.map((s) => s.label)
+    expect(ids).toEqual(['ticket'])
+    // Nothing but transport and stays: no map at all.
+    t.bookings = t.bookings.filter((b) => b.kind !== 'ticket')
+    expect(hasMapPlaces(t)).toBe(false)
   })
 
   it('shortens with an ellipsis', () => {
