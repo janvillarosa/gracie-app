@@ -17,7 +17,7 @@ function isEmail(v: string) {
 }
 
 export const UserSettings: React.FC = () => {
-  const { apiKey, setApiKey } = useAuth()
+  const { apiKey, setApiKey, signOut } = useAuth()
   const navigate = useTransitionNavigate()
   useDocumentTitle('Account settings')
   const qc = useQueryClient()
@@ -105,7 +105,7 @@ export const UserSettings: React.FC = () => {
   async function onConfirmDelete() {
     try {
       await deleteMyAccount(apiKey!)
-      setApiKey(null)
+      await signOut('expired')
       navigate('/login', { replace: true })
     } catch (e: any) {
       message.error(errorMessage(e, 'Couldn’t delete your account. Try again.'))

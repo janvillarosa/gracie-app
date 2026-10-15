@@ -5,6 +5,7 @@ import type { Booking, BookingKind, Place } from '@api/tripTypes'
 import {
   bookingEndMs,
   bookingStartMs,
+  bookingRoute,
   bookingSub,
   inferKind,
   joinDt,
@@ -66,12 +67,41 @@ type Draft = Partial<Booking>
 /** Which rows a kind shows, and what its places and times are called. */
 const KIND_ROWS: Record<
   BookingKind,
-  { place: string; start: string; end: string; hasEnd: boolean; arrives: boolean }
+  {
+    place: string
+    // The second place ("To"), for the kinds that go from one place to another.
+    endPlace?: string
+    start: string
+    end: string
+    hasEnd: boolean
+    arrives: boolean
+  }
 > = {
-  flight: { place: 'From', start: 'Depart', end: 'Arrive', hasEnd: true, arrives: true },
-  train: { place: 'From', start: 'Depart', end: 'Arrive', hasEnd: true, arrives: true },
+  flight: {
+    place: 'From',
+    endPlace: 'To',
+    start: 'Depart',
+    end: 'Arrive',
+    hasEnd: true,
+    arrives: true,
+  },
+  train: {
+    place: 'From',
+    endPlace: 'To',
+    start: 'Depart',
+    end: 'Arrive',
+    hasEnd: true,
+    arrives: true,
+  },
   stay: { place: 'Place', start: 'Check-in', end: 'Check-out', hasEnd: true, arrives: false },
-  car: { place: 'Place', start: 'Pick-up', end: 'Drop-off', hasEnd: true, arrives: false },
+  car: {
+    place: 'From',
+    endPlace: 'To',
+    start: 'Pick-up',
+    end: 'Drop-off',
+    hasEnd: true,
+    arrives: false,
+  },
   ticket: { place: 'Place', start: 'When', end: '', hasEnd: false, arrives: false },
   other: { place: 'Place', start: 'When', end: '', hasEnd: false, arrives: false },
 }
@@ -122,6 +152,7 @@ export const BookingSheet: React.FC<Props> = ({
     !!(
       m.title?.trim() !== initialTitle.trim() ||
       m.place ||
+      m.end_place ||
       m.confirmation_code ||
       m.notes ||
       m.ends_at ||
@@ -156,8 +187,9 @@ export const BookingSheet: React.FC<Props> = ({
       starts_at: draft.starts_at ?? null,
       ends_at: draft.ends_at ?? null,
       start_tz: draft.start_tz ?? null,
-      end_tz: draft.end_tz ?? null,
+      ...(draft.end_tz ? { end_tz: draft.end_tz } : {}),
       place: draft.place ?? null,
+      ...(draft.end_place ? { end_place: draft.end_place } : {}),
       ...(draft.notes ? { notes: draft.notes } : {}),
     })
   }
@@ -224,7 +256,7 @@ export const BookingSheet: React.FC<Props> = ({
   const full = b as Booking
   const s0 = bookingStartMs(full, tripTz)
   const e0 = bookingEndMs(full, tripTz) ?? s0
-  const context = isNew
+  const state = isNew
     ? 'New booking'
     : e0 !== null && e0 < nowMs
       ? 'Used'
@@ -233,11 +265,17 @@ export const BookingSheet: React.FC<Props> = ({
         : s0 !== null && start.d
           ? `Next · ${shortDay(start.d)}${start.t ? ` ${start.t}` : ''}`
           : bookingSub(full)
+  // "Lisbon → Porto" leads the line once both ends are known.
+  const context = [bookingRoute(full), state].filter(Boolean).join(' · ')
+  const underway = s0 !== null && s0 <= nowMs
 
-  const pin = b.place && b.place.source !== 'manual' ? b.place : null
-  const placeText = b.place
-    ? [b.place.name, b.place.locality].filter((x, i, a) => x && a.indexOf(x) === i).join(' · ')
-    : ''
+  const hasPin = (p?: Place | null): p is Place => !!p && p.source !== 'manual'
+  // Open Maps goes to where it ends once it is under way (arriving), else to where it starts.
+  const pin = underway && hasPin(b.end_place) ? b.end_place : hasPin(b.place) ? b.place : null
+  const placeLine = (p?: Place | null) =>
+    p ? [p.name, p.locality].filter((x, i, a) => x && a.indexOf(x) === i).join(' · ') : ''
+  const placeText = placeLine(b.place)
+  const endPlaceText = placeLine(b.end_place)
   const code = b.confirmation_code
 
   const kindTile = (
@@ -373,7 +411,9 @@ export const BookingSheet: React.FC<Props> = ({
             {rows.hasEnd && (
               <NavRow
                 label={rows.end}
-                value={whenText(end.d, end.t, b.end_tz || b.start_tz) || 'Add a time'}
+                value={
+                  whenText(end.d, end.t, b.end_tz || b.end_place?.tz || b.start_tz) || 'Add a time'
+                }
                 empty={!end.d}
                 disabled={locked}
                 picker={{
@@ -413,6 +453,29 @@ export const BookingSheet: React.FC<Props> = ({
                 ),
               }}
             />
+            {rows.endPlace && (
+              <NavRow
+                label={rows.endPlace}
+                value={endPlaceText || 'Add where to'}
+                empty={!endPlaceText}
+                disabled={locked}
+                picker={{
+                  title: 'To',
+                  content: (close) => (
+                    <PlacePicker
+                      label="Booking end place"
+                      value={b.end_place}
+                      bias={bias}
+                      tz={tripTz}
+                      onChange={(p) => {
+                        apply({ end_place: p })
+                        if (p) close()
+                      }}
+                    />
+                  ),
+                }}
+              />
+            )}
             <NavRow
               label="Code"
               value={code ? mask(code) : 'Add confirmation code'}

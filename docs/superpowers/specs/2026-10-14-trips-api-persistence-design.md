@@ -33,6 +33,8 @@ Trip {
   title ≤120   destination *Place   notes ≤16KB
   start_date, end_date  *"YYYY-MM-DD"   (end ≥ start; equal for a day trip; both nil = draft)
   tz           IANA. Taken from destination on create, then only changed by an explicit edit
+  stops    []Place  (cap 12; ordered route shown as "Lisbon → Porto"; display only)
+  days     map["YYYY-MM-DD"]string  (day labels ≤40 chars; cap 60 entries)
   packing_list_id *string
   todos    []TripTodo   (cap 150)
   bookings []Booking    (cap 50)
@@ -50,19 +52,19 @@ TripTodo { todo_id "ttd_<32hex>", title ≤200, done, done_by, done_at,
   day *"YYYY-MM-DD" (nil ⇒ Ideas), start_time *"HH:MM", duration_min *int,
   tz *IANA (worked out at write time: place.tz ?? trip.tz; stored, never derived on read),
   order float64, category enum{food,sight,activity,transport,stay,shopping,other},
-  notes ≤2KB, place *Place, v int64, field_at map }
+  notes ≤2KB, place *Place, created_by, updated_by, v int64, field_at map }
 
 Booking { booking_id "tbk_<32hex>", kind enum{flight,stay,train,car,ticket,other},
   title ≤200, confirmation_code ≤64, starts_at/ends_at *"YYYY-MM-DDTHH:MM",
   start_tz/end_tz *IANA (two zones, so a flight lands in its own zone), place *Place,
-  notes ≤2KB, v int64, field_at map }
+  notes ≤2KB, created_by, updated_by, v int64, field_at map }
 
-Place { name ≤200, address ≤300, lat, lng, tz, osm_ref?, source: photon|pin|manual }
+Place { name ≤200, address ≤300, locality? ≤120, lat, lng, tz, osm_ref?, source: photon|pin|manual }
 ```
 
 Behavior:
 - **Size:** worst case at the caps is about 0.6MB; a typical trip is about 30KB raw, about 6KB gzipped. An integration test measures both.
-- **Times** are stored as wall-clock time plus an IANA zone (the source of truth, DST-safe). Clients sort a day by absolute time computed from those (nulls last), then `order`, then `todo_id`. Ideas sort by `order` then id.
+- **Times** are stored as wall-clock time plus an IANA zone (the source of truth, DST-safe). Clients sort a day by `order`, then `todo_id` (revised 2026-10-15; previously absolute time with nulls last). When a time is set or changed, the client gives the todo an `order` between its nearest timed neighbours, so timed todos stay chronological and untimed todos keep their dragged position. Ideas sort by `order` then id.
 - A `day` outside the trip dates is allowed; the UI shows it as "outside trip dates", so changing dates never drops data.
 - **Reordering** uses midpoint `order`; when a gap falls below 1e-7, `ApplyOp` renumbers that day's todos in the same write.
 - **"Open in maps"** is built on the client from lat/lng. No API.
@@ -154,6 +156,25 @@ All endpoints sit behind the auth middleware and use the `ensureRoomMembership` 
 - `make test-integration` (real Mongo): `ReplaceCAS` version guard; duplicate key on insert; TTL indexes exist; measured document size for a typical trip and one at the caps.
 - `make check` passes and the coverage ratchet holds.
 
+## Amendment 2026-10-15 (from the UI brief)
+
+Decided while shaping the UI (`2026-10-15-trips-ui-brief.md`, section 7):
+
+- **`created_by` / `updated_by`** on `TripTodo` and `Booking`. The server sets both from the
+  authenticated user in `ApplyOp`; neither is a patch field. `updated_by` changes on every
+  applied update that changed at least one field.
+- **`Place.locality`** (town or city, ≤120). Filled from Photon's `city`/`town`/`village`
+  (or `reverse`); empty for manual places. Used to suggest day labels.
+- **`stops []Place`** on the trip: a hand-entered, ordered route (cap 12). Set as a whole list
+  through `trip.update` (one field clock, `field_at["stops"]`). Display only: it never moves
+  todos or changes `tz`.
+- **`days` map** (date → label ≤40 chars, cap 60): set through `trip.update` with a
+  `days: {"2026-10-24": "Sintra"}` patch, where an empty string removes the label. Each date
+  has its own clock, `field_at["days.2026-10-24"]`, so two members labelling different days
+  never conflict. Labels for dates outside the trip are kept, the same as todos.
+- Tests: add `ApplyOp` cases for the per-date clock, the stops cap, and `created_by` not being
+  settable from a patch.
+
 ## Skeptic review → resolution
 
 | # | Issue | Resolution |
@@ -180,3 +201,7 @@ All endpoints sit behind the auth middleware and use the `ensureRoomMembership` 
 2. Each `TripDelta` returned from `/ops` and `/sync` includes `base_version`, plus `deleted` / `deleted_by` flags.
 3. A stale packing-list link is repaired by `POST .../packing-list`; the sync payload returns the stored id and does not check that the List still exists.
 4. Reverse-geocode results are deliberately not cached (exact pin coordinates are not stored).
+5. Wire shapes as built: `removed` is `[{trip_id, deleted_by?, purged?}]`; a `TripDelta` is `{trip_id, full, base_version, version, deleted?, deleted_by?, trip?, todos?, bookings?, removed_ids?}` with child deletions in `removed_ids`; nullable fields use `omitempty`, so a missing key means null.
+6. Todos have an optional `booking_id` (added 2026-10-15). It is set through todo.create and todo.update patches, must reference a non-deleted booking in the same trip (otherwise `invalid`), has its own field clock, and is cleared on the referencing todos when the booking is deleted.
+7. Trips have an optional `icon` (added 2026-10-15), one of SUITCASE, PLANE, BEACH, MOUNTAIN, CITY, TRAIN, ROAD_TRIP, CAMPING, MAP, LANDMARK, WINE, SKI; empty clears it. It is set through trip.create and trip.update and has its own field clock. The UI keeps `destination` equal to the first route stop.
+8. Bookings have an optional `end_place` (added 2026-10-15): `place` is the departure / pick-up / only place and `end_place` the arrival / drop-off. It is set through booking.create and booking.update (`null` clears), uses the same Place validation, and has its own field clock `field_at["end_place"]`. When a patch sets `end_place` with a `tz` and does not name `end_tz`, `end_tz` is derived from it; `start_tz` is not derived from `place`.

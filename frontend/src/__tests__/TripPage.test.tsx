@@ -478,11 +478,16 @@ describe('Days', () => {
       }).format(new Date(`${d}T00:00:00Z`))
     await userEvent.click(within(sheet).getByRole('button', { name: label(rel(3)) }))
     await userEvent.click(within(sheet).getByRole('button', { name: label(rel(5)) }))
-    await waitFor(() => {
-      const f = tripServer.trips.get(makeTrip(7).trip_id)?.fields
-      expect(f?.start_date).toBe(rel(3))
-      expect(f?.end_date).toBe(rel(5))
-    })
+    // Each pick saves at once, so the server briefly holds a one-day range; under full-suite
+    // load the second sync can take longer than waitFor's 1s default.
+    await waitFor(
+      () => {
+        const f = tripServer.trips.get(makeTrip(7).trip_id)?.fields
+        expect(f?.start_date).toBe(rel(3))
+        expect(f?.end_date).toBe(rel(5))
+      },
+      { timeout: 5000 },
+    )
     expect(screen.getByTestId('where').textContent).toBe(`/app/trips/${makeTrip(7).trip_id}`)
   })
 

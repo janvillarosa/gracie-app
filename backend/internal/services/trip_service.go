@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log"
 	"sort"
 	"time"
 
@@ -71,7 +72,7 @@ func (s *TripService) ApplyOps(ctx context.Context, user *models.User, roomID st
 	}
 	deltas := []models.TripDelta{}
 	for _, id := range order {
-		d, err := s.applyGroup(ctx, user, roomID, now, ops, groups[id], results)
+		d, err := s.applyGroup(ctx, user, roomID, now, ops, orderBySeq(ops, groups[id]), results)
 		if err != nil {
 			return nil, err
 		}
@@ -80,6 +81,41 @@ func (s *TripService) ApplyOps(ctx context.Context, user *models.User, roomID st
 		}
 	}
 	return &OpsResponse{ServerTime: now.UnixMilli(), Results: results, Trips: deltas}, nil
+}
+
+// orderBySeq stable-sorts a trip's ops by seq per client_id (clients keep their first-seen
+// order), so a batch whose array order disagrees with seq order is not silently dropped as
+// "duplicate". Only one flusher may run per client_id: seqs are a total order per device.
+func orderBySeq(ops []models.Op, idx []int) []int {
+	rank := map[string]int{}
+	for _, i := range idx {
+		if _, ok := rank[ops[i].ClientID]; !ok {
+			rank[ops[i].ClientID] = len(rank)
+		}
+	}
+	out := append([]int(nil), idx...)
+	sort.SliceStable(out, func(a, b int) bool {
+		x, y := ops[out[a]], ops[out[b]]
+		if rank[x.ClientID] != rank[y.ClientID] {
+			return rank[x.ClientID] < rank[y.ClientID]
+		}
+		return x.Seq < y.Seq
+	})
+	return out
+}
+
+// storageFailure turns a per-trip storage error into per-op "retry" results so one bad trip
+// never fails (or hides the outcome of) the other trips in the batch. Only a dead context
+// aborts the whole request.
+func storageFailure(ctx context.Context, tripID string, err error, ops []models.Op, idx []int, results []models.OpResult) error {
+	if cerr := ctx.Err(); cerr != nil {
+		return cerr
+	}
+	log.Printf("trips: storage error for %s: %v", tripID, err)
+	for _, i := range idx {
+		results[i] = models.OpResult{OpID: ops[i].OpID, Status: models.OpRetry}
+	}
+	return nil
 }
 
 // applyGroup applies the ops of one trip with a compare-and-swap retry loop.
@@ -92,7 +128,7 @@ func (s *TripService) applyGroup(ctx context.Context, user *models.User, roomID 
 		case errors.Is(err, derr.ErrNotFound):
 			t, isNew = trips.NewShell(tripID, roomID, user.UserID, now), true
 		case err != nil:
-			return nil, err
+			return nil, storageFailure(ctx, tripID, err, ops, idx, results)
 		case t.RoomID != roomID:
 			// Same answer as an unknown trip, so existence in other houses is not revealed.
 			for _, i := range idx {
@@ -103,7 +139,17 @@ func (s *TripService) applyGroup(ctx context.Context, user *models.User, roomID 
 		base := t.Version
 		c := trips.Ctx{Actor: user.UserID, Now: now, NewV: base + 1}
 		dirty, bump := false, false
+		newClients := map[string]bool{}
 		for _, i := range idx {
+			if cid := ops[i].ClientID; !newClients[cid] {
+				if _, known := t.Acked[cid]; !known {
+					if len(newClients) >= trips.MaxNewClientsPerBatch {
+						results[i] = models.OpResult{OpID: ops[i].OpID, Status: models.OpRejected, Code: models.CodeCap}
+						continue
+					}
+					newClients[cid] = true
+				}
+			}
 			r, o := trips.ApplyOp(t, ops[i], c)
 			results[i] = r
 			dirty, bump = dirty || o.Dirty, bump || o.Bump
@@ -111,7 +157,7 @@ func (s *TripService) applyGroup(ctx context.Context, user *models.User, roomID 
 		if !dirty || (isNew && !bump) {
 			return nil, nil
 		}
-		trips.PruneTombstones(t, now)
+		trips.Prune(t, now)
 		if bump {
 			t.UpdatedAt = now
 		}
@@ -120,12 +166,12 @@ func (s *TripService) applyGroup(ctx context.Context, user *models.User, roomID 
 				if errors.Is(err, derr.ErrConflict) {
 					continue // lost a create race: reload and apply against the winner
 				}
-				return nil, err
+				return nil, storageFailure(ctx, tripID, err, ops, idx, results)
 			}
 		} else {
 			ok, err := s.trips.ReplaceCAS(ctx, t, base)
 			if err != nil {
-				return nil, err
+				return nil, storageFailure(ctx, tripID, err, ops, idx, results)
 			}
 			if !ok {
 				continue
@@ -212,10 +258,16 @@ func (s *TripService) EnsurePackingList(ctx context.Context, user *models.User, 
 		return nil, derr.ErrNotFound
 	}
 	if t.PackingListID != nil {
-		if l, err := s.listRepo.GetByID(ctx, *t.PackingListID); err == nil && !l.IsDeleted {
+		l, err := s.listRepo.GetByID(ctx, *t.PackingListID)
+		switch {
+		case err == nil && !l.IsDeleted && l.RoomID == roomID:
 			return l, nil
+		case err == nil, errors.Is(err, derr.ErrNotFound):
+			// stale link (list deleted, or left behind in another room after a join):
+			// fall through and relink, expecting the stale id
+		default:
+			return nil, err
 		}
-		// stale link: fall through and relink, expecting the stale id
 	}
 	created, err := s.lists.CreateList(ctx, user, roomID, "Packing · "+t.Title, "", "")
 	if err != nil {

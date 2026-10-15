@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	api "github.com/janvillarosa/gracie-app/backend/internal/http"
+	"github.com/janvillarosa/gracie-app/backend/internal/models"
 	"github.com/janvillarosa/gracie-app/backend/internal/services"
 	"github.com/janvillarosa/gracie-app/backend/pkg/ids"
 )
@@ -54,13 +55,14 @@ func (h *UserHandler) GetMe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	respUser := map[string]interface{}{
-		"user_id":    u.UserID,
-		"name":       u.Name,
-		"username":   u.Username,
-		"room_id":    u.RoomID,
-		"created_at": u.CreatedAt,
-		"updated_at": u.UpdatedAt,
-		"avatar_key": ids.DeriveAvatarKey(u.UserID, h.AvatarSalt),
+		"user_id":     u.UserID,
+		"name":        u.Name,
+		"username":    u.Username,
+		"room_id":     u.RoomID,
+		"created_at":  u.CreatedAt,
+		"updated_at":  u.UpdatedAt,
+		"avatar_key":  ids.DeriveAvatarKey(u.UserID, h.AvatarSalt),
+		"preferences": map[string]interface{}{"trips_show_next_stop": u.TripsShowNextStop()},
 	}
 	api.WriteJSON(w, http.StatusOK, respUser)
 }
@@ -71,16 +73,31 @@ func (h *UserHandler) UpdateMe(w http.ResponseWriter, r *http.Request) {
 		api.WriteJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
 		return
 	}
-	var req createUserReq
-	if err := api.DecodeJSON(r, &req); err != nil || req.Name == "" {
+	r.Body = http.MaxBytesReader(w, r.Body, maxProfileBody)
+	var req updateMeReq
+	// DecodeJSON rejects unknown fields at every level, so unknown preference keys are a 400.
+	if err := api.DecodeJSON(r, &req); err != nil || (req.Name != nil && *req.Name == "") {
 		api.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request"})
 		return
 	}
-	if err := h.Users.UpdateName(r.Context(), u.UserID, req.Name); err != nil {
+	var prefs *models.UserPreferences
+	if req.Preferences != nil {
+		prefs = &models.UserPreferences{TripsShowNextStop: req.Preferences.TripsShowNextStop}
+	}
+	if err := h.Users.UpdateMe(r.Context(), u.UserID, req.Name, prefs); err != nil {
 		api.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+const maxProfileBody = 4 << 10
+
+type updateMeReq struct {
+	Name        *string `json:"name"`
+	Preferences *struct {
+		TripsShowNextStop *bool `json:"trips_show_next_stop"`
+	} `json:"preferences"`
 }
 
 type updateProfileReq struct {

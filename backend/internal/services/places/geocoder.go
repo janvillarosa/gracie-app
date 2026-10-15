@@ -47,6 +47,9 @@ type photonResp struct {
 			Street      string `json:"street"`
 			HouseNumber string `json:"housenumber"`
 			City        string `json:"city"`
+			Town        string `json:"town"`
+			Village     string `json:"village"`
+			OSMValue    string `json:"osm_value"`
 			State       string `json:"state"`
 			Country     string `json:"country"`
 			OSMID       int64  `json:"osm_id"`
@@ -85,13 +88,17 @@ func toPlaces(r *photonResp, source string) []models.Place {
 			continue
 		}
 		pr := f.Properties
+		lng, lat := f.Geometry.Coordinates[0], f.Geometry.Coordinates[1]
+		if !validCoords(lat, lng) {
+			continue
+		}
 		var parts []string
 		for _, s := range []string{strings.TrimSpace(pr.Street + " " + pr.HouseNumber), pr.City, pr.State, pr.Country} {
 			if s != "" {
 				parts = append(parts, s)
 			}
 		}
-		pl := models.Place{Name: pr.Name, Address: strings.Join(parts, ", "), Lng: f.Geometry.Coordinates[0], Lat: f.Geometry.Coordinates[1], Source: source}
+		pl := models.Place{Name: truncateRunes(pr.Name, 200), Address: truncateRunes(strings.Join(parts, ", "), 300), Locality: locality(pr.City, pr.Town, pr.Village, pr.Name, pr.OSMValue), Lng: lng, Lat: lat, Source: source}
 		if pr.OSMType != "" && pr.OSMID != 0 {
 			pl.OSMRef = fmt.Sprintf("%s%d", pr.OSMType, pr.OSMID)
 		}
@@ -100,10 +107,35 @@ func toPlaces(r *photonResp, source string) []models.Place {
 	return out
 }
 
+// locality picks the town or city: Photon's city, town or village, or the place's own
+// name when the feature itself is a settlement. Empty when unknown.
+func locality(city, town, village, name, osmValue string) string {
+	for _, c := range []string{city, town, village} {
+		if c != "" {
+			return truncateRunes(c, 120)
+		}
+	}
+	switch osmValue {
+	case "city", "town", "village":
+		return truncateRunes(name, 120)
+	}
+	return ""
+}
+
+func truncateRunes(s string, n int) string {
+	r := []rune(s)
+	if len(r) <= n {
+		return s
+	}
+	return string(r[:n])
+}
+
 func (p *Photon) Search(ctx context.Context, q string, lat, lng *float64, lang string, limit int) ([]models.Place, error) {
 	v := url.Values{}
 	v.Set("q", q)
-	v.Set("lang", lang)
+	if lang != "" {
+		v.Set("lang", lang)
+	}
 	v.Set("limit", fmt.Sprint(limit))
 	if lat != nil && lng != nil {
 		v.Set("lat", fmt.Sprintf("%.1f", *lat)) // rounded bias, never exact coordinates
@@ -120,7 +152,9 @@ func (p *Photon) Reverse(ctx context.Context, lat, lng float64, lang string) (*m
 	v := url.Values{}
 	v.Set("lat", fmt.Sprintf("%.5f", lat))
 	v.Set("lon", fmt.Sprintf("%.5f", lng))
-	v.Set("lang", lang)
+	if lang != "" {
+		v.Set("lang", lang)
+	}
 	r, err := p.get(ctx, "/reverse", v)
 	if err != nil {
 		return nil, err

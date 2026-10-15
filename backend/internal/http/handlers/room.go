@@ -43,6 +43,7 @@ func (h *RoomHandler) GetMyRoom(w http.ResponseWriter, r *http.Request) {
 		if m, err := h.Users.GetByID(r.Context(), mid); err == nil {
 			members = append(members, m.Name)
 			membersMeta = append(membersMeta, map[string]any{
+				"user_id":    m.UserID, // members of this room only (it is the caller's own room)
 				"name":       m.Name,
 				"avatar_key": ids.DeriveAvatarKey(m.UserID, h.AvatarSalt),
 			})

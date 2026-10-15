@@ -47,6 +47,12 @@ embedding model into the image at build time.
   are not exposed.
 - Categorization failures degrade to `General` rather than failing item creation.
 
+- **Preferences:** `User.Preferences.TripsShowNextStop *bool` (nil = default true). `GET /me`
+  always returns `preferences.trips_show_next_stop` as a concrete bool. `PUT /me` takes
+  optional `name` and/or `preferences: {trips_show_next_stop?}` (4 KB body cap, unknown keys
+  at any level -> 400, at least one field required). Mongo uses a nested
+  `$set preferences.trips_show_next_stop`, so partial updates never clobber each other.
+
 ## Trips (offline-first sync)
 
 Spec: `docs/superpowers/specs/2026-10-14-trips-api-persistence-design.md`.
@@ -63,6 +69,49 @@ Spec: `docs/superpowers/specs/2026-10-14-trips-api-persistence-design.md`.
   acked; surface `conflicted` with its `skipped_fields`.
 - Invariants: never add a write path to `trips` that bypasses `ApplyOp` + `ReplaceCAS`;
   trip handlers use `tripStatus` (500 default), not `statusFromErr` (400 default).
+- **Amendment 2026-10-15:** `TripTodo`/`Booking` carry server-set `created_by`/`updated_by`
+  (never patch fields; a patch naming them is `unsupported`). `Place.locality` is filled from
+  Photon `city`/`town`/`village`. The trip has `stops` (ordered `[]Place`, cap 12, replaced
+  whole via `trip.update`, clock `field_at["stops"]`) and `days` (date -> label <=40 chars,
+  cap 60; `""` removes; clock `field_at["days.<date>"]`, so labelling different days never
+  conflicts). Over-cap patches are rejected with code `cap`. `field_at` keys with dots are
+  fine because trips are only ever written as whole documents (`ReplaceCAS`).
+- **Attribution:** todos and bookings also carry server-set `updated_at` (UTC), stamped with
+  `created_by`/`updated_by` on every applied change (create, update, and the booking-delete
+  cascade); duplicate and fully-conflicted ops leave it alone. `GET /rooms/me` `members_meta`
+  entries include `user_id` so clients can resolve `created_by`/`updated_by`/`done_by`.
+- **Booking end_place:** `Booking.end_place` (optional, `null` clears; same Place validation
+  and strict nested decoding) is the arrival / drop-off, `place` the departure / pick-up /
+  only place. Own clock `field_at["end_place"]`. If a patch sets `end_place` with a tz and
+  does not name `end_tz`, `end_tz` is derived from it (own clock); `start_tz` is never
+  derived from `place`.
+- **Trip icon:** `icon` (omitempty) on the trip fields, set via trip.create/update, clock
+  `field_at["icon"]`; one of SUITCASE, PLANE, BEACH, MOUNTAIN, CITY, TRAIN, ROAD_TRIP,
+  CAMPING, MAP, LANDMARK, WINE, SKI; `""` clears; anything else is `invalid`.
+- **Todo -> booking link:** `TripTodo.booking_id` (optional, `null` clears) is set through
+  todo.create/update. It must name a live booking of the same trip, else `invalid`; it has
+  the normal clock `field_at["booking_id"]`. `booking.delete` clears the link on every todo
+  that references it in the same write (todo `v` bumped, `updated_by` set), so those todos
+  appear in the delta.
+- **Batch semantics:** ops are grouped per trip and applied in `seq` order per `client_id`
+  (array order across clients is kept). **Only one flusher may run per `client_id`**: seqs
+  are a per-device total order, and a lower seq arriving after a higher one is `duplicate`.
+  A storage error on one trip turns that trip's ops into `retry` and the rest of the batch
+  proceeds; only a dead request context fails the whole call.
+- **Bounded documents:** `acked` entries carry a last-seen time and are pruned after 30 days
+  idle; at most 3 new `client_id`s per trip per batch and 200 per trip (else `cap`, seq not
+  consumed). A `days` patch has at most 60 keys; `days.*` clocks are capped at 240 per trip
+  and pruned for unlabelled dates after 30 days. Pruning an old `acked` entry means a replay
+  older than 30 days could re-apply, the same horizon as tombstones.
+- Packing-list link is stale (and relinked) only for not-found, soft-deleted, or a list in
+  another room (e.g. left behind in a deleted solo room after a join); other lookup errors
+  surface. Lists are not moved on join.
+- Places privacy/limits: `lang` is mapped to Photon's set (en/de/fr/it, else omitted);
+  upstream names/addresses are truncated (200/300) and out-of-range coordinates dropped;
+  `/places/*` query strings are redacted from the access log; the tz finder (tzf, ~34 MB
+  heap) loads lazily on the first lookup and never when `PHOTON_BASE_URL` is unset. Rate
+  limiter burst is `ratelimit.Burst(rps)` (>= 1). All trip endpoints, including
+  packing-list, share the per-user trips limiter.
 - Places: `PHOTON_BASE_URL` unset or upstream failure => `200 {"results":[],"degraded":true}`.
 
 ## Testing

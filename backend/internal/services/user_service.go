@@ -84,6 +84,23 @@ func (s *UserService) UpdateName(ctx context.Context, userID string, name string
 	return s.users.UpdateName(ctx, userID, name, time.Now().UTC())
 }
 
+// UpdateMe applies a partial update of name and/or preferences; omitted parts are untouched.
+func (s *UserService) UpdateMe(ctx context.Context, userID string, name *string, prefs *models.UserPreferences) error {
+	if name == nil && (prefs == nil || prefs.TripsShowNextStop == nil) {
+		return derr.ErrBadRequest
+	}
+	now := time.Now().UTC()
+	if name != nil {
+		if err := s.UpdateName(ctx, userID, *name); err != nil {
+			return err
+		}
+	}
+	if prefs != nil && prefs.TripsShowNextStop != nil {
+		return s.users.UpdatePreferences(ctx, userID, *prefs, now)
+	}
+	return nil
+}
+
 // UseListRepos injects optional list repositories used for cleanup when a room is deleted.
 func (s *UserService) UseListRepos(lists store.ListRepository, items store.ListItemRepository) {
 	s.lists, s.items = lists, items

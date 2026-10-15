@@ -14,23 +14,30 @@ import (
 )
 
 const (
-	TypeTripCreate    = "trip.create"
-	TypeTripUpdate    = "trip.update"
-	TypeTripDelete    = "trip.delete"
-	TypeTripRestore   = "trip.restore"
-	TypeTodoCreate    = "todo.create"
-	TypeTodoUpdate    = "todo.update"
-	TypeTodoDelete    = "todo.delete"
-	TypeBookingCreate = "booking.create"
-	TypeBookingUpdate = "booking.update"
-	TypeBookingDelete = "booking.delete"
-	MaxTodos          = 150
-	MaxBookings       = 50
-	maxTripTitle      = 120
-	maxItemTitle      = 200
-	maxTripNotes      = 16384
-	maxItemNotes      = 2048
-	maxConfirmation   = 64
+	TypeTripCreate        = "trip.create"
+	TypeTripUpdate        = "trip.update"
+	TypeTripDelete        = "trip.delete"
+	TypeTripRestore       = "trip.restore"
+	TypeTodoCreate        = "todo.create"
+	TypeTodoUpdate        = "todo.update"
+	TypeTodoDelete        = "todo.delete"
+	TypeBookingCreate     = "booking.create"
+	TypeBookingUpdate     = "booking.update"
+	TypeBookingDelete     = "booking.delete"
+	MaxTodos              = 150
+	MaxBookings           = 50
+	maxTripTitle          = 120
+	maxItemTitle          = 200
+	maxTripNotes          = 16384
+	maxItemNotes          = 2048
+	maxConfirmation       = 64
+	MaxStops              = 12
+	MaxDays               = 60
+	maxDayLabel           = 40
+	MaxDayClocks          = 4 * MaxDays // live labels plus recently removed ones awaiting clock pruning
+	MaxAckedClients       = 200
+	MaxNewClientsPerBatch = 3
+	maxLocality           = 120
 )
 
 var (
@@ -41,6 +48,8 @@ var (
 
 	categories   = map[string]bool{"food": true, "sight": true, "activity": true, "transport": true, "stay": true, "shopping": true, "other": true}
 	bookingKinds = map[string]bool{"flight": true, "stay": true, "train": true, "car": true, "ticket": true, "other": true}
+	tripIcons    = map[string]bool{"SUITCASE": true, "PLANE": true, "BEACH": true, "MOUNTAIN": true, "CITY": true, "TRAIN": true,
+		"ROAD_TRIP": true, "CAMPING": true, "MAP": true, "LANDMARK": true, "WINE": true, "SKI": true}
 	placeSources = map[string]bool{"photon": true, "pin": true, "manual": true}
 )
 
@@ -73,7 +82,7 @@ func validPlace(p *models.Place) bool {
 	if p == nil {
 		return true
 	}
-	return okTitle(p.Name, 200) && utf8.RuneCountInString(p.Address) <= 300 &&
+	return okTitle(p.Name, 200) && utf8.RuneCountInString(p.Address) <= 300 && utf8.RuneCountInString(p.Locality) <= maxLocality &&
 		p.Lat >= -90 && p.Lat <= 90 && p.Lng >= -180 && p.Lng <= 180 &&
 		!math.IsNaN(p.Lat) && !math.IsNaN(p.Lng) &&
 		len(p.OSMRef) <= 64 && placeSources[p.Source] && (p.TZ == "" || validTZ(p.TZ))
@@ -100,6 +109,25 @@ func validTripPatch(p TripPatch, create bool) bool {
 	if !optOK(p.StartDate, validDate) || !optOK(p.EndDate, validDate) {
 		return false
 	}
+	if p.Stops.Set && p.Stops.Val != nil {
+		for i := range *p.Stops.Val {
+			pl := (*p.Stops.Val)[i]
+			if pl.Name == "" || !validPlace(&pl) {
+				return false
+			}
+		}
+	}
+	if len(p.Days) > MaxDays {
+		return false
+	}
+	for date, label := range p.Days {
+		if !validDate(date) || utf8.RuneCountInString(label) > maxDayLabel {
+			return false
+		}
+	}
+	if p.Icon != nil && *p.Icon != "" && !tripIcons[*p.Icon] {
+		return false
+	}
 	return p.TZ == nil || validTZ(*p.TZ)
 }
 
@@ -110,7 +138,8 @@ func validTodoPatch(p TodoPatch, create bool) bool {
 	if p.Title != nil && !okTitle(*p.Title, maxItemTitle) {
 		return false
 	}
-	if !optOK(p.Day, validDate) || !optOK(p.StartTime, validClock) {
+	if !optOK(p.Day, validDate) || !optOK(p.StartTime, validClock) ||
+		!optOK(p.BookingID, reBooking.MatchString) {
 		return false
 	}
 	if p.DurationMin.Set && p.DurationMin.Val != nil && (*p.DurationMin.Val < 1 || *p.DurationMin.Val > 1440) {
@@ -148,7 +177,7 @@ func validBookingPatch(p BookingPatch, create bool) bool {
 	if p.Notes != nil && !okBytes(*p.Notes, maxItemNotes) {
 		return false
 	}
-	return !p.Place.Set || validPlace(p.Place.Val)
+	return (!p.Place.Set || validPlace(p.Place.Val)) && (!p.EndPlace.Set || validPlace(p.EndPlace.Val))
 }
 
 var knownTypes = map[string]bool{

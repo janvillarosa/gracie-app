@@ -56,7 +56,9 @@ export type Booking = {
   ends_at?: string | null
   start_tz?: string | null
   end_tz?: string | null
+  // Where it starts (departure, pick-up) and where it ends (arrival, drop-off).
   place?: Place | null
+  end_place?: Place | null
   notes?: string
   created_by?: string
   updated_by?: string
