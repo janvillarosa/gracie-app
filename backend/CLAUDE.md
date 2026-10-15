@@ -47,6 +47,12 @@ embedding model into the image at build time.
   are not exposed.
 - Categorization failures degrade to `General` rather than failing item creation.
 
+- **Preferences:** `User.Preferences.TripsShowNextStop *bool` (nil = default true). `GET /me`
+  always returns `preferences.trips_show_next_stop` as a concrete bool. `PUT /me` takes
+  optional `name` and/or `preferences: {trips_show_next_stop?}` (4 KB body cap, unknown keys
+  at any level -> 400, at least one field required). Mongo uses a nested
+  `$set preferences.trips_show_next_stop`, so partial updates never clobber each other.
+
 ## Trips (offline-first sync)
 
 Spec: `docs/superpowers/specs/2026-10-14-trips-api-persistence-design.md`.
