@@ -1064,6 +1064,7 @@ const TripScreen: React.FC<{
             celebrating={celebrating.has(day.date)}
             closed={closed}
             clash={clash}
+            colourIndex={schedule.days.findIndex((d) => d.date === day.date)}
           />
         )
       })}

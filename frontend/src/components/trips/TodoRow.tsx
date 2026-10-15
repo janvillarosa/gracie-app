@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react'
 import { Button, Checkbox } from 'antd'
-import { ArrowsOutCardinal, DotsSixVertical, Trash } from '@phosphor-icons/react'
+import { CalendarPlus, DotsSixVertical, Trash } from '@phosphor-icons/react'
 import { useDraggable, useDroppable } from '@dnd-kit/core'
 import type { TripTodo } from '@api/tripTypes'
 import { confettiAt } from '@lib/confetti'
@@ -42,6 +42,8 @@ type Props = {
   entering: boolean
   // Overlaps another row: a thin amber rule on the left.
   clash?: boolean
+  // An idea is not a task: a category dot instead of a checkbox, and a key to add it to a day.
+  idea?: boolean
   actions: RowActions
 }
 
@@ -59,6 +61,7 @@ export const TodoRow = React.memo<Props>(function TodoRow({
   days,
   entering,
   clash,
+  idea,
   actions,
 }) {
   const id = todo.todo_id
@@ -115,6 +118,7 @@ export const TodoRow = React.memo<Props>(function TodoRow({
         entering ? 'is-entering' : '',
         overdue ? 'is-overdue' : '',
         clash ? 'is-clash' : '',
+        idea ? 'is-idea' : '',
       ]
         .filter(Boolean)
         .join(' ')}
@@ -129,20 +133,30 @@ export const TodoRow = React.memo<Props>(function TodoRow({
             <span className="trip-grip" aria-hidden>
               <DotsSixVertical />
             </span>
-            <span ref={boxRef} className="trip-check">
-              <Checkbox
-                checked={todo.done}
-                disabled={locked}
-                onChange={onToggle}
-                aria-label={`${todo.title}, done`}
-              />
-            </span>
-            {todo.start_time && (
-              <span className="trip-time">
-                {todo.start_time}
-                {pin ? <span className="trip-pinno">{pin}</span> : null}
+            {idea ? (
+              <span className="trip-check trip-idea-dot">
+                <span
+                  className={`trip-catdot trip-catdot-${todo.category}`}
+                  role="img"
+                  aria-label={categoryLabel(todo.category)}
+                />
+              </span>
+            ) : (
+              <span ref={boxRef} className="trip-check">
+                <Checkbox
+                  checked={todo.done}
+                  disabled={locked}
+                  onChange={onToggle}
+                  aria-label={`${todo.title}, done`}
+                />
               </span>
             )}
+            {pin ? (
+              <span className="trip-pinno" aria-hidden>
+                {pin}
+              </span>
+            ) : null}
+            {todo.start_time && <span className="trip-time">{todo.start_time}</span>}
             <button
               type="button"
               className="trip-main"
@@ -151,7 +165,6 @@ export const TodoRow = React.memo<Props>(function TodoRow({
             >
               <span className="trip-titleline">
                 <span className="trip-title">{todo.title}</span>
-                {pin && !todo.start_time ? <span className="trip-pinno">{pin}</span> : null}
               </span>
               {second && <span className="trip-sub">{second}</span>}
             </button>
@@ -160,7 +173,7 @@ export const TodoRow = React.memo<Props>(function TodoRow({
                 {changedBy[0].toUpperCase()}
               </span>
             )}
-            {!changedBy && (
+            {!changedBy && !idea && (
               <span
                 className={`trip-catdot trip-catdot-${todo.category}`}
                 role="img"
@@ -173,21 +186,24 @@ export const TodoRow = React.memo<Props>(function TodoRow({
                   type="text"
                   shape="circle"
                   size="small"
-                  aria-label={`Move ${todo.title} to…`}
-                  aria-haspopup="menu"
-                  aria-expanded={moveOpen}
-                  onClick={() => actions.openMove(moveOpen ? null : id)}
-                  icon={<ArrowsOutCardinal />}
-                />
-                <Button
-                  type="text"
-                  shape="circle"
-                  size="small"
                   aria-label={`Delete ${todo.title}`}
                   onClick={() => actions.remove(id)}
                   icon={<Trash />}
                 />
               </span>
+            )}
+            {idea && !locked && (
+              <Button
+                className="trip-addday"
+                type="text"
+                shape="circle"
+                size="small"
+                aria-label={`Add ${todo.title} to a day`}
+                aria-haspopup="menu"
+                aria-expanded={moveOpen}
+                onClick={() => actions.openMove(moveOpen ? null : id)}
+                icon={<CalendarPlus />}
+              />
             )}
             {moveOpen && (
               <MoveMenu

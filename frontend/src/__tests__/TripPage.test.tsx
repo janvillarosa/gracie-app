@@ -4,7 +4,7 @@ import { http, HttpResponse } from 'msw'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Trip } from '@api/tripTypes'
 import { getTripStore } from '@lib/trips/store'
-import { shortDay } from '@lib/trips/schedule'
+import { fullDay, shortDay } from '@lib/trips/schedule'
 import { server, tripServer } from '../testServer'
 import {
   ME,
@@ -560,18 +560,48 @@ describe('Rows', () => {
     )
   })
 
-  it('moves a row with the keyboard through Move to…', async () => {
+  it('has no Move control on day rows: moving lives in the item sheet', async () => {
     seed(TRIP)
     open()
-    const move = await screen.findByRole('button', { name: 'Move Buy souvenirs to…' })
-    move.focus()
+    await screen.findByRole('button', { name: 'Buy souvenirs' })
+    expect(screen.queryByRole('button', { name: /^Move .* to…/ })).not.toBeInTheDocument()
+  })
+
+  it('treats ideas as ideas: a category dot, no checkbox, and a key to add to a day', async () => {
+    seed(TRIP)
+    open()
+    await userEvent.click(await screen.findByRole('tab', { name: 'Ideas' }))
+    const row = (await screen.findByText('Ginjinha tasting')).closest('li') as HTMLElement
+    expect(within(row).queryByRole('checkbox')).not.toBeInTheDocument()
+    expect(within(row).getByRole('img', { name: 'Sight' })).toBeInTheDocument()
+    const add = within(row).getByRole('button', { name: 'Add Ginjinha tasting to a day' })
+    add.focus()
     await userEvent.keyboard('{Enter}')
-    await screen.findByRole('menu', { name: 'Move Buy souvenirs to' })
-    await userEvent.keyboard('{End}{Enter}')
-    await waitFor(() =>
-      expect(serverTodos().find((x) => x.title === 'Buy souvenirs')?.day ?? null).toBeNull(),
+    await screen.findByRole('menu', { name: 'Move Ginjinha tasting to' })
+    await userEvent.click(
+      await screen.findByRole('menuitem', { name: new RegExp(fullDay(rel(1))) }),
     )
-    await waitFor(() => expect(document.body.textContent).toContain('Moved Buy souvenirs to Ideas'))
+    await waitFor(() =>
+      expect(serverTodos().find((x) => x.title === 'Ginjinha tasting')?.day).toBe(rel(1)),
+    )
+    await waitFor(() => expect(document.body.textContent).toContain('Moved Ginjinha tasting to'))
+  })
+
+  it('numbers a stop with a small badge before its time, only while the map is up', async () => {
+    const t = lisbonTrip()
+    t.todos[4] = {
+      ...t.todos[4],
+      place: { name: 'Tascantiga', lat: 38.8, lng: -9.38, source: 'photon' },
+    }
+    seed(t)
+    open()
+    const row = (await screen.findByText('Lunch at Tascantiga')).closest('li') as HTMLElement
+    const badge = row.querySelector('.trip-pinno') as HTMLElement
+    expect(badge).toHaveTextContent('1')
+    const time = row.querySelector('.trip-time') as HTMLElement
+    expect(badge.compareDocumentPosition(time) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    // The number is not inside the time, so it can never read as "12:301".
+    expect(time).toHaveTextContent(/^12:30$/)
   })
 
   it('reorders with Alt+Arrow, timed or not, and announces it', async () => {

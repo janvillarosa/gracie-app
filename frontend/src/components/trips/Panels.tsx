@@ -128,6 +128,7 @@ export const IdeasPanel: React.FC<IdeasProps> = ({
           selectedId={selectedId}
           enteringId={enteringId}
           nowMs={0}
+          ideas
         />
       )}
       {!ideas.length && <p className="trip-empty-row">Nothing here yet</p>}

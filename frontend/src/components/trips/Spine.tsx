@@ -79,6 +79,8 @@ type RowsProps = {
   stay?: Booking
   // Ids of the two rows that overlap: a thin amber rule on the left.
   clashIds?: readonly string[]
+  // The Ideas list: rows without checkboxes.
+  ideas?: boolean
 }
 
 export const EntryRows: React.FC<RowsProps> = ({
@@ -94,6 +96,7 @@ export const EntryRows: React.FC<RowsProps> = ({
   nowLabel,
   stay,
   clashIds,
+  ideas,
 }) => {
   const out: React.ReactNode[] = []
   const t = Date.now()
@@ -121,6 +124,7 @@ export const EntryRows: React.FC<RowsProps> = ({
           days={shared.days}
           entering={enteringId === td.todo_id}
           clash={!!clashIds?.includes(td.todo_id)}
+          idea={ideas}
           actions={shared.actions}
         />,
       )
@@ -247,6 +251,8 @@ type DayProps = {
   closed: boolean
   // Today and later days only: the pair that runs into each other.
   clash?: Clash
+  // Which of the day colours this day wears (the map pin's colour, and the number badge).
+  colourIndex?: number
 }
 
 /** One day: a section of the plan sheet, divided the way a list divides its groups. */
@@ -268,6 +274,7 @@ export const DaySection = React.memo<DayProps>(function DaySection({
   celebrating,
   closed,
   clash,
+  colourIndex = 0,
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: `day:${day.date}` })
   const label = day.label || day.suggested
@@ -313,6 +320,7 @@ export const DaySection = React.memo<DayProps>(function DaySection({
       id={`day-${day.date}`}
       data-day={day.date}
       className={cls}
+      style={{ '--day-colour': `var(--trip-day-${colourIndex % 6})` } as React.CSSProperties}
       aria-label={shortDay(day.date)}
     >
       <header className="trip-day-head">

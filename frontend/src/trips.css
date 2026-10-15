@@ -519,7 +519,7 @@ textarea.trip-field {
 .trip-row-line {
   position: relative;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   min-height: 52px;
   padding: 4px 0;
@@ -557,12 +557,6 @@ textarea.trip-field {
   font-size: 13px;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
-}
-.trip-pinno {
-  margin-left: 4px;
-  color: var(--muted);
-  font-size: 10.5px;
-  opacity: 0.8;
 }
 .trip-main {
   display: flex;
@@ -1954,9 +1948,6 @@ textarea.trip-field {
   flex: 0 0 38px;
   font-size: 12.5px;
 }
-.trip-pinno {
-  margin-left: 2px;
-}
 /* ---- trip settings: grouped rows on paper, no boxed inputs ------------------------------ */
 .settings-identity {
   display: flex;
@@ -2305,4 +2296,77 @@ textarea.trip-field {
   .trip-deck-actions {
     margin-left: 0;
   }
+}
+
+/* ---- rows: checkbox and time sit on the title's first line; titles are two lines at most --- */
+.trip-grip,
+.trip-check,
+.trip-pinno,
+.trip-time,
+.trip-catdot,
+.trip-whodot,
+.trip-acts {
+  align-self: flex-start;
+}
+.trip-grip {
+  margin-top: 15px;
+}
+.trip-check {
+  margin-top: 11px;
+}
+.trip-time {
+  margin-top: 13px;
+  line-height: 18px;
+}
+.trip-main {
+  justify-content: flex-start;
+  padding: 12px 6px 10px;
+  min-height: 44px;
+}
+.trip-title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+.trip-catdot,
+.trip-whodot {
+  margin-top: 17px;
+}
+.trip-whodot {
+  margin-top: 13px;
+}
+.trip-acts,
+.trip-addday {
+  margin-top: 8px;
+}
+.trip-idea-dot {
+  display: grid;
+  place-items: center;
+}
+.trip-idea-dot .trip-catdot {
+  margin-top: 0;
+  width: 10px;
+  height: 10px;
+}
+/* A small numbered disc before the time, in the day's colour: the map pin's twin. */
+.trip-pinno {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  margin-top: 13px;
+  border-radius: 50%;
+  background: var(--day-colour, var(--ink));
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+/* One row inset across Plan, Ideas and Bookings. */
+.pill-nav-pane .trip-ideas,
+.pill-nav-pane .trip-pane-body {
+  padding-inline: 0;
 }

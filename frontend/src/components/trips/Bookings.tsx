@@ -269,9 +269,13 @@ export const BookingLine = React.memo<LineProps>(function BookingLine({
         onClick={() => onOpen(b.booking_id)}
       >
         <span className="trip-stub-icon">{KIND_ICON[b.kind]}</span>
+        {pin ? (
+          <span className="trip-pinno" aria-hidden>
+            {pin}
+          </span>
+        ) : null}
         <span className="trip-time">
           {tonight ? 'Tonight' : (b.starts_at?.split('T')[1] ?? '')}
-          {pin ? <span className="trip-pinno">{pin}</span> : null}
         </span>
         <span className="trip-stub-title">{b.title}</span>
         {past && <span className="trip-used">Used</span>}
