@@ -37,7 +37,8 @@ export function useTripStoreFor(
           userId,
           api: apiRef.current as NonNullable<typeof api>,
           // After joining another house the old room answers 403: re-read who we are, and
-          // the store for the new house picks the saved outbox up.
+          // the store for the new house loads the whole saved outbox (it is per user, not per house)
+          // and re-tags it, so ops queued before the join still go out.
           onForbidden: () => {
             void qc.invalidateQueries({ queryKey: ['me'] })
             void qc.invalidateQueries({ queryKey: ['my-room'] })

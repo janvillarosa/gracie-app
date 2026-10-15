@@ -109,6 +109,50 @@ describe('N5: only stamped ops are sent', () => {
   })
 })
 
+describe('N4: ops queued before a house join are not stranded', () => {
+  const offline: TripApi = {
+    sync: () => Promise.reject(new Error('offline')),
+    ops: () => Promise.reject(new Error('offline')),
+  }
+
+  it('loads, re-tags, sends and applies an op queued in the old house', async () => {
+    const srv = new MockTripServer()
+    const name = uniq('n4')
+    const old = new TripStore({
+      roomId: 'room_a',
+      userId: ME,
+      api: direct(srv, 'room_a'),
+      db: new IdbTripDB(name),
+    })
+    await old.hydrate()
+    const id = old.createTrip({ title: 'Before' })
+    await old.flush()
+    old.setApi(offline)
+    old.updateTrip(id, { notes: 'queued in house A' })
+    await old.settle()
+    await old.dispose()
+    // The user joins another house: the backend moves their trips to it.
+    const t = srv.trips.get(id)
+    if (t) t.room_id = 'room_b'
+
+    const db = new IdbTripDB(name)
+    const next = new TripStore({
+      roomId: 'room_b',
+      userId: ME,
+      api: direct(srv, 'room_b'),
+      db,
+    })
+    await next.hydrate()
+    expect(next.getState().pending).toBe(1)
+    expect((await db.load('room_b')).outbox).toHaveLength(1)
+    await next.flush()
+    expect(next.getState().pending).toBe(0)
+    expect(srv.trips.get(id)?.fields.notes).toBe('queued in house A')
+    await next.dispose()
+    await new IdbTripDB(name).destroy()
+  })
+})
+
 describe('N3: one flush lock per user', () => {
   it('names the lock by user, whatever the device id or house', async () => {
     const names: string[] = []

@@ -1,5 +1,5 @@
 // Local persistence for the offline client. One IndexedDB per signed-in user holds `trips`
-// (server snapshots), `outbox` (ops, each tagged with its house) and `meta` (the device's
+// (server snapshots), `outbox` (ops, tagged with the house they were queued in) and `meta` (the device's
 // client_id and the seq counter). The seq is handed out inside the same transaction that stores
 // the op, so two tabs (or a duplicated tab) can never reuse one.
 // A memory implementation backs tests and browsers without IndexedDB.
@@ -12,12 +12,17 @@ export type Meta = { client_id: string; seq: number }
 export type DraftOp = Omit<TripOp, 'client_id' | 'seq'>
 
 export interface TripDB {
-  load(roomId: string): Promise<{ trips: StoredTrip[]; outbox: TripOp[]; meta: Meta | null }>
+  /** Everything this user's database holds. Ops are not filtered by house: a user has one house
+   *  and joining another moves their trips, so ops queued before a join still have to go out.
+   *  A `roomId` narrows the outbox to that house (kept for callers that want it). */
+  load(roomId?: string): Promise<{ trips: StoredTrip[]; outbox: TripOp[]; meta: Meta | null }>
   putTrip(t: StoredTrip): Promise<void>
   deleteTrip(tripId: string): Promise<void>
   /** Stamps the op with the device's client_id and the next seq, atomically, and stores it. */
   appendOp(op: DraftOp, roomId: string): Promise<TripOp>
   deleteOps(opIds: string[]): Promise<void>
+  /** Tags every queued op with `roomId` (ops target trip ids, so they still apply after a join). */
+  retagOps(roomId: string): Promise<void>
   /** Releases the connection. */
   close(): void
   /** Deletes everything this database holds (sign-out). */
@@ -34,11 +39,11 @@ export class MemoryTripDB implements TripDB {
   private trips = new Map<string, StoredTrip>()
   private ops = new Map<string, TripOp & { room_id: string }>()
   private meta: Meta | null = null
-  async load(roomId: string) {
+  async load(roomId?: string) {
     return {
       trips: [...this.trips.values()],
       outbox: [...this.ops.values()]
-        .filter((o) => o.room_id === roomId)
+        .filter((o) => roomId === undefined || o.room_id === roomId)
         .map(({ room_id: _r, ...op }) => op as TripOp)
         .sort(bySeq),
       meta: this.meta ? { ...this.meta } : null,
@@ -58,6 +63,9 @@ export class MemoryTripDB implements TripDB {
   }
   async deleteOps(opIds: string[]) {
     for (const s of opIds) this.ops.delete(s)
+  }
+  async retagOps(roomId: string) {
+    for (const o of this.ops.values()) o.room_id = roomId
   }
   close() {}
   async destroy() {
@@ -150,7 +158,7 @@ export class IdbTripDB implements TripDB {
     return this.opening
   }
 
-  async load(roomId: string) {
+  async load(roomId?: string) {
     const db = await this.open()
     const tx = db.transaction(['trips', 'outbox', 'meta'], 'readonly')
     const [trips, outbox, meta] = await Promise.all([
@@ -159,7 +167,7 @@ export class IdbTripDB implements TripDB {
       req(tx.objectStore('meta').get(DEVICE)),
     ])
     const mine = (outbox as Array<TripOp & { room_id?: string }>)
-      .filter((o) => o.room_id === roomId)
+      .filter((o) => roomId === undefined || o.room_id === roomId)
       .map(({ room_id: _r, ...op }) => op as TripOp)
       .sort(bySeq)
     return {
@@ -197,6 +205,14 @@ export class IdbTripDB implements TripDB {
     const db = await this.open()
     const tx = db.transaction('outbox', 'readwrite')
     for (const s of opIds) tx.objectStore('outbox').delete(s)
+    await done(tx)
+  }
+  async retagOps(roomId: string) {
+    const db = await this.open()
+    const tx = db.transaction('outbox', 'readwrite')
+    const store = tx.objectStore('outbox')
+    const all = (await req(store.getAll())) as Array<TripOp & { room_id?: string }>
+    for (const o of all) if (o.room_id !== roomId) store.put({ ...o, room_id: roomId })
     await done(tx)
   }
   close() {

@@ -167,7 +167,7 @@ export class TripStore {
     this.hydrating ??= (async () => {
       let loaded: Awaited<ReturnType<TripDB['load']>>
       try {
-        loaded = await this.db.load(this.roomId)
+        loaded = await this.db.load()
       } catch {
         loaded = { trips: [], outbox: [], meta: null }
         this.persistFailed = true
@@ -179,7 +179,11 @@ export class TripStore {
         else stale.push(t.trip_id)
       }
       for (const id of stale) void this.persist(() => this.db.deleteTrip(id))
+      // Ops queued before a house join belong to this user's trips, which the join moved here:
+      // keep them, and tag them with the house they will now be sent to.
       this.outbox = loaded.outbox
+      await this.persist(() => this.db.retagOps(this.roomId))
+      if (this.disposed) return
       this.deviceId = loaded.meta?.client_id ?? ''
       this.recomputeAll()
       this.ready = true
@@ -492,7 +496,7 @@ export class TripStore {
   private async reloadOutbox(): Promise<TripOp[]> {
     await this.settle()
     try {
-      const { outbox } = await this.db.load(this.roomId)
+      const { outbox } = await this.db.load()
       if (this.disposed) return []
       // Ops this tab already holds keep their identity; the database adds what other tabs queued.
       const mine = new Map(this.outbox.map((o) => [o.op_id, o]))
@@ -570,8 +574,8 @@ export class TripStore {
           return 'stop'
         }
         if (status === 403) {
-          // The house changed under us (a join moved our trips). The outbox is kept; the
-          // owner of this store refreshes who we are and starts a store for the new house.
+          // The house changed under us (a join moved our trips). The outbox is kept (and the new
+          // house's store re-tags it); the owner refreshes who we are and starts that store.
           this.onForbidden?.()
           this.fail()
           return 'stop'
