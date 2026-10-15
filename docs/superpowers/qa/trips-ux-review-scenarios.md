@@ -249,6 +249,12 @@ screenshot at each step, and write a one-line look-and-flow judgement for each.
 6. **Geography check:** scroll Days. The map follows each day and the sticky day header matches it.
    Drag an idea over days and the map previews the idea's place.
 7. **Leave and return:** open Trip settings, go back, and check both panes keep their scroll.
+9. **Map interaction (both map modes):**
+   - Run once with no key (the interactive preview) and once with `VITE_PMTILES_URL` (real MapLibre).
+   - Zoom with the wheel, a pinch and +/−; drag to pan.
+   - Fit day resets; a manual pan pauses follow-scroll.
+   - Click to add a stop.
+   - Labels and pips don't collide; clusters split when you zoom.
 8. **Before → during:** switch `?mockPhase=during`. The Next stop card replaces Ready to go, and
    nothing else jumps.
 
