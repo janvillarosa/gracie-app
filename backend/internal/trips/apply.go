@@ -26,6 +26,12 @@ type Outcome struct {
 	Bump  bool // data changed; t.Version has been set to Ctx.NewV
 }
 
+// stamp returns the batch's server time (UTC) for updated_at.
+func stamp(c Ctx) *time.Time {
+	n := c.Now.UTC()
+	return &n
+}
+
 // NewShell returns an empty, not-yet-persisted trip (Version 0) for trip.create.
 func NewShell(tripID, roomID, actor string, now time.Time) *models.Trip {
 	return &models.Trip{
@@ -454,7 +460,7 @@ func todoCreate(t *models.Trip, op models.Op, at int64, c Ctx, res *models.OpRes
 	if !validTodoPatch(p, true) || !bookingLinkOK(t, p) {
 		return fail(res, models.CodeInvalid)
 	}
-	td := models.TripTodo{TodoID: op.EntityID, Category: "other", CreatedBy: c.Actor, UpdatedBy: c.Actor, FieldAt: map[string]int64{}}
+	td := models.TripTodo{TodoID: op.EntityID, Category: "other", CreatedBy: c.Actor, UpdatedBy: c.Actor, UpdatedAt: stamp(c), FieldAt: map[string]int64{}}
 	commit(&td.FieldAt, at, todoChanges(&td, p, c.Actor, c.Now), res)
 	if p.Order == nil {
 		td.Order = nextOrder(t, td.Day)
@@ -483,7 +489,7 @@ func todoUpdate(t *models.Trip, op models.Op, at int64, c Ctx, res *models.OpRes
 		return false
 	}
 	td.V = c.NewV
-	td.UpdatedBy = c.Actor
+	td.UpdatedBy, td.UpdatedAt = c.Actor, stamp(c)
 	if p.Place.Set { // a title-only edit must not shift the time after a trip tz change
 		resolveTodoTZ(t, td)
 	}
@@ -570,7 +576,7 @@ func bookingCreate(t *models.Trip, op models.Op, at int64, c Ctx, res *models.Op
 	if !validBookingPatch(p, true) {
 		return fail(res, models.CodeInvalid)
 	}
-	b := models.Booking{BookingID: op.EntityID, CreatedBy: c.Actor, UpdatedBy: c.Actor, FieldAt: map[string]int64{}}
+	b := models.Booking{BookingID: op.EntityID, CreatedBy: c.Actor, UpdatedBy: c.Actor, UpdatedAt: stamp(c), FieldAt: map[string]int64{}}
 	commit(&b.FieldAt, at, bookingChanges(&b, p), res)
 	b.V = c.NewV
 	t.Bookings = append(t.Bookings, b)
@@ -594,7 +600,7 @@ func bookingUpdate(t *models.Trip, op models.Op, at int64, c Ctx, res *models.Op
 		return false
 	}
 	b.V = c.NewV
-	b.UpdatedBy = c.Actor
+	b.UpdatedBy, b.UpdatedAt = c.Actor, stamp(c)
 	return true
 }
 
@@ -609,7 +615,7 @@ func bookingDelete(t *models.Trip, op models.Op, c Ctx, res *models.OpResult) bo
 		if td := &t.Todos[k]; td.BookingID != nil && *td.BookingID == op.EntityID {
 			td.BookingID = nil
 			td.V = c.NewV
-			td.UpdatedBy = c.Actor
+			td.UpdatedBy, td.UpdatedAt = c.Actor, stamp(c)
 		}
 	}
 	return true
