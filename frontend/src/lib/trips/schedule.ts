@@ -150,15 +150,16 @@ export type DayModel = {
   label: string
   suggested: string
   entries: Entry[]
+  clash?: Clash
 }
 
-export type Gap = { id: string; text: string; target: string }
+/** Two things in one day that run into each other: named once, under the day's header. */
+export type Clash = { ids: [string, string]; laterId: string; text: string }
 
 export type Schedule = {
   days: DayModel[]
   ideas: TripTodo[]
   outside: Entry[]
-  gaps: Gap[]
 }
 
 function todoEntry(t: TripTodo, tripTz?: string): Entry {
@@ -286,17 +287,33 @@ export function suggestLabel(todos: TripTodo[]): string {
   return best
 }
 
-export function overlapping(entries: Entry[]): boolean {
+const entryTitle = (e: Entry) => (e.kind === 'todo' ? e.todo.title : e.booking.title)
+const clockOf = (dt?: string | null) => (dt ? (dt.split('T')[1] ?? '') : '')
+
+/** The first pair of timed entries that run into each other (back-to-back is fine). */
+export function findClash(entries: Entry[]): Clash | undefined {
   const timed = entries.filter((e) => e.startMs !== null).sort(compareEntries)
   let end = -Infinity
-  let lastStart = -Infinity
+  let reach: Entry | undefined
+  let last: Entry | undefined
   for (const e of timed) {
     const s = e.startMs as number
-    if (s < end || s === lastStart) return true
-    lastStart = s
-    end = Math.max(end, e.endMs ?? s)
+    const hit = s < end ? reach : last && last.startMs === s ? last : undefined
+    if (hit) {
+      const time = e.kind === 'todo' ? (e.todo.start_time ?? '') : clockOf(e.booking.starts_at)
+      const text =
+        hit.kind === 'booking' && hit.booking.ends_at
+          ? `${entryTitle(e)} starts before ${entryTitle(hit)} ends (${clockOf(hit.booking.ends_at)})`
+          : `${entryTitle(hit)} and ${entryTitle(e)} overlap at ${time}`
+      return { ids: [hit.id, e.id], laterId: e.id, text }
+    }
+    last = e
+    if ((e.endMs ?? s) >= end) {
+      end = e.endMs ?? s
+      reach = e
+    }
   }
-  return false
+  return undefined
 }
 
 export function buildSchedule(trip: Trip): Schedule {
@@ -333,32 +350,11 @@ export function buildSchedule(trip: Trip): Schedule {
       label: trip.days?.[date] ?? '',
       suggested: trip.days?.[date] ? '' : suggestLabel(todos),
       entries,
+      clash: findClash(entries),
     }
   })
 
-  const gaps: Gap[] = []
-  const empty = days.filter((d) => d.entries.length === 0)
-  if (empty.length)
-    gaps.push({
-      id: 'empty',
-      text: `${empty.length} ${empty.length === 1 ? 'day has' : 'days have'} nothing planned`,
-      target: `day-${empty[0].date}`,
-    })
-  for (const d of days)
-    if (overlapping(d.entries))
-      gaps.push({
-        id: `overlap-${d.date}`,
-        text: `${shortDay(d.date)} has two things at the same time`,
-        target: `day-${d.date}`,
-      })
-  const outTodos = outside.filter((e) => e.kind === 'todo').length
-  if (outTodos)
-    gaps.push({
-      id: 'outside',
-      text: `${outTodos} ${outTodos === 1 ? 'thing is' : 'things are'} outside the trip dates`,
-      target: 'outside-dates',
-    })
-  return { days, ideas, outside: outsideOrdered, gaps }
+  return { days, ideas, outside: outsideOrdered }
 }
 
 export type Phase = 'draft' | 'before' | 'during' | 'after'

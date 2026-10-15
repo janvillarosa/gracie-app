@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import { CaretDown, CaretRight } from '@phosphor-icons/react'
 import type { Booking, TripTodo } from '@api/tripTypes'
-import { shortDay, type DayModel, type Entry } from '@lib/trips/schedule'
+import { shortDay, type Clash, type DayModel, type Entry } from '@lib/trips/schedule'
 import type { ConflictNote } from '@lib/trips/store'
 import { memberName, type Member } from '@lib/trips/hooks'
 import { BookingLine } from './Bookings'
@@ -21,6 +21,8 @@ export type Shared = {
   // Map numbers; empty while the map is not on screen (the gutter stays quiet then).
   pins: Map<string, number>
   setDayLabel: (date: string, label: string) => void
+  // Opens an item's sheet with its time ready to change (from the overlap line).
+  onClash: (id: string) => void
 }
 
 /** "Added by Mia · Changed by Jan", for the detail. */
@@ -75,6 +77,8 @@ type RowsProps = {
   nowIndex?: number
   nowLabel?: string
   stay?: Booking
+  // Ids of the two rows that overlap: a thin amber rule on the left.
+  clashIds?: readonly string[]
 }
 
 export const EntryRows: React.FC<RowsProps> = ({
@@ -89,6 +93,7 @@ export const EntryRows: React.FC<RowsProps> = ({
   nowIndex = -1,
   nowLabel,
   stay,
+  clashIds,
 }) => {
   const out: React.ReactNode[] = []
   const t = Date.now()
@@ -115,6 +120,7 @@ export const EntryRows: React.FC<RowsProps> = ({
           dayLabel={showDay ? shortDay(e.day) : ''}
           days={shared.days}
           entering={enteringId === td.todo_id}
+          clash={!!clashIds?.includes(td.todo_id)}
           actions={shared.actions}
         />,
       )
@@ -127,6 +133,7 @@ export const EntryRows: React.FC<RowsProps> = ({
           past={(e.endMs ?? e.startMs ?? Number.POSITIVE_INFINITY) < nowMs}
           pin={shared.pins.get(b.booking_id)}
           selected={selectedId === b.booking_id}
+          clash={!!clashIds?.includes(b.booking_id)}
           onOpen={shared.actions.open}
         />,
       )
@@ -238,6 +245,8 @@ type DayProps = {
   celebrating: boolean
   // Collapsed to one line (phone: only today and the day you picked are open).
   closed: boolean
+  // Today and later days only: the pair that runs into each other.
+  clash?: Clash
 }
 
 /** One day: a section of the plan sheet, divided the way a list divides its groups. */
@@ -258,6 +267,7 @@ export const DaySection = React.memo<DayProps>(function DaySection({
   today,
   celebrating,
   closed,
+  clash,
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: `day:${day.date}` })
   const label = day.label || day.suggested
@@ -328,6 +338,11 @@ export const DaySection = React.memo<DayProps>(function DaySection({
         </button>
         {celebrating && <span className="trip-stamp">Day done</span>}
       </header>
+      {clash && (
+        <button type="button" className="trip-clash" onClick={() => shared.onClash(clash.laterId)}>
+          {clash.text}
+        </button>
+      )}
       {day.entries.length === 0 && !stay ? (
         <p className="trip-empty-row">Nothing planned yet</p>
       ) : (
@@ -342,6 +357,7 @@ export const DaySection = React.memo<DayProps>(function DaySection({
           nowIndex={isToday ? nowIndex : -1}
           nowLabel={nowLabel}
           stay={isToday ? stay : undefined}
+          clashIds={clash?.ids}
         />
       )}
     </section>

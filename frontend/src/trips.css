@@ -273,51 +273,10 @@ textarea.trip-field {
   gap: 4px;
   flex: none;
 }
-.trip-gap-pill {
-  min-height: 28px;
-  padding: 0 12px;
-  border: 1px solid var(--border-strong);
-  border-radius: 999px;
-  background: var(--panel);
-  color: var(--ink);
-  font: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-}
 .trip-gaps-pop .ant-popover-inner {
   box-shadow: var(--lift-3);
   padding: 6px;
   border-radius: 14px;
-}
-.trip-gaps {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  min-width: 200px;
-}
-.trip-gap {
-  display: block;
-  width: 100%;
-  min-height: 44px;
-  padding: 6px 12px;
-  background: none;
-  border: 0;
-  border-radius: 10px;
-  text-align: left;
-  font: inherit;
-  color: var(--ink);
-  cursor: pointer;
-}
-.trip-gap:focus-visible {
-  background: color-mix(in srgb, var(--brand-yellow) 22%, white);
-  outline: none;
-}
-@media (hover: hover) {
-  .trip-gap:hover {
-    background: var(--panel-subtle);
-  }
 }
 .trip-cap {
   color: var(--brand-red);
@@ -1732,9 +1691,6 @@ textarea.trip-field {
 .trip-metaline .trip-avatars {
   margin: 0;
 }
-.trip-metaline .trip-gap-pill {
-  margin-left: auto;
-}
 
 /* ---- the item sheet: one editor, grouped by spacing and hairlines, not boxes ------------- */
 .trip-sheet {
@@ -2189,4 +2145,51 @@ textarea.trip-field {
 }
 .trip-map-drawer .trip-map {
   min-height: 0;
+}
+
+/* ---- an overlap: one quiet amber line under the day header, a rule on both rows ---------- */
+:root {
+  --trip-warn-bg: #fff4d6;
+  --trip-warn-ink: #7a4b00;
+  --trip-warn-rule: var(--brand-yellow-deep);
+}
+.trip-clash {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 36px;
+  margin: 2px 0 6px;
+  padding: 6px 12px;
+  border: 0;
+  border-left: 3px solid var(--trip-warn-rule);
+  border-radius: 0 10px 10px 0;
+  background: var(--trip-warn-bg);
+  color: var(--trip-warn-ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: left;
+  cursor: pointer;
+}
+.trip-clash:focus-visible {
+  box-shadow: var(--focus-ring);
+  outline: none;
+}
+.trip-row.is-clash,
+.trip-stub.is-clash {
+  box-shadow: inset 3px 0 0 var(--trip-warn-rule);
+}
+.trip-flag-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-left: 8px;
+  border-radius: 50%;
+  background: var(--trip-warn-rule);
+  vertical-align: middle;
+}
+.trip-outside-note {
+  margin: 0 0 8px;
+  font-size: 13px;
 }

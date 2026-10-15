@@ -1,16 +1,9 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { Button, Card, Dropdown, Popover, Typography } from 'antd'
 import type { MenuProps } from 'antd'
 import { ArrowDown, ArrowUp, CaretDown, DotsThreeVertical, X } from '@phosphor-icons/react'
 import type { Place, Trip } from '@api/tripTypes'
-import {
-  countdown,
-  routeText,
-  shortDay,
-  shortRange,
-  tripPhase,
-  type Gap,
-} from '@lib/trips/schedule'
+import { countdown, routeText, shortDay, shortRange, tripPhase } from '@lib/trips/schedule'
 import { AvatarBadge } from '@components/AvatarBadge'
 import type { Member } from '@lib/trips/hooks'
 import { toTripEmoji } from '../../icons'
@@ -19,7 +12,6 @@ import { PlacePicker } from './PlacePicker'
 type HeaderProps = {
   trip: Trip
   today: string
-  gaps: Gap[]
   offline: boolean
   pending: number
   deletedBy: string
@@ -27,7 +19,6 @@ type HeaderProps = {
   members: Member[]
   onUnlock: () => void
   onRestore: () => void
-  onGap: (target: string) => void
   onMenu: (key: 'notes' | 'packing' | 'details') => void
   // The friendly line opens a list of days: a popover on desktop, a sheet (owned by the page)
   // elsewhere.
@@ -41,7 +32,6 @@ type HeaderProps = {
 export const TripHeader: React.FC<HeaderProps> = ({
   trip,
   today,
-  gaps,
   offline,
   pending,
   deletedBy,
@@ -49,14 +39,12 @@ export const TripHeader: React.FC<HeaderProps> = ({
   members,
   onUnlock,
   onRestore,
-  onGap,
   onMenu,
   desktop,
   daysOpen,
   onDaysOpen,
   dayList,
 }) => {
-  const [gapsOpen, setGapsOpen] = useState(false)
   const route = routeText(trip)
   const phase = tripPhase(trip, today)
   const line =
@@ -134,42 +122,6 @@ export const TripHeader: React.FC<HeaderProps> = ({
                 />
               ))}
             </span>
-            {gaps.length > 0 && (
-              <Popover
-                trigger="click"
-                placement="bottomLeft"
-                open={gapsOpen}
-                onOpenChange={setGapsOpen}
-                overlayClassName="trip-gaps-pop"
-                content={
-                  <ul className="trip-gaps" aria-label="Things to look at">
-                    {gaps.map((g) => (
-                      <li key={g.id}>
-                        <button
-                          type="button"
-                          className="trip-gap"
-                          onClick={() => {
-                            setGapsOpen(false)
-                            onGap(g.target)
-                          }}
-                        >
-                          {g.text}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                }
-              >
-                <button
-                  type="button"
-                  className="trip-gap-pill"
-                  aria-haspopup="true"
-                  aria-expanded={gapsOpen}
-                >
-                  {gaps.length} {gaps.length === 1 ? 'thing' : 'things'} to look at
-                </button>
-              </Popover>
-            )}
           </div>
         </div>
         <div className="list-actions">

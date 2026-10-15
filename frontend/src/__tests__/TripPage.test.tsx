@@ -75,16 +75,11 @@ describe('The stack', () => {
     expect(screen.getByText('Day trip to Cascais')).toBeInTheDocument()
   })
 
-  it('reads "things to look at" for gaps and scrolls to each', async () => {
+  it('has no "things to look at" pill', async () => {
     seed(TRIP)
     open()
-    const pill = await screen.findByRole('button', { name: /thing.* to look at/ })
-    await userEvent.click(pill)
-    const item = await screen.findByRole('button', { name: '1 day has nothing planned' })
-    scrollIntoView.mockClear()
-    await userEvent.click(item)
-    await waitFor(() => expect(scrollIntoView).toHaveBeenCalled())
-    expect(([...scrollIntoView.mock.contexts].pop() as HTMLElement).id).toBe(`day-${rel(2)}`)
+    await deck()
+    expect(screen.queryByRole('button', { name: /to look at/ })).not.toBeInTheDocument()
   })
 
   it('has no count summaries in day headers', async () => {
@@ -93,6 +88,66 @@ describe('The stack', () => {
     await screen.findByRole('heading', { name: 'Later today' })
     expect(screen.queryByText(/\d+ stops?/)).not.toBeInTheDocument()
     expect(screen.queryByText(/\d+ bookings?/)).not.toBeInTheDocument()
+  })
+})
+
+describe('Overlaps', () => {
+  // Tomorrow: Jerónimos 10:00 for two hours, then Pastéis at 11:00.
+  const clashing = () => {
+    const t = lisbonTrip()
+    t.todos[7] = { ...t.todos[7], duration_min: 120 }
+    t.todos.push(todo('11', 'Pastéis de Belém', { day: rel(1), order: 2, start_time: '11:00' }))
+    return t
+  }
+
+  it('names the clash once under the day header and marks both rows', async () => {
+    seed(clashing())
+    open()
+    const line = await screen.findByRole('button', {
+      name: 'Jerónimos Monastery and Pastéis de Belém overlap at 11:00',
+    })
+    const day = line.closest('section') as HTMLElement
+    expect(within(day).getAllByRole('button', { name: /overlap/ })).toHaveLength(1)
+    for (const title of ['Jerónimos Monastery', 'Pastéis de Belém'])
+      expect(within(day).getByText(title).closest('li')).toHaveClass('is-clash')
+  })
+
+  it('opens the later item with its time ready, and the line goes when the times stop overlapping', async () => {
+    seed(clashing())
+    open()
+    await userEvent.click(
+      await screen.findByRole('button', { name: /Jerónimos Monastery and Pastéis/ }),
+    )
+    const sheet = await screen.findByRole('dialog', { name: 'Pastéis de Belém' })
+    const time = within(sheet).getByLabelText('Time')
+    expect(time).toHaveFocus()
+    fireEvent.change(time, { target: { value: '12:30' } })
+    fireEvent.blur(time)
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: /overlap/ })).not.toBeInTheDocument(),
+    )
+  })
+
+  it('never flags a day that is already over', async () => {
+    const t = lisbonTrip()
+    // Yesterday: two stops at the same time.
+    t.todos[2] = { ...t.todos[2], start_time: '10:00' }
+    seed(t)
+    open()
+    await deck()
+    await userEvent.click(await screen.findByRole('button', { name: /2 days done/ }))
+    await screen.findByRole('heading', { name: shortDay(rel(-1)) })
+    expect(screen.queryByRole('button', { name: /overlap/ })).not.toBeInTheDocument()
+  })
+
+  it('puts a small amber dot on the day in the day list', async () => {
+    seed(clashing())
+    open()
+    await userEvent.click(await screen.findByRole('button', { name: /Day 3 of 5/ }))
+    const list = await screen.findByRole('list', { name: 'Days' })
+    const row = within(list).getByRole('button', { name: new RegExp(shortDay(rel(1))) })
+    expect(within(row).getByRole('img', { name: 'Two things overlap' })).toBeInTheDocument()
+    expect(within(list).getAllByRole('img', { name: 'Two things overlap' })).toHaveLength(1)
   })
 })
 
@@ -380,6 +435,7 @@ describe('Days', () => {
     open()
     const section = await screen.findByRole('region', { name: 'Outside trip dates' })
     expect(within(section).getByText('Christmas market')).toBeInTheDocument()
+    expect(within(section).getByText(/^These are dated outside /)).toBeInTheDocument()
   })
 })
 

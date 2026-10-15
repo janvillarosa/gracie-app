@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { Trip, TripTodo } from '../api/tripTypes'
+import type { Booking, Trip, TripTodo } from '../api/tripTypes'
 import { IdbTripDB } from '../lib/trips/db'
 import {
   addDays,
@@ -83,22 +83,40 @@ describe('buildSchedule', () => {
     expect(s.outside.map((e) => e.id)).toEqual(['late'])
   })
 
-  it('flags empty days, overlaps in absolute time and todos outside the dates', () => {
+  it('names an overlap on its day, and keeps todos outside the dates apart', () => {
     const t = trip({
       todos: [
-        todo('a', { day: '2026-10-23', start_time: '10:00', duration_min: 120 }),
-        todo('b', { day: '2026-10-23', start_time: '11:00' }),
+        todo('Lunch', { day: '2026-10-23', start_time: '10:00', duration_min: 120 }),
+        todo('Walk', { day: '2026-10-23', start_time: '11:00' }),
         todo('x', { day: '2026-12-01' }),
         todo('y', { day: '2026-12-02' }),
       ],
     })
     const s = buildSchedule(t)
-    expect(s.gaps.map((g) => g.text)).toEqual([
-      '3 days have nothing planned',
-      'Fri 23 has two things at the same time',
-      '2 things are outside the trip dates',
-    ])
-    expect(s.gaps[0].target).toBe('day-2026-10-22')
+    const day = s.days.find((d) => d.date === '2026-10-23')
+    expect(day?.clash?.text).toBe('Lunch and Walk overlap at 11:00')
+    expect(day?.clash?.ids).toEqual(['Lunch', 'Walk'])
+    expect(day?.clash?.laterId).toBe('Walk')
+    expect(s.days.filter((d) => d.clash)).toHaveLength(1)
+    expect(s.outside.map((e) => e.id)).toEqual(['x', 'y'])
+  })
+
+  it('says a stop starts before a booking ends', () => {
+    const t = trip({
+      bookings: [
+        {
+          booking_id: 'train',
+          kind: 'train',
+          title: 'the train',
+          starts_at: '2026-10-23T11:00',
+          ends_at: '2026-10-23T12:45',
+        } as Booking,
+      ],
+      todos: [todo('Lunch near São Bento', { day: '2026-10-23', start_time: '12:00' })],
+    })
+    const day = buildSchedule(t).days.find((d) => d.date === '2026-10-23')
+    expect(day?.clash?.text).toBe('Lunch near São Bento starts before the train ends (12:45)')
+    expect(day?.clash?.laterId).toBe('Lunch near São Bento')
   })
 
   it('does not call back-to-back stops an overlap, and compares across zones', () => {
@@ -114,14 +132,14 @@ describe('buildSchedule', () => {
         todo('b', { day: '2026-10-23', start_time: '11:00', tz: 'Europe/Paris' }),
       ],
     })
-    expect(buildSchedule(t).gaps.some((g) => g.id.startsWith('overlap'))).toBe(true)
+    expect(buildSchedule(t).days.some((d) => d.clash)).toBe(true)
     const calm = trip({
       todos: [
         todo('a', { day: '2026-10-23', start_time: '10:00', duration_min: 60 }),
         todo('b', { day: '2026-10-23', start_time: '11:00' }),
       ],
     })
-    expect(buildSchedule(calm).gaps.some((g) => g.id.startsWith('overlap'))).toBe(false)
+    expect(buildSchedule(calm).days.some((d) => d.clash)).toBe(false)
   })
 
   it('puts bookings in the spine at their start and suggests a muted day label', () => {

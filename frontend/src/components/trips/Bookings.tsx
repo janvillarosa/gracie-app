@@ -232,6 +232,7 @@ type LineProps = {
   pin?: number
   tonight?: boolean
   selected: boolean
+  clash?: boolean
   onOpen: (id: string) => void
 }
 
@@ -243,6 +244,7 @@ export const BookingLine = React.memo<LineProps>(function BookingLine({
   pin,
   tonight,
   selected,
+  clash,
   onOpen,
 }) {
   const open = tonight ? `tonight-${b.booking_id}` : b.booking_id
@@ -255,6 +257,7 @@ export const BookingLine = React.memo<LineProps>(function BookingLine({
         past ? 'is-used' : '',
         tonight ? 'is-tonight' : '',
         selected ? 'is-selected' : '',
+        clash ? 'is-clash' : '',
       ]
         .filter(Boolean)
         .join(' ')}

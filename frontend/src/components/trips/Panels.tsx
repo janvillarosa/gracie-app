@@ -23,12 +23,15 @@ type PanelProps = {
  *  focus-trapped bottom sheet on touch screens. Rendered only while open. */
 export const Panel: React.FC<PanelProps> = ({ title, onClose, desktop, bare, children }) => {
   const closeRef = useRef<HTMLButtonElement>(null)
+  const rootRef = useRef<HTMLDivElement>(null)
   const onCloseRef = useRef(onClose)
   onCloseRef.current = onClose
   useEffect(() => {
     if (!desktop) return
     const opener = document.activeElement as HTMLElement | null
-    closeRef.current?.focus({ preventScroll: true })
+    // Something inside (a field that asked for focus) keeps it.
+    if (!rootRef.current?.contains(document.activeElement))
+      closeRef.current?.focus({ preventScroll: true })
     // Escape closes the panel wherever focus has moved to, unless something inside took it.
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && !e.defaultPrevented) onCloseRef.current()
@@ -57,7 +60,7 @@ export const Panel: React.FC<PanelProps> = ({ title, onClose, desktop, bare, chi
   }
   return (
     // biome-ignore lint/a11y/useSemanticElements: a docked panel, not a modal <dialog>
-    <div className="trip-overlay" role="dialog" aria-label={title}>
+    <div ref={rootRef} className="trip-overlay" role="dialog" aria-label={title}>
       <header className={bare ? 'trip-overlay-head is-bare' : 'trip-overlay-head'}>
         {bare ? <span className="sr-only">{title}</span> : <h2>{title}</h2>}
         <Button

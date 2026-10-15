@@ -27,6 +27,7 @@ import {
   buildSchedule,
   fullDay,
   longDay,
+  shortRange,
   localDateKey,
   orderBetween,
   orderForDrop,
@@ -320,6 +321,8 @@ const TripScreen: React.FC<{
   const [packBusy, setPackBusy] = useState(false)
   const [packError, setPackError] = useState('')
   const [dragging, setDragging] = useState<string | null>(null)
+  // The item whose time field opens ready (from an overlap line).
+  const [focusTime, setFocusTime] = useState<string | null>(null)
   const mapRef = useRef<TripMapHandle>(null)
 
   const desktop = useMedia('(min-width: 1024px)')
@@ -366,6 +369,7 @@ const TripScreen: React.FC<{
     announce: setAnnouncement,
     openItem: (id) => {
       setMoveOpen(null)
+      setFocusTime(null)
       const key = id ? id.replace(/^tonight-/, '') : null
       setSelected(key)
       // The map shows the day of the item you opened.
@@ -542,6 +546,8 @@ const TripScreen: React.FC<{
               ),
             },
             closed: !isOpenDay(d),
+            // Past days are never flagged.
+            clash: d.date >= today ? d.clash : undefined,
           }
         })
         .filter((p) => !p.deckDay || p.day.entries.length > 0 || !!stay),
@@ -639,6 +645,10 @@ const TripScreen: React.FC<{
       locked,
       pins: mapVisible ? pins.numbers : NO_PINS,
       setDayLabel,
+      onClash: (id: string) => {
+        ctx.current.openItem(id)
+        setFocusTime(id)
+      },
     }),
     [
       rowActions,
@@ -704,7 +714,6 @@ const TripScreen: React.FC<{
     [schedule.days, doneDays, override, celebrating, phone, phase, today],
   )
   const openDay = useCallback((date: string) => setOverride((o) => ({ ...o, [date]: true })), [])
-  const goTo = useCallback((id: string) => scrollToEl(document.getElementById(id)), [])
   const goToDay = useCallback(
     (date: string, focus = true) => {
       setCurrentDay(date)
@@ -717,14 +726,6 @@ const TripScreen: React.FC<{
     },
     [openDay, doneDays],
   )
-  const onGap = useCallback(
-    (target: string) => {
-      if (target.startsWith('day-')) goToDay(target.slice(4))
-      else goTo(target)
-    },
-    [goTo, goToDay],
-  )
-
   // ---- map ----------------------------------------------------------------------------
   const dayIndex = Math.max(
     0,
@@ -927,6 +928,7 @@ const TripScreen: React.FC<{
       key={selTodo.todo_id}
       todo={selTodo}
       fresh={selTodo.todo_id === freshId}
+      focusTime={focusTime === selTodo.todo_id}
       onCopy={bookingActions.copy}
       bookings={trip.bookings}
       days={moveTargets}
@@ -942,6 +944,7 @@ const TripScreen: React.FC<{
     <BookingDetail
       key={selBooking.booking_id}
       booking={selBooking}
+      focusTime={focusTime === selBooking.booking_id}
       tripTz={trip.tz}
       bias={bias}
       byline={bylineFor(selBooking, userId, members)}
@@ -1037,7 +1040,7 @@ const TripScreen: React.FC<{
       onFocus={onSpineOver}
       onPointerLeave={() => mapRef.current?.setHot(null)}
     >
-      {planDays.map(({ day, closed, deckDay }) => {
+      {planDays.map(({ day, closed, deckDay, clash }) => {
         const isToday = day.date === today && phase === 'during'
         return (
           <DaySection
@@ -1058,6 +1061,7 @@ const TripScreen: React.FC<{
             today={today}
             celebrating={celebrating.has(day.date)}
             closed={closed}
+            clash={clash}
           />
         )
       })}
@@ -1066,6 +1070,11 @@ const TripScreen: React.FC<{
           <header className="trip-day-head">
             <h3 tabIndex={-1}>Outside the trip dates</h3>
           </header>
+          {trip.start_date && (
+            <p className="trip-muted trip-outside-note">
+              These are dated outside {shortRange(trip.start_date, trip.end_date)}.
+            </p>
+          )}
           <EntryRows
             entries={schedule.outside}
             shared={shared}
@@ -1088,6 +1097,7 @@ const TripScreen: React.FC<{
       title: `${d.date === today && phase === 'during' ? 'Today' : shortDay(d.date)}${d.label || d.suggested ? ` · ${d.label || d.suggested}` : ''}`,
       note: doneDays.has(d.date) ? 'All done' : todos === 0 ? 'Nothing planned' : '',
       current: d.date === currentDay,
+      flag: d.date >= today && !!d.clash,
     }
   })
   const dayListNode = (
@@ -1171,7 +1181,6 @@ const TripScreen: React.FC<{
               <TripHeader
                 trip={trip}
                 today={today}
-                gaps={schedule.gaps}
                 offline={state.offline}
                 pending={state.pending}
                 deletedBy={deletedBy}
@@ -1179,7 +1188,6 @@ const TripScreen: React.FC<{
                 members={members}
                 onUnlock={() => setUnlocked(true)}
                 onRestore={() => store.restoreTrip(trip.trip_id)}
-                onGap={onGap}
                 onMenu={(k) => (k === 'details' ? goSettings() : setExtra(k))}
                 desktop={desktop}
                 daysOpen={daysOpen}

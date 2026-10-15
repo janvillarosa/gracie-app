@@ -84,6 +84,8 @@ type TodoDetailProps = {
   byline: string
   locked: boolean
   fresh?: boolean
+  // Open with the time field ready (from an overlap line).
+  focusTime?: boolean
   onPatch: (patch: Record<string, unknown>) => void
   onMove: (day: string | null) => void
   onDelete: () => void
@@ -100,13 +102,14 @@ export const TodoDetail: React.FC<TodoDetailProps> = ({
   byline,
   locked,
   fresh,
+  focusTime,
   onPatch,
   onMove,
   onDelete,
   onCopy,
 }) => {
   const [view, setView] = useState<'main' | 'place' | 'booking'>('main')
-  const [timing, setTiming] = useState(false)
+  const [timing, setTiming] = useState(!!focusTime)
   const [custom, setCustom] = useState(false)
   const pin = todo.place && todo.place.source !== 'manual' ? todo.place : null
   const linked = bookings.find((b) => b.booking_id === todo.booking_id)
@@ -225,7 +228,7 @@ export const TodoDetail: React.FC<TodoDetailProps> = ({
             defaultValue={todo.start_time ?? ''}
             disabled={locked}
             // biome-ignore lint/a11y/noAutofocus: the time field opens because "+ Time" was pressed
-            autoFocus={timing && !todo.start_time}
+            autoFocus={focusTime || (timing && !todo.start_time)}
             onBlur={(e) => {
               const v = e.target.value || null
               setTiming(false)
@@ -362,6 +365,7 @@ type BookingDetailProps = {
   bias: Bias
   byline: string
   locked: boolean
+  focusTime?: boolean
   actions: BookingActions
 }
 
@@ -381,6 +385,7 @@ export const BookingDetail: React.FC<BookingDetailProps> = ({
   bias,
   byline,
   locked,
+  focusTime,
   actions,
 }) => {
   const [view, setView] = useState<'main' | 'place'>('main')
@@ -449,6 +454,8 @@ export const BookingDetail: React.FC<BookingDetailProps> = ({
             className="trip-chip"
             type="datetime-local"
             aria-label="Starts"
+            // biome-ignore lint/a11y/noAutofocus: opened from an overlap line to change the time
+            autoFocus={focusTime}
             key={b.starts_at ?? 's'}
             defaultValue={b.starts_at ?? ''}
             disabled={locked}

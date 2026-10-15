@@ -40,6 +40,8 @@ type Props = {
   days: MoveTarget[]
   // True the first time a row appears after it was added here.
   entering: boolean
+  // Overlaps another row: a thin amber rule on the left.
+  clash?: boolean
   actions: RowActions
 }
 
@@ -56,6 +58,7 @@ export const TodoRow = React.memo<Props>(function TodoRow({
   dayLabel,
   days,
   entering,
+  clash,
   actions,
 }) {
   const id = todo.todo_id
@@ -111,6 +114,7 @@ export const TodoRow = React.memo<Props>(function TodoRow({
         isDragging ? 'is-dragging' : '',
         entering ? 'is-entering' : '',
         overdue ? 'is-overdue' : '',
+        clash ? 'is-clash' : '',
       ]
         .filter(Boolean)
         .join(' ')}

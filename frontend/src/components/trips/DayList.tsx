@@ -8,6 +8,8 @@ export type DayRow = {
   // Muted: "All done", "Nothing planned".
   note?: string
   current?: boolean
+  // Two things in this day run into each other: a small amber dot.
+  flag?: boolean
 }
 
 type Props = {
@@ -30,7 +32,12 @@ export const DayList: React.FC<Props> = ({ rows, onPick, label }) => (
             onClick={() => onPick(r.value)}
           >
             <span className="list-row-text">
-              <span className="list-row-name">{r.title}</span>
+              <span className="list-row-name">
+                {r.title}
+                {r.flag && (
+                  <span className="trip-flag-dot" role="img" aria-label="Two things overlap" />
+                )}
+              </span>
               {r.note && <span className="list-row-desc">{r.note}</span>}
             </span>
           </button>
