@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Modal, Form, Input, Space, Button, Typography } from 'antd'
+import { takePendingHouse } from '@lib/pendingHouse'
 import { DESCRIPTION_RULE, isValidDisplayName, MAX_DESCRIPTION, NAME_RULE } from '@lib/validation'
 
 type Props = {
@@ -24,7 +25,11 @@ export const CreateHouseModal: React.FC<Props> = ({ open, onClose, onSubmit, sub
     if (!open) {
       setDisplayName('')
       setDescription('')
+      return
     }
+    // A name typed on the landing page ("Call your House ___ and start.") fills the field once.
+    const pending = takePendingHouse()
+    if (pending) setDisplayName(pending)
   }, [open])
 
   const canSubmit = !submitting && !nameError && !descError

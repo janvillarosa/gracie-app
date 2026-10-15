@@ -191,6 +191,22 @@ why the config forces a single fork.
 - **Tests:** `__tests__/trips.helpers.tsx` has `renderTrips`, `seed`, `setViewport`,
   `lisbonTrip`, `meState`, `resetTripsWorld`; the shared in-memory `tripServer` is in `testServer.ts`.
 
+## Landing page (`/`, logged out)
+
+- `pages/Landing.tsx` composes `components/landing/*` (styles in `landing.css`, all classes `ld-*`). Logged-in
+  members hitting `/` go to `/app` (`RequireGuest`). Brief: `docs/superpowers/specs/2026-10-15-landing-page-brief.md`;
+  visual rules in the root `DESIGN.md`.
+- The hero list, the shared plate and the offline slip are **local demos** (`components/landing/demo.ts`, pure and
+  unit-tested): no API calls. Mia, Sam and Jo are an example House; the page never calls it a demo.
+  `components/landing/appUi.tsx` copies the app's own pieces (list header, PillNav, checkbox, add bar,
+  avatars); keep it in step when those change in the app.
+- "Call your House ___ and start." stores the name in `sessionStorage` (`lib/pendingHouse.ts`);
+  `CreateHouseModal` takes it once to prefill the House name.
+- Photos in `assets/landing/` are open-licence (CC BY); `credits.json` holds sources, the footer credits them, and
+  each JPEG carries its provenance in a comment. Keep all three in step when adding or swapping a picture.
+- The page's thesis is that there's nothing to fiddle with: no Notion template, spreadsheet or shared note to set up, one app on every device, offline. It is split plainly into two parts, linked from `Parts.tsx` right under the first screen: **Lists for the house** (`SharedPlate.tsx`, id `lists`, plus the `LearnsSheet`) and **Trip planning** (`Capabilities.tsx`, id `trips`, the stacking sheets). Cross-cutting claims (every device, offline, free) sit after both. The lists section holds a looping typing demo (`SharedPlate.tsx`): a line is typed, another housemate ticks the bottom item, the new line lands and the ticked one folds into "Show checked-off items". It plays only while on screen and rests on a finished list with reduced motion. The "It costs nothing" section is a till receipt (`FreeReceipt`). `StickyKey` pins a "Try Bauhouse free" key to the bottom of phones once the first one has scrolled away; content scrolls beneath it, so the tasteskill inspector's `covered-text` rule is allowed for it. Calls to action say "Try Bauhouse free", not "Start your House", because a first-time visitor doesn't know what a House is.
+- The offline promise covers lists too, so list offline support must ship before this page goes live.
+
 ## UI primitives (`src/components/ui/`)
 
 Every trip overlay (and the House's New list / Edit list) is a composition of these, one file

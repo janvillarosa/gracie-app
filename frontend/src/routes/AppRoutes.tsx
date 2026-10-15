@@ -3,18 +3,28 @@ import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { useAuth } from '@auth/AuthProvider'
 import { HouseLoader } from '@components/HouseLoader'
 
-const pageLoaders: Array<() => Promise<unknown>> = []
+// Chunks to warm once the browser is idle, by who is looking: a signed-out visitor (on the
+// landing page) only needs the way in, so the trip planner and its map loader never download for
+// them. The landing page itself is the entry and is never prefetched.
+type Audience = 'guest' | 'member' | 'entry'
+const pageLoaders: Record<Audience, Array<() => Promise<unknown>>> = {
+  guest: [],
+  member: [],
+  entry: [],
+}
 
 const lazyPage = <K extends string>(
   load: () => Promise<Record<K, React.ComponentType>>,
   name: K,
+  audience: Audience = 'member',
 ) => {
-  pageLoaders.push(load)
+  pageLoaders[audience].push(load)
   return React.lazy(() => load().then((m) => ({ default: m[name] })))
 }
 
-const Login = lazyPage(() => import('@pages/Login'), 'Login')
-const Register = lazyPage(() => import('@pages/Register'), 'Register')
+const Landing = lazyPage(() => import('@pages/Landing'), 'Landing', 'entry')
+const Login = lazyPage(() => import('@pages/Login'), 'Login', 'guest')
+const Register = lazyPage(() => import('@pages/Register'), 'Register', 'guest')
 const Dashboard = lazyPage(() => import('@pages/Dashboard'), 'Dashboard')
 const RoomSettings = lazyPage(() => import('@pages/RoomSettings'), 'RoomSettings')
 const UserSettings = lazyPage(() => import('@pages/UserSettings'), 'UserSettings')
@@ -48,19 +58,21 @@ const RequireGuest: React.FC<React.PropsWithChildren> = ({ children }) => {
 
 // Warm the other route chunks once the browser is idle, so a navigation never has to wait on
 // a network fetch (and a view transition never snapshots a loading state).
-const prefetchPages = () => {
-  for (const load of pageLoaders) load().catch(() => {})
+const prefetchPages = (audience: Audience) => () => {
+  for (const load of pageLoaders[audience]) load().catch(() => {})
 }
 
 export const AppRoutes: React.FC = () => {
+  const { isAuthed } = useAuth()
   React.useEffect(() => {
+    const warm = prefetchPages(isAuthed ? 'member' : 'guest')
     const idle = (window as any).requestIdleCallback as ((cb: () => void) => number) | undefined
-    const id = idle ? idle(prefetchPages) : window.setTimeout(prefetchPages, 1500)
+    const id = idle ? idle(warm) : window.setTimeout(warm, 1500)
     return () => {
       if (idle) (window as any).cancelIdleCallback?.(id)
       else window.clearTimeout(id)
     }
-  }, [])
+  }, [isAuthed])
   return (
     <main>
       <React.Suspense
@@ -154,7 +166,14 @@ export const AppRoutes: React.FC = () => {
             }
           />
           {DevUi && <Route path="/dev/ui" element={<DevUi />} />}
-          <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route
+            path="/"
+            element={
+              <RequireGuest>
+                <Landing />
+              </RequireGuest>
+            }
+          />
           <Route path="*" element={<Navigate to="/app" replace />} />
         </Routes>
       </React.Suspense>

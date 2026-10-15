@@ -1,0 +1,2380 @@
+/* The landing page: the House's shared sheet, and every section another piece of the same paper.
+   Colours, faces, easing and the yellow key come from the app's tokens on :root (styles.css). */
+
+.ld {
+  --ld-gutter: 32px;
+  --ld-max: 1280px;
+  --ld-radius: 20px;
+  --ld-control-radius: 12px;
+  --ld-tone: #ececec;
+  --ld-tone-hover: #e2e2e2;
+  --ld-grey-ink: var(--muted);
+  --ld-box-edge: #c9ccd1;
+  --ld-soft-rule: #b4b8bf;
+  --ld-placeholder: #6f747c;
+  --ld-ok: #4cc26a;
+  --ld-slip-hot: #fff6cc;
+  /* On the ink ground: a raised control, its track, and secondary text. */
+  --ld-ink-raised: #2e2e2e;
+  --ld-ink-raised-hover: #3a3a3a;
+  --ld-ink-track: #5a5a5a;
+  --ld-on-ink-muted: #d4d6da;
+
+  /* Five type steps. */
+  --ld-display: clamp(46px, 6.4vw, 96px);
+  --ld-heading: clamp(36px, 4.4vw, 66px);
+  --ld-title: clamp(22px, 2vw, 30px);
+  --ld-text: 18px;
+  --ld-small: 14px;
+
+  /* Stamps: the app's trip stamp pairs (4.5:1), plus a red pair for Free. */
+  --ld-green-bg: var(--trip-cat-activity-bg);
+  --ld-green-fg: var(--trip-cat-activity-fg);
+  --ld-blue-bg: var(--trip-cat-sight-bg);
+  --ld-blue-fg: var(--trip-cat-sight-fg);
+  --ld-amber-bg: var(--trip-cat-stay-bg);
+  --ld-amber-fg: var(--trip-cat-stay-fg);
+  --ld-red-bg: #fbe3e5;
+  --ld-red-fg: #9a1824;
+  --ld-orange-bg: var(--trip-cat-food-bg);
+  --ld-orange-fg: var(--trip-cat-food-fg);
+  --ld-grey-bg: var(--trip-cat-other-bg);
+  --ld-grey-fg: var(--trip-cat-other-fg);
+  --ld-violet-bg: var(--trip-cat-shopping-bg);
+  --ld-violet-fg: var(--trip-cat-shopping-fg);
+
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--ld-text);
+  line-height: 1.5;
+  overflow-x: clip;
+}
+
+.ld ::selection {
+  background: var(--highlighter);
+  color: var(--ink);
+}
+
+.ld a {
+  color: inherit;
+  text-underline-offset: 0.2em;
+}
+
+.ld :focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring); /* taste-skill-ignore: focus state */
+  border-radius: var(--ld-control-radius);
+}
+
+.ld-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px; /* taste-skill-ignore: screen-reader only */
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---- shared parts --------------------------------------------------------------------- */
+
+.ld-h1,
+.ld-h2 {
+  font-family: var(--font-headings);
+  font-weight: 800;
+  color: var(--ink);
+  margin: 0;
+  text-wrap: balance;
+}
+
+.ld-h1 {
+  font-size: var(--ld-display);
+  line-height: 0.98;
+  letter-spacing: -0.035em;
+}
+
+/* The cycling word in the headline. It is an ordinary word in the line (the font sets the
+   spacing); the old word fades and its highlight wipes away to the right, the new word lands with
+   the highlighter swiping in, and the words before it glide into place (a FLIP in HeadlineWord). */
+.ld-rotor {
+  position: relative;
+  z-index: 0;
+  display: inline-block;
+  white-space: nowrap;
+  transition: opacity 180ms var(--ease-out);
+}
+
+.ld-rotor.is-out {
+  opacity: 0;
+}
+
+.ld-rotor::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: 50% -0.08em 4% -0.08em;
+  border-radius: 0.06em;
+  background: var(--highlighter);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ld-rotor.is-in::after {
+    animation: ld-swipe-in 520ms var(--ease-out) 120ms both;
+  }
+
+  .ld-rotor.is-out::after {
+    animation: ld-swipe-out 200ms var(--ease-out) both;
+  }
+}
+
+@keyframes ld-swipe-in {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes ld-swipe-out {
+  from {
+    clip-path: inset(0 0 0 0);
+  }
+
+  to {
+    clip-path: inset(0 0 0 100%);
+  }
+}
+
+.ld-lead {
+  display: inline-block;
+}
+
+.ld-h2 {
+  font-size: var(--ld-heading);
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.ld-body {
+  font-size: var(--ld-text);
+  line-height: 1.55;
+  max-width: 34ch;
+  margin: 0;
+}
+
+/* The yellow key: the one action, everywhere on the page. */
+.ld-key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--control-h);
+  padding: 0 20px;
+  border-radius: var(--ld-control-radius);
+  background: var(--brand-yellow);
+  color: var(--ink) !important;
+  font: 700 var(--ld-text) / 1 var(--font-body);
+  text-decoration: none;
+  white-space: nowrap;
+  box-shadow: var(--shadow-key); /* taste-skill-ignore: brand key (DESIGN: kept) */
+  transition:
+    box-shadow var(--dur-fast) var(--ease-out),
+    transform var(--dur-press) var(--ease-out);
+}
+
+.ld-key:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+.ld-key.is-large {
+  min-height: 56px;
+  padding: 0 24px;
+}
+
+.ld-key.is-bar {
+  width: 100%;
+  min-height: 56px;
+}
+
+@media (hover: hover) {
+  .ld-key:hover {
+    box-shadow: var(--shadow-key-hover); /* taste-skill-ignore: brand key (DESIGN: kept) */
+    transform: translateY(-1px);
+  }
+}
+
+/* ---- nav ------------------------------------------------------------------------------ */
+
+.ld-nav {
+  max-width: var(--ld-max);
+  margin: 0 auto;
+  height: 76px;
+  padding: 0 var(--ld-gutter);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ld-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ink) !important;
+  text-decoration: none;
+  font: 800 22px/1 var(--font-headings);
+  letter-spacing: -0.02em;
+}
+
+.ld-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+
+.ld-nav-link {
+  font-weight: 600;
+  font-size: var(--ld-text);
+  text-decoration: none;
+  padding: 10px 2px;
+}
+
+@media (hover: hover) {
+  .ld-nav-link:hover {
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+  }
+}
+
+/* ---- hero ---------------------------------------------------------------------------- */
+
+.ld-hero {
+  padding: 36px var(--ld-gutter) 0;
+  text-align: center;
+}
+
+.ld-lede {
+  text-wrap: balance;
+  margin: 20px auto 0;
+  max-width: 58ch;
+  font-size: var(--ld-text);
+  line-height: 1.45;
+  color: var(--text);
+}
+
+.ld-hero-cta {
+  margin: 28px 0 0;
+}
+
+/* ---- the app, drawn ------------------------------------------------------------------- */
+/* Copies of the List page's paper stack, PillNav, rows, tags and add bar (styles.css), at
+   landing scale. Everything here is a picture of the real interface, so it keeps the app's own
+   borders and shadows (data-ui). */
+
+.ld-stack {
+  position: relative;
+  max-width: 760px;
+  margin: 48px auto 0;
+  text-align: left;
+}
+
+.ld-app-card {
+  position: relative;
+  background: var(--panel);
+  border: 1px solid var(--border-strong); /* taste-skill-ignore: data-ui app card */
+  border-radius: var(--radius-squircle);
+  box-shadow: var(--paper-edge), 0 1px 2px rgba(20, 20, 20, 0.05); /* taste-skill-ignore: data-ui app card */
+}
+
+/* The List page's two sheets: the header sheet, and the list sheet laid over its lower edge. */
+.ld-app-card.is-meta {
+  padding: 26px 30px 40px;
+}
+
+.ld-app-card.is-list {
+  z-index: 2;
+  margin-top: -20px;
+  padding: 22px 30px 0;
+  overflow: hidden;
+  box-shadow: var(--paper-edge), 0 24px 48px -32px rgba(20, 20, 20, 0.3); /* taste-skill-ignore: data-ui app card */
+}
+
+/* A third sheet peeks out beneath, as on the List page. */
+.ld-stack::after {
+  content: '';
+  position: absolute;
+  z-index: 1;
+  left: 16px;
+  right: 16px;
+  bottom: -9px;
+  height: 40px;
+  background: var(--panel);
+  border: 1px solid var(--border-strong); /* taste-skill-ignore: data-ui app card */
+  border-radius: 0 0 var(--radius-squircle) var(--radius-squircle);
+}
+
+.ld-app-card.is-flat {
+  padding: 18px 20px 0;
+  overflow: hidden;
+}
+
+.ld-app-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.ld-app-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  font-size: 24px;
+  line-height: 1;
+  background: var(--panel-subtle);
+  border: 1px solid var(--border); /* taste-skill-ignore: data-ui app card */
+}
+
+.ld-app-titles {
+  flex: 1;
+  min-width: 0;
+}
+
+.ld-app-title {
+  margin: 0;
+  font: 800 var(--ld-title) / 1.1 var(--font-headings);
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.ld-is-flat-title,
+.ld-app-card.is-flat .ld-app-title,
+.ld-plate .ld-app-title {
+  font-size: 22px;
+}
+
+.ld-app-meta {
+  margin: 4px 0 0;
+  font-size: var(--ld-small);
+  color: var(--ld-grey-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.ld-mates {
+  display: flex;
+  flex: none;
+}
+
+.ld-mate {
+  border: 2px solid var(--panel);
+  margin-left: -8px;
+}
+
+.ld-mate:first-child {
+  margin-left: 0;
+}
+
+/* PillNav */
+.ld-pills {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  margin-bottom: 6px;
+  border-radius: 999px;
+  background: var(--panel-subtle);
+  border: 1px solid var(--border-strong); /* taste-skill-ignore: data-ui app card */
+}
+
+.ld-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 16px;
+  border-radius: 999px;
+  font-size: var(--ld-small);
+  font-weight: 600;
+  color: var(--ld-grey-ink);
+}
+
+.ld-pill.is-on {
+  background: var(--panel);
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.06); /* taste-skill-ignore: data-ui app card */
+}
+
+.ld-pill-count {
+  color: var(--ld-grey-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Rows */
+.ld-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.ld-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 60px;
+  border-bottom: 1px solid var(--border); /* taste-skill-ignore: data-ui app card */
+}
+
+.ld-row:last-child {
+  border-bottom: 0;
+}
+
+.ld-row-hit {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 0;
+  cursor: pointer;
+}
+
+.ld-row.is-static .ld-row-hit {
+  cursor: default;
+}
+
+.ld-check-input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px; /* taste-skill-ignore: screen-reader only */
+}
+
+/* The list checkbox: a soft grey outline; checked, it fills yellow with an ink tick. */
+.ld-box {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  border: 1.5px solid color-mix(in srgb, var(--border-strong) 70%, var(--muted));
+  display: grid;
+  place-items: center;
+  color: transparent;
+  font-size: 13px;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    transform var(--dur-press) var(--ease-out);
+}
+
+.ld-box.is-done,
+.is-done > label .ld-box {
+  background: var(--brand-yellow);
+  border-color: var(--brand-yellow-deep);
+  color: var(--ink);
+}
+
+.ld-check-input:focus-visible + .ld-box {
+  box-shadow: var(--focus-ring); /* taste-skill-ignore: focus state */
+}
+
+.ld-row-hit:active .ld-box {
+  transform: scale(0.88);
+}
+
+@media (hover: hover) {
+  .ld-row:not(.is-static) .ld-row-hit:hover .ld-box:not(.is-done) {
+    border-color: var(--brand-yellow-deep);
+    background: color-mix(in srgb, var(--brand-yellow) 12%, white);
+  }
+}
+
+.ld-row-title {
+  position: relative;
+  z-index: 0;
+  min-width: 0;
+  font-weight: 500;
+  font-size: var(--ld-text);
+  line-height: 1.35;
+  color: var(--ink-heading);
+}
+
+.ld-qty {
+  margin-left: 8px;
+  color: var(--ld-grey-ink);
+  font-size: var(--ld-small);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.is-done .ld-row-title {
+  color: var(--ld-grey-ink);
+  text-decoration: line-through;
+  text-decoration-color: var(--ld-soft-rule);
+}
+
+/* A line the visitor just added: the highlighter swipe that fades like drying ink. */
+.ld-row.is-fresh .ld-row-title::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: 42% -4px 4% -4px;
+  border-radius: 3px;
+  background: var(--highlighter);
+  transform-origin: left center;
+  animation: highlight-fade 1500ms ease both;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ld-row.is-fresh .ld-row-title::after {
+    animation: highlight 1500ms var(--ease-out) 80ms both;
+  }
+
+  .ld-row.is-fresh {
+    animation: ld-row-in 380ms var(--ease-out) both;
+  }
+}
+
+/* One pitch line keeps a dry highlight: the line the page most wants read. */
+.ld-row.is-marked:not(.is-done) .ld-row-title::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: 42% -4px 4% -4px;
+  border-radius: 3px;
+  background: var(--highlighter);
+}
+
+.ld-done-toggle {
+  display: block;
+  min-height: 44px;
+  margin: 4px auto 0;
+  padding: 0 14px;
+  border: 0;
+  background: transparent;
+  color: var(--ld-grey-ink);
+  font: 600 var(--ld-small) / 44px var(--font-body);
+  text-align: center;
+  cursor: pointer;
+}
+
+p.ld-done-toggle {
+  cursor: default;
+}
+
+@media (hover: hover) {
+  button.ld-done-toggle:hover {
+    color: var(--ink);
+  }
+}
+
+.ld-rows.is-checked-off {
+  margin-bottom: 4px;
+}
+
+/* Stamps */
+.ld-stamp {
+  flex: none;
+  display: inline-block;
+  min-width: 2em;
+  padding: 5px 8px;
+  border-radius: 6px;
+  font: 700 var(--ld-small) / 1 var(--font-body);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background: var(--ld-grey-bg);
+  color: var(--ld-grey-fg);
+}
+
+/* Pantry, Household, General, Transport and the rest keep the default grey pair above. */
+.ld-stamp.is-pending {
+  background: transparent;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ld-stamp:not(.is-pending) {
+    animation: stamp 340ms var(--ease-out) both;
+  }
+}
+
+.ld-stamp:is(.is-simple, .is-produce, .is-green) {
+  background: var(--ld-green-bg);
+  color: var(--ld-green-fg);
+}
+
+.ld-stamp:is(.is-shared, .is-dairy, .is-frozen, .is-trip-sight) {
+  background: var(--ld-blue-bg);
+  color: var(--ld-blue-fg);
+}
+
+.ld-stamp:is(.is-offline, .is-amber) {
+  background: var(--ld-amber-bg);
+  color: var(--ld-amber-fg);
+}
+
+.ld-stamp:is(.is-free, .is-meat) {
+  background: var(--ld-red-bg);
+  color: var(--ld-red-fg);
+}
+
+.ld-stamp:is(.is-bakery, .is-grains, .is-trip-food) {
+  background: var(--ld-orange-bg);
+  color: var(--ld-orange-fg);
+}
+
+.ld-stamp:is(.is-drinks, .is-violet) {
+  background: var(--ld-violet-bg);
+  color: var(--ld-violet-fg);
+}
+
+/* The add bar, pinned to the bottom of a list: a soft pill field and a round add key that
+   turns yellow once there is something to add. */
+.ld-addbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 12px -30px 0;
+  padding: 12px 30px 14px;
+  border-top: 1px solid var(--border); /* taste-skill-ignore: data-ui app card */
+  background: var(--panel);
+}
+
+.ld-app-card.is-flat .ld-addbar {
+  margin: 10px -20px 0;
+  padding: 12px 20px 14px;
+}
+
+.ld-addbar-field {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 0 18px;
+  border-radius: 999px;
+  background: var(--panel-subtle);
+  border: 1px solid var(--border); /* taste-skill-ignore: data-ui app card */
+  transition:
+    background var(--dur-fast) ease,
+    box-shadow var(--dur-fast) ease;
+}
+
+.ld-addbar-field:focus-within {
+  background: var(--panel);
+  box-shadow: var(--focus-ring); /* taste-skill-ignore: focus state */
+}
+
+.ld-addbar-input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font: 500 var(--ld-text) var(--font-body);
+  font-size: var(--ld-text) !important;
+  color: var(--ink);
+}
+
+.ld-addbar-input:focus-visible {
+  box-shadow: none; /* taste-skill-ignore: removes a shadow; the field around it carries the ring */
+}
+
+.ld-addbar-input::placeholder,
+.ld-addbar-placeholder {
+  color: var(--ld-placeholder);
+}
+
+.ld-addbar-text {
+  color: var(--ink);
+}
+
+.ld-addbar-chip {
+  flex: none;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--brand-yellow) 45%, white);
+  font-size: var(--ld-small);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.ld-addbar-btn {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 1px solid var(--border-strong); /* taste-skill-ignore: data-ui app card */
+  display: grid;
+  place-items: center;
+  background: var(--panel-subtle);
+  color: var(--ld-grey-ink);
+  font-size: 20px;
+  cursor: pointer;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    transform var(--dur-press) var(--ease-out);
+}
+
+.ld-addbar-btn.is-armed {
+  background: var(--brand-yellow);
+  border-color: var(--brand-yellow-deep);
+  color: var(--ink);
+  box-shadow: var(--shadow-key); /* taste-skill-ignore: brand key (DESIGN: kept) */
+}
+
+.ld-addbar-btn:disabled {
+  cursor: default;
+}
+
+.ld-addbar-btn:active:not(:disabled) {
+  transform: scale(0.92);
+}
+
+.ld-sheet-note {
+  margin: 0 0 14px;
+  text-align: center;
+  text-wrap: balance;
+  font-size: var(--ld-small);
+  color: var(--ld-grey-ink);
+}
+
+/* The sketch's margin note, in the gutter beside the sheet on wide screens. */
+.ld-margin-note {
+  display: none;
+}
+
+@media (min-width: 1360px) {
+  .ld-margin-note {
+    display: block;
+    position: absolute;
+    left: calc(100% + 32px);
+    top: 170px;
+    width: 190px;
+    margin: 0;
+    font-weight: 600;
+    font-size: var(--ld-small);
+    line-height: 1.4;
+    color: var(--ld-grey-ink);
+  }
+
+  .ld-margin-note::before {
+    content: '';
+    display: block;
+    width: 56px;
+    height: 3px;
+    margin-bottom: 10px;
+    background: var(--ink);
+  }
+}
+
+/* ---- the page in two: lists, and trips ------------------------------------------------ */
+
+.ld-parts {
+  max-width: 1080px;
+  margin: 110px auto 0;
+  padding: 0 var(--ld-gutter);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.ld-part {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 28px 72px 30px 28px;
+  border-radius: var(--ld-radius);
+  color: #fff !important;
+  text-decoration: none;
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.ld-part.is-lists {
+  background: var(--ink);
+}
+
+.ld-part.is-trips {
+  background: var(--brand-blue);
+}
+
+.ld-part-title {
+  font: 800 var(--ld-title) / 1.1 var(--font-headings);
+  letter-spacing: -0.02em;
+}
+
+.ld-part-text {
+  font-size: var(--ld-text);
+  line-height: 1.4;
+  max-width: 30ch;
+}
+
+.ld-part-arrow {
+  position: absolute;
+  right: 26px;
+  top: 50%;
+  margin-top: -14px;
+  width: 28px;
+  height: 28px;
+  transition: transform var(--dur-base) var(--ease-out);
+}
+
+.ld-part:active {
+  transform: scale(0.99);
+}
+
+@media (hover: hover) {
+  .ld-part:hover .ld-part-arrow {
+    transform: translateY(5px);
+  }
+}
+
+/* ---- one list, whole house ------------------------------------------------------------ */
+
+.ld-shared {
+  margin-top: 120px;
+  scroll-margin-top: 0;
+  background: var(--panel);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 88svh;
+}
+
+.ld-plate {
+  aspect-ratio: 1;
+  align-self: center;
+  margin: 40px;
+  background: var(--brand-blue);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 9%;
+}
+
+/* The plate's tabs sit on the sheet's top edge, like folder tabs. */
+.ld-plate-card {
+  width: 100%;
+}
+
+.ld-plate-sheet {
+  border-top-left-radius: 0;
+}
+
+.ld-plate-sheet {
+  width: 100%;
+  background: var(--panel);
+  border-radius: var(--radius-squircle);
+  padding: 20px 22px 0;
+}
+
+.ld-plate-sheet .ld-app-head {
+  padding-bottom: 6px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ld-plate-sheet {
+    animation: ld-sheet-swap 360ms var(--ease-out) both;
+  }
+}
+
+.ld-plate .ld-row {
+  min-height: 60px;
+}
+
+.ld-plate .ld-row:last-child {
+  border-bottom: 0;
+}
+
+.ld-shared-copy {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 48px;
+  padding: 64px var(--ld-gutter) 64px 24px;
+  max-width: 620px;
+}
+
+.ld-shared-text .ld-body {
+  margin-top: 28px;
+}
+
+.ld-cells {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.ld-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 72px;
+  border-radius: var(--ld-control-radius);
+  font: 700 var(--ld-text) / 1 var(--font-body);
+  text-decoration: none;
+  transition: transform var(--dur-press) var(--ease-out);
+}
+
+.ld-cell.is-key {
+  background: var(--brand-yellow);
+  color: var(--ink) !important;
+  box-shadow: var(--shadow-key); /* taste-skill-ignore: brand key (DESIGN: kept) */
+}
+
+.ld-cell.is-tone {
+  background: var(--ld-tone);
+}
+
+.ld-cell:active {
+  transform: scale(0.98);
+}
+
+@media (hover: hover) {
+  .ld-cell.is-tone:hover {
+    background: var(--ld-tone-hover);
+  }
+
+  .ld-cell.is-key:hover {
+    box-shadow: var(--shadow-key-hover); /* taste-skill-ignore: brand key (DESIGN: kept) */
+  }
+}
+
+/* ---- capabilities: stacking sheets ---------------------------------------------------- */
+
+.ld-caps {
+  max-width: var(--ld-max);
+  margin: 0 auto;
+  padding: 150px var(--ld-gutter) 0;
+  scroll-margin-top: 0;
+}
+
+.ld-caps-intro {
+  max-width: 44rem;
+  margin-bottom: 56px;
+}
+
+.ld-caps-intro .ld-body {
+  margin-top: 24px;
+  max-width: 52ch;
+}
+
+/* A sheet that sits where it is instead of stacking (the lists part's single ink sheet). */
+.ld-capsheet.is-static {
+  position: relative;
+  top: auto;
+  min-height: 0;
+  border-radius: var(--ld-radius);
+}
+
+.ld-lists-more {
+  max-width: var(--ld-max);
+  margin: 0 auto;
+  padding: 40px var(--ld-gutter) 0;
+}
+
+.ld-sheets {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.ld-capsheet {
+  --band: 76px;
+  min-height: var(--sheet-h, 0);
+  position: sticky;
+  top: calc(16px + var(--n) * var(--band));
+  border-radius: var(--ld-radius) var(--ld-radius) 0 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  scroll-margin-top: 24px;
+}
+
+.ld-capsheet + .ld-capsheet {
+  margin-top: 40px;
+}
+
+.ld-capsheet.is-ink {
+  background: var(--ink);
+  color: #fff;
+}
+
+.ld-capsheet.is-blue {
+  background: var(--brand-blue);
+  color: #fff;
+}
+
+.ld-capsheet.is-red {
+  background: var(--brand-red);
+  color: #fff;
+}
+
+.ld-capsheet.is-paper {
+  background: var(--panel);
+  color: var(--ink);
+}
+
+.ld-capsheet-name {
+  margin: 0;
+  color: inherit !important;
+  height: var(--band);
+  flex: none;
+  display: flex;
+  align-items: center;
+  padding: 0 40px;
+  font: 800 var(--ld-title) / 1 var(--font-headings);
+  letter-spacing: -0.02em;
+}
+
+.ld-capsheet-body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 5fr 7fr;
+}
+
+.ld-capsheet-side {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  padding: 4px 40px 40px;
+}
+
+/* The photo takes whatever the column has left, so the colour never sits empty; its caption
+   names the line of the plan it shows. */
+.ld-capsheet-photo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+}
+
+.ld-capsheet-photo img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+}
+
+.ld-capsheet-photo figcaption,
+.ld-slip-plate figcaption {
+  font-size: var(--ld-small);
+  line-height: 1.4;
+  max-width: 42ch;
+}
+
+/* A dry highlighter on the line a photo shows: a thick underline in highlighter ink, so it
+   follows the words line by line when the name wraps on a phone. */
+.ld-dayrow.is-marked .ld-dayrow-what,
+.ld-mark {
+  text-decoration: underline;
+  text-decoration-color: var(--highlighter);
+  text-decoration-thickness: 0.55em;
+  text-underline-offset: -0.35em;
+  text-decoration-skip-ink: none;
+}
+
+/* Every other sheet turns over: the fragment on the left, the words on the right. */
+.ld-capsheet:nth-child(even) .ld-capsheet-body {
+  grid-template-columns: 7fr 5fr;
+}
+
+.ld-capsheet:nth-child(even) .ld-capsheet-frag {
+  order: -1;
+  border-radius: 0 var(--ld-radius) 0 0;
+}
+
+.ld-capsheet-text {
+  order: -1;
+  margin: 0;
+  max-width: 36ch;
+  font-size: var(--ld-text);
+  line-height: 1.5;
+}
+
+.ld-capsheet-frag {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 40px 40px;
+  border-radius: var(--ld-radius) 0 0 0;
+  background: var(--panel);
+  color: var(--ink);
+}
+
+.ld-capsheet.is-paper .ld-capsheet-frag {
+  background: var(--ld-tone);
+  border-radius: 0;
+}
+
+/* The last sheet has no picture: its words sit under the name and the list spans the sheet. */
+.ld-capsheet.is-paper .ld-capsheet-body,
+.ld-capsheet.is-paper:nth-child(even) .ld-capsheet-body {
+  grid-template-columns: 1fr;
+}
+
+.ld-capsheet.is-paper .ld-capsheet-side {
+  padding-bottom: 28px;
+}
+
+.ld-capsheet.is-paper .ld-capsheet-frag {
+  order: 0;
+}
+
+.ld-capsheet.is-paper .ld-frag {
+  width: min(100%, 760px);
+}
+
+/* Fragments: pieces of the real app */
+.ld-frag {
+  width: min(100%, 540px);
+  font-size: var(--ld-text);
+}
+
+.ld-frag .ld-app-card.is-flat {
+  box-shadow: var(--paper-edge), 0 18px 40px -28px rgba(20, 20, 20, 0.35); /* taste-skill-ignore: data-ui app card */
+}
+
+.ld-slips {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 6px;
+  background: var(--panel);
+  border: 1px solid var(--border-strong); /* taste-skill-ignore: data-ui fragment */
+  border-radius: 14px;
+  box-shadow: 0 12px 30px -18px rgba(20, 20, 20, 0.35); /* taste-skill-ignore: data-ui fragment */
+}
+
+.ld-slips li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 12px;
+  border-radius: 10px;
+}
+
+.ld-slips li.is-hot {
+  background: var(--ld-slip-hot);
+}
+
+.ld-slips b {
+  font-weight: 800;
+}
+
+.ld-caret {
+  display: inline-block;
+  width: 2px;
+  height: 1.1em;
+  margin-left: 1px;
+  vertical-align: -0.2em;
+  background: var(--brand-blue);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ld-caret {
+    animation: ld-blink 1.1s steps(1) infinite;
+  }
+}
+
+.ld-frag-foot {
+  margin: 14px 0 0;
+  font-size: var(--ld-small);
+  color: var(--ld-grey-ink);
+}
+
+/* Trip plan: the day heading, then rows of tick, time, stop (and its place), category dot. */
+.ld-day {
+  margin: 14px 0 4px;
+  font-size: var(--ld-small);
+  color: var(--ld-grey-ink);
+}
+
+.ld-day b {
+  margin-right: 8px;
+  font: 800 22px/1.2 var(--font-headings);
+  color: var(--ink);
+}
+
+.ld-dayrow {
+  display: grid;
+  grid-template-columns: 22px 48px 1fr 10px;
+  gap: 12px;
+  align-items: center;
+  min-height: 56px;
+  border-bottom: 1px solid var(--border); /* taste-skill-ignore: data-ui app card */
+}
+
+.ld-dayrow:last-of-type {
+  border-bottom: 0;
+}
+
+.ld-time {
+  font-size: var(--ld-small);
+  font-variant-numeric: tabular-nums;
+  color: var(--ld-grey-ink);
+}
+
+.ld-dayrow-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 8px 0;
+}
+
+.ld-dayrow-what {
+  justify-self: start;
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.ld-dayrow-place {
+  font-size: var(--ld-small);
+  color: var(--ld-grey-ink);
+}
+
+.ld-dayrow.is-done .ld-dayrow-what {
+  color: var(--ld-grey-ink);
+  text-decoration: line-through;
+}
+
+.ld-pip {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--pip-other);
+}
+
+.ld-pip.is-food {
+  background: var(--pip-food);
+}
+
+.ld-pip.is-sight {
+  background: var(--pip-sight);
+}
+
+.ld-pip.is-transport {
+  background: var(--pip-transport);
+}
+
+/* Bookings: the list, then the open booking's details as the inspector shows them. */
+.ld-bookrow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 6px -10px 0;
+  padding: 10px;
+  border-radius: 12px;
+  font-size: var(--ld-small);
+  color: var(--ld-grey-ink);
+}
+
+.ld-bookrow.is-on {
+  background: var(--panel-subtle);
+}
+
+.ld-bookrow svg {
+  flex: none;
+  font-size: 20px;
+  color: var(--ink);
+}
+
+.ld-bookrow span {
+  display: flex;
+  flex-direction: column;
+}
+
+.ld-bookrow b {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.ld-details {
+  margin: 12px 0 18px;
+  padding: 4px 16px;
+  border-radius: 14px;
+  background: var(--panel-subtle);
+}
+
+.ld-details div {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  align-items: center;
+  min-height: 46px;
+  border-bottom: 1px solid var(--border); /* taste-skill-ignore: data-ui app card */
+}
+
+.ld-details div:last-child {
+  border-bottom: 0;
+}
+
+.ld-details dt {
+  font-size: var(--ld-small);
+  color: var(--ld-grey-ink);
+}
+
+.ld-details dd {
+  margin: 0;
+  font-size: 16px;
+  color: var(--ink);
+}
+
+.ld-details .ld-code {
+  font: 800 20px/1 var(--font-headings);
+  letter-spacing: 0.08em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- offline: the itinerary slip ------------------------------------------------------ */
+
+.ld-offline {
+  margin-top: 200px;
+  background: var(--ink);
+  color: #fff;
+  padding: 140px var(--ld-gutter) 170px;
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+  gap: 64px;
+  align-items: start;
+}
+
+.ld-offline-copy {
+  justify-self: end;
+  max-width: 480px;
+  position: sticky;
+  top: 80px;
+}
+
+.ld-offline .ld-h2 {
+  color: #fff;
+}
+
+.ld-offline .ld-body {
+  margin-top: 28px;
+}
+
+.ld-signal {
+  margin-top: 40px;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 0 18px 0 10px;
+  border: 0;
+  border-radius: var(--ld-control-radius);
+  background: var(--ld-ink-raised);
+  color: #fff;
+  font: 700 var(--ld-text) / 1 var(--font-body);
+  cursor: pointer;
+  transition: transform var(--dur-press) var(--ease-out);
+}
+
+@media (hover: hover) {
+  .ld-signal:hover {
+    background: var(--ld-ink-raised-hover);
+  }
+
+  .ld-footer-small a:hover {
+    text-decoration: underline;
+  }
+}
+
+.ld-signal:active {
+  transform: scale(0.98);
+}
+
+.ld-signal-track {
+  width: 48px;
+  height: 28px;
+  border-radius: 999px;
+  background: var(--ld-ink-track);
+  position: relative;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.ld-signal-thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform var(--dur-base) var(--ease-out);
+}
+
+.ld-signal[aria-checked='true'] .ld-signal-track {
+  background: var(--brand-yellow);
+}
+
+.ld-signal[aria-checked='true'] .ld-signal-thumb {
+  transform: translateX(20px);
+}
+
+.ld-offline-hint {
+  margin: 14px 0 0;
+  font-size: var(--ld-small);
+  color: var(--ld-on-ink-muted);
+}
+
+.ld-slip {
+  position: relative;
+  max-width: 500px;
+  width: 100%;
+  background: var(--panel);
+  color: var(--ink);
+  margin-bottom: 14px;
+  padding-bottom: 18px;
+}
+
+.ld-slip-plate {
+  margin: 0;
+}
+
+.ld-slip-photo {
+  display: block;
+  overflow: hidden;
+}
+
+.ld-slip-plate img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+
+.ld-slip-plate figcaption {
+  padding: 10px 28px 0;
+  color: var(--ld-grey-ink);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ld-slip-plate img {
+    transform: scale(1.08);
+    transition: transform 9s linear;
+  }
+
+  .ld-slip[data-in] .ld-slip-plate img,
+  .ld:not(.ld-motion) .ld-slip-plate img {
+    transform: scale(1);
+  }
+}
+
+.ld-slip-body {
+  padding: 24px 28px 8px;
+}
+
+.ld-slip-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ld-slip-title {
+  margin: 0;
+  font: 800 var(--ld-title) / 1.1 var(--font-headings);
+}
+
+.ld-slip-who {
+  font-size: var(--ld-small);
+  color: var(--ld-grey-ink);
+}
+
+.ld-slip-group ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.ld-slip-when {
+  margin: 24px 0 4px;
+  font: 700 var(--ld-text) / 1.2 var(--font-body);
+}
+
+.ld-slip-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  font-size: var(--ld-text);
+}
+
+.ld-slip-row label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  min-width: 0;
+}
+
+.ld-slip-what {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.ld-slip-row.is-done .ld-slip-what {
+  color: var(--ld-grey-ink);
+  text-decoration: line-through;
+}
+
+.ld-waiting {
+  padding: 4px 7px;
+  border-radius: 6px;
+  background: var(--ld-amber-bg);
+  color: var(--ld-amber-fg);
+  font: 700 var(--ld-small) / 1 var(--font-body);
+  text-decoration: none;
+  display: inline-block;
+}
+
+.ld-leader {
+  flex: 1;
+  min-width: 16px;
+  height: 0;
+  border-bottom: 4px dotted var(--ld-box-edge);
+}
+
+.ld-slip-total {
+  margin: 20px 0 0;
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 0 28px;
+  background: var(--ink);
+  color: #fff;
+  font-weight: 700;
+  font-size: var(--ld-text);
+  transition: background var(--dur-base) var(--ease-out);
+}
+
+.ld-slip.is-offline .ld-slip-total {
+  background: var(--warn-bg);
+  color: var(--warn-ink);
+}
+
+.ld-slip-total::before {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 10px;
+  background: var(--ld-ok);
+}
+
+.ld-slip.is-offline .ld-slip-total::before {
+  background: var(--brand-yellow-deep);
+}
+
+/* The slip's torn bottom edge. */
+.ld-zigzag {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  display: block;
+}
+
+.ld-zigzag path {
+  fill: var(--panel);
+}
+
+/* ---- free: the receipt --------------------------------------------------------------- */
+
+.ld-free {
+  background: var(--brand-blue);
+  color: #fff;
+  padding: 150px var(--ld-gutter) 170px;
+  display: grid;
+  grid-template-columns: minmax(0, 6fr) minmax(0, 5fr);
+  gap: 72px;
+  align-items: center;
+  max-width: none;
+}
+
+.ld-free-copy {
+  justify-self: end;
+  max-width: 520px;
+}
+
+.ld-free .ld-h2 {
+  color: #fff;
+}
+
+.ld-free .ld-body {
+  margin: 28px 0 36px;
+  max-width: 38ch;
+}
+
+.ld-receipt-wrap {
+  justify-self: start;
+  width: min(100%, 400px);
+  padding-bottom: 14px;
+}
+
+/* A till receipt: white paper, tabular figures, dotted leaders, a torn bottom edge. */
+.ld-receipt {
+  position: relative;
+  padding: 32px 30px 30px;
+  background: var(--panel);
+  color: var(--ink);
+  transform: rotate(-1.6deg);
+  transform-origin: 50% 0;
+}
+
+.ld-receipt::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: 12px;
+  background:
+    linear-gradient(-135deg, var(--panel) 6px, transparent 0) 0 0 / 16px 12px, /* taste-skill-ignore: a torn paper edge, a shape and not a fill */
+    linear-gradient(135deg, var(--panel) 6px, transparent 0) 0 0 / 16px 12px; /* taste-skill-ignore: a torn paper edge, a shape and not a fill */
+}
+
+.ld-receipt-head {
+  margin: 0;
+  text-align: center;
+  font: 800 var(--ld-title) / 1 var(--font-headings);
+  letter-spacing: -0.02em;
+}
+
+.ld-receipt-sub {
+  margin: 4px 0 22px;
+  text-align: center;
+  font-size: var(--ld-small);
+  color: var(--ld-grey-ink);
+}
+
+.ld-receipt-lines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.ld-receipt-lines li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 7px 0;
+  font-size: var(--ld-small);
+  font-weight: 500;
+}
+
+.ld-receipt-price {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.ld-receipt-total {
+  display: flex;
+  justify-content: space-between;
+  margin: 14px 0 0;
+  padding-top: 14px;
+  border-top: 3px dotted var(--ld-soft-rule); /* taste-skill-ignore: a till receipt's total rule */
+  font: 800 22px/1 var(--font-headings);
+}
+
+.ld-receipt-foot {
+  margin: 22px 0 6px;
+  text-align: center;
+  font-size: var(--ld-small);
+  color: var(--ld-grey-ink);
+}
+
+/* The rubber stamp: red ink, slightly tilted, struck over the total. */
+.ld-receipt-stamp {
+  position: absolute;
+  right: 18px;
+  bottom: 74px;
+  padding: 8px 14px 7px;
+  border: 3px solid var(--brand-red); /* taste-skill-ignore: a rubber stamp's ink border */
+  border-radius: 6px;
+  color: var(--brand-red);
+  font: 800 22px/1 var(--font-headings);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transform: rotate(-9deg);
+  mix-blend-mode: multiply;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ld-motion .ld-receipt-wrap[data-reveal] .ld-receipt-stamp {
+    opacity: 0;
+    transform: rotate(-9deg) scale(1.7);
+  }
+
+  .ld-motion .ld-receipt-wrap[data-in] .ld-receipt-stamp {
+    animation: ld-stamp-down 380ms var(--ease-out) 900ms both;
+  }
+}
+
+@keyframes ld-stamp-down {
+  0% {
+    opacity: 0;
+    transform: rotate(-9deg) scale(1.7);
+  }
+
+  70% {
+    opacity: 1;
+    transform: rotate(-9deg) scale(0.96);
+  }
+
+  100% {
+    opacity: 1;
+    transform: rotate(-9deg) scale(1);
+  }
+}
+
+/* ---- close: a sentence with a blank --------------------------------------------------- */
+
+.ld-close {
+  max-width: var(--ld-max);
+  margin: 0 auto;
+  padding: 180px var(--ld-gutter) 200px;
+}
+
+.ld-close-line {
+  margin: 0;
+  max-width: 16em;
+  font: 800 var(--ld-heading) / 1.18 var(--font-headings);
+  letter-spacing: -0.035em;
+  color: var(--ink);
+}
+
+.ld-close-lead {
+  display: block;
+}
+
+/* The blank, "and" and the button sit in one row and are centred on each other, so the three
+   line up at any width without nudging any of them off the text baseline. */
+.ld-close-fill {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.14em 0.3em;
+  margin-top: 0.1em;
+}
+
+.ld-close-and {
+  line-height: 1;
+}
+
+.ld-close-input {
+  font-size: 1em !important;
+  flex: 0 1 9.6em;
+  min-width: 0;
+  height: 1.25em;
+  padding: 0 0.28em;
+  border: 0;
+  border-radius: var(--ld-control-radius);
+  background: var(--ld-tone);
+  font: inherit;
+  letter-spacing: inherit;
+  line-height: 1;
+  color: var(--ink);
+  outline: none;
+}
+
+.ld-close-input::placeholder {
+  color: var(--ld-placeholder);
+}
+
+.ld-close-input:focus-visible {
+  box-shadow: var(--focus-ring); /* taste-skill-ignore: focus state */
+}
+
+.ld-close-go {
+  display: inline-flex;
+  align-items: center;
+  height: 1.25em;
+  padding: 0 0.3em;
+  border: 0;
+  border-radius: var(--ld-control-radius);
+  background: var(--brand-yellow);
+  box-shadow: var(--shadow-key); /* taste-skill-ignore: brand key (DESIGN: kept) */
+  font: inherit;
+  letter-spacing: inherit;
+  line-height: 1;
+  color: var(--ink);
+  cursor: pointer;
+  transition:
+    transform var(--dur-press) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
+}
+
+.ld-close-go:active {
+  transform: translateY(2px);
+}
+
+@media (hover: hover) {
+  .ld-close-go:hover {
+    box-shadow: var(--shadow-key-hover); /* taste-skill-ignore: brand key (DESIGN: kept) */
+  }
+}
+
+.ld-close-note {
+  text-wrap: pretty;
+  margin: 28px 0 0;
+  font-size: var(--ld-text);
+  color: var(--text);
+}
+
+/* ---- footer: the back of the sheet ---------------------------------------------------- */
+
+.ld-footer {
+  background: var(--ink);
+  color: #fff;
+  overflow: hidden;
+  padding: 120px var(--ld-gutter) 0;
+}
+
+.ld-footer-row {
+  max-width: var(--ld-max);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 5fr 7fr;
+  gap: 40px;
+}
+
+.ld-footer-main {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font: 800 var(--ld-title) / 1.3 var(--font-headings);
+}
+
+.ld-footer-main a {
+  color: var(--brand-yellow);
+  text-decoration: none;
+}
+
+@media (hover: hover) {
+  .ld-footer-main a:hover {
+    text-decoration: underline;
+    text-decoration-thickness: 3px;
+  }
+}
+
+.ld-footer-small {
+  font-size: var(--ld-small);
+  color: var(--ld-on-ink-muted);
+}
+
+.ld-footer-small ul {
+  list-style: none;
+  margin: 0 0 24px;
+  padding: 0;
+  display: flex;
+  gap: 28px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.ld-footer-small p {
+  margin: 0 0 8px;
+}
+
+.ld-wordmark {
+  margin: 96px 0 0;
+  font: 800 21vw/0.8 var(--font-headings);
+  letter-spacing: -0.06em;
+  text-align: center;
+  color: #fff;
+  margin-bottom: -0.11em;
+  user-select: none;
+}
+
+/* ---- motion --------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: no-preference) {
+  .ld-hero .ld-h1,
+  .ld-hero .ld-lede,
+  .ld-hero .ld-stack {
+    animation: ld-rise 720ms var(--ease-out) both;
+  }
+
+  .ld-hero .ld-lede {
+    animation-delay: 80ms;
+  }
+
+  .ld-hero .ld-stack {
+    animation-delay: 170ms;
+  }
+
+  .ld-motion [data-reveal] {
+    opacity: 0;
+    transform: translateY(24px);
+    transition:
+      opacity 640ms var(--ease-out),
+      transform 640ms var(--ease-out);
+    transition-delay: calc(var(--i, 0) * 80ms);
+  }
+
+  .ld-motion [data-reveal][data-in] {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes ld-rise {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+}
+
+@keyframes ld-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+@keyframes ld-sheet-swap {
+  from {
+    opacity: 0;
+    transform: translateY(12px) rotate(-1deg);
+  }
+}
+
+@keyframes ld-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* ---- delight: the paper, the pen and the stamp ---------------------------------------- */
+
+@media (prefers-reduced-motion: no-preference) {
+  /* A tick pops the way it does in the app. */
+  .ld-box.is-done {
+    animation: check-pop var(--dur-slow) var(--ease-out);
+  }
+
+  /* The first list: stamps land one after another, then the pen marks the line that matters. */
+  .ld-hero .ld-row:not(.is-fresh):nth-child(1) .ld-stamp {
+    animation-delay: 520ms;
+  }
+
+  .ld-hero .ld-row:not(.is-fresh):nth-child(2) .ld-stamp {
+    animation-delay: 680ms;
+  }
+
+  .ld-hero .ld-row:not(.is-fresh):nth-child(3) .ld-stamp {
+    animation-delay: 840ms;
+  }
+
+  .ld-hero .ld-row:not(.is-fresh):nth-child(4) .ld-stamp {
+    animation-delay: 1000ms;
+  }
+
+  .ld-row.is-marked:not(.is-done) .ld-row-title::after {
+    transform-origin: left center;
+    animation: ld-pen 700ms var(--ease-out) 1300ms both;
+  }
+
+  /* A sheet's stamps land when the sheet's piece of the app scrolls into view. */
+  .ld-motion .ld-capsheet-frag .ld-stamp {
+    opacity: 0;
+  }
+
+  .ld-motion .ld-capsheet-frag[data-in] .ld-stamp {
+    animation: stamp 340ms var(--ease-out) 420ms both;
+  }
+
+  .ld-motion .ld-capsheet-frag[data-in] .ld-slips li:nth-child(2) .ld-stamp {
+    animation-delay: 560ms;
+  }
+
+  .ld-motion .ld-capsheet-frag[data-in] .ld-slips li:nth-child(3) .ld-stamp {
+    animation-delay: 700ms;
+  }
+
+  /* The highlighter inks in on the line a photo shows. */
+  .ld-motion .ld-capsheet-frag .ld-dayrow.is-marked .ld-dayrow-what,
+  .ld-motion .ld-capsheet-frag .ld-mark {
+    text-decoration-color: transparent;
+  }
+
+  .ld-motion .ld-capsheet-frag[data-in] .ld-dayrow.is-marked .ld-dayrow-what,
+  .ld-motion .ld-capsheet-frag[data-in] .ld-mark {
+    text-decoration-color: var(--highlighter);
+    transition: text-decoration-color 900ms ease 700ms;
+  }
+
+  /* The category dots drop in down the day. */
+  .ld-motion .ld-capsheet-frag .ld-pip {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+
+  .ld-motion .ld-capsheet-frag[data-in] .ld-pip {
+    opacity: 1;
+    transform: none;
+    transition:
+      transform 360ms var(--ease-out),
+      opacity 240ms var(--ease-out);
+  }
+
+  .ld-motion .ld-capsheet-frag[data-in] .ld-dayrow:nth-of-type(1) .ld-pip {
+    transition-delay: 300ms;
+  }
+
+  .ld-motion .ld-capsheet-frag[data-in] .ld-dayrow:nth-of-type(2) .ld-pip {
+    transition-delay: 420ms;
+  }
+
+  .ld-motion .ld-capsheet-frag[data-in] .ld-dayrow:nth-of-type(3) .ld-pip {
+    transition-delay: 540ms;
+  }
+
+  .ld-motion .ld-capsheet-frag[data-in] .ld-dayrow:nth-of-type(4) .ld-pip {
+    transition-delay: 660ms;
+  }
+
+  /* The offline slip: waiting changes pop on, and the status line slides in on every change. */
+  .ld-waiting {
+    animation: stamp 300ms var(--ease-out) both;
+  }
+
+  .ld-slip-total span {
+    display: inline-block;
+    animation: ld-status-in 320ms var(--ease-out) both;
+  }
+
+  /* The footer wordmark rises out of the page. */
+  .ld-motion .ld-wordmark[data-reveal] {
+    opacity: 1;
+    transform: none;
+    clip-path: inset(100% 0 0 0);
+    transition: clip-path 900ms var(--ease-out);
+  }
+
+  .ld-motion .ld-wordmark[data-reveal][data-in] {
+    clip-path: inset(0 0 0 0);
+  }
+
+  /* "start." wakes up once there is a name in the blank. */
+  .ld-close-go.is-armed {
+    animation: ld-nudge 520ms var(--ease-out);
+  }
+}
+
+.ld-close-input {
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.ld-close-input:focus {
+  background: color-mix(in srgb, var(--brand-yellow) 38%, var(--panel));
+}
+
+@keyframes ld-pen {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes ld-status-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@keyframes ld-nudge {
+  35% {
+    transform: translateY(-4px) rotate(-2deg);
+  }
+
+  70% {
+    transform: translateY(1px) rotate(1deg);
+  }
+}
+
+/* Phones: the key that follows the visitor down the page. */
+.ld-sticky {
+  display: none;
+}
+
+@media (max-width: 719px) {
+  .ld-sticky {
+    display: block;
+    position: fixed;
+    z-index: 20;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 12px var(--ld-gutter) calc(12px + env(safe-area-inset-bottom, 0px));
+    pointer-events: none;
+    transform: translateY(110%);
+    transition: transform 360ms var(--ease-out);
+  }
+
+  .ld-sticky.is-on {
+    transform: none;
+  }
+
+  .ld-sticky .ld-key {
+    width: 100%;
+    pointer-events: auto;
+    box-shadow: /* taste-skill-ignore: a floating bar over the page */
+      var(--shadow-key),
+      0 10px 30px -10px rgba(20, 20, 20, 0.45);
+  }
+
+  .ld-sticky:not(.is-on) .ld-key {
+    pointer-events: none;
+  }
+}
+
+/* ---- tablet and phone ----------------------------------------------------------------- */
+
+@media (max-width: 1023px) {
+  .ld-shared {
+    grid-template-columns: 1fr;
+    min-height: 0;
+  }
+
+  .ld-plate {
+    margin: 32px var(--ld-gutter) 0;
+  }
+
+  .ld-shared-copy {
+    max-width: none;
+    padding: 40px var(--ld-gutter) 64px;
+  }
+
+  /* Below desktop a sheet can be taller than the screen, so the next one would cover its
+     end: the sheets lie flat instead of stacking. */
+  .ld-capsheet {
+    position: relative;
+    top: auto;
+    min-height: 0;
+    border-radius: var(--ld-radius);
+  }
+
+  .ld-capsheet-body,
+  .ld-capsheet:nth-child(even) .ld-capsheet-body {
+    grid-template-columns: 1fr;
+  }
+
+  .ld-capsheet-frag,
+  .ld-capsheet:nth-child(even) .ld-capsheet-frag {
+    order: -1;
+    border-radius: 0;
+  }
+
+  .ld-capsheet-side {
+    padding-top: 28px;
+  }
+
+  .ld-capsheet-photo img {
+    aspect-ratio: 3 / 2;
+  }
+
+  .ld-offline {
+    grid-template-columns: 1fr;
+    gap: 56px;
+  }
+
+  .ld-free {
+    grid-template-columns: 1fr;
+    gap: 56px;
+  }
+
+  .ld-free-copy {
+    justify-self: start;
+  }
+
+  .ld-receipt-wrap {
+    justify-self: center;
+  }
+
+  .ld-offline-copy {
+    position: static;
+    justify-self: start;
+  }
+
+  .ld-slip {
+    justify-self: center;
+  }
+}
+
+@media (max-width: 719px) {
+  .ld {
+    --ld-gutter: 16px;
+  }
+
+  .ld-nav {
+    height: 64px;
+  }
+
+  .ld-parts {
+    grid-template-columns: 1fr;
+    margin-top: 80px;
+  }
+
+  .ld-part {
+    padding: 22px 64px 24px 22px;
+  }
+
+  .ld-lists-more {
+    padding-top: 24px;
+  }
+
+  .ld-nav-links {
+    gap: 14px;
+  }
+
+  .ld-nav-link.is-wide {
+    display: none;
+  }
+
+  .ld-brand span {
+    display: none;
+  }
+
+  .ld-hero {
+    padding-top: 24px;
+  }
+
+  .ld-rotor {
+    display: block;
+    width: fit-content;
+    margin-inline: auto;
+  }
+
+  .ld-h1-break {
+    display: none;
+  }
+
+  .ld-stack {
+    margin-top: 36px;
+  }
+
+  .ld-app-card.is-meta {
+    padding: 20px 18px 36px;
+  }
+
+  .ld-app-card.is-list {
+    padding: 18px 18px 0;
+  }
+
+  .ld-addbar {
+    margin-inline: -18px;
+    padding-inline: 18px;
+  }
+
+  .ld-app-title {
+    font-size: 24px;
+  }
+
+  .ld-row-hit {
+    gap: 12px;
+  }
+
+  .ld-shared {
+    margin-top: 120px;
+  }
+
+  .ld-plate {
+    padding: 16px;
+  }
+
+  .ld-plate-sheet {
+    padding: 16px 16px 0;
+  }
+
+  .ld-cells {
+    grid-template-columns: 1fr;
+  }
+
+  .ld-cell {
+    height: 60px;
+  }
+
+  .ld-caps {
+    padding-top: 120px;
+  }
+
+  .ld-capsheet {
+    --band: 64px;
+  }
+
+  .ld-capsheet-name {
+    padding: 0 20px;
+  }
+
+  .ld-capsheet-frag {
+    padding: 24px 16px;
+  }
+
+  .ld-capsheet-side {
+    padding: 24px 20px 32px;
+  }
+
+  .ld-offline {
+    margin-top: 140px;
+    padding: 100px var(--ld-gutter) 120px;
+  }
+
+  .ld-slip-body {
+    padding: 20px 18px 6px;
+  }
+
+  .ld-slip-total {
+    padding: 0 18px;
+  }
+
+  .ld-free {
+    grid-template-columns: 1fr;
+    gap: 56px;
+    padding: 110px var(--ld-gutter) 130px;
+  }
+
+  .ld-free-copy {
+    justify-self: start;
+  }
+
+  .ld-receipt-wrap {
+    justify-self: center;
+  }
+
+  .ld-close {
+    padding: 120px var(--ld-gutter) 140px;
+  }
+
+  .ld-close-line {
+    font-size: clamp(30px, 8.6vw, 44px);
+    line-height: 1.2;
+  }
+
+  .ld-close-input {
+    flex: 1 1 100%;
+  }
+
+  .ld-footer {
+    padding-top: 80px;
+  }
+
+  .ld-footer-row {
+    grid-template-columns: 1fr;
+  }
+
+  .ld-wordmark {
+    margin-top: 64px;
+  }
+}
