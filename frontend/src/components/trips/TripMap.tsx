@@ -1,59 +1,39 @@
 import React, {
   forwardRef,
   lazy,
-  useCallback,
   Suspense,
+  useCallback,
   useEffect,
   useImperativeHandle,
   useMemo,
   useRef,
   useState,
 } from 'react'
+import { placeLabels, type LabelItem } from '@lib/trips/mapLabels'
+import { shorten, type MapScene } from '@lib/trips/mapScene'
+import { OSM_MAP_ATTRIBUTION, tileConfig, type MapViewProps } from './mapView'
 
-export type MapPoint = { id: string; lat: number; lng: number }
-export type TripMapHandle = { setHot: (id: string | null) => void }
+export type { MapViewProps } from './mapView'
 
-export type MapProps = {
-  // The day in view: its stops are numbered and joined by a line in the day's colour.
-  pins: MapPoint[]
-  // Everything else, drawn as small grey dots.
-  others: MapPoint[]
-  // CSS custom property holding the day's colour, e.g. "--trip-day-2".
-  colourVar: string
-  title: string
-  // The item open in the detail panel: its pin is lifted and the map centres on it.
-  focusId?: string | null
-  focusPoint?: { lat: number; lng: number } | null
-  // Pixels on the right covered by a docked panel: the focused pin centres in what is left.
-  focusInset?: number
-  // The next stop (during the trip): its pin is larger, with a yellow ring.
-  nextId?: string | null
-  onPinClick: (id: string) => void
-}
-
-const PAD = 48
-
-// Lazy: MapLibre only loads when a tile source exists and the map is actually on screen.
+// Lazy: MapLibre only loads when there are tiles to draw and the map is actually shown.
 const MapCanvas = lazy(() => import('./MapCanvas'))
 
-export const OSM_MAP_ATTRIBUTION = '© OpenStreetMap contributors'
+const PAD = 56
 
-function project(points: MapPoint[], fit: MapPoint[], W: number, H: number) {
-  const base = fit.length ? fit : points
-  if (!base.length) return () => ({ x: W / 2, y: H / 2 })
+function project(stops: MapScene['stops'], W: number, H: number) {
+  if (!stops.length) return () => ({ x: W / 2, y: H / 2 })
   let minLat = Infinity
   let maxLat = -Infinity
   let minLng = Infinity
   let maxLng = -Infinity
-  for (const p of base) {
+  for (const p of stops) {
     minLat = Math.min(minLat, p.lat)
     maxLat = Math.max(maxLat, p.lat)
     minLng = Math.min(minLng, p.lng)
     maxLng = Math.max(maxLng, p.lng)
   }
-  const midLat = (minLat + maxLat) / 2
-  const k = Math.cos((midLat * Math.PI) / 180)
-  // A single point still needs a span, or the scale divides by zero.
+  const k = Math.cos((((minLat + maxLat) / 2) * Math.PI) / 180)
+  // A single stop still needs a span, or the scale divides by zero.
   const spanX = Math.max((maxLng - minLng) * k, 0.01)
   const spanY = Math.max(maxLat - minLat, 0.01)
   const scale = Math.min((W - PAD * 2) / spanX, (H - PAD * 2) / spanY)
@@ -65,20 +45,21 @@ function project(points: MapPoint[], fit: MapPoint[], W: number, H: number) {
   })
 }
 
-/** Pins and route on a plain paper-coloured ground. Always works: no tiles, no network, no
- *  WebGL. Drawn 1:1 with the pane, so a pin is 28px whatever the pane's size. */
-const PlainMap: React.FC<MapProps & { hot: string | null; reason: string }> = ({
-  pins,
-  others,
-  colourVar,
+/** The map without tiles: stops, route and labels on a plain paper ground. Always works (no
+ *  network, no WebGL) and follows the same rules as the real map: labels in priority order,
+ *  the ones that would collide dropped, the next stop in a pill, a ring on the selected one. */
+const PlainMap: React.FC<MapViewProps & { reason: string }> = ({
+  scene,
+  labelLimit,
+  nextPrefix,
+  hotId,
   title,
-  nextId,
   onPinClick,
-  hot,
   reason,
 }) => {
   const box = useRef<HTMLDivElement>(null)
   const [size, setSize] = useState({ w: 600, h: 420 })
+  const [over, setOver] = useState<string | null>(null)
   useEffect(() => {
     const el = box.current
     if (!el) return
@@ -97,18 +78,43 @@ const PlainMap: React.FC<MapProps & { hot: string | null; reason: string }> = ({
     return () => ro?.disconnect()
   }, [])
   const { w: W, h: H } = size
-  const proj = useMemo(() => project([...pins, ...others], pins, W, H), [pins, others, W, H])
-  const pts = pins.map((p) => ({ ...p, ...proj(p) }))
-  const dots = others.map((p) => ({ ...p, ...proj(p) }))
-  const colour = `var(${colourVar})`
+  const proj = useMemo(() => project(scene.stops, W, H), [scene.stops, W, H])
+  const pts = useMemo(() => scene.stops.map((s) => ({ ...s, ...proj(s) })), [scene.stops, proj])
+  const hollow = scene.mode === 'ideas'
+  const byDay = scene.mode === 'all'
+  const lit = hotId ?? over
+  // Labels: on for a day, off for all days and ideas (those show on hover).
+  const labelled = scene.mode === 'day'
+  const text = (s: (typeof pts)[number]) =>
+    `${s.id === scene.nextId && nextPrefix ? 'Next · ' : ''}${shorten(s.label, labelLimit)}`
+  const placed = useMemo(() => {
+    const items: LabelItem[] = pts
+      .filter((s) => labelled || s.id === lit)
+      .map((s) => ({
+        id: s.id,
+        x: s.x,
+        y: s.y,
+        text: text(s),
+        priority: s.id === lit ? -1 : s.priority,
+      }))
+    return placeLabels(items, { width: W, height: H })
+    // biome-ignore lint/correctness/useExhaustiveDependencies: text() reads exactly these
+  }, [pts, labelled, lit, W, H, labelLimit, nextPrefix, scene.nextId])
+  const pipFill = (s: (typeof pts)[number]) =>
+    hollow
+      ? 'var(--panel)'
+      : s.done
+        ? 'var(--pip-done)'
+        : byDay
+          ? `var(--trip-day-${s.dayIndex % 6})`
+          : `var(--pip-${s.category})`
+  const pipStroke = (s: (typeof pts)[number]) => (hollow ? `var(--pip-${s.category})` : '#fff')
+  const colour = `var(${scene.colourVar})`
   return (
     <div ref={box} className="trip-map-plain">
       <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={title} preserveAspectRatio="none">
         <rect width={W} height={H} className="map-ground" />
-        {dots.map((d) => (
-          <circle key={d.id} cx={d.x} cy={d.y} r={5} className="map-dot" aria-hidden />
-        ))}
-        {pts.length > 1 && (
+        {scene.route && pts.length > 1 && (
           <polyline
             className="map-route"
             points={pts.map((p) => `${p.x},${p.y}`).join(' ')}
@@ -116,23 +122,54 @@ const PlainMap: React.FC<MapProps & { hot: string | null; reason: string }> = ({
             aria-hidden
           />
         )}
-        {pts.map((p) => (
-          // biome-ignore lint/a11y/noStaticElementInteractions: pins are supplementary; the spine is the accessible source
-          <g
-            key={p.id}
-            className={['map-pin', hot === p.id ? 'is-hot' : '', nextId === p.id ? 'is-next' : '']
-              .filter(Boolean)
-              .join(' ')}
-            transform={`translate(${p.x} ${p.y})`}
-            onClick={() => onPinClick(p.id)}
-            aria-hidden
-          >
-            {nextId === p.id && <circle r={20} className="map-pin-ring" />}
-            <circle r={14} fill={colour} className="map-pin-disc" />
-          </g>
-        ))}
+        {pts.map((p) => {
+          const ring = p.id === scene.nextId || p.id === scene.selectedId
+          return (
+            // biome-ignore lint/a11y/noStaticElementInteractions: pins are supplementary; the list is the accessible source
+            <g
+              key={p.id}
+              className={['map-pin', lit === p.id ? 'is-hot' : '', p.done ? 'is-done' : '']
+                .filter(Boolean)
+                .join(' ')}
+              transform={`translate(${p.x} ${p.y})`}
+              onClick={() => onPinClick(p.id)}
+              onPointerEnter={() => setOver(p.id)}
+              onPointerLeave={() => setOver(null)}
+              aria-hidden
+            >
+              {ring && <circle r={11} className="map-pin-ring" />}
+              <circle r={6.5} fill={pipFill(p)} stroke={pipStroke(p)} className="map-pin-disc" />
+            </g>
+          )
+        })}
+        {placed.map((l) => {
+          const next = l.id === scene.nextId
+          const isDone = pts.find((p) => p.id === l.id)?.done
+          return (
+            <g key={`l-${l.id}`} className="map-label-g" aria-hidden>
+              {next && (
+                <rect
+                  x={l.x - 6}
+                  y={l.y - 2}
+                  width={l.w + 8}
+                  height={l.h + 4}
+                  rx={9}
+                  className="map-next-pill"
+                />
+              )}
+              <text
+                x={l.x}
+                y={l.y + l.h / 2}
+                dominantBaseline="central"
+                className={isDone ? 'map-label is-done' : 'map-label'}
+              >
+                {l.text}
+              </text>
+            </g>
+          )
+        })}
       </svg>
-      <span className="map-label">{reason}</span>
+      <span className="map-label-badge">{reason}</span>
       <span className="map-attrib">{OSM_MAP_ATTRIBUTION}</span>
     </div>
   )
@@ -147,23 +184,24 @@ function webglOk(): boolean {
   }
 }
 
-export const TripMap = forwardRef<TripMapHandle, MapProps>(function TripMap(props, ref) {
-  const [hot, setHot] = useState<string | null>(null)
+export type TripMapHandle = { setHot: (id: string | null) => void }
+
+/** The map pane: the real map when there is a tile key and WebGL, otherwise the preview. */
+export const TripMap = forwardRef<TripMapHandle, MapViewProps>(function TripMap(props, ref) {
+  const config = useMemo(() => tileConfig(), [])
   const [failed, setFailed] = useState(false)
+  // The list's hover lights a stop here without re-rendering the page.
+  const [hot, setHot] = useState<string | null>(null)
   useImperativeHandle(ref, () => ({ setHot }), [])
   const onFail = useCallback(() => setFailed(true), [])
-  const tiles = (import.meta.env.VITE_PMTILES_URL as string | undefined) || ''
-  const gl = !!tiles && !failed && webglOk()
-  // "Offline map" only when it really is offline; with no tiles configured it is a preview.
-  const offline = typeof navigator !== 'undefined' && navigator.onLine === false
-  const reason =
-    tiles && !failed ? 'Loading map' : offline || failed ? 'Offline map' : 'Map preview'
-  const lit = props.focusId ?? hot
-  const plain = <PlainMap {...props} hot={lit} reason={reason} />
+  const gl = !!config.key && !failed && webglOk()
+  const reason = config.key && !failed ? 'Loading map' : 'Map preview'
+  const shared = { ...props, hotId: props.hotId ?? hot }
+  const plain = <PlainMap {...shared} reason={reason} />
   if (!gl) return plain
   return (
     <Suspense fallback={plain}>
-      <MapCanvas {...props} hot={lit} tilesUrl={tiles} onFail={onFail} />
+      <MapCanvas {...shared} config={config} onFail={onFail} />
     </Suspense>
   )
 })

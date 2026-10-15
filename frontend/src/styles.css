@@ -2838,6 +2838,17 @@ textarea.notes-textarea {
   --trip-day-4: #0E7C86;
   --trip-day-5: #6A3FB5;
 
+  /* Map pips, by category: the stamp hues, a little stronger, each at least 3:1 against the map
+     ground. A finished stop is a muted grey. */
+  --pip-food: #C4560C;
+  --pip-sight: #2348A6;
+  --pip-activity: #1E7B3C;
+  --pip-transport: #5A6470;
+  --pip-stay: #946D00;
+  --pip-shopping: #8A3FB5;
+  --pip-other: #767676;
+  --pip-done: #A9ADA6;
+
   /* Category stamps: tinted ground, darker ink of the same hue (4.5:1 on the tint). */
   --trip-cat-food-bg: #FDE7D2;
   --trip-cat-food-fg: #8A4209;

@@ -60,9 +60,12 @@ import {
   type Shared,
 } from '@components/trips/Spine'
 import { TripHeader } from '@components/trips/TripHeader'
-import { TripMap, type MapPoint, type TripMapHandle } from '@components/trips/TripMap'
+import { TripMap, type TripMapHandle } from '@components/trips/TripMap'
+import { MapAddPopover } from '@components/trips/MapAddPopover'
+import { MapScreen } from '@components/trips/MapScreen'
+import { pinPlace, useClickAdd, useMapFollow, useMapOk } from '@components/trips/useTripMap'
+import { buildScene, hasMapPlaces, type MapPreview } from '@lib/trips/mapScene'
 import type { RowActions } from '@components/trips/TodoRow'
-import { Sheet } from '@components/trips/Sheet'
 import { DAY_COLOURS } from '@components/trips/tripUi'
 import { PillNav } from '@components/PillNav'
 import '../trips.css'
@@ -278,28 +281,6 @@ function useScreenActions(ctx: React.MutableRefObject<Ctx>) {
   }, [ctx, commitDelete])
 }
 
-function pinsFor(schedule: Schedule) {
-  let hasDayPlaces = false
-  const byDay = new Map<string, MapPoint[]>()
-  const ideaDots: MapPoint[] = []
-  const ideaPins: MapPoint[] = []
-  for (const d of schedule.days) {
-    const list: MapPoint[] = []
-    for (const e of d.entries) {
-      const p = e.kind === 'todo' ? e.todo.place : e.booking.place
-      if (!p || p.source === 'manual') continue
-      hasDayPlaces = true
-      list.push({ id: e.id, lat: p.lat, lng: p.lng })
-    }
-    byDay.set(d.date, list)
-  }
-  for (const t of schedule.ideas)
-    if (t.place && t.place.source !== 'manual')
-      ideaDots.push({ id: t.todo_id, lat: t.place.lat, lng: t.place.lng })
-  for (const d of ideaDots) ideaPins.push(d)
-  return { hasDayPlaces, byDay, ideaDots, ideaPins }
-}
-
 type Segment =
   | { kind: 'day'; key: string; day: DayModel; index: number; closed: boolean }
   | { kind: 'done'; key: string; days: DayModel[] }
@@ -328,7 +309,12 @@ const TripScreen: React.FC<{
   const [whenOpen, setWhenOpen] = useState(false)
   const [celebrating, setCelebrating] = useState<ReadonlySet<string>>(() => new Set())
   const [dismissed, setDismissed] = useState<ReadonlySet<string>>(() => new Set())
-  const [sheetOpen, setSheetOpen] = useState(false)
+  const [screenOpen, setScreenOpen] = useState(false)
+  const mapPill = useRef<HTMLButtonElement>(null)
+  const mapFollow = useMapFollow()
+  const [clickTarget, setClickTarget] = useState<string | null>(null)
+  const [barPreview, setBarPreview] = useState<MapPreview | null>(null)
+  const mapPane = useRef<HTMLDivElement>(null)
   const [currentDay, setCurrentDay] = useState<string | null>(null)
   const [allDays, setAllDays] = useState(false)
   const [announcement, setAnnouncementRaw] = useState('')
@@ -371,6 +357,9 @@ const TripScreen: React.FC<{
   )
   const schedule = useMemo(() => buildSchedule(trip), [trip])
   const today = localDateKey(new Date(nowMs))
+  const online = !state.offline && (typeof navigator === 'undefined' || navigator.onLine !== false)
+  // The map is shown only while online (it needs tiles), hiding a few seconds after a drop.
+  const mapOk = useMapOk(online)
   const phase = tripPhase(trip, today)
   const locked = !!trip.deleted || (phase === 'after' && !unlocked)
   const doneDays = useMemo(
@@ -662,10 +651,11 @@ const TripScreen: React.FC<{
     }
   }, [])
 
-  const mapVisible = desktop || (phone && sheetOpen)
-  const pins = useMemo(() => pinsFor(schedule), [schedule])
   // The map control appears once there is something to show on it.
-  const hasPlaces = pins.hasDayPlaces || pins.ideaDots.length > 0
+  const hasPlaces = hasMapPlaces(trip)
+  // Wide and online: the map is a pane beside the plan; item panels dock over it. Otherwise
+  // (phone, or no connection) panels are bottom sheets.
+  const docked = desktop && mapOk
   const moveTargets = useMemo(
     () => [
       ...schedule.days.map((d) => ({ value: d.date as string | null, label: fullDay(d.date) })),
@@ -752,12 +742,14 @@ const TripScreen: React.FC<{
       const d = schedule.days.find((x) => x.date === date)
       if (!d) return
       setOverride((o) => ({ ...o, [date]: !isOpenDay(d) }))
+      mapFollow.resume()
     },
     [schedule.days, doneDays, override, celebrating, phone, phase, today],
   )
   const openDay = useCallback((date: string) => setOverride((o) => ({ ...o, [date]: true })), [])
   const goToDay = useCallback(
     (date: string, focus = true) => {
+      mapFollow.resume()
       setCurrentDay(date)
       if (doneDays.has(date)) setShowDone(true)
       openDay(date)
@@ -768,29 +760,81 @@ const TripScreen: React.FC<{
     },
     [openDay, doneDays],
   )
+  // ---- the one add bar -----------------------------------------------------------------
+  const autoTarget =
+    tab === 'ideas' || schedule.days.length === 0
+      ? 'ideas'
+      : phase === 'during'
+        ? today
+        : (currentDay ?? schedule.days[0].date)
+  const target = addTarget === 'auto' ? autoTarget : addTarget
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a new tab goes back to the automatic target
+  useEffect(() => setAddTarget('auto'), [tab])
+  const targetOptions = useMemo(
+    () => [
+      ...schedule.days.map((d) => ({
+        value: d.date,
+        label: d.date === today && phase === 'during' ? 'Today' : shortDay(d.date),
+      })),
+      { value: 'ideas', label: 'Ideas' },
+    ],
+    [schedule.days, today, phase],
+  )
+  const targetLabel =
+    target === 'ideas'
+      ? 'Ideas'
+      : target === today && phase === 'during'
+        ? 'today'
+        : shortDay(target)
+
   // ---- map ----------------------------------------------------------------------------
   const dayIndex = Math.max(
     0,
     schedule.days.findIndex((d) => d.date === currentDay),
   )
-  const dayPins = currentDay ? (pins.byDay.get(currentDay) ?? []) : []
-  const ideasOpen = desktop && tab === 'ideas'
-  const mapPins = ideasOpen ? pins.ideaPins : allDays ? [] : dayPins
-  const mapOthers = useMemo(() => {
-    if (ideasOpen) return []
-    const out: MapPoint[] = [...pins.ideaDots]
-    for (const [date, list] of pins.byDay) {
-      // Finished days stay off the map unless you opened them or are reading them.
-      if (doneDays.has(date) && override[date] !== true && date !== currentDay) continue
-      if (allDays || date !== currentDay) out.push(...list)
-    }
-    return out
-  }, [pins, currentDay, allDays, doneDays, override, ideasOpen])
+  const ideasOpen = docked && tab === 'ideas'
   const currentModel: DayModel | undefined = schedule.days[dayIndex]
+  // The next stop today: the first open todo, or a booking that has not finished.
+  const nextStopId = useMemo(() => {
+    if (phase !== 'during') return null
+    const model = schedule.days.find((d) => d.date === today)
+    const e = model?.entries.find((x) =>
+      x.kind === 'todo'
+        ? !x.todo.done
+        : (x.endMs ?? x.startMs ?? Number.POSITIVE_INFINITY) >= nowMs,
+    )
+    return e?.id ?? null
+  }, [schedule.days, phase, today, nowMs])
+  const skipDays = useMemo(
+    () => new Set([...doneDays].filter((d) => override[d] !== true && d !== currentDay)),
+    [doneDays, override, currentDay],
+  )
+  const sceneFor = useCallback(
+    (mode: 'day' | 'all' | 'ideas', day: string | null, sel: string | null) =>
+      buildScene({
+        mode,
+        schedule,
+        day,
+        skipDays,
+        nextId: day === today || mode !== 'day' ? nextStopId : null,
+        selectedId: sel,
+        colourIndex: Math.max(
+          0,
+          schedule.days.findIndex((d) => d.date === day),
+        ),
+      }),
+    [schedule, skipDays, today, nextStopId],
+  )
+  const mapMode = ideasOpen ? 'ideas' : allDays ? 'all' : 'day'
+  const scene = useMemo(
+    () => sceneFor(mapMode, currentDay, selected),
+    [sceneFor, mapMode, currentDay, selected],
+  )
+  const dayStopCount = scene.stops.length
   const mapTitle = ideasOpen
     ? 'Map of the ideas'
     : currentModel
-      ? `Map of ${shortDay(currentModel.date)}, ${dayPins.length} ${dayPins.length === 1 ? 'stop' : 'stops'}`
+      ? `Map of ${shortDay(currentModel.date)}, ${dayStopCount} ${dayStopCount === 1 ? 'stop' : 'stops'}`
       : 'Map of the ideas'
 
   const selTodo = selected ? trip.todos.find((t) => t.todo_id === selected) : undefined
@@ -816,37 +860,95 @@ const TripScreen: React.FC<{
     mapRef.current?.setHot(li?.dataset.entryId ?? null)
   }
 
+  const clickAdd = useClickAdd(apiKey, trip.tz)
+  // Click to add a stop (wide screens only): the card's day defaults to the one on the map.
+  const clickDefault = ideasOpen ? 'ideas' : (currentDay ?? 'ideas')
+  const clickDay = clickTarget ?? clickDefault
+  const clickLabel = clickDay === 'ideas' ? 'Ideas' : shortDay(clickDay)
+  const addFromPin = (more: boolean) => {
+    const pin = clickAdd.pin
+    const place = pin ? pinPlace(pin) : null
+    if (!pin || !place) return
+    const id = add(clickDay === 'ideas' ? null : clickDay, { title: place.name, place })
+    clickAdd.dismiss()
+    setClickTarget(null)
+    if (more && id) {
+      setFreshId(id)
+      ctx.current.openItem(id)
+    }
+  }
+  const preview: MapPreview | null = clickAdd.pin
+    ? { lat: clickAdd.pin.pos.lat, lng: clickAdd.pin.pos.lng }
+    : barPreview
+
   const mapNode = (
-    <div className="trip-map">
+    <div className="trip-map" ref={mapPane}>
       <div className="trip-map-bar">
         <span className="trip-pill">
           {ideasOpen || !currentModel ? 'Ideas' : shortDay(currentModel.date)}
         </span>
-        {schedule.days.length > 1 && !ideasOpen && (
+        <span className="trip-map-keys">
+          {schedule.days.length > 1 && !ideasOpen && (
+            <button
+              type="button"
+              className="trip-pill is-button"
+              aria-pressed={allDays}
+              onClick={() => setAllDays((a) => !a)}
+            >
+              {allDays ? 'Follow the day' : 'Show all days'}
+            </button>
+          )}
           <button
             type="button"
-            className="trip-pill is-button"
-            aria-pressed={allDays}
-            onClick={() => setAllDays((a) => !a)}
+            className={mapFollow.following ? 'trip-pill is-button' : 'trip-pill is-button is-key'}
+            onClick={mapFollow.fit}
           >
-            {allDays ? 'Follow the day' : 'Show all days'}
+            Fit day
           </button>
-        )}
+        </span>
       </div>
       <TripMap
         ref={mapRef}
-        pins={mapPins}
-        others={mapOthers}
-        colourVar={ideasOpen ? '--muted' : `--trip-day-${dayIndex % DAY_COLOURS}`}
-        nextId={
-          !ideasOpen && phase === 'during' && currentDay === today ? (deckTopId ?? null) : null
-        }
+        scene={scene}
+        interactive
+        labelLimit={22}
+        nextPrefix
+        preview={preview}
+        following={mapFollow.following}
+        fitToken={mapFollow.fitToken}
         title={mapTitle}
-        focusId={selected}
         focusPoint={focusPoint}
-        focusInset={desktop && selected ? 420 : 0}
+        focusInset={docked && selected ? 420 : 0}
         onPinClick={onPinClick}
+        onMapClick={clickAdd.onMapClick}
+        onUserMove={() => {
+          mapFollow.pause()
+          clickAdd.dismiss()
+        }}
       />
+      {clickAdd.pin && (
+        <MapAddPopover
+          at={{ x: clickAdd.pin.pos.x, y: clickAdd.pin.pos.y }}
+          bounds={{
+            w: mapPane.current?.clientWidth ?? 600,
+            h: mapPane.current?.clientHeight ?? 400,
+          }}
+          place={clickAdd.pin.place}
+          degraded={clickAdd.pin.degraded}
+          name={clickAdd.pin.name}
+          onName={clickAdd.setName}
+          targetLabel={clickLabel}
+          targets={targetOptions.map((t) => ({
+            value: t.value,
+            label: t.value === 'ideas' ? 'Ideas' : t.label,
+          }))}
+          target={clickDay}
+          onTarget={setClickTarget}
+          onAdd={() => addFromPin(false)}
+          onMore={() => addFromPin(true)}
+          onDismiss={clickAdd.dismiss}
+        />
+      )}
     </div>
   )
 
@@ -876,7 +978,6 @@ const TripScreen: React.FC<{
         return n[0].toUpperCase() + n.slice(1)
       })()
     : ''
-  const online = !state.offline && (typeof navigator === 'undefined' || navigator.onLine !== false)
 
   // The packing list is the List page's: the menu says how packed it is and goes straight there.
   const packing = usePacking(store.roomId, trip.packing_list_id)
@@ -951,33 +1052,6 @@ const TripScreen: React.FC<{
     if (target !== undefined) rowActions.move(activeId, target)
   }
   const dragTitle = dragging ? trip.todos.find((t) => t.todo_id === dragging)?.title : ''
-
-  // ---- the one add bar -----------------------------------------------------------------
-  const autoTarget =
-    tab === 'ideas' || schedule.days.length === 0
-      ? 'ideas'
-      : phase === 'during'
-        ? today
-        : (currentDay ?? schedule.days[0].date)
-  const target = addTarget === 'auto' ? autoTarget : addTarget
-  // biome-ignore lint/correctness/useExhaustiveDependencies: a new tab goes back to the automatic target
-  useEffect(() => setAddTarget('auto'), [tab])
-  const targetOptions = useMemo(
-    () => [
-      ...schedule.days.map((d) => ({
-        value: d.date,
-        label: d.date === today && phase === 'during' ? 'Today' : shortDay(d.date),
-      })),
-      { value: 'ideas', label: 'Ideas' },
-    ],
-    [schedule.days, today, phase],
-  )
-  const targetLabel =
-    target === 'ideas'
-      ? 'Ideas'
-      : target === today && phase === 'during'
-        ? 'today'
-        : shortDay(target)
 
   // n or / jumps to the add bar, unless you are typing somewhere.
   useEffect(() => {
@@ -1127,7 +1201,7 @@ const TripScreen: React.FC<{
   const lastPanel = useRef(panel)
   if (panel) lastPanel.current = panel
   const shownPanel = panel ?? lastPanel.current
-  const showSide = desktop
+  const showSide = docked
   const showAdd = !locked
 
   const spine = (
@@ -1302,9 +1376,12 @@ const TripScreen: React.FC<{
   return (
     <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
       <div className="trip-page">
-        <div className="trip-shell">
+        <div className={desktop && !mapOk ? 'trip-shell is-mapless' : 'trip-shell'}>
           <div className="trip-col">
             <TopNav back={{ to: '/app/trips', label: roomName }} />
+            {desktop && !mapOk && (
+              <p className="trip-map-off">The map comes back when you’re online.</p>
+            )}
             <div className="paper-stack">
               <TripHeader
                 trip={trip}
@@ -1334,20 +1411,22 @@ const TripScreen: React.FC<{
                     value={tab}
                     onChange={(k) => setTab(k as TabId)}
                     extra={
-                      phone && hasPlaces ? (
+                      phone && hasPlaces && mapOk ? (
                         <Button
-                          shape="circle"
+                          ref={mapPill}
+                          shape="round"
                           icon={<MapTrifold />}
-                          title="Map"
-                          aria-label={`Show map for ${currentModel ? shortDay(currentModel.date) : 'the ideas'}`}
-                          onClick={() => setSheetOpen(true)}
-                        />
+                          aria-label={`Show map for ${currentModel ? shortDay(currentModel.date) : 'the trip'}`}
+                          onClick={() => setScreenOpen(true)}
+                        >
+                          Map
+                        </Button>
                       ) : undefined
                     }
                     items={[
                       { key: 'plan', label: 'Plan', children: planNode },
                       // Wide screens: the spine stays; the ideas open over the map instead.
-                      { key: 'ideas', label: 'Ideas', children: desktop ? planNode : ideasNode },
+                      { key: 'ideas', label: 'Ideas', children: docked ? planNode : ideasNode },
                       { key: 'bookings', label: 'Bookings', children: bookingsNode },
                     ]}
                   />
@@ -1364,6 +1443,12 @@ const TripScreen: React.FC<{
                     onTarget={setAddTarget}
                     onAdd={(item) => add(target === 'ideas' ? null : target, item)}
                     onLaunch={(typed) => setBookingDraft({ title: typed })}
+                    onPreview={
+                      docked
+                        ? (pl) =>
+                            setBarPreview(pl ? { lat: pl.lat, lng: pl.lng, label: pl.name } : null)
+                        : undefined
+                    }
                     onExpand={(item) => {
                       // One editor for add and edit: create the item, then open it.
                       const id = add(target === 'ideas' ? null : target, item)
@@ -1380,7 +1465,7 @@ const TripScreen: React.FC<{
           {showSide && (
             <aside className="trip-side" aria-label="Map">
               {mapNode}
-              {desktop && panel && (
+              {docked && panel && (
                 <Panel
                   key={panel.key}
                   desktop
@@ -1401,22 +1486,31 @@ const TripScreen: React.FC<{
           onChange={(s, e) => store.updateTrip(trip.trip_id, { start_date: s, end_date: e })}
           onClose={() => setWhenOpen(false)}
         />
-        {phone && sheetOpen && (
-          <Sheet
-            title={`Map · ${currentModel ? shortDay(currentModel.date) : 'ideas'}`}
-            height="62%"
-            className="trip-map-drawer"
-            onClose={() => setSheetOpen(false)}
-          >
-            {mapNode}
-          </Sheet>
+        {phone && mapOk && screenOpen && (
+          <MapScreen
+            days={schedule.days.map((d) => ({
+              date: d.date,
+              title: `${shortDay(d.date)}${d.label || d.suggested ? ` · ${d.label || d.suggested}` : ''}`,
+              long: longDay(d.date),
+            }))}
+            initialDate={currentDay ?? schedule.days[0]?.date ?? today}
+            defaultSelected={(date, ids) =>
+              date === today && nextStopId && ids.includes(nextStopId)
+                ? nextStopId
+                : (ids[0] ?? null)
+            }
+            scene={(date, sel) => sceneFor('day', date, sel)}
+            onOpenItem={(id) => ctx.current.openItem(id)}
+            onClose={() => setScreenOpen(false)}
+            opener={mapPill}
+          />
         )}
-        {!desktop && (
+        {!docked && (
           <Panel desktop={false} open={daysOpen} title="Days" onClose={() => setDaysOpen(false)}>
             {daysOpen ? dayListNode : null}
           </Panel>
         )}
-        {!desktop && shownPanel && (
+        {!docked && shownPanel && (
           <Panel
             key={shownPanel.key}
             desktop={false}

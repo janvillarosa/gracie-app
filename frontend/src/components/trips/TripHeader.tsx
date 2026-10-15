@@ -4,7 +4,7 @@ import type { MenuProps } from 'antd'
 import { ArrowDown, ArrowUp, CaretDown, DotsThreeVertical, X } from '@phosphor-icons/react'
 import type { Place, Trip } from '@api/tripTypes'
 import { countdown, routeText, shortDay, shortRange, tripPhase } from '@lib/trips/schedule'
-import { AvatarBadge } from '@components/AvatarBadge'
+import { Avatar } from '@components/Avatar'
 import type { Member } from '@lib/trips/hooks'
 import { toTripEmoji } from '../../icons'
 import { PlacePicker } from './PlacePicker'
@@ -33,6 +33,13 @@ type HeaderProps = {
   daysOpen: boolean
   onDaysOpen: (open: boolean) => void
   dayList: React.ReactNode
+}
+
+const sharedWith = (members: Member[]) => {
+  const names = members.map((m) => m.name)
+  return names.length < 2
+    ? `Shared with ${names[0] ?? 'the House'}`
+    : `Shared with ${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`
 }
 
 /** The top sheet of the stack: the trip's mark and name, one friendly line, who is in it. */
@@ -90,50 +97,6 @@ export const TripHeader: React.FC<HeaderProps> = ({
             </span>
             <span className="trip-title-text">{trip.title}</span>
           </Typography.Title>
-          <div className="trip-metaline">
-            {phase === 'draft' ? (
-              <Typography.Text className="list-meta">{line}</Typography.Text>
-            ) : (
-              (() => {
-                const button = (
-                  <button
-                    type="button"
-                    className="list-meta trip-dayline"
-                    aria-haspopup="dialog"
-                    aria-expanded={daysOpen}
-                    onClick={desktop ? undefined : () => onDaysOpen(true)}
-                  >
-                    {line}
-                    <CaretDown aria-hidden />
-                  </button>
-                )
-                return desktop ? (
-                  <Popover
-                    trigger="click"
-                    placement="bottomLeft"
-                    open={daysOpen}
-                    onOpenChange={onDaysOpen}
-                    overlayClassName="trip-gaps-pop trip-days-pop"
-                    content={dayList}
-                  >
-                    {button}
-                  </Popover>
-                ) : (
-                  button
-                )
-              })()
-            )}
-            <span className="trip-avatars">
-              {members.map((m) => (
-                <AvatarBadge
-                  key={m.user_id ?? m.name}
-                  seed={m.avatar_key ?? m.name}
-                  name={m.name}
-                  size={26}
-                />
-              ))}
-            </span>
-          </div>
         </div>
         <div className="list-actions">
           <Dropdown
@@ -147,6 +110,56 @@ export const TripHeader: React.FC<HeaderProps> = ({
               aria-label="More trip options"
             />
           </Dropdown>
+        </div>
+        <div className="trip-metaline">
+          {phase === 'draft' ? (
+            <Typography.Text className="list-meta">{line}</Typography.Text>
+          ) : (
+            (() => {
+              const button = (
+                <button
+                  type="button"
+                  className="list-meta trip-dayline"
+                  aria-haspopup="dialog"
+                  aria-expanded={daysOpen}
+                  onClick={desktop ? undefined : () => onDaysOpen(true)}
+                >
+                  {line}
+                  <CaretDown aria-hidden />
+                </button>
+              )
+              return desktop ? (
+                <Popover
+                  trigger="click"
+                  placement="bottomLeft"
+                  open={daysOpen}
+                  onOpenChange={onDaysOpen}
+                  overlayClassName="trip-gaps-pop trip-days-pop"
+                  content={dayList}
+                >
+                  {button}
+                </Popover>
+              ) : (
+                button
+              )
+            })()
+          )}
+          <span className="trip-avatars" role="img" aria-label={sharedWith(members)}>
+            {members.slice(0, members.length > 4 ? 3 : 4).map((m) => (
+              <Avatar
+                key={m.user_id ?? m.name}
+                seed={m.avatar_key ?? m.name}
+                size={24}
+                alt=""
+                className="trip-avatar"
+              />
+            ))}
+            {members.length > 4 && (
+              <span className="trip-avatar-more" aria-hidden>
+                +{members.length - 3}
+              </span>
+            )}
+          </span>
         </div>
       </div>
       {notes.map((n) => (

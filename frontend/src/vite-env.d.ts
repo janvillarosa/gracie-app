@@ -6,3 +6,12 @@ declare module '*.webmanifest' {
   const src: string
   export default src
 }
+
+interface ImportMetaEnv {
+  // The Protomaps hosted API key (empty: the map preview is used).
+  readonly VITE_PROTOMAPS_API_KEY?: string
+  // Glyph source for map labels (empty: no text labels on the map).
+  readonly VITE_GLYPHS_URL?: string
+  // Dev only: serve the trips API from the in-browser mock.
+  readonly VITE_MOCK_TRIPS?: string
+}

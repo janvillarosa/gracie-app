@@ -378,13 +378,14 @@ describe('Map', () => {
     expect(screen.getByText('© OpenStreetMap contributors')).toBeInTheDocument()
   })
 
-  it('says "Offline map" only when it really is offline', async () => {
+  it('hides the map when there is no connection, and says when it returns', async () => {
     vi.spyOn(window.navigator, 'onLine', 'get').mockReturnValue(false)
     seed(TRIP)
     open()
     await screen.findByRole('heading', { name: 'Lisbon & Porto' })
-    expect(screen.getByText('Offline map')).toBeInTheDocument()
     expect(screen.queryByText('Map preview')).not.toBeInTheDocument()
+    expect(document.querySelector('.trip-map')).toBeNull()
+    expect(screen.getByText('The map comes back when you’re online.')).toBeInTheDocument()
   })
 
   it('lifts the next stop on the map with a ring', async () => {
@@ -402,8 +403,7 @@ describe('Map', () => {
     open()
     await screen.findByRole('region', { name: 'Next stop' })
     await waitFor(() => expect(document.querySelectorAll('.map-pin')).toHaveLength(2))
-    const pins = document.querySelectorAll('.map-pin')
-    expect(document.querySelectorAll('.map-pin.is-next')).toHaveLength(1)
+    expect(document.querySelectorAll('.map-pin-ring')).toHaveLength(1)
     // No numbers anywhere on the pins.
     expect(document.querySelectorAll('.map-pin text')).toHaveLength(0)
   })

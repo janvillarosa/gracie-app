@@ -1,4 +1,4 @@
-import React, { useId, useRef, useState } from 'react'
+import React, { useEffect, useId, useRef, useState } from 'react'
 import { Button, Input, Popover } from 'antd'
 import { ArrowsOutSimple, CaretDown, Plus } from '@phosphor-icons/react'
 import type { Place } from '@api/tripTypes'
@@ -25,6 +25,8 @@ type Props = {
   // 'booking': what is typed becomes the title of a new booking, which opens in its own sheet.
   mode?: 'todo' | 'booking'
   onLaunch?: (typed: string) => void
+  // A place suggestion is highlighted (or not): the map shows a hollow pin for it.
+  onPreview?: (place: Place | null) => void
 }
 
 const MAX_SLIPS = 5
@@ -44,6 +46,7 @@ export const AddBar: React.FC<Props> = ({
   onExpand,
   mode = 'todo',
   onLaunch,
+  onPreview,
 }) => {
   const [value, setValue] = useState('')
   const [active, setActive] = useState(-1)
@@ -112,6 +115,16 @@ export const AddBar: React.FC<Props> = ({
   }
 
   const [chipOpen, setChipOpen] = useState(false)
+
+  // The highlighted suggestion previews on the map; nothing highlighted (or no bar) clears it.
+  const previewed = open && active >= 0 ? slips[active] : null
+  // (The callback is read through a ref, so a new function each render cannot loop.)
+  const previewRef = useRef(onPreview)
+  previewRef.current = onPreview
+  useEffect(() => {
+    previewRef.current?.(previewed)
+    return () => previewRef.current?.(null)
+  }, [previewed])
 
   return (
     <div className="add-bar" role="region" aria-label="Add to trip">
