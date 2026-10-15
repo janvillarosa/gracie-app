@@ -325,7 +325,7 @@ describe('a booking with a start and an end place', () => {
 
   // The shared mock server (mocks/tripsServer.ts) still rejects `end_place`: add it to BOOKING_KEYS
   // there (the cleanup agent owns that file), then turn this on.
-  it.skip('saves the To place as end_place and leaves place as the start', async () => {
+  it('saves the To place as end_place and leaves place as the start', async () => {
     seed(TRIP)
     open()
     const sheet = await newSheet('Flight home')
