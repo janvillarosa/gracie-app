@@ -30,6 +30,9 @@ type Opts = {
   textHeight?: number
   charWidth?: number
   gap?: number
+  // Pips that carry no label of their own but must not be covered by one (e.g. stops whose
+  // names only show on hover).
+  obstacles?: Array<{ x: number; y: number }>
   // Items that must always be placed if at all possible are simply earlier in priority.
 }
 
@@ -43,6 +46,12 @@ export function placeLabels(items: LabelItem[], o: Opts): PlacedLabel[] {
   const cw = o.charWidth ?? 6.9
   const gap = o.gap ?? 5
   const pipBoxes: Box[] = items.map((i) => ({
+    x: i.x - pip - 1,
+    y: i.y - pip - 1,
+    w: (pip + 1) * 2,
+    h: (pip + 1) * 2,
+  }))
+  const extra: Box[] = (o.obstacles ?? []).map((i) => ({
     x: i.x - pip - 1,
     y: i.y - pip - 1,
     w: (pip + 1) * 2,
@@ -66,6 +75,7 @@ export function placeLabels(items: LabelItem[], o: Opts): PlacedLabel[] {
         continue
       if (taken.some((t) => hit(t, box))) continue
       if (pipBoxes.some((p, i) => i !== index && hit(p, box))) continue
+      if (extra.some((p) => hit(p, box))) continue
       taken.push(box)
       out.push({ id: it.id, text: it.text, anchor, ...box })
       break

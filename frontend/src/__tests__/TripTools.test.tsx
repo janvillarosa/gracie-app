@@ -373,7 +373,8 @@ describe('Map', () => {
       'true',
     )
     expect(screen.getByText('Map preview')).toBeInTheDocument()
-    expect(screen.getByText('© OpenStreetMap contributors')).toBeInTheDocument()
+    // The preview has no map data on it, so no map credit.
+    expect(screen.queryByText(/OpenStreetMap/)).not.toBeInTheDocument()
   })
 
   it('hides the map when there is no connection, and says when it returns', async () => {

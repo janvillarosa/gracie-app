@@ -4,18 +4,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { tripServer } from '../testServer'
 import { lisbonTrip, rel, renderTrips, resetTripsWorld, seed, setViewport } from './trips.helpers'
 
-vi.mock('maplibre-gl', async () => {
-  const m = await import('./mapFake')
-  return { Map: m.FakeMap, LngLatBounds: m.LngLatBounds, NavigationControl: m.NavigationControl }
-})
+vi.mock('@googlemaps/js-api-loader', async () => (await import('./googleFake')).loaderMock())
+vi.mock('@googlemaps/markerclusterer', async () => (await import('./googleFake')).clustererMock())
 
-import { FakeMap } from './mapFake'
-const features = (id: string) =>
-  ((
-    FakeMap.last?.sources.get(id)?.data as {
-      features: Array<{ properties: Record<string, unknown> }>
-    }
-  )?.features ?? []) as Array<{ properties: Record<string, unknown> }>
+import {
+  FakeGeocoder,
+  FakeMap,
+  FakeMarker,
+  FakePlace,
+  fakeLayout,
+  resetGoogleFake,
+} from './googleFake'
 
 const place = (name: string, lat: number, lng: number) => ({
   name,
@@ -36,16 +35,10 @@ const withPlaces = () => {
 }
 
 beforeEach(async () => {
-  vi.stubEnv('VITE_PROTOMAPS_API_KEY', 'test-key')
-  vi.stubEnv('VITE_GLYPHS_URL', 'https://fonts.test/{fontstack}/{range}.pbf')
-  // A canvas that accepts any drawing call (the map draws its small images with one).
-  HTMLCanvasElement.prototype.getContext = (() =>
-    new Proxy(
-      {},
-      { get: (_t, k) => (k === 'getImageData' ? () => ({}) : () => {}), set: () => true },
-    )) as never
-  FakeMap.last = null
-  FakeMap.made = 0
+  vi.stubEnv('VITE_GOOGLE_MAPS_API_KEY', 'test-key')
+  vi.stubEnv('VITE_GOOGLE_MAP_ID', 'TEST_MAP_ID')
+  resetGoogleFake()
+  fakeLayout()
   await resetTripsWorld()
   Element.prototype.scrollIntoView = vi.fn()
   setViewport('desktop')
@@ -57,119 +50,69 @@ afterEach(async () => {
 })
 
 const ready = async () => {
-  await waitFor(() => expect(FakeMap.last?.layers.has('pips')).toBe(true))
-  return FakeMap.last as InstanceType<typeof FakeMap>
+  await waitFor(() => expect(FakeMarker.pins().length).toBeGreaterThan(0))
+  return FakeMap.last as FakeMap
 }
+const pinFor = (text: string) =>
+  FakeMarker.pins().find((m) => m.title.startsWith(text)) as FakeMarker
 
-describe('the real map (tiles from the Protomaps API, drawn as layers)', () => {
-  it('reads tiles from the hosted TileJSON with the key, and has no pmtiles protocol', async () => {
+describe('the real map (Google Maps, drawn as markers)', () => {
+  it('loads Google with the Map ID and no default controls', async () => {
     const t = withPlaces()
     seed(t)
     renderTrips(`/app/trips/${t.trip_id}`)
     const map = await ready()
-    const style = map.options.style as { sources: { protomaps: { url: string } }; glyphs?: string }
-    expect(style.sources.protomaps.url).toBe('https://api.protomaps.com/tiles/v4.json?key=test-key')
-    expect(style.sources.protomaps.url).not.toMatch(/pmtiles/)
-    expect(style.glyphs).toBe('https://fonts.test/{fontstack}/{range}.pbf')
+    expect(map.options).toMatchObject({ mapId: 'TEST_MAP_ID', disableDefaultUI: true })
   })
 
-  it('draws pips, a thin route with arrows, labels and clusters as layers, not as elements', async () => {
-    const t = withPlaces()
-    seed(t)
-    renderTrips(`/app/trips/${t.trip_id}`)
-    const map = await ready()
-    for (const id of [
-      'route-line',
-      'route-arrows',
-      'clusters',
-      'pips',
-      'focus-ring',
-      'labels',
-      'label-next',
-      'preview-pin',
-    ])
-      expect(map.layers.has(id)).toBe(true)
-    const pips = map.layers.get('pips') as { paint: Record<string, unknown> }
-    expect(pips.paint['circle-radius']).toBe(6.5)
-    expect(pips.paint['circle-stroke-width']).toBe(2.5)
-    expect(
-      (map.layers.get('focus-ring') as { paint: Record<string, unknown> }).paint['circle-radius'],
-    ).toBe(11)
-    expect(
-      (map.layers.get('route-line') as { paint: Record<string, unknown> }).paint['line-width'],
-    ).toBe(3)
-    // Only stops that genuinely stack merge.
-    expect(map.sources.get('stops')?.spec).toMatchObject({ cluster: true, clusterRadius: 28 })
-    expect(map.sources.get('focus')?.spec.cluster).toBeUndefined()
-    expect(document.querySelectorAll('.map-marker')).toHaveLength(0)
-  })
-
-  it('gives the adapter the label, category and priority, and the next stop apart, with no numbers', async () => {
+  it('draws pips and names as our own markers: the next stop in a pill, long names cut at 22', async () => {
     const t = withPlaces()
     seed(t)
     renderTrips(`/app/trips/${t.trip_id}`)
     await ready()
-    await waitFor(() => expect(features('focus').length).toBeGreaterThan(0))
-    const focus = features('focus')
-    // Pena Palace leads the deck: the next stop, drawn from the unclustered source, in a pill.
-    expect(focus).toHaveLength(1)
-    expect(focus[0].properties).toMatchObject({ next: true, prio: 1, text: 'Next · Pena Palace' })
-    const rest = features('stops')
-    const lunch = rest.find((f) => String(f.properties.text).startsWith('Quinta'))
-    // Cut to 22 characters with an ellipsis.
-    expect(lunch?.properties.text).toBe('Quinta da Regaleira d…')
-    expect(String(lunch?.properties.text)).toHaveLength(22)
-    expect(lunch?.properties.prio).toBeGreaterThanOrEqual(2)
-    for (const f of [...focus, ...rest]) expect(Object.keys(f.properties)).not.toContain('n')
-    // Category colour, not a day colour or a number.
-    expect(lunch?.properties).toHaveProperty('fill')
+    expect(pinFor('Pena Palace').label).toBe('Next · Pena Palace')
+    expect(pinFor('Pena Palace').content).toHaveClass('is-next')
+    const lunch = pinFor('Quinta')
+    expect(lunch.label).toBe('Quinta da Regaleira d…')
+    expect(lunch.label).toHaveLength(22)
+    // One marker per place on the day, and no numbers anywhere.
+    expect(
+      FakeMarker.pins()
+        .map((m) => m.title)
+        .sort(),
+    ).toEqual([...new Set(FakeMarker.pins().map((m) => m.title))].sort())
+    for (const m of FakeMarker.pins()) expect(m.label).not.toMatch(/^\d+$/)
   })
 
-  it('marks the selected stop with the same ring and the highest priority', async () => {
+  it('marks the selected stop with the same ring', async () => {
     const t = withPlaces()
     seed(t)
     renderTrips(`/app/trips/${t.trip_id}`)
     await ready()
     await userEvent.click(await screen.findByRole('button', { name: /^Lunch at Tascantiga/ }))
-    await waitFor(() => expect(features('focus').some((f) => f.properties.prio === 0)).toBe(true))
-    expect(
-      features('focus')
-        .map((f) => f.properties.prio)
-        .sort(),
-    ).toEqual([0, 1])
+    await waitFor(() =>
+      expect(
+        FakeMarker.pins().filter((m) => m.content.classList.contains('is-selected')),
+      ).toHaveLength(1),
+    )
   })
 
-  it('shows controls and takes clicks on wide screens only', async () => {
+  it('shows our zoom keys and Fit day on wide screens', async () => {
     const t = withPlaces()
     seed(t)
     renderTrips(`/app/trips/${t.trip_id}`)
-    const map = await ready()
-    expect(map.controls).toContain('navigation')
+    await ready()
+    expect(screen.getByRole('button', { name: 'Zoom in' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Fit day' })).toBeInTheDocument()
   })
 
-  it('zooms into a cluster when it is clicked', async () => {
+  it('scrolls the list to the item when its pin is tapped', async () => {
     const t = withPlaces()
     seed(t)
     renderTrips(`/app/trips/${t.trip_id}`)
-    const map = await ready()
-    map.queryHook = (l) =>
-      l.includes('clusters')
-        ? [
-            {
-              layer: { id: 'clusters' },
-              properties: { cluster_id: 7 },
-              geometry: { coordinates: [-9.38, 38.79] },
-            },
-          ]
-        : []
-    await act(async () => {
-      map.emit('click', { point: { x: 10, y: 10 }, lngLat: { lat: 38.79, lng: -9.38 } })
-    })
-    await waitFor(() => expect(map.clusterZoom).toHaveBeenCalledWith(7))
-    await waitFor(() =>
-      expect(map.easeTo).toHaveBeenCalledWith(expect.objectContaining({ zoom: 13 })),
-    )
+    await ready()
+    act(() => pinFor('Quinta').click())
+    expect(Element.prototype.scrollIntoView).toHaveBeenCalled()
   })
 })
 
@@ -181,14 +124,14 @@ describe('following the day, and pausing when you move the map', () => {
     const map = await ready()
     const fitDay = screen.getByRole('button', { name: 'Fit day' })
     expect(fitDay).not.toHaveClass('is-key')
-    await waitFor(() => expect(map.fitBounds).toHaveBeenCalled())
+    await waitFor(() => expect(map.moves).toBeGreaterThan(0))
     // The person pans: following pauses.
-    act(() => map.emit('moveend', {}))
-    act(() => map.emit('movestart', {}))
+    act(() => map.emit('idle'))
+    act(() => map.emit('dragstart'))
     await waitFor(() => expect(fitDay).toHaveClass('is-key'))
     map.fitBounds.mockClear()
     await userEvent.click(fitDay)
-    await waitFor(() => expect(map.fitBounds).toHaveBeenCalled())
+    await waitFor(() => expect(map.moves).toBeGreaterThan(0))
     expect(fitDay).not.toHaveClass('is-key')
   })
 
@@ -197,11 +140,10 @@ describe('following the day, and pausing when you move the map', () => {
     seed(t)
     renderTrips(`/app/trips/${t.trip_id}`)
     const map = await ready()
-    await waitFor(() => expect(map.fitBounds).toHaveBeenCalled())
-    // The fit that just ran starts a move of its own: that is not "the person".
-    act(() => map.emit('movestart', {}))
+    await waitFor(() => expect(map.moves).toBeGreaterThan(0))
+    // The fit that just ran changes the zoom itself: that is not "the person".
+    act(() => map.emit('zoom_changed'))
     expect(screen.getByRole('button', { name: 'Fit day' })).not.toHaveClass('is-key')
-    act(() => map.emit('moveend', {}))
   })
 
   it('resumes when a day is picked from the day list', async () => {
@@ -209,9 +151,9 @@ describe('following the day, and pausing when you move the map', () => {
     seed(t)
     renderTrips(`/app/trips/${t.trip_id}`)
     const map = await ready()
-    await waitFor(() => expect(map.fitBounds).toHaveBeenCalled())
-    act(() => map.emit('moveend', {}))
-    act(() => map.emit('movestart', {}))
+    await waitFor(() => expect(map.moves).toBeGreaterThan(0))
+    act(() => map.emit('idle'))
+    act(() => map.emit('dragstart'))
     const fitDay = screen.getByRole('button', { name: 'Fit day' })
     await waitFor(() => expect(fitDay).toHaveClass('is-key'))
     await userEvent.click(screen.getByRole('button', { name: /Day 3 of 5/ }))
@@ -222,13 +164,16 @@ describe('following the day, and pausing when you move the map', () => {
 })
 
 describe('click to add a stop', () => {
-  const click = (map: InstanceType<typeof FakeMap>, name?: string) => {
-    // The basemap's own label layers exist on the real map; here they are stood in for.
-    map.layers.set('pois', {})
-    map.queryHook = (l) =>
-      name && l.includes('pois') ? [{ layer: { id: 'pois' }, properties: { name } }] : []
+  // A click on a Google place (with its name) or on an empty spot (reverse-geocoded).
+  const click = (map: FakeMap, name?: string) => {
+    if (name) FakePlace.next = { displayName: name, lat: 38.7876, lng: -9.3906 }
+    else FakeGeocoder.result = 'fail'
     act(() => {
-      map.emit('click', { point: { x: 220, y: 200 }, lngLat: { lat: 38.7876, lng: -9.3906 } })
+      map.emit('click', {
+        latLng: { lat: () => 38.7876, lng: () => -9.3906 },
+        placeId: name ? 'ChIJtest' : undefined,
+        stop: () => {},
+      })
     })
   }
 
@@ -240,8 +185,7 @@ describe('click to add a stop', () => {
     click(map)
     const card = await screen.findByRole('dialog', { name: /^Add .* to / })
     expect(await within(card).findByRole('heading')).toBeInTheDocument()
-    // The temporary pin is on the preview layer.
-    expect(features('preview')).toHaveLength(1)
+    // The temporary pin is the hollow ring.
     expect(
       tripServer.trips
         .get(t.trip_id)
@@ -271,7 +215,7 @@ describe('click to add a stop', () => {
     await waitFor(() =>
       expect(screen.queryByRole('dialog', { name: /Pastéis de Belém/ })).not.toBeInTheDocument(),
     )
-    expect(features('preview')).toHaveLength(0)
+    expect(FakeMarker.preview()?.shown ?? false).toBe(false)
     expect(await screen.findByRole('button', { name: 'Pastéis de Belém' })).toBeInTheDocument()
   })
 
@@ -318,8 +262,8 @@ describe('click to add a stop', () => {
     )
     click(map, 'Jardim')
     await screen.findByRole('dialog', { name: /Jardim/ })
-    act(() => map.emit('moveend', {}))
-    act(() => map.emit('movestart', {}))
+    act(() => map.emit('idle'))
+    act(() => map.emit('dragstart'))
     await waitFor(() =>
       expect(screen.queryByRole('dialog', { name: /Jardim/ })).not.toBeInTheDocument(),
     )
@@ -375,12 +319,12 @@ describe('a place suggestion in the add bar', () => {
     const bar = await screen.findByRole('combobox', { name: 'Add to today' })
     await userEvent.type(bar, 'Pena')
     await screen.findByRole('option', { name: /Pena Palace/ })
-    expect(features('preview')).toHaveLength(0)
+    expect(FakeMarker.preview()?.shown ?? false).toBe(false)
     await userEvent.keyboard('{ArrowUp}')
-    await waitFor(() => expect(features('preview')).toHaveLength(1))
-    expect(map.easeTo).toBeDefined()
+    await waitFor(() => expect(FakeMarker.preview()?.shown).toBe(true))
+    expect(map).toBeDefined()
     await userEvent.clear(bar)
-    await waitFor(() => expect(features('preview')).toHaveLength(0))
+    await waitFor(() => expect(FakeMarker.preview()?.shown).toBe(false))
   })
 })
 

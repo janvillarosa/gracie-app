@@ -1,5 +1,5 @@
 // What the map shows, as plain data. The page builds a MapScene from the schedule; a map view
-// (MapLibre today, the SVG preview when there are no tiles, any other provider later) draws it.
+// (Google Maps today, the SVG preview when there is no key, any other provider later) draws it.
 // Nothing here knows about a provider, React or the DOM.
 import type { Booking, BookingKind, Trip, TripCategory, TripTodo } from '../../api/tripTypes'
 import type { DayModel, Schedule } from './schedule'
@@ -32,14 +32,25 @@ export type MapScene = {
   selectedId: string | null
   // The CSS custom property holding the route's colour (the day's).
   colourVar: string
-  // Whether the day's stops are joined by a line.
+  // Whether the day's stops are joined by a line (one line per day, in that day's colour).
   route: boolean
+  // Emphasis only, never the camera: the day in view keeps its colour, the other days dim.
+  // Absent or null: nothing is dimmed.
+  emphasisDay?: number | null
 }
 
 export type MapPreview = LatLng & { label?: string }
 
-/** A click on the map, with where it landed in the pane and the place label under it, if any. */
-export type MapClick = LatLng & { name?: string; x: number; y: number }
+/** A click on the map, with where it landed in the pane. A click on a Google place carries its
+ *  `place_id`; `displayName` (also as `name`) is Google content for display only and is never
+ *  stored. */
+export type MapClick = LatLng & {
+  place_id?: string
+  displayName?: string
+  name?: string
+  x: number
+  y: number
+}
 
 export const EMPTY_SCENE: MapScene = {
   mode: 'day',
@@ -111,6 +122,8 @@ type Opts = {
   nextId?: string | null
   selectedId?: string | null
   colourIndex?: number
+  // The day in view (an index into the schedule): see MapScene.emphasisDay.
+  emphasisDay?: number | null
 }
 
 /** The stops and flags for one view of the map: a day, every day, or the ideas. */
@@ -122,6 +135,7 @@ export function buildScene({
   nextId = null,
   selectedId = null,
   colourIndex = 0,
+  emphasisDay,
 }: Opts): MapScene {
   let stops: MapStop[] = []
   if (mode === 'ideas') {
@@ -149,6 +163,7 @@ export function buildScene({
     selectedId: stops.some((s) => s.id === selectedId) ? selectedId : null,
     colourVar: `--trip-day-${colourIndex % 6}`,
     route: mode === 'day',
+    ...(emphasisDay === undefined ? {} : { emphasisDay }),
   }
 }
 
