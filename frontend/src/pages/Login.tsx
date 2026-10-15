@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useSyncExternalStore } from 'react'
 import { errorMessage } from '@lib/errors'
 import { useTransitionNavigate } from '@lib/viewTransition'
 import { TransitionLink } from '@components/TransitionLink'
@@ -8,9 +8,13 @@ import { Form, Input, Button, Typography, message } from 'antd'
 import { useDocumentTitle } from '@lib/useDocumentTitle'
 import { AuthShell } from '@components/AuthShell'
 import { startWelcome } from '@lib/welcome'
+import { getPendingOnLogout, subscribePendingOnLogout } from '@lib/trips/hooks'
+import { Note } from '@components/ui'
 
 export const Login: React.FC = () => {
   const { setApiKey } = useAuth()
+  // Trip changes this device could not send before the last sign-out.
+  const unsent = useSyncExternalStore(subscribePendingOnLogout, getPendingOnLogout)
   useDocumentTitle('Log in')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -52,6 +56,14 @@ export const Login: React.FC = () => {
         </Typography.Text>
       }
     >
+      {unsent > 0 && (
+        <Note tone="warn" role="status">
+          {unsent === 1
+            ? '1 change to your trips couldn’t be sent.'
+            : `${unsent} changes to your trips couldn’t be sent.`}{' '}
+          Log in again on this device to send {unsent === 1 ? 'it' : 'them'}.
+        </Note>
+      )}
       <Form layout="vertical" onSubmitCapture={onLogin}>
         <Form.Item label="Email">
           <Input

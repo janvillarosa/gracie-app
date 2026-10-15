@@ -176,7 +176,7 @@ function bookingEntry(b: Booking, tripTz?: string): Entry | null {
   let endMs: number | null = null
   if (b.ends_at) {
     const [ed, et] = b.ends_at.split('T')
-    endMs = wallToUtc(ed, et || '00:00', b.end_tz || b.start_tz || tripTz)
+    endMs = wallToUtc(ed, et || '00:00', b.end_tz || b.end_place?.tz || b.start_tz || tripTz)
   }
   return { kind: 'booking', id: b.booking_id, day, startMs, endMs, booking: b }
 }
