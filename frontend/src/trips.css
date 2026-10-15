@@ -2056,3 +2056,165 @@ textarea.trip-field {
     height: 140px;
   }
 }
+
+/* ---- trip settings: grouped rows on paper, no boxed inputs ------------------------------ */
+.settings-identity {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 8px;
+}
+.settings-icon {
+  width: 56px;
+  height: 56px;
+  font-size: 28px;
+  cursor: pointer;
+}
+.settings-identity .trip-sheet-title {
+  font-size: 28px;
+}
+.settings-group {
+  margin-top: 20px;
+}
+.settings-group h4 {
+  margin: 0 0 4px;
+  font-family: var(--font-headings);
+  color: var(--ink-heading);
+}
+.settings-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 64px;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-top: 1px solid var(--border);
+  font: inherit;
+  color: var(--ink);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+.settings-row:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.settings-row:focus-visible {
+  box-shadow: var(--focus-ring);
+  outline: none;
+}
+.settings-row .list-row-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.settings-row .list-row-name {
+  font-weight: 600;
+}
+.settings-row .list-row-desc {
+  color: var(--muted);
+}
+.settings-danger {
+  margin-top: 40px;
+  padding-top: 8px;
+}
+.list-row-desc.is-now {
+  color: var(--ink);
+  font-weight: 600;
+}
+.trips-pref {
+  display: grid;
+  gap: 6px;
+}
+.trips-pref-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
+}
+.trips-pref-label {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* Where: ordered places, with a handle and a swipe */
+.trip-where {
+  display: grid;
+  gap: 12px;
+}
+.trip-stop-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 52px;
+}
+.trip-stop-grip {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  color: var(--muted);
+  cursor: grab;
+  touch-action: none;
+}
+.trip-stop-keys {
+  display: inline-flex;
+}
+.trip-stops .trip-stop {
+  display: block;
+  border-bottom: 1px solid var(--border);
+}
+
+/* One calendar for a date range */
+.trip-cal {
+  display: grid;
+  gap: 8px;
+  max-width: 360px;
+  margin: 0 auto;
+}
+.trip-cal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.trip-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+.trip-cal-wd {
+  text-align: center;
+  color: var(--muted);
+  font-size: 12px;
+}
+.trip-cal-day {
+  min-height: 44px;
+  background: none;
+  border: 0;
+  border-radius: 999px;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  cursor: pointer;
+}
+.trip-cal-day.is-today {
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.trip-cal-day.is-in {
+  background: color-mix(in srgb, var(--brand-yellow) 28%, white);
+  border-radius: 0;
+}
+.trip-cal-day.is-start,
+.trip-cal-day.is-end {
+  background: var(--brand-yellow);
+  font-weight: 700;
+}
+.trip-cal-day:focus-visible {
+  box-shadow: var(--focus-ring);
+  outline: none;
+}

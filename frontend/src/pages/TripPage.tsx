@@ -10,7 +10,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from '@dnd-kit/core'
-import { Button, Card, Tabs, message } from 'antd'
+import { Button, Card, message } from 'antd'
 import { Check } from '@phosphor-icons/react'
 import { useAuth } from '@auth/AuthProvider'
 import { TopNav } from '@components/TopNav'
@@ -50,7 +50,7 @@ import { TripHeader } from '@components/trips/TripHeader'
 import { TripMap, type MapPoint, type TripMapHandle } from '@components/trips/TripMap'
 import type { RowActions } from '@components/trips/TodoRow'
 import { DAY_COLOURS } from '@components/trips/tripUi'
-import { usePillTabs } from '@components/trips/usePillTabs'
+import { PillNav } from '@components/PillNav'
 import '../trips.css'
 
 type Extra = 'notes' | 'packing' | null
@@ -322,7 +322,6 @@ const TripScreen: React.FC<{
   const [dragging, setDragging] = useState<string | null>(null)
   const mapRef = useRef<TripMapHandle>(null)
 
-  const pill = usePillTabs(tab)
   const desktop = useMedia('(min-width: 1024px)')
   // Tablets use the phone layout: one column, the map in a sheet.
   const phone = useMedia('(max-width: 1023px)')
@@ -1182,7 +1181,7 @@ const TripScreen: React.FC<{
       <div className="trip-page">
         <div className="trip-shell">
           <div className="trip-col">
-            <TopNav back={{ to: '/app', label: roomName }} />
+            <TopNav back={{ to: '/app/trips', label: roomName }} />
             <div className="paper-stack">
               <TripHeader
                 trip={trip}
@@ -1219,11 +1218,9 @@ const TripScreen: React.FC<{
                 />
               )}
               <Card className="paper-card paper-list">
-                <div ref={pill.wrapRef}>
-                  <Tabs
-                    className="list-tabs"
-                    style={pill.vars}
-                    activeKey={tab}
+                <div>
+                  <PillNav
+                    value={tab}
                     onChange={(k) => setTab(k as TabId)}
                     items={[
                       { key: 'plan', label: 'Plan', children: planNode },
@@ -1334,7 +1331,7 @@ export const TripPage: React.FC = () => {
   if (!trip) {
     return (
       <div className="container">
-        <TopNav back={{ to: '/app', label: roomName }} />
+        <TopNav back={{ to: '/app/trips', label: roomName }} />
         <div className="trip-missing">
           <h1>We can’t find this trip</h1>
           <p>It may have been removed, or it hasn’t reached this device yet.</p>

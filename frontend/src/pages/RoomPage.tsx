@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { errorMessage } from '@lib/errors'
 import type { RoomView, List } from '@api/types'
 import { useAuth } from '@auth/AuthProvider'
@@ -40,16 +40,31 @@ import { ShareCodeModal } from '@components/ShareCodeModal'
 import { TopNav } from '@components/TopNav'
 import { TransitionLink } from '@components/TransitionLink'
 import { RowSkeleton } from '@components/RowSkeleton'
-import { TripsSection } from '@components/trips/TripsSection'
+import { PillNav } from '@components/PillNav'
+import { TripNameModal } from '@components/trips/NewTripModal'
+import { TripsPanel } from '@components/trips/TripsPanel'
+import { useTripState, useTripStoreFor } from '@lib/trips/hooks'
+import { localDateKey, tripPhase } from '@lib/trips/schedule'
 import { toEmoji } from '../icons'
 import type { ListIcon } from '@api/types'
 import { useDocumentTitle } from '@lib/useDocumentTitle'
 
-export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string }> = ({
-  room,
-  roomId,
-  userId,
-}) => {
+const PILL_KEY = 'bauhouse_house_pill'
+export const lastHousePill = (): 'lists' | 'trips' => {
+  try {
+    return localStorage.getItem(PILL_KEY) === 'trips' ? 'trips' : 'lists'
+  } catch {
+    return 'lists'
+  }
+}
+
+export const RoomPage: React.FC<{
+  room: RoomView
+  roomId: string
+  userId: string
+  // Which pill the URL asks for: /app is Lists, /app/trips is Trips.
+  tab?: 'lists' | 'trips'
+}> = ({ room, roomId, userId, tab = 'lists' }) => {
   const { apiKey } = useAuth()
   const navigate = useTransitionNavigate()
   useDocumentTitle(room.display_name || 'House')
@@ -69,6 +84,26 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
   const [editIcon, setEditIcon] = useState<ListIcon | undefined>(undefined)
   const [editIconTouched, setEditIconTouched] = useState(false)
   const qc = useQueryClient()
+  const tripStore = useTripStoreFor(roomId, userId, apiKey)
+  const tripState = useTripState(tripStore)
+  const [newTripOpen, setNewTripOpen] = useState(false)
+  const today = localDateKey()
+  const liveNow = Object.values(tripState.trips).some(
+    (t) => !t.deleted && tripPhase(t, today) === 'during',
+  )
+  const onTab = (k: string) => {
+    const next = k === 'trips' ? 'trips' : 'lists'
+    try {
+      localStorage.setItem(PILL_KEY, next)
+    } catch {}
+    navigate(next === 'trips' ? '/app/trips' : '/app')
+  }
+  // The pill is remembered for this viewer; the URL is what is shown.
+  useEffect(() => {
+    try {
+      localStorage.setItem(PILL_KEY, tab)
+    } catch {}
+  }, [tab])
 
   const onShare = async () => {
     try {
@@ -229,92 +264,136 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
           </div>
         </Card>
 
-        {/* Top list sheet: lists and actions */}
+        {/* The second sheet: a pill switch between Lists and Trips, with the section's key. */}
         <Card className="paper-card paper-list">
-          <Space direction="vertical" style={{ width: '100%' }} size="large">
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 12,
-              }}
-            >
-              <Typography.Title level={3} style={{ marginTop: 0, marginBottom: 0 }}>
-                Our Lists
-              </Typography.Title>
-              <Button
-                type="primary"
-                shape="round"
-                onClick={() => setCreateOpen(true)}
-                icon={<Plus />}
-              >
-                New list
-              </Button>
-            </div>
-
-            {listsQuery.isLoading ? (
-              <RowSkeleton variant="list" rows={3} label="Loading your lists" />
-            ) : lists.length === 0 ? (
-              <Typography.Text type="secondary">
-                No lists yet. Create one with New list.
-              </Typography.Text>
-            ) : (
-              <AntList
-                className={listsWereLoading.current ? 'lists-list is-arriving' : 'lists-list'}
-                dataSource={lists}
-                renderItem={(l) => (
-                  <AntList.Item>
-                    <TransitionLink to={`/app/lists/${l.list_id}`} className="list-row-link">
-                      {l.icon ? (
-                        <span className="list-icon" aria-hidden>
-                          {toEmoji(l.icon)}
-                        </span>
-                      ) : null}
-                      <span className="list-row-text">
-                        <span className="list-row-name">{l.name}</span>
-                        {l.description && (
-                          <Typography.Text type="secondary" className="list-row-desc">
-                            {l.description}
-                          </Typography.Text>
-                        )}
-                      </span>
-                    </TransitionLink>
-                    <Dropdown
-                      trigger={['click']}
-                      placement="bottomRight"
-                      menu={{
-                        items: [
-                          { key: 'edit', label: 'Edit details' },
-                          ...(l.deletion_votes && l.deletion_votes[userId]
-                            ? [{ key: 'cancel', label: 'Cancel delete vote' }]
-                            : [{ key: 'vote', label: 'Vote to delete list' }]),
-                        ],
-                        onClick: ({ key }) => {
-                          if (key === 'edit') onOpenEdit(l)
-                          if (key === 'vote') onVoteList(l)
-                          if (key === 'cancel') onCancelVoteList(l)
-                        },
-                      }}
-                    >
-                      <Button
-                        className="list-row-menu"
-                        icon={<DotsThreeVertical size={20} weight="bold" />}
-                        type="text"
-                        shape="circle"
-                        aria-label={`Actions for ${l.name}`}
-                      />
-                    </Dropdown>
-                    <CaretRight className="list-row-caret" size={18} weight="bold" aria-hidden />
-                  </AntList.Item>
-                )}
-              />
-            )}
-          </Space>
+          <PillNav
+            label="House sections"
+            value={tab}
+            onChange={onTab}
+            extra={
+              tab === 'trips' ? (
+                <Button
+                  type="primary"
+                  shape="round"
+                  onClick={() => setNewTripOpen(true)}
+                  icon={<Plus />}
+                >
+                  New trip
+                </Button>
+              ) : (
+                <Button
+                  type="primary"
+                  shape="round"
+                  onClick={() => setCreateOpen(true)}
+                  icon={<Plus />}
+                >
+                  New list
+                </Button>
+              )
+            }
+            items={[
+              {
+                key: 'lists',
+                label: 'Lists',
+                children: listsQuery.isLoading ? (
+                  <RowSkeleton variant="list" rows={3} label="Loading your lists" />
+                ) : lists.length === 0 ? (
+                  <Typography.Text type="secondary">
+                    No lists yet. Create one with New list.
+                  </Typography.Text>
+                ) : (
+                  <AntList
+                    className={listsWereLoading.current ? 'lists-list is-arriving' : 'lists-list'}
+                    dataSource={lists}
+                    renderItem={(l) => {
+                      // A trip's packing list says whose it is.
+                      const packing = l.name.startsWith('Packing · ')
+                      const icon = l.icon ? toEmoji(l.icon) : packing ? '🧳' : null
+                      const meta = packing
+                        ? `For ${l.name.slice('Packing · '.length)}`
+                        : l.description
+                      return (
+                        <AntList.Item>
+                          <TransitionLink to={`/app/lists/${l.list_id}`} className="list-row-link">
+                            {icon ? (
+                              <span className="list-icon" aria-hidden>
+                                {icon}
+                              </span>
+                            ) : null}
+                            <span className="list-row-text">
+                              <span className="list-row-name">{packing ? 'Packing' : l.name}</span>
+                              {meta && (
+                                <Typography.Text type="secondary" className="list-row-desc">
+                                  {meta}
+                                </Typography.Text>
+                              )}
+                            </span>
+                          </TransitionLink>
+                          <Dropdown
+                            trigger={['click']}
+                            placement="bottomRight"
+                            menu={{
+                              items: [
+                                { key: 'edit', label: 'Edit details' },
+                                ...(l.deletion_votes && l.deletion_votes[userId]
+                                  ? [{ key: 'cancel', label: 'Cancel delete vote' }]
+                                  : [{ key: 'vote', label: 'Vote to delete list' }]),
+                              ],
+                              onClick: ({ key }) => {
+                                if (key === 'edit') onOpenEdit(l)
+                                if (key === 'vote') onVoteList(l)
+                                if (key === 'cancel') onCancelVoteList(l)
+                              },
+                            }}
+                          >
+                            <Button
+                              className="list-row-menu"
+                              icon={<DotsThreeVertical size={20} weight="bold" />}
+                              type="text"
+                              shape="circle"
+                              aria-label={`Actions for ${l.name}`}
+                            />
+                          </Dropdown>
+                          <CaretRight
+                            className="list-row-caret"
+                            size={18}
+                            weight="bold"
+                            aria-hidden
+                          />
+                        </AntList.Item>
+                      )
+                    }}
+                  />
+                ),
+              },
+              {
+                key: 'trips',
+                label: 'Trips',
+                ariaLabel: liveNow ? 'Trips, one happening now' : undefined,
+                children: (
+                  <TripsPanel trips={tripState.trips} store={tripStore} ready={tripState.ready} />
+                ),
+              },
+            ]}
+          />
         </Card>
       </div>
 
-      <TripsSection roomId={roomId} userId={userId} />
+      {newTripOpen && tripStore && (
+        <TripNameModal
+          title="Name your trip"
+          cta="Create trip"
+          onCancel={() => setNewTripOpen(false)}
+          onSubmit={(title) => {
+            const id = tripStore.createTrip({
+              title,
+              tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            })
+            setNewTripOpen(false)
+            navigate(`/app/trips/${id}`)
+          }}
+        />
+      )}
 
       <ShareCodeModal
         open={shareOpen}

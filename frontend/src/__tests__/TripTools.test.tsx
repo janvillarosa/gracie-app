@@ -1,23 +1,8 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router-dom'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { http, HttpResponse } from 'msw'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { AuthProvider } from '@auth/AuthProvider'
-import { RoomPage } from '@pages/RoomPage'
-import { server, tripServer } from '../testServer'
-import {
-  ME,
-  ROOM,
-  lisbonTrip,
-  makeTrip,
-  rel,
-  renderTrips,
-  resetTripsWorld,
-  seed,
-  setViewport,
-} from './trips.helpers'
+import { tripServer } from '../testServer'
+import { lisbonTrip, renderTrips, resetTripsWorld, seed, setViewport } from './trips.helpers'
 
 const TRIP = lisbonTrip()
 const open = (id = TRIP.trip_id) => renderTrips(`/app/trips/${id}`)
@@ -287,36 +272,5 @@ describe('Map', () => {
     )
     expect(screen.getByText('Offline map')).toBeInTheDocument()
     expect(screen.getByText('© OpenStreetMap contributors')).toBeInTheDocument()
-  })
-})
-
-describe('House page section', () => {
-  it('lists the next trips and links to the rest', async () => {
-    seed(makeTrip(1, { title: 'Lisbon & Porto', start_date: rel(-1), end_date: rel(5) }))
-    seed(makeTrip(2, { title: 'Ghent', start_date: rel(30), end_date: rel(32) }))
-    localStorage.setItem('gracie_api_key', 'k_test')
-    server.use(
-      http.get('/api/me', () => HttpResponse.json({ user_id: ME, name: 'Jan', avatar_key: 'jan' })),
-      http.get('/api/rooms/:roomId/lists', () => HttpResponse.json([])),
-    )
-    render(
-      <MemoryRouter>
-        <AuthProvider>
-          <QueryClientProvider client={new QueryClient()}>
-            <RoomPage
-              room={{ display_name: 'The House', members: [], created_at: '', updated_at: '' }}
-              roomId={ROOM}
-              userId={ME}
-            />
-          </QueryClientProvider>
-        </AuthProvider>
-      </MemoryRouter>,
-    )
-    expect(await screen.findByRole('link', { name: /Lisbon & Porto/ })).toHaveAttribute(
-      'href',
-      `/app/trips/${makeTrip(1).trip_id}`,
-    )
-    expect(screen.getByRole('link', { name: /Ghent/ })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Plan a trip' })).toHaveAttribute('href', '/app/trips')
   })
 })

@@ -82,6 +82,28 @@ why the config forces a single fork.
 - **Rows:** swipe-left (touch) and the hover trash (desktop) both go through `onDeleteItem`,
   which defers the request ~5s behind an Undo toast and flushes on unmount.
 
+## Trips (offline-first)
+
+- **Layout:** `lib/trips/` is the client: `db.ts` (IndexedDB `trips`/`outbox`/`meta`),
+  `replay.ts` (pure `renderTrip(snapshot, pendingOps)`), `store.ts` (per-tab senders, flush
+  lock, backoff, per-result handling), `schedule.ts` (ordering, dates, DST-safe `wallToUtc`),
+  `hooks.ts`. UI lives in `components/trips/` and `pages/Trip*.tsx`. Mutations go through the
+  store (outbox), never straight to the API. Ids are client-made (`trip_`/`ttd_`/`tbk_` + 32 hex).
+- **Tabs:** every tab group on the House, List and Trip screens uses `components/PillNav.tsx`.
+  Do not add another tab style.
+- **Map and tiles-origin exception:** the map is lazy (`MapCanvas`: maplibre-gl, pmtiles,
+  `@protomaps/basemaps`) and loads only when `VITE_PMTILES_URL` is set (optional
+  `VITE_GLYPHS_URL`; without it text layers are dropped). That origin is the one allowed
+  non-self origin and is served by us; no third-party tile or glyph hosts. Without it the page
+  draws the plain SVG "Offline map".
+- **Dev mock (no backend needed):** `cd frontend && VITE_MOCK_TRIPS=1 pnpm dev`
+  (optionally `--port 5174 --strictPort --host 127.0.0.1`). It boots an MSW worker (a fetch
+  shim if a service worker can't register) backed by `mocks/tripsServer.ts`, seeded from
+  `mocks/seed.ts` ("Lisbon & Porto", dates relative to today). `?mockPhase=` picks the trip
+  phase. Dev only; never in a production build.
+- **Tests:** `__tests__/trips.helpers.tsx` has `renderTrips`, `seed`, `setViewport`,
+  `lisbonTrip`, `meState`, `resetTripsWorld`; the shared in-memory `tripServer` is in `testServer.ts`.
+
 ## Ratchets (raise over time; never lower)
 
 - **Coverage:** thresholds live in `vite.config.ts` (`test.coverage.thresholds`),

@@ -20,7 +20,7 @@ const RoomSettings = lazyPage(() => import('@pages/RoomSettings'), 'RoomSettings
 const UserSettings = lazyPage(() => import('@pages/UserSettings'), 'UserSettings')
 const ListPage = lazyPage(() => import('@pages/ListPage'), 'ListPage')
 const ListsIndex = lazyPage(() => import('@pages/ListsIndex'), 'ListsIndex')
-const TripsIndex = lazyPage(() => import('@pages/TripsIndex'), 'TripsIndex')
+const TripsDashboard = lazyPage(() => import('@pages/Dashboard'), 'TripsDashboard')
 const TripPage = lazyPage(() => import('@pages/TripPage'), 'TripPage')
 const TripSettings = lazyPage(() => import('@pages/TripSettings'), 'TripSettings')
 
@@ -128,7 +128,7 @@ export const AppRoutes: React.FC = () => {
             path="/app/trips"
             element={
               <RequireAuth>
-                <TripsIndex />
+                <TripsDashboard />
               </RequireAuth>
             }
           />

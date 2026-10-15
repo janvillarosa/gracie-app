@@ -39,9 +39,11 @@ export const PlacePicker: React.FC<Props> = ({
   const coords = parseCoords(text)
   const typed = text.trim()
   const fresh = search.forQuery === typed
+  // Search feedback shows only once a search has run for what is typed.
+  const ran = fresh && typed.length >= MIN_QUERY
   const slips = fresh ? search.results : []
-  const noHits = fresh && !search.loading && slips.length === 0
-  const showManual = typed.length >= MIN_QUERY && !coords && (noHits || (fresh && search.degraded))
+  const noHits = ran && !search.loading && slips.length === 0
+  const showManual = ran && !coords && (noHits || search.degraded)
   const open = slips.length > 0
 
   const pick = (p: Place) => {
@@ -138,10 +140,8 @@ export const PlacePicker: React.FC<Props> = ({
         </div>
       )}
       <div className="place-help" role="status">
-        {fresh && search.degraded ? DEGRADED_TEXT : ''}
-        {fresh && !search.degraded && noHits && !coords
-          ? 'No match. Type the address instead.'
-          : ''}
+        {ran && search.degraded ? DEGRADED_TEXT : ''}
+        {ran && !search.degraded && noHits && !coords ? 'No match. Type the address instead.' : ''}
       </div>
       {coords && (
         <Button size="small" onClick={dropPin}>

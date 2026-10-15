@@ -1,16 +1,24 @@
-import React from 'react'
+import React, { useEffect } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@auth/AuthProvider'
 import { getLists, getMe, getMyRoom, isNotFound } from '@api/endpoints'
-import { RoomPage } from './RoomPage'
+import { RoomPage, lastHousePill } from './RoomPage'
 import { NoRoomPage } from './NoRoomPage'
 import { Card, Alert, Button, Space } from 'antd'
 import { SignIn } from '@phosphor-icons/react'
 import { TopNav } from '@components/TopNav'
 import { HouseLoader } from '@components/HouseLoader'
 
-export const Dashboard: React.FC = () => {
+export const Dashboard: React.FC<{ tab?: 'lists' | 'trips' }> = ({ tab = 'lists' }) => {
   const { apiKey, setApiKey } = useAuth()
+  const navigate = useNavigate()
+  const loc = useLocation()
+  // Coming back to the House lands on the pill you last used.
+  useEffect(() => {
+    if (tab === 'lists' && loc.pathname === '/app' && lastHousePill() === 'trips')
+      navigate('/app/trips', { replace: true })
+  }, [tab, loc.pathname, navigate])
   const key = apiKey!
   const meQuery = useQuery({
     queryKey: ['me'],
@@ -76,5 +84,8 @@ export const Dashboard: React.FC = () => {
 
   const room = roomQuery.data!
   const me = meQuery.data!
-  return <RoomPage room={room} roomId={me.room_id!} userId={me.user_id} />
+  return <RoomPage room={room} roomId={me.room_id!} userId={me.user_id} tab={tab} />
 }
+
+/** /app/trips: the same House page, on the Trips pill. */
+export const TripsDashboard: React.FC = () => <Dashboard tab="trips" />

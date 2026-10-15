@@ -475,11 +475,7 @@ h5.ant-typography {
     transform: none !important;
   }
 
-  .list-tabs .ant-tabs-nav .ant-tabs-nav-list::after,
-  .ant-progress-bg {
-    transition: none !important;
   }
-}
 
 .container {
   max-width: 720px;
@@ -1458,88 +1454,18 @@ h5.ant-typography {
 }
 
 /* Centered, pill-styled tabs for ListPage */
-.list-tabs .ant-tabs-nav {
-  margin: 0 0 8px 0;
-}
 
-.list-tabs .ant-tabs-nav::before {
-  border-bottom: none !important;
-}
 
-.list-tabs .ant-tabs-ink-bar {
-  display: none !important;
-}
 
-.list-tabs .ant-tabs-nav .ant-tabs-nav-wrap {
-  flex: 0 0 auto;
-  justify-content: flex-start;
-}
 
-.list-tabs .ant-tabs-nav .ant-tabs-extra-content {
-  flex: 1 1 auto;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  min-width: 0;
-  padding-left: 8px;
-}
 
-.list-tabs .ant-tabs-nav .ant-tabs-nav-list {
-  position: relative;
-  box-sizing: border-box;
-  height: var(--control-h);
-  align-items: stretch;
-  background: var(--panel-subtle);
-  border: 1px solid var(--border-strong);
-  border-radius: 999px;
-  padding: 3px;
-  gap: 2px;
-}
 
 /* Sliding pill indicator */
-.list-tabs .ant-tabs-nav .ant-tabs-nav-list::after {
-  content: '';
-  position: absolute;
-  top: 3px;
-  left: var(--tab-x, 3px);
-  width: var(--tab-w, 60px);
-  height: calc(100% - 6px);
-  border-radius: 999px;
-  background: var(--panel);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.06);
-  transition: left 320ms var(--ease-out), width 320ms var(--ease-out);
-  z-index: 0;
-}
 
-.list-tabs .ant-tabs-tab {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  margin: 0 !important;
-  padding: 0 16px !important;
-  border-radius: 999px !important;
-  background: transparent !important;
-  transition: color var(--dur-fast) ease;
-}
 
-.list-tabs .ant-tabs-tab:hover {
-  background: transparent;
-}
 
-.list-tabs .ant-tabs-tab .ant-tabs-tab-btn {
-  color: var(--muted);
-  font-weight: 600;
-  font-size: 14px;
-}
 
-.list-tabs .ant-tabs-tab-active .ant-tabs-tab-btn {
-  color: var(--ink) !important;
-}
 
-.list-tabs .ant-tabs-content-holder {
-  padding-top: 8px;
-}
 
 /* Notes textarea: fixed height to avoid Android autoSize repaint bug */
 .notes-textarea,
@@ -1973,10 +1899,7 @@ h5.ant-typography {
   }
 
   /* Switching Items/Notes slides the new page in from the side of the pill that was tapped */
-  .list-tabs .ant-tabs-tabpane-active {
-    animation: pane-in 260ms var(--ease-out);
-  }
-
+  
   .completed-list {
     animation: pane-in 320ms var(--ease-out);
   }
@@ -2197,10 +2120,7 @@ textarea.notes-textarea {
     inset: -11px;
   }
 
-  .list-tabs .ant-tabs-tab {
-    padding: 0 18px !important;
   }
-}
 
 /* ---------- Page-to-page navigation (View Transitions) ---------- */
 /* The page crossfades; each page's own sheets supply the movement, and the logo morphs
@@ -2250,12 +2170,7 @@ textarea.notes-textarea {
 /* Switching to Notes: the page gets ruled. The margin line is drawn first, then the
    blue rules sweep down, as if a pen ran down the sheet. */
 @media (prefers-reduced-motion: no-preference) {
-  .list-tabs .ant-tabs-tabpane-active textarea.notes-textarea {
-    animation:
-      notes-margin 380ms var(--ease-out) backwards,
-      notes-rules 620ms var(--ease-out) 60ms backwards;
   }
-}
 
 @keyframes notes-margin {
   from {
@@ -2908,10 +2823,7 @@ textarea.notes-textarea {
 }
 
 @media (max-width: 480px) {
-  .list-tabs .ant-tabs-tab {
-    padding: 0 14px !important;
   }
-}
 
 /* Trips: day colours and category stamps.
    The day cycle is brand blue, red and a deep yellow plus green, teal and violet. Each is at
@@ -2953,3 +2865,92 @@ textarea.notes-textarea {
 .trip-cat-stay { background: var(--trip-cat-stay-bg) !important; color: var(--trip-cat-stay-fg) !important; }
 .trip-cat-shopping { background: var(--trip-cat-shopping-bg) !important; color: var(--trip-cat-shopping-fg) !important; }
 .trip-cat-other { background: var(--trip-cat-other-bg) !important; color: var(--trip-cat-other-fg) !important; }
+
+
+/* ---- the pill nav: one segmented control for House, List and Trip ------------------------ */
+.pill-nav-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 8px;
+}
+.pill-nav-list {
+  position: relative;
+  display: flex;
+  box-sizing: border-box;
+  height: var(--control-h);
+  align-items: stretch;
+  background: var(--panel-subtle);
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  padding: 3px;
+  gap: 2px;
+}
+.pill-nav-list::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: var(--tab-x, 3px);
+  width: var(--tab-w, 60px);
+  height: calc(100% - 6px);
+  border-radius: 999px;
+  background: var(--panel);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.06);
+  z-index: 0;
+}
+.pill-nav-tab {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.pill-nav-tab[aria-selected='true'] {
+  color: var(--ink);
+}
+.pill-nav-tab:focus-visible {
+  box-shadow: var(--focus-ring);
+  outline: none;
+}
+.pill-nav-extra {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+  padding-left: 8px;
+}
+.pill-nav-pane {
+  padding-top: 8px;
+}
+.pill-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--brand-yellow);
+  box-shadow: 0 0 0 1px var(--brand-yellow-deep);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .pill-nav-list::after {
+    transition: left 320ms var(--ease-out), width 320ms var(--ease-out);
+  }
+  .pill-nav-pane {
+    animation: pane-in 260ms var(--ease-out);
+  }
+}
+@media (max-width: 480px) {
+  .pill-nav-tab {
+    padding: 0 14px;
+  }
+}

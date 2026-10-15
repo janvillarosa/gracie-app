@@ -63,7 +63,8 @@ describe('The stack', () => {
     expect(await screen.findByText('Notes')).toBeInTheDocument()
     expect(screen.getByText('Packing list')).toBeInTheDocument()
     await userEvent.click(screen.getByText('Trip settings'))
-    expect(await screen.findByRole('heading', { name: 'Trip settings' })).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByTestId('where').textContent).toMatch(/\/settings$/))
+    expect(await screen.findByLabelText('Trip name')).toBeInTheDocument()
   })
 
   it('shows the ideas in their own tab', async () => {
@@ -351,7 +352,8 @@ describe('Days', () => {
     open(makeTrip(7).trip_id)
     expect(await screen.findByRole('heading', { name: 'Where to first?' })).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'When are you going?' }))
-    expect(await screen.findByRole('heading', { name: 'Trip settings' })).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByTestId('where').textContent).toMatch(/\/settings$/))
+    expect(await screen.findByLabelText('Trip name')).toBeInTheDocument()
   })
 
   it('puts things dated outside the trip in their own section', async () => {

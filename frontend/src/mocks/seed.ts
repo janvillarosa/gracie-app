@@ -260,7 +260,9 @@ export function buildSeedTrips(today: string, phase: Phase, now = Date.now()): T
       { ...L.ribeira, name: 'Porto', locality: 'Porto' },
     ],
     days: { [day(0)]: 'Arrival', [day(5)]: 'Train north' },
-    packing_list_id: null,
+    icon: 'CITY',
+    // The packing list the dev worker serves: linked, so settings shows it as linked.
+    packing_list_id: 'list_packing',
     todos,
     bookings,
     version: 1,

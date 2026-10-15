@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { http, HttpResponse } from 'msw'
 import { AuthProvider } from '@auth/AuthProvider'
 import { TripPage } from '@pages/TripPage'
-import { TripsIndex } from '@pages/TripsIndex'
+import { Dashboard, TripsDashboard } from '@pages/Dashboard'
 import { TripSettings } from '@pages/TripSettings'
 import { UserSettings } from '@pages/UserSettings'
 import type { Trip, TripTodo } from '@api/tripTypes'
@@ -41,8 +41,14 @@ export const today = () => localDateKey()
 export const rel = (n: number) => addDays(today(), n)
 
 // The signed-in account's preferences, as the server holds them.
-export const meState: { prefs: { trips_show_next_stop?: boolean } } = {
+export const meState: {
+  prefs: { trips_show_next_stop?: boolean }
+  lists: Array<Record<string, unknown>>
+  items: Array<Record<string, unknown>>
+} = {
   prefs: { trips_show_next_stop: true },
+  lists: [],
+  items: [],
 }
 
 export function mockHouse() {
@@ -60,6 +66,8 @@ export function mockHouse() {
       meState.prefs = { ...meState.prefs, ...body.preferences }
       return HttpResponse.json(me())
     }),
+    http.get('/api/rooms/:roomId/lists', () => HttpResponse.json(meState.lists)),
+    http.get('/api/rooms/:roomId/lists/:listId/items', () => HttpResponse.json(meState.items)),
     http.get('/api/rooms/me', () =>
       HttpResponse.json({
         display_name: 'The House',
@@ -86,8 +94,8 @@ export function renderTrips(path: string) {
         >
           <Where />
           <Routes>
-            <Route path="/app" element={<div>House page</div>} />
-            <Route path="/app/trips" element={<TripsIndex />} />
+            <Route path="/app" element={<Dashboard />} />
+            <Route path="/app/trips" element={<TripsDashboard />} />
             <Route path="/app/trips/:tripId/settings" element={<TripSettings />} />
             <Route path="/app/trips/:tripId" element={<TripPage />} />
             <Route path="/app/account" element={<UserSettings />} />
@@ -107,6 +115,11 @@ export async function resetTripsWorld() {
   })
   sessionStorage.clear()
   meState.prefs = { trips_show_next_stop: true }
+  meState.lists = []
+  meState.items = []
+  try {
+    localStorage.removeItem('bauhouse_house_pill')
+  } catch {}
 }
 
 export const seed = (t: Trip) => tripServer.seed(ROOM, t, MIA)
