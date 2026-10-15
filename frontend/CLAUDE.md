@@ -140,7 +140,9 @@ why the config forces a single fork.
   `sessionStorage` per trip. An open todo or booking is an inspector: it takes the right column at
   1200px and wider, a fixed overlay panel at 1024-1199px. Opening, switching or closing it never
   moves the Days pane (focus uses `preventScroll`; a selected row that is hidden is scrolled just
-  into view). Tested in `__tests__/TripScroll.test.tsx`.
+  into view). Tested in `__tests__/TripScroll.test.tsx`. With an item open, J/K and Alt+↑/↓ open the
+  next or previous item in its pane (`pages/trip/useInspectorKeys.ts`; focus ends in the inspector,
+  J/K are ignored while typing); tested in `__tests__/TripInspector.test.tsx`.
 - **Dev mock (no backend needed):** `cd frontend && VITE_MOCK_TRIPS=1 pnpm dev --port 5174 --strictPort --host 127.0.0.1`
   (or just `pnpm dev`). It boots an MSW worker (a fetch
   shim if a service worker can't register) backed by `mocks/tripsServer.ts`, seeded from
@@ -170,6 +172,7 @@ each, styled by `ui/ui.css` from tokens on `:root` in `styles.css` (`--space-*`,
 | `Field`, `Switch` | `Field.tsx`, `Switch.tsx` | Borderless text field (with inline problem text); the yellow switch. |
 | `Combobox` | `Combobox.tsx` | The one ARIA combobox: slips rise above an add bar, ↑/↓, Esc, Tab takes the ghost, polite count, `visualViewport` fit. Enter only picks a highlighted option, else `onSubmitText`. `AddItemBar` (pantry) and the trip `QuickAdd` (places) both use it; the draft stays in the bar. |
 | `Stamp`, `Pip` | `Stamp.tsx`, `Pip.tsx` | Category/state tag; the colour dot. |
+| `InlineWhen`, `InlineSelect`, `StampSelect` | `InlineWhen.tsx`, `InlineSelect.tsx`, `StampSelect.tsx` | The desktop inspector's in-place editors (variant `panel`; phones keep pickers). `InlineWhen`: a day select, a typed 24-hour time (`lib/trips/clock.ts` parses "9", "930", "2:30pm"; ↑/↓ ±15 min, Shift ±1 h; blank clears when allowed), and the length as segments. `InlineSelect`: a native select drawn like the paper (linked booking). `StampSelect`: stamps outlined in their colours, only the chosen one filled. The Place row stays a picker for now. |
 | `Row` | `Row.tsx` | The row grid `[lead 24] 12 [time 48] 12 [title] [trail]`. |
 | `Note`, `SectionLabel`, `EmptyState` | `Note.tsx`, `SectionLabel.tsx`, `EmptyState.tsx` | Muted/warn one-liner (warn = amber text + glyph, no side rule), small caps label, friendly empty line. |
 

@@ -23,7 +23,7 @@ type Props = {
   onDismiss: () => void
 }
 
-const WIDTH = 260
+const WIDTH = 292
 
 /** A paper card anchored to the pin a click dropped on the map. Nothing exists until the
  *  yellow key is pressed. A dialog: focus moves in and stays in, Esc or a click elsewhere closes. */

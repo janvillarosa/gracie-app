@@ -767,3 +767,183 @@ input.ui-sheet-title:focus-visible {
     margin: -11px;
   }
 }
+
+/* ---- The inline inspector: rows that need no picker (desktop) ---------------------------------- */
+.ui-inline-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--detail-label-w) minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--row-h);
+  padding: var(--space-2) var(--detail-inset);
+  box-sizing: border-box;
+}
+.ui-inline-row.is-top {
+  align-items: start;
+}
+.ui-inline-row.is-top .ui-navrow-label {
+  padding-top: 7px;
+}
+.ui-inline-hint {
+  margin: 0;
+  padding: 0 var(--detail-inset) var(--space-2) calc(var(--detail-label-w) + var(--detail-inset) + var(--space-3));
+  color: var(--brand-red);
+  font-size: var(--size-meta);
+}
+.ui-inlinewhen {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.ui-inlinewhen .ui-select {
+  flex: 1 1 auto;
+}
+
+/* A native select drawn like the paper: panel fill, hairline, the yellow caret. */
+.ui-select {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  width: 100%;
+}
+.ui-select select {
+  appearance: none;
+  width: 100%;
+  min-height: var(--control-md);
+  padding: 0 28px 0 var(--space-3);
+  box-sizing: border-box;
+  font: inherit;
+  font-size: var(--size-body);
+  font-weight: 500;
+  color: var(--ink);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  text-overflow: ellipsis;
+}
+.ui-select select:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.ui-select select:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+.ui-select-caret {
+  position: absolute;
+  right: 10px;
+  color: var(--brand-yellow-deep);
+  pointer-events: none;
+}
+.ui-timefield {
+  flex: 0 0 84px;
+  width: 84px;
+  min-height: var(--control-md);
+  padding: 0 var(--space-3);
+  box-sizing: border-box;
+  font: inherit;
+  font-size: var(--size-body);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.ui-timefield::placeholder {
+  color: var(--muted);
+  font-weight: 400;
+}
+.ui-timefield:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.ui-timefield.has-error {
+  box-shadow: 0 0 0 2px var(--brand-red);
+}
+
+/* Length: a row of segments, one pressed. */
+.ui-segments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+.ui-segment {
+  min-height: var(--control-md);
+  padding: 0 10px;
+  font: inherit;
+  font-size: var(--size-meta);
+  font-weight: 600;
+  color: var(--muted);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+.ui-segment[aria-pressed='true'] {
+  color: var(--ink);
+  background: var(--brand-yellow);
+  border-color: var(--brand-yellow-deep);
+}
+.ui-segment:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.ui-segment:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+/* Category: outlined stamps in their own colours; only the chosen one is filled. */
+.ui-stampselect {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.ui-stampselect-btn {
+  padding: 6px 10px;
+  font: 700 11px var(--font-body);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--stamp-fg);
+  background: none;
+  border: 1.5px solid var(--stamp-fg);
+  border-radius: 6px;
+  cursor: pointer;
+  opacity: 0.78;
+}
+.ui-stampselect-btn[aria-pressed='true'] {
+  background: var(--stamp-bg);
+  opacity: 1;
+}
+.ui-stampselect-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  opacity: 1;
+}
+.ui-stampselect-btn:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+@media (hover: hover) {
+  .ui-stampselect-btn:hover:not(:disabled):not([aria-pressed='true']) {
+    background: var(--stamp-bg);
+    opacity: 1;
+  }
+}
+
+/* A note on show: the field is just there, in its own row. */
+.ui-inline-note {
+  padding: var(--space-2) var(--detail-inset) var(--space-2);
+}
+.ui-inline-note .ui-field {
+  min-height: 84px;
+  padding: var(--space-2) var(--space-3);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}

@@ -128,8 +128,11 @@ describe('Overlaps', () => {
       await screen.findByRole('button', { name: /Jerónimos Monastery and Pastéis/ }),
     )
     const sheet = await screen.findByRole('dialog', { name: 'Pastéis de Belém' })
-    // The When picker is already open on the time.
-    await userEvent.click(await screen.findByRole('button', { name: '12:30' }))
+    // The time field has focus, ready to change.
+    const time = within(sheet).getByLabelText('Time')
+    await waitFor(() => expect(time).toHaveFocus())
+    await userEvent.clear(time)
+    await userEvent.type(time, '12:30{Enter}')
     await waitFor(() =>
       expect(screen.queryByRole('button', { name: /overlap/ })).not.toBeInTheDocument(),
     )
@@ -600,12 +603,15 @@ describe('Rows', () => {
     expectAtMostOneKey(panel)
     // The details are one group of rows: label on the left, value on the right.
     const details = within(panel).getByRole('group', { name: 'Details' })
-    expect(within(details).getByRole('button', { name: /^When /i })).toHaveTextContent(
-      shortDay(rel(0)),
-    )
+    // On a desk they are edited in place: a day select, a typed time, the stamps, the note.
+    expect(within(details).getByLabelText('Day')).toHaveValue(rel(0))
+    expect(within(details).getByLabelText('Time')).toHaveValue('12:30')
     expect(within(details).getByRole('button', { name: /^Place Add a place/ })).toBeInTheDocument()
-    expect(within(details).getByRole('button', { name: /^Category Sight/ })).toBeInTheDocument()
-    expect(within(details).getByRole('button', { name: /^Note Add a note/ })).toBeInTheDocument()
+    expect(within(details).getByRole('button', { name: 'Sight' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    expect(within(details).getByLabelText('Notes')).toBeInTheDocument()
     // No Save button, and a quiet Delete at the bottom.
     expect(within(panel).queryByRole('button', { name: /^Save/ })).not.toBeInTheDocument()
     expect(within(panel).getByRole('button', { name: 'Delete' })).toBeInTheDocument()
@@ -718,8 +724,7 @@ describe('Rows', () => {
     open()
     await userEvent.click(await screen.findByRole('button', { name: 'Buy souvenirs' }))
     const panel = await screen.findByRole('dialog', { name: 'Buy souvenirs' })
-    await userEvent.click(within(panel).getByRole('button', { name: /^When / }))
-    await userEvent.click(await screen.findByRole('button', { name: '11:00' }))
+    await userEvent.type(within(panel).getByLabelText('Time'), '11:00{Enter}')
     // Between Pena Palace (10:15, the deck) and Lunch (12:30).
     await waitFor(() =>
       expect(rowTitles().slice(0, 3)).toEqual([
@@ -912,7 +917,7 @@ describe('The add bar', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Add with details' }))
     const panel = await screen.findByRole('dialog', { name: 'Ginjinha stop' })
     expect(within(panel).getByLabelText('Title')).toHaveValue('Ginjinha stop')
-    expect(within(panel).getByRole('button', { name: /^When .*16:00/ })).toBeInTheDocument()
+    expect(within(panel).getByLabelText('Time')).toHaveValue('16:00')
     await waitFor(() => expect(serverTodos().some((x) => x.title === 'Ginjinha stop')).toBe(true))
   })
 
