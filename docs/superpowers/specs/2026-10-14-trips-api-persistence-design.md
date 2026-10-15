@@ -194,3 +194,11 @@ Decided while shaping the UI (`2026-10-15-trips-ui-brief.md`, section 7):
 | M13 | No body limits | `MaxBytesReader` + caps |
 | M14 | Time zones | Stored per-todo tz, start/end tz on bookings |
 | minor | Encryption, indexes, existence oracle, float order, ETag, error default, `server_time`, refactor scope, tzf size | See sections above |
+
+## Implementation notes (precision amendments)
+
+1. The manifest index also carries `deleted_by`: `(room_id, deleted_at, trip_id, version, deleted_by)`.
+2. Each `TripDelta` returned from `/ops` and `/sync` includes `base_version`, plus `deleted` / `deleted_by` flags.
+3. A stale packing-list link is repaired by `POST .../packing-list`; the sync payload returns the stored id and does not check that the List still exists.
+4. Reverse-geocode results are deliberately not cached (exact pin coordinates are not stored).
+5. Wire shapes as built: `removed` is `[{trip_id, deleted_by?, purged?}]`; a `TripDelta` is `{trip_id, full, base_version, version, deleted?, deleted_by?, trip?, todos?, bookings?, removed_ids?}` with child deletions in `removed_ids`; nullable fields use `omitempty`, so a missing key means null.
