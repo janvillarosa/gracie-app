@@ -397,13 +397,16 @@ describe('without a connection', () => {
     expect(screen.queryByRole('complementary', { name: 'Map' })).not.toBeInTheDocument()
   })
 
-  it('docks item panels as sheets when there is no map', async () => {
+  it('still docks the inspector in the right column when there is no map', async () => {
     vi.spyOn(window.navigator, 'onLine', 'get').mockReturnValue(false)
     const t = withPlaces()
     seed(t)
     renderTrips(`/app/trips/${t.trip_id}`)
     await userEvent.click(await screen.findByRole('button', { name: 'Buy souvenirs' }))
     const sheet = await screen.findByRole('dialog')
-    expect(document.querySelector('.ui-dialog.is-sheet, .ui-drawer.is-sheet')).not.toBeNull()
+    expect(sheet).toHaveClass('ui-sheet-panel')
+    // The right column opens for it alone (no map), and goes when it closes.
+    expect(sheet.closest('.trip-side')).not.toBeNull()
+    expect(document.querySelector('.trip-shell')).toHaveClass('has-map')
   })
 })
