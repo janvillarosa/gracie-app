@@ -145,7 +145,8 @@ section wins. Hierarchy now has three levels:
 - **Day:** each day is its own paper card with an H2 header, one summary line and a small day
   dot. Past days collapse to a one-line summary; today is marked with a Today pill and the Now
   marker; on the phone only today and the day picked in the date strip are expanded. There is no
-  per-day add field (desktop: "+ Add" opens a popover; phone: the bottom add bar only). "Day
+  per-day add control: like the List page, the trip screen has **one** sticky add bar (with a
+  target switch, defaulting to the day in view or to Ideas on the Ideas tab) on every breakpoint. "Day
   done" stamps once, then shows as ✓ in the summary.
 - **Item:** rows are two lines at most (checkbox, time, title / place). The category is an icon
   or dot, not a text chip. The handle, trash, duration and "added by" move off the row. Tapping
