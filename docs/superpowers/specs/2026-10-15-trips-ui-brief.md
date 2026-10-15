@@ -334,6 +334,21 @@ matching the ⋮ menu's, as a tight overlapping stack (24px avatars, "+N" after 
 screens they wrap onto their own line below, still right-aligned. They are not interactive, and
 the stack is labelled "Shared with …".
 
+## 6l. Components as a design system (2026-10-15)
+
+Every overlay uses one `Sheet`, and sheet content is built only from shared primitives in
+`frontend/src/components/ui/`:
+- Sheet, SheetTitle, Row (the shared grid), NavRow (yellow chevron)
+- Chip and ChipGroup, Stamp, Pip, Field (borderless)
+- Switch (brand yellow), Button (key / quiet / text, with danger)
+- SectionLabel, Note (muted / warn), EmptyState
+
+The rules:
+- All values are `:root` tokens.
+- Trips code may not import antd form or overlay components directly; tests enforce this.
+- A dev-only `/dev/ui` gallery shows every primitive and state.
+- DESIGN.md is generated from the finished build.
+
 ## 7. Constraints and open decisions
 
 Constraints:
