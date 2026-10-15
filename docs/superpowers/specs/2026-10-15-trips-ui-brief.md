@@ -437,8 +437,10 @@ Context lines leave an 8px gap before the stamp.
 
 User feedback: the map jumped while the list scrolled. This supersedes "the map follows the day in
 view" as a camera move.
-- **No camera moves on scroll.** The map fits the whole trip on load, and scrolling only changes
-  emphasis: the day in view gets its colour, and other days dim.
+- **No camera moves on scroll.** The map fits the emphasised day on load (today, or the first day
+  with places). Scrolling only changes emphasis: the day in view gets its colour, and other days dim.
+  When the day in view is off-screen, a chip "Wed 28 is off the map · Show" offers one click to move.
+  The emphasised day's pins are never clustered.
 - **The camera moves only on explicit actions:**
   - Fit day or Show all days;
   - "Show on map";
