@@ -5,13 +5,11 @@ import { placeLabels } from '@lib/trips/mapLabels'
 import { buildScene, shorten } from '@lib/trips/mapScene'
 import { buildSchedule } from '@lib/trips/schedule'
 import { useMapOk } from '@components/trips/useTripMap'
-import { FakeMap } from './mapFake'
+import { FakeMap, FakeMarker, fakeLayout, resetGoogleFake } from './googleFake'
 import { lisbonTrip, rel, renderTrips, resetTripsWorld, seed, setViewport } from './trips.helpers'
 
-vi.mock('maplibre-gl', async () => {
-  const m = await import('./mapFake')
-  return { Map: m.FakeMap, LngLatBounds: m.LngLatBounds, NavigationControl: m.NavigationControl }
-})
+vi.mock('@googlemaps/js-api-loader', async () => (await import('./googleFake')).loaderMock())
+vi.mock('@googlemaps/markerclusterer', async () => (await import('./googleFake')).clustererMock())
 
 const place = (name: string, lat: number, lng: number) => ({
   name,
@@ -29,14 +27,10 @@ const withPlaces = () => {
 }
 
 beforeEach(async () => {
-  vi.stubEnv('VITE_PROTOMAPS_API_KEY', 'test-key')
-  HTMLCanvasElement.prototype.getContext = (() =>
-    new Proxy(
-      {},
-      { get: (_t, k) => (k === 'getImageData' ? () => ({}) : () => {}), set: () => true },
-    )) as never
-  FakeMap.last = null
-  FakeMap.made = 0
+  vi.stubEnv('VITE_GOOGLE_MAPS_API_KEY', 'test-key')
+  vi.stubEnv('VITE_GOOGLE_MAP_ID', 'TEST_MAP_ID')
+  resetGoogleFake()
+  fakeLayout()
   window.history.replaceState(null, '', '/')
   await resetTripsWorld()
   Element.prototype.scrollIntoView = vi.fn()
@@ -142,7 +136,7 @@ describe('the phone map: a full-screen, read-only view', () => {
 
   it('shows the selected stop on a card (the next stop to begin with), and a tap on a pin switches it', async () => {
     const { screen: dlg } = await openMap()
-    await waitFor(() => expect(FakeMap.last?.layers.has('pips')).toBe(true))
+    await waitFor(() => expect(FakeMarker.pins().length).toBeGreaterThan(0))
     const card = () => within(dlg).getByRole('region', { name: 'Selected stop' })
     expect(card()).toHaveTextContent('Pena Palace')
     expect(within(card()).getByRole('link', { name: 'Open Maps' })).toHaveAttribute(
@@ -150,13 +144,16 @@ describe('the phone map: a full-screen, read-only view', () => {
       expect.stringContaining('38.78'),
     )
     // No pip, no controls, no add: a read-only view.
-    expect(FakeMap.last?.controls).toEqual([])
-    const map = FakeMap.last as FakeMap
-    map.queryHook = (l) =>
-      l.includes('pips')
-        ? [{ layer: { id: 'pips' }, properties: { id: withPlaces().todos[4].todo_id } }]
-        : []
-    act(() => map.emit('click', { point: { x: 5, y: 5 }, lngLat: { lat: 38.8, lng: -9.38 } }))
+    expect(within(dlg).queryByRole('button', { name: 'Zoom in' })).not.toBeInTheDocument()
+    expect(FakeMap.last?.options).toMatchObject({
+      clickableIcons: false,
+      gestureHandling: 'greedy',
+    })
+    act(() =>
+      FakeMarker.pins()
+        .find((m) => m.title === 'Tascantiga')
+        ?.click(),
+    )
     await waitFor(() => expect(card()).toHaveTextContent('Tascantiga'))
     expect(dlg.querySelector('[role="status"]')).toHaveTextContent('Selected Tascantiga')
     // Nothing was created by tapping.
@@ -167,23 +164,10 @@ describe('the phone map: a full-screen, read-only view', () => {
     const t = withPlaces()
     t.todos[3] = { ...t.todos[3], place: place('Quinta da Regaleira do Convento', 38.78, -9.39) }
     const { screen: dlg } = await openMap(t)
-    await waitFor(() => expect(FakeMap.last?.layers.has('pips')).toBe(true))
-    await waitFor(() =>
-      expect(
-        (
-          FakeMap.last?.sources.get('focus')?.data as {
-            features: Array<{ properties: { text: string } }>
-          }
-        ).features.length,
-      ).toBeGreaterThan(0),
-    )
-    const feats = (
-      FakeMap.last?.sources.get('focus')?.data as {
-        features: Array<{ properties: { text: string } }>
-      }
-    ).features
-    expect(feats[0].properties.text).toBe('Quinta da Reg…')
-    expect(feats[0].properties.text).toHaveLength(14)
+    await waitFor(() => expect(FakeMarker.pins().length).toBeGreaterThan(0))
+    const quinta = () => FakeMarker.pins().find((m) => m.title.startsWith('Quinta')) as FakeMarker
+    expect(quinta().label).toBe('Quinta da Reg…')
+    expect(quinta().label).toHaveLength(14)
     expect(within(dlg).getByRole('region', { name: 'Selected stop' })).toHaveTextContent(
       'Quinta da Regaleira do Convento',
     )

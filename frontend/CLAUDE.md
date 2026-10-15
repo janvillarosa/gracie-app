@@ -91,15 +91,38 @@ why the config forces a single fork.
   store (outbox), never straight to the API. Ids are client-made (`trip_`/`ttd_`/`tbk_` + 32 hex).
 - **Tabs:** every tab group on the House, List and Trip screens uses `components/PillNav.tsx`.
   Do not add another tab style.
-- **Map, tiles and offline:** the map is lazy (`MapCanvas`: maplibre-gl, `@protomaps/basemaps`; the
-  provider sits behind the `MapViewProps` adapter in `components/trips/mapView.ts`). Tiles come from
-  the Protomaps hosted API TileJSON `https://api.protomaps.com/tiles/v4.json?key=${VITE_PROTOMAPS_API_KEY}`.
-  That one origin (`api.protomaps.com`) is the only allowed non-self origin; glyphs load only from
-  `VITE_GLYPHS_URL` when set (otherwise labels use a hover tag). With no key the page draws the plain
-  SVG "Map preview". No service worker prefetches third-party tiles. The map chunk must stay under
-  **320 KB gzip** (JS + CSS); trip route chunks stay near 50 KB. On phones the map is a read-only
-  full-screen view (history `#map`); pan/zoom/click-to-add are desktop only. Offline the map pane and
-  its button are not rendered (5 s debounce), the plan widens, and no map chunk is requested.
+- **Map (Google Maps JavaScript API), keys and offline:** the map is lazy (`MapCanvas` +
+  `components/trips/gmap/`: `loader.ts`, `controller.ts`, `pin.ts`, `labels.ts`, `geometry.ts`,
+  `gmap.css`) behind the `MapViewProps` adapter in `components/trips/mapView.ts`; `TripMap` picks
+  the real map or the plain SVG "Map preview". Google's script is loaded only when the map is first
+  shown, through `@googlemaps/js-api-loader` (`importLibrary('maps'|'marker'|'core')`; `places` and
+  `geocoding` only on the first click-to-add), and never offline.
+  - **Keys:** `VITE_GOOGLE_MAPS_API_KEY` (browser key, restricted by HTTP referrer and to the Maps
+    JavaScript, Places (New) and Geocoding APIs) and `VITE_GOOGLE_MAP_ID` (the cloud style;
+    `DEMO_MAP_ID` in dev only). Both live in the git-ignored `.env.development.local`. No key or no
+    Map ID: the plain "Map preview". **Never print, log or render the key.**
+  - **Third-party origins:** `maps.googleapis.com` and `maps.gstatic.com` (script, tiles, fonts of
+    Google's own UI) are the only allowed non-self origins, and only for the map. No service worker
+    caches Google content, and nothing from Google (tiles, names, addresses) is stored by us; the
+    only Google value we keep is `place_id`. A click's `displayName` is for display only.
+  - **Attribution:** Google's logo (bottom-left) and terms (bottom-right) stay visible; our +/- sit
+    above the terms strip, and on the phone the bottom card sits below the map, never over the logo.
+  - **Markers** are `AdvancedMarkerElement`s with our own HTML (`gmap/pin.ts`, styled in
+    `gmap/gmap.css`): a `--pip-*` pip and a Figtree 600 12.5px name with a white halo. After `idle`
+    a greedy pass (`gmap/labels.ts`, priority selected, next, day order) hides labels that
+    overlap; pips always show. Stacked stops cluster with `@googlemaps/markerclusterer` ("+N" disc);
+    the next and selected stop are never clustered.
+  - **Camera (brief 6q):** only explicit actions move it (Fit day, Show all days, "Show on map",
+    picking a day, an opened item or a drag preview that is off screen). A scene that only changes
+    `emphasisDay` (which day is in colour, the others dimmed) never moves it.
+  - **Click to add (desktop):** a POI click gives `place_id` (`Place.fetchFields` with `id`,
+    `displayName`, `formattedAddress`, `location`); an empty spot is reverse-geocoded; Google's own
+    info window is suppressed. Phones are read-only (no click-to-add, `clickableIcons` off).
+  - **Budget:** our map chunk (JS + CSS) must stay well under **320 KB gzip** (MapLibre is gone);
+    Google's script is third-party, loaded on demand and outside that budget. Trip route chunks
+    stay near 50 KB. On phones the map is a full-screen view (history `#map`). Offline the map pane
+    and its button are not rendered (5 s debounce), the plan widens, and nothing is requested.
+  - **Tests** mock the loader and clusterer with `__tests__/googleFake.ts`.
 - **Desktop planning desk (`pages/TripPage.tsx`, brief 6n):** at 1200px and wider the trip is three
   columns, Ideas (300) | Days | Map (~420); at 1024-1199px it is Ideas | Days, and the map opens
   over them from the Map pill (`trip-side is-over`). Below 1024px nothing changes (phones keep the

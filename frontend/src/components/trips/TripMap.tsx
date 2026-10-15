@@ -8,14 +8,17 @@ import React, {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
 } from 'react'
 import { placeLabels, type LabelItem } from '@lib/trips/mapLabels'
 import { shorten, type MapScene } from '@lib/trips/mapScene'
-import { OSM_MAP_ATTRIBUTION, tileConfig, type MapViewProps } from './mapView'
+import type { MapViewProps } from './mapView'
+import { mapsConfig, mapsEnabled } from './gmap/config'
 
 export type { MapViewProps } from './mapView'
 
-// Lazy: MapLibre only loads when there are tiles to draw and the map is actually shown.
+// Lazy: Google's script (and our map code) only load when a key is set, we are online and the
+// map is actually shown.
 const MapCanvas = lazy(() => import('./MapCanvas'))
 
 const PAD = 56
@@ -45,8 +48,8 @@ function project(stops: MapScene['stops'], W: number, H: number) {
   })
 }
 
-/** The map without tiles: stops, route and labels on a plain paper ground. Always works (no
- *  network, no WebGL) and follows the same rules as the real map: labels in priority order,
+/** The map without Google: stops, route and labels on a plain paper ground. Always works (no
+ *  key, no network) and follows the same rules as the real map: labels in priority order,
  *  the ones that would collide dropped, the next stop in a pill, a ring on the selected one. */
 const PlainMap: React.FC<MapViewProps & { reason: string }> = ({
   scene,
@@ -170,35 +173,37 @@ const PlainMap: React.FC<MapViewProps & { reason: string }> = ({
         })}
       </svg>
       <span className="map-label-badge">{reason}</span>
-      <span className="map-attrib">{OSM_MAP_ATTRIBUTION}</span>
     </div>
   )
 }
 
-function webglOk(): boolean {
-  try {
-    const c = document.createElement('canvas')
-    return !!(c.getContext('webgl2') || c.getContext('webgl'))
-  } catch {
-    return false
+const subscribeOnline = (cb: () => void) => {
+  window.addEventListener('online', cb)
+  window.addEventListener('offline', cb)
+  return () => {
+    window.removeEventListener('online', cb)
+    window.removeEventListener('offline', cb)
   }
 }
+const onlineNow = () => navigator.onLine !== false
 
 export type TripMapHandle = { setHot: (id: string | null) => void }
 
-/** The map pane: the real map when there is a tile key and WebGL, otherwise the preview. */
+/** The map pane: the Google map when there is a key and Map ID and we are online, otherwise the
+ *  preview. Nothing from Google is requested until the real map is rendered. */
 export const TripMap = forwardRef<TripMapHandle, MapViewProps>(function TripMap(props, ref) {
-  const config = useMemo(() => tileConfig(), [])
+  const config = useMemo(() => mapsConfig(), [])
+  const online = useSyncExternalStore(subscribeOnline, onlineNow, () => true)
   const [failed, setFailed] = useState(false)
   // The list's hover lights a stop here without re-rendering the page.
   const [hot, setHot] = useState<string | null>(null)
   useImperativeHandle(ref, () => ({ setHot }), [])
   const onFail = useCallback(() => setFailed(true), [])
-  const gl = !!config.key && !failed && webglOk()
-  const reason = config.key && !failed ? 'Loading map' : 'Map preview'
+  const real = mapsEnabled(config) && online && !failed
+  const reason = real ? 'Loading map' : 'Map preview'
   const shared = { ...props, hotId: props.hotId ?? hot }
   const plain = <PlainMap {...shared} reason={reason} />
-  if (!gl) return plain
+  if (!real) return plain
   return (
     <Suspense fallback={plain}>
       <MapCanvas {...shared} config={config} onFail={onFail} />

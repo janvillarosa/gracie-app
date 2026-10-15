@@ -477,6 +477,19 @@ Every "Open Maps" is one `MapsLink`, named for the place:
   app.
 - **Android:** the Google Maps universal link, so it opens the app, falling back to the web.
 
+## 6u. Map pills and paths (approved 2026-10-15)
+
+Reference: `.impeccable/mocks/map-pills.html`.
+- **Stops are 34px white paper pills:** category dot, name in Figtree 14/600, and the time. A pointer
+  tail and an anchor ring sit on the exact spot.
+  - **Next:** the yellow key pill with a "NEXT" kicker.
+  - **Done:** grey. **Selected:** an ink outline. **Ideas:** outlined.
+- **Collisions** collapse lower-priority pills to their anchor and dot, and they expand on hover.
+- **Clusters** are an ink "+N" pill.
+- **Routes** are a 5px day-colour line on a 10px white casing, with white chevrons. Transport legs are
+  dotted.
+- **Phone:** 30px pills with 13px text and no time.
+
 ## 7. Constraints and open decisions
 
 Constraints:
