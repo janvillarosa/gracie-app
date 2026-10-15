@@ -461,6 +461,14 @@ view" as a camera move.
   - A cancel floats back to where it started.
   - All of it uses transform and opacity only, holds 60fps at 6× CPU, and turns off under reduced motion.
 
+## 6s. Map fonts (2026-10-15)
+
+All map text uses self-hosted glyphs: **Figtree first, Noto Sans as the fallback** (composite stacks
+for Latin, Greek and Cyrillic). CJK uses the device's system font through MapLibre's
+`localIdeographFontFamily`. Arabic and Hebrew use the RTL plugin, self-hosted and lazy-loaded.
+Scripts MapLibre can't shape fall back to a hover label. The basemap prefers English names, then the
+local name. No third-party font origins.
+
 ## 7. Constraints and open decisions
 
 Constraints:
