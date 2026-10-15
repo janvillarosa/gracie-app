@@ -218,6 +218,17 @@ adventure or a scavenger hunt.
   - A booking's confirmation code is hidden behind a "Show code" button.
   - "Skip for now", the Done button and the progress shapes are removed. "2 more today" remains.
 
+## 6e. Trip settings and the next-stop preference (2026-10-15)
+
+- **Trip settings** is a full page (`/app/trips/:tripId/settings`), opened from the ⋮ menu, styled
+  like RoomSettings and UserSettings. It replaces the Trip details modal.
+  - "This trip" is shared with the House: name and icon, dates, destination, route stops, packing
+    list, and Delete trip (restorable for 30 days).
+  - "Just for you" holds the switch **"Show next stop when I'm travelling"**.
+- The switch is a **per-account preference** (`preferences.trips_show_next_stop` on `/me`,
+  default on), also shown under a Trips section in UserSettings. When it's off, the trip opens on
+  today's plan without the deck. Changing it needs a connection; offline, the cached value is used.
+
 ## 7. Constraints and open decisions
 
 Constraints:
