@@ -110,7 +110,7 @@ describe('Trip screen', () => {
     const sheet = await screen.findByRole('dialog', { name: 'Rossio to Sintra' })
     await userEvent.click(within(sheet).getByRole('button', { name: 'Show code' }))
     const slip = await screen.findByRole('dialog', { name: 'Ticket for Rossio to Sintra' })
-    await waitFor(() => expect(slip).toHaveFocus())
+    await waitFor(() => expect(slip).toContainElement(document.activeElement as HTMLElement))
   })
 
   it('gives the drag handles to a long trip row by row, and to a short one at once', async () => {

@@ -1,5 +1,5 @@
 import React from 'react'
-import { Button } from 'antd'
+import { Button } from '@components/ui'
 import {
   DndContext,
   MouseSensor,
@@ -66,27 +66,24 @@ const StopRow: React.FC<RowProps> = ({ id, place, first, last, onMove, onRemove 
             <span className="trip-stop-name">{place.name}</span>
             <span className="trip-stop-keys">
               <Button
-                type="text"
-                shape="circle"
-                size="small"
+                kind="text"
+                iconOnly
                 icon={<ArrowUp />}
                 disabled={first}
                 aria-label={`Move ${place.name} earlier`}
                 onClick={() => onMove(-1)}
               />
               <Button
-                type="text"
-                shape="circle"
-                size="small"
+                kind="text"
+                iconOnly
                 icon={<ArrowDown />}
                 disabled={last}
                 aria-label={`Move ${place.name} later`}
                 onClick={() => onMove(1)}
               />
               <Button
-                type="text"
-                shape="circle"
-                size="small"
+                kind="text"
+                iconOnly
                 icon={<X />}
                 aria-label={`Remove ${place.name} from the route`}
                 onClick={onRemove}

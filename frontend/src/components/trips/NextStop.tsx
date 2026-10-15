@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { Button, Card, Checkbox } from 'antd'
+import { Button } from '@components/ui'
+import { Card, Checkbox } from 'antd'
 import type { Place } from '@api/tripTypes'
 import { confettiAt } from '@lib/confetti'
 import { mapsUrl } from '@lib/trips/schedule'
@@ -189,12 +190,7 @@ export const NextStopDeck: React.FC<Props> = ({
             )}
             {tomorrow && (
               <div className="trip-deck-actions">
-                <Button
-                  type="primary"
-                  shape="round"
-                  size="large"
-                  onClick={() => onSeeTomorrow(tomorrow.date)}
-                >
+                <Button kind="key" onClick={() => onSeeTomorrow(tomorrow.date)}>
                   See tomorrow
                 </Button>
               </div>

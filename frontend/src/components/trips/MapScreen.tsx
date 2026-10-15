@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import { Button } from 'antd'
+import { Button } from '@components/ui'
 import { CaretLeft, CaretRight, X } from '@phosphor-icons/react'
 import { mapsUrl } from '@lib/trips/schedule'
 import type { MapScene } from '@lib/trips/mapScene'
@@ -138,18 +138,18 @@ export const MapScreen: React.FC<Props> = ({
         }}
       >
         <Button
+          kind="text"
+          iconOnly
           ref={closeRef}
           className="map-screen-close"
-          type="text"
-          shape="circle"
           aria-label="Close map"
           icon={<X size={22} />}
           onClick={close}
         />
         <div className="map-screen-stepper">
           <Button
-            type="text"
-            shape="circle"
+            kind="text"
+            iconOnly
             aria-label="Previous day"
             disabled={index === 0}
             icon={<CaretLeft />}
@@ -157,8 +157,8 @@ export const MapScreen: React.FC<Props> = ({
           />
           <span className="map-screen-day">{day.title}</span>
           <Button
-            type="text"
-            shape="circle"
+            kind="text"
+            iconOnly
             aria-label="Next day"
             disabled={index === days.length - 1}
             icon={<CaretRight />}

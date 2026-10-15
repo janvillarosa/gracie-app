@@ -172,7 +172,7 @@ describe('Trips pill', () => {
     await waitFor(() => expect(key).toBeEnabled())
     await userEvent.click(key)
     const dialog = await screen.findByRole('dialog', { name: 'Name your trip' })
-    expect(dialog.closest('.paper-modal')).not.toBeNull()
+    expect(dialog.querySelector('.ui-sheet')).not.toBeNull()
     expect(within(dialog).getAllByRole('textbox')).toHaveLength(1)
     // The field is focused as the dialog opens, so you can just type.
     await waitFor(() => expect(within(dialog).getByLabelText('Trip name')).toHaveFocus())

@@ -3059,3 +3059,110 @@ textarea.trip-field {
 .map-screen-card .trip-go {
   justify-self: stretch;
 }
+
+/* ---- what the sheets put in their tiers (all values are tokens) ---------------------------- */
+.trip-when-pick {
+  display: grid;
+  gap: var(--space-2);
+}
+.trip-timegrid {
+  max-height: 220px;
+  overflow-y: auto;
+}
+.trip-timegrid .ui-choice {
+  min-height: var(--control-md);
+  padding: 0;
+  flex-direction: row;
+  font-weight: 500;
+  font-size: var(--size-meta);
+  font-variant-numeric: tabular-nums;
+}
+.trip-custom-length {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.trip-custom-length .ui-field {
+  width: 96px;
+  border: 1px solid var(--border);
+  padding: 0 var(--space-3);
+  min-height: var(--control-md);
+}
+.trip-kindstep {
+  margin-top: var(--tier-identity-actions);
+}
+.trip-kind-tile {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin-top: 3px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--panel-subtle);
+  color: var(--ink);
+  font-size: 16px;
+  cursor: pointer;
+}
+.trip-kind-tile:focus-visible {
+  box-shadow: var(--focus-ring);
+  outline: none;
+}
+.trip-slip {
+  margin-top: var(--tier-identity-actions);
+  padding: var(--space-4);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--warn-bg);
+  text-align: center;
+}
+.trip-slip-code {
+  margin: var(--space-2) 0;
+  font-family: var(--font-headings);
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.trip-slip-actions {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-3);
+}
+.trip-note-line {
+  margin: 0 0 var(--space-2);
+  color: var(--muted);
+  font-size: var(--size-meta);
+}
+.trip-settings-identity {
+  position: relative;
+  margin-bottom: var(--space-6);
+}
+.trip-settings-identity .ui-sheet-title {
+  font-size: var(--title-page);
+}
+.trip-settings .ui-section-label {
+  margin-top: var(--space-6);
+}
+.trips-pref {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--detail-inset);
+}
+.trips-pref-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.trips-pref-label {
+  font-weight: 500;
+  color: var(--ink);
+}
+.trips-pref-help {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--size-meta);
+}

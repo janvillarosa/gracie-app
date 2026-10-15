@@ -1,5 +1,6 @@
 import React, { useId, useState } from 'react'
-import { Button, Input } from 'antd'
+import { Button } from '@components/ui'
+import { Input } from 'antd'
 import { MapPin, X } from '@phosphor-icons/react'
 import { useAuth } from '@auth/AuthProvider'
 import type { Place } from '@api/tripTypes'
@@ -97,9 +98,8 @@ export const PlacePicker: React.FC<Props> = ({
           {!hasPin && <span className="place-chosen-sub">Address only, not on the map</span>}
         </span>
         <Button
-          type="text"
-          shape="circle"
-          size="small"
+          kind="text"
+          iconOnly
           onClick={() => onChange(null)}
           icon={<X />}
           aria-label={`Remove ${label.toLowerCase()}`}
@@ -144,12 +144,12 @@ export const PlacePicker: React.FC<Props> = ({
         {ran && !search.degraded && noHits && !coords ? 'No match. Type the address instead.' : ''}
       </div>
       {coords && (
-        <Button size="small" onClick={dropPin}>
+        <Button kind="quiet" onClick={dropPin}>
           Drop a pin at {coords.lat}, {coords.lng}
         </Button>
       )}
       {showManual && (
-        <Button size="small" onClick={chooseManual}>
+        <Button kind="quiet" onClick={chooseManual}>
           Use “{typed}” as the address
         </Button>
       )}

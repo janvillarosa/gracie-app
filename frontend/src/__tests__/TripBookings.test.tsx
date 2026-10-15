@@ -69,10 +69,7 @@ describe('the Bookings list', () => {
     expect(screen.getAllByPlaceholderText(/^Add /)).toHaveLength(1)
     const sheet = await newSheet('Hotel Ribeira')
     expect(within(sheet).getByLabelText('Title')).toHaveValue('Hotel Ribeira')
-    expect(within(sheet).getByRole('button', { name: 'Stay' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    )
+    expect(within(sheet).getByRole('button', { name: 'Kind, Stay' })).toBeInTheDocument()
   })
 
   it('says what an empty list is for', async () => {
@@ -173,22 +170,25 @@ describe('adding a booking', () => {
     seed(TRIP)
     open()
     const sheet = await newSheet()
-    const pick = (name: string) =>
-      userEvent.click(within(sheet).getByRole('button', { name, pressed: false }))
-    await pick('Flight')
-    expect(within(sheet).getByRole('button', { name: 'From' })).toBeInTheDocument()
-    expect(within(sheet).getByRole('group', { name: 'Departs' })).toBeInTheDocument()
-    expect(within(sheet).getByRole('group', { name: 'Arrives' })).toBeInTheDocument()
-    await pick('Stay')
-    expect(within(sheet).getByRole('group', { name: 'Check-in' })).toBeInTheDocument()
-    expect(within(sheet).getByRole('group', { name: 'Check-out' })).toBeInTheDocument()
-    expect(within(sheet).queryByRole('group', { name: 'Arrives' })).not.toBeInTheDocument()
-    await pick('Car')
-    expect(within(sheet).getByRole('group', { name: 'Pick-up' })).toBeInTheDocument()
-    expect(within(sheet).getByRole('group', { name: 'Drop-off' })).toBeInTheDocument()
-    await pick('Ticket')
-    expect(within(sheet).getByRole('group', { name: 'When' })).toBeInTheDocument()
-    expect(within(sheet).queryByRole('group', { name: 'Drop-off' })).not.toBeInTheDocument()
+    const row = (name: RegExp) => within(sheet).queryByRole('button', { name })
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Flight' }))
+    expect(row(/^From /)).toBeInTheDocument()
+    expect(row(/^Depart /)).toBeInTheDocument()
+    expect(row(/^Arrive /)).toBeInTheDocument()
+    const change = async (from: string, to: string) => {
+      await userEvent.click(within(sheet).getByRole('button', { name: `Kind, ${from}` }))
+      await userEvent.click(await screen.findByRole('button', { name: to }))
+    }
+    await change('Flight', 'Stay')
+    expect(row(/^Check-in /)).toBeInTheDocument()
+    expect(row(/^Check-out /)).toBeInTheDocument()
+    expect(row(/^Arrive /)).not.toBeInTheDocument()
+    await change('Stay', 'Car')
+    expect(row(/^Pick-up /)).toBeInTheDocument()
+    expect(row(/^Drop-off /)).toBeInTheDocument()
+    await change('Car', 'Ticket')
+    expect(row(/^When /)).toBeInTheDocument()
+    expect(row(/^Drop-off /)).not.toBeInTheDocument()
   })
 
   it('enables the yellow key only with a kind and a title, and creates the booking', async () => {
@@ -218,27 +218,20 @@ describe('adding a booking', () => {
     open()
     const sheet = await newSheet('Flight home')
     expect(within(sheet).queryByLabelText(/time zone/i)).not.toBeInTheDocument()
-    const departs = () => within(sheet).getByRole('group', { name: 'Departs' })
+    const departs = () => within(sheet).getByRole('button', { name: /^Depart / })
     const pickPlace = async (query: string, option: RegExp) => {
-      await userEvent.click(within(sheet).getByRole('button', { name: 'From' }))
-      const remove = within(sheet).queryByRole('button', { name: 'Remove booking place' })
+      await userEvent.click(within(sheet).getByRole('button', { name: /^From / }))
+      const remove = screen.queryByRole('button', { name: 'Remove booking place' })
       if (remove) await userEvent.click(remove)
-      await userEvent.type(
-        await within(sheet).findByRole('combobox', { name: 'Booking place' }),
-        query,
-      )
-      await userEvent.click(await within(sheet).findByRole('option', { name: option }))
+      await userEvent.type(await screen.findByRole('combobox', { name: 'Booking place' }), query)
+      await userEvent.click(await screen.findByRole('option', { name: option }))
     }
     // A place in the trip's own zone: nothing to say.
     await pickPlace('Lisbon', /Lisbon/)
-    expect(
-      within(departs()).getByRole('button', { name: /^Starts, \d\d:\d\d$/ }),
-    ).toBeInTheDocument()
+    expect(departs()).toHaveTextContent(/\d\d:\d\d$/)
     // A place in another zone: its zone is a muted suffix on the time.
     await pickPlace('Heathrow', /Heathrow/)
-    expect(
-      await within(departs()).findByRole('button', { name: /^Starts, \d\d:\d\d London$/ }),
-    ).toBeInTheDocument()
+    await waitFor(() => expect(departs()).toHaveTextContent(/\d\d:\d\d London$/))
     // And it is what gets saved (the trip's own zone is saved as nothing).
     await userEvent.click(within(sheet).getByRole('button', { name: 'Add booking' }))
     await waitFor(() => {
@@ -261,7 +254,9 @@ describe('adding a booking', () => {
     await userEvent.click(within(sheet).getByLabelText('Title'))
     await userEvent.type(within(sheet).getByLabelText('Title'), ' two{Enter}')
     await userEvent.keyboard('{Escape}')
-    expect(await screen.findByText('Discard this booking?')).toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', { name: 'Discard this booking?' }),
+    ).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Keep editing' }))
     expect(screen.getByRole('dialog', { name: 'New booking' })).toBeInTheDocument()
     await userEvent.keyboard('{Escape}')
@@ -300,8 +295,10 @@ describe('editing a booking', () => {
     const sheet = await openStay()
     expect(within(sheet).queryByRole('button', { name: /^Save/ })).not.toBeInTheDocument()
     expect(within(sheet).getByRole('button', { name: 'Kind, Stay' })).toBeInTheDocument()
-    expect(within(sheet).getByRole('group', { name: 'Check-in' })).toBeInTheDocument()
-    expect(within(sheet).getByText('Linked to Pena Palace ›')).toBeInTheDocument()
+    expect(within(sheet).getByRole('button', { name: /^Check-in / })).toBeInTheDocument()
+    expect(
+      within(sheet).getByRole('button', { name: /^Linked to Pena Palace/ }),
+    ).toBeInTheDocument()
     const t = () => serverTrip()?.bookings.find((b) => b.booking_id === stay.booking_id)
     const title = within(sheet).getByLabelText('Title')
     await userEvent.clear(title)
@@ -324,7 +321,7 @@ describe('editing a booking', () => {
     const slip = await screen.findByRole('dialog', { name: 'Ticket for Alfama flat' })
     expect(within(slip).getByLabelText(/Confirmation code for/)).toHaveTextContent('ABC123')
     await userEvent.click(within(slip).getByRole('button', { name: 'Edit' }))
-    const field = await within(sheet).findByLabelText('Confirmation code')
+    const field = await screen.findByRole('textbox', { name: 'Confirmation code' })
     expect(field).toHaveValue('ABC123')
     await userEvent.clear(field)
     await userEvent.type(field, 'XYZ9{Enter}')
@@ -333,7 +330,7 @@ describe('editing a booking', () => {
     // And it can be cleared.
     await userEvent.click(within(sheet).getByRole('button', { name: 'Show code' }))
     await userEvent.click(await screen.findByRole('button', { name: 'Edit' }))
-    const again = await within(sheet).findByLabelText('Confirmation code')
+    const again = await screen.findByRole('textbox', { name: 'Confirmation code' })
     await userEvent.clear(again)
     await userEvent.tab()
     await waitFor(() => expect(t()?.confirmation_code ?? '').toBe(''))
@@ -349,7 +346,10 @@ describe('editing a booking', () => {
     renderTrips(`/app/trips/${t.trip_id}`)
     const sheet = await openStay()
     await userEvent.click(within(sheet).getByRole('button', { name: /Add confirmation code/ }))
-    await userEvent.type(await within(sheet).findByLabelText('Confirmation code'), 'NEW42{Enter}')
+    await userEvent.type(
+      await screen.findByRole('textbox', { name: 'Confirmation code' }),
+      'NEW42{Enter}',
+    )
     await waitFor(() => expect(serverTrip()?.bookings[0].confirmation_code).toBe('NEW42'))
     expect(await within(sheet).findByRole('button', { name: 'Show code' })).toBeInTheDocument()
   })

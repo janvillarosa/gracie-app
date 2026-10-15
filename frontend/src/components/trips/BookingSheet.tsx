@@ -1,22 +1,40 @@
 import React, { useState } from 'react'
-import { Button, Dropdown } from 'antd'
-import { DotsThree, MapPin } from '@phosphor-icons/react'
+import { Dropdown } from 'antd'
+import { DotsThree } from '@phosphor-icons/react'
 import type { Booking, BookingKind, Place } from '@api/tripTypes'
+import {
+  bookingEndMs,
+  bookingStartMs,
+  bookingSub,
+  inferKind,
+  joinDt,
+  splitDt,
+} from '@lib/trips/bookings'
 import { LIMITS } from '@lib/trips/limits'
-import { addDays, mapsUrl, zoneLabel } from '@lib/trips/schedule'
-import { inferKind, joinDt, splitDt } from '@lib/trips/bookings'
-import { BackBar, NotesField, Row, SheetTitle } from './ItemDetail'
-import { DayChip, TimeChip } from './Chips'
+import { addDays, mapsUrl, shortDay, zoneLabel } from '@lib/trips/schedule'
+import {
+  Button,
+  DetailGroup,
+  Field,
+  NavRow,
+  Sheet,
+  SheetActions,
+  SheetFooter,
+  SheetIdentity,
+} from '@components/ui'
 import { CodeReveal } from './CodeReveal'
 import type { MoveTarget } from './MoveMenu'
 import { PlacePicker } from './PlacePicker'
-import { Sheet } from './Sheet'
+import { KindPick, NotePick, WhenPick } from './pickers'
 import { BOOKING_KINDS, KIND_ICON } from './tripUi'
 
 type Bias = { lat: number; lng: number } | null
 
 type Props = {
   mode: 'new' | 'edit'
+  variant: 'panel' | 'sheet'
+  open: boolean
+  onClose: () => void
   booking?: Booking
   // New: what was typed in the add bar. It is the title; a kind is guessed from it.
   initialTitle?: string
@@ -25,6 +43,8 @@ type Props = {
   days: MoveTarget[]
   // A new booking starts here (a datetime-local value).
   defaultStart?: string
+  // For the state line ("Now · until Sun 18, 11:00").
+  nowMs: number
   // Edit: the todos linked to this booking, as a muted line.
   linked?: Array<{ id: string; title: string }>
   byline?: string
@@ -51,29 +71,36 @@ const validZone = (z: string) => {
   }
 }
 
-/** Departure/arrival wording and which rows a kind shows. */
+/** Which rows a kind shows, and what its places and times are called. */
 const KIND_ROWS: Record<
   BookingKind,
-  { place: string; from: string; to: string; span: boolean; arrives: boolean }
+  { place: string; start: string; end: string; hasEnd: boolean; arrives: boolean }
 > = {
-  flight: { place: 'From', from: 'Departs', to: 'Arrives', span: false, arrives: true },
-  train: { place: 'From', from: 'Departs', to: 'Arrives', span: false, arrives: true },
-  stay: { place: 'Where', from: 'Check-in', to: 'Check-out', span: true, arrives: false },
-  car: { place: 'Pick-up', from: 'Pick-up', to: 'Drop-off', span: true, arrives: false },
-  ticket: { place: 'Where', from: 'When', to: '', span: false, arrives: false },
-  other: { place: 'Where', from: 'When', to: '', span: false, arrives: false },
+  flight: { place: 'From', start: 'Depart', end: 'Arrive', hasEnd: true, arrives: true },
+  train: { place: 'From', start: 'Depart', end: 'Arrive', hasEnd: true, arrives: true },
+  stay: { place: 'Place', start: 'Check-in', end: 'Check-out', hasEnd: true, arrives: false },
+  car: { place: 'Place', start: 'Pick-up', end: 'Drop-off', hasEnd: true, arrives: false },
+  ticket: { place: 'Place', start: 'When', end: '', hasEnd: false, arrives: false },
+  other: { place: 'Place', start: 'When', end: '', hasEnd: false, arrives: false },
 }
 
-/** One sheet for adding and editing a booking. A new one starts with a kind and Create; an
- *  existing one saves as it changes. Same anatomy as a todo: a large title, rows, chips. */
+const mask = (code: string) => `•••• ${code.slice(-3)}`
+
+/** A booking, in the four tiers: identity (kind tile, title, its state), do (Open Maps, Show
+ *  code; or Add booking while it is new), details (kind-dependent rows), a footer. A new one
+ *  starts with the kind; an existing one saves as it changes. */
 export const BookingSheet: React.FC<Props> = ({
   mode,
+  variant,
+  open,
+  onClose,
   booking,
   initialTitle = '',
   tripTz,
   bias,
   days,
   defaultStart,
+  nowMs,
   linked,
   byline,
   note,
@@ -91,13 +118,24 @@ export const BookingSheet: React.FC<Props> = ({
     title: initialTitle,
     starts_at: defaultStart ?? null,
   }))
-  const [view, setView] = useState<'main' | 'place'>('main')
   const [zonesOpen, setZonesOpen] = useState(false)
-  const [codeEditing, setCodeEditing] = useState(false)
+  const [codeOpen, setCodeOpen] = useState(false)
+  const [kindOpen, setKindOpen] = useState(false)
   const isNew = mode === 'new'
   const b: Draft = isNew ? draft : (booking as Booking)
   const kind = b.kind
   const rows = KIND_ROWS[kind ?? 'ticket']
+
+  const entered = (m: Draft) =>
+    !!(
+      m.title?.trim() !== initialTitle.trim() ||
+      m.place ||
+      m.confirmation_code ||
+      m.notes ||
+      m.ends_at ||
+      m.kind !== inferKind(initialTitle) ||
+      m.starts_at !== (defaultStart ?? null)
+    )
 
   const apply = (p: Record<string, unknown>) => {
     const next = { ...p }
@@ -113,17 +151,7 @@ export const BookingSheet: React.FC<Props> = ({
     if (isNew) {
       const merged = { ...draft, ...(next as Draft) }
       setDraft(merged)
-      onDirty?.(
-        !!(
-          merged.title?.trim() !== initialTitle.trim() ||
-          merged.place ||
-          merged.confirmation_code ||
-          merged.notes ||
-          merged.ends_at ||
-          merged.kind !== inferKind(initialTitle) ||
-          merged.starts_at !== (defaultStart ?? null)
-        ),
-      )
+      onDirty?.(entered(merged))
     } else onSave((booking as Booking).booking_id, next)
   }
 
@@ -142,7 +170,29 @@ export const BookingSheet: React.FC<Props> = ({
     })
   }
 
-  // ---- when --------------------------------------------------------------------------
+  const dirty = isNew && entered(draft)
+
+  // ---- the kind comes first when adding ------------------------------------------------
+  if (isNew && !kind) {
+    return (
+      <Sheet
+        variant={variant}
+        open={open}
+        onClose={onClose}
+        label="New booking"
+        identity={<SheetIdentity title="New booking" context="What kind is it?" />}
+        dirty={dirty}
+        discardTitle="Discard this booking?"
+      >
+        <div className="trip-kindstep">
+          <KindPick onPick={(k) => apply({ kind: k })} />
+        </div>
+      </Sheet>
+    )
+  }
+  const k = kind as BookingKind
+
+  // ---- when ----------------------------------------------------------------------------
   const start = splitDt(b.starts_at)
   const end = splitDt(b.ends_at)
   const firstDay = (days.find((d) => d.value)?.value as string | undefined) ?? undefined
@@ -150,22 +200,18 @@ export const BookingSheet: React.FC<Props> = ({
   const setStartDay = (d: string | null) => {
     if (!d) return
     const next: Record<string, unknown> = { starts_at: joinDt(d, start.t || '09:00') }
-    // A stay or a car keeps its length when it moves; others keep their arrival day.
-    if (b.ends_at && end.d) {
-      const shift = rows.span || end.d !== start.d
-      if (shift && start.d) {
-        const gap = Math.round(
-          (Date.parse(`${end.d}T00:00:00Z`) - Date.parse(`${start.d}T00:00:00Z`)) / 86400000,
-        )
-        next.ends_at = joinDt(addDays(d, Math.max(0, gap)), end.t || '12:00')
-      }
+    // A stay or a car keeps its length when it moves.
+    if (b.ends_at && end.d && start.d) {
+      const gap = Math.round(
+        (Date.parse(`${end.d}T00:00:00Z`) - Date.parse(`${start.d}T00:00:00Z`)) / 86400000,
+      )
+      next.ends_at = joinDt(addDays(d, Math.max(0, gap)), end.t || '12:00')
     }
     apply(next)
   }
   const setStartTime = (t: string | null) => {
-    if (!t) return
     const day = start.d || firstDay
-    if (day) apply({ starts_at: joinDt(day, t) })
+    if (t && day) apply({ starts_at: joinDt(day, t) })
   }
   const setEndDay = (d: string | null) => {
     if (d) apply({ ends_at: joinDt(d, end.t || '12:00') })
@@ -178,28 +224,23 @@ export const BookingSheet: React.FC<Props> = ({
     const wrap = rows.arrives && !end.d && start.t && t < start.t && sameZone
     apply({ ends_at: joinDt(wrap ? addDays(day, 1) : day, t) })
   }
-  const showArrivalDay = !!end.d && end.d !== start.d
+  const zoneSuffix = (tz?: string | null) => (tz && tz !== tripTz ? ` ${zoneLabel(tz)}` : '')
+  const whenText = (d: string, t: string, tz?: string | null) =>
+    d ? `${shortDay(d)}${t ? `, ${t}` : ''}${zoneSuffix(tz)}` : ''
 
-  const zoneSuffix = (tz?: string | null) => (tz && tz !== tripTz ? zoneLabel(tz) : undefined)
-
-  // ---- sub-views ----------------------------------------------------------------------
-  if (view === 'place') {
-    return (
-      <div className="trip-sheet trip-booking">
-        <BackBar onBack={() => setView('main')} title="Place" />
-        <PlacePicker
-          label="Booking place"
-          value={b.place}
-          bias={bias}
-          tz={tripTz}
-          onChange={(p) => {
-            apply({ place: p })
-            if (p) setView('main')
-          }}
-        />
-      </div>
-    )
-  }
+  // ---- the state line ---------------------------------------------------------------------
+  const full = b as Booking
+  const s0 = bookingStartMs(full, tripTz)
+  const e0 = bookingEndMs(full, tripTz) ?? s0
+  const context = isNew
+    ? 'New booking'
+    : e0 !== null && e0 < nowMs
+      ? 'Used'
+      : s0 !== null && s0 <= nowMs
+        ? `Now${end.d ? ` · until ${shortDay(end.d)}${end.t ? `, ${end.t}` : ''}` : ''}`
+        : s0 !== null && start.d
+          ? `Next · ${shortDay(start.d)}${start.t ? ` ${start.t}` : ''}`
+          : bookingSub(full)
 
   const pin = b.place && b.place.source !== 'manual' ? b.place : null
   const placeText = b.place
@@ -207,209 +248,243 @@ export const BookingSheet: React.FC<Props> = ({
     : ''
   const code = b.confirmation_code
 
-  const whenRow = (
-    label: string,
-    d: string,
-    t: string,
-    tz: string | null | undefined,
-    which: 's' | 'e',
-  ) => (
-    <div className="trip-when" role="group" aria-label={label}>
-      <span className="trip-when-label">{label}</span>
-      <DayChip
-        value={d || null}
-        days={days}
-        placeholder="Add a day"
-        disabled={locked}
-        onPick={which === 's' ? setStartDay : setEndDay}
+  const kindTile = (
+    <Sheet
+      variant="chips"
+      open={kindOpen}
+      onOpen={() => setKindOpen(true)}
+      onClose={() => setKindOpen(false)}
+      label="Kind"
+      title="Kind"
+      anchor={
+        <button
+          type="button"
+          className="trip-kind-tile"
+          aria-label={`Kind, ${BOOKING_KINDS.find((x) => x.value === k)?.label}`}
+          disabled={locked}
+        >
+          {KIND_ICON[k]}
+        </button>
+      }
+    >
+      <KindPick
+        value={k}
+        onPick={(v) => {
+          setKindOpen(false)
+          apply({ kind: v })
+        }}
       />
-      <TimeChip
-        label={which === 's' ? 'Starts' : 'Ends'}
-        value={t || null}
-        clearable={which === 'e'}
-        suffix={zoneSuffix(tz)}
-        disabled={locked}
-        autoFocus={which === 's' && focusTime}
-        onPick={which === 's' ? setStartTime : setEndTime}
-      />
-    </div>
+    </Sheet>
   )
 
+  const menu = !locked ? (
+    <Dropdown
+      trigger={['click']}
+      placement="bottomRight"
+      menu={{
+        items: [{ key: 'zones', label: 'Change time zone' }],
+        onClick: () => setZonesOpen(true),
+      }}
+    >
+      <Button
+        kind="text"
+        iconOnly
+        aria-label="More booking options"
+        icon={<DotsThree weight="bold" />}
+      />
+    </Dropdown>
+  ) : undefined
+
   return (
-    <div className="trip-sheet trip-booking">
-      {note && (
-        <div className="trip-note trip-note-sheet" role="status">
-          <span>{note}</span>
-          <Button size="small" type="link" onClick={onDismissNote}>
-            Got it
-          </Button>
-        </div>
-      )}
-
-      <div className="trip-booking-top">
-        {isNew ? (
-          <div className="trip-kinds" role="group" aria-label="Kind of booking">
-            {BOOKING_KINDS.map((k) => (
-              <button
-                key={k.value}
-                type="button"
-                className="trip-kind"
-                aria-pressed={kind === k.value}
-                onClick={() => apply({ kind: k.value })}
-              >
-                <span className="trip-kind-icon">{KIND_ICON[k.value]}</span>
-                <span className="trip-kind-label">{k.label}</span>
-              </button>
-            ))}
-          </div>
-        ) : (
-          <KindChip
-            kind={kind as BookingKind}
-            disabled={locked}
-            onPick={(k) => apply({ kind: k })}
-          />
-        )}
-        {kind && !locked && (
-          <Dropdown
-            trigger={['click']}
-            placement="bottomRight"
-            menu={{
-              items: [{ key: 'zones', label: 'Change time zone' }],
-              onClick: () => setZonesOpen(true),
-            }}
-          >
-            <Button
-              type="text"
-              shape="circle"
-              aria-label="More booking options"
-              icon={<DotsThree weight="bold" />}
-            />
-          </Dropdown>
-        )}
-      </div>
-
-      {kind && (
-        <>
-          <SheetTitle
-            value={b.title ?? ''}
-            onCommit={(v) => apply({ title: v })}
-            autoFocus={isNew && !b.title}
-            placeholder="Name this booking"
-            disabled={locked}
-            leading={<span className="trip-stub-icon is-big">{KIND_ICON[kind]}</span>}
-          />
-
-          <Row
-            icon={<MapPin aria-hidden />}
-            onClick={() => setView('place')}
-            disabled={locked}
-            label={rows.place}
-          >
-            {placeText || (
-              <span className="trip-muted">
-                {rows.place === 'From' ? 'Add where from' : 'Add a place'}
-              </span>
+    <>
+      <Sheet
+        variant={variant}
+        open={open}
+        onClose={onClose}
+        label={isNew ? 'New booking' : b.title || 'Booking'}
+        menu={menu}
+        dirty={dirty}
+        discardTitle="Discard this booking?"
+        identity={
+          <>
+            {note && (
+              <p className="trip-note-line" role="status">
+                {note}{' '}
+                <Button kind="text" onClick={onDismissNote}>
+                  Got it
+                </Button>
+              </p>
             )}
-          </Row>
-
-          {whenRow(rows.from, start.d, start.t, b.start_tz, 's')}
-          {(rows.to || rows.arrives) &&
-            (rows.arrives ? (
-              <div className="trip-when" role="group" aria-label={rows.to}>
-                <span className="trip-when-label">{rows.to}</span>
-                {showArrivalDay && (
-                  <DayChip value={end.d} days={days} disabled={locked} onPick={setEndDay} />
-                )}
-                <TimeChip
-                  label="Ends"
-                  value={end.t || null}
-                  clearable
-                  suffix={zoneSuffix(b.end_tz)}
-                  disabled={locked}
-                  onPick={setEndTime}
-                />
-              </div>
-            ) : (
-              whenRow(rows.to, end.d, end.t, b.end_tz || b.start_tz, 'e')
-            ))}
-
-          {code && !codeEditing ? (
-            <div className="trip-code-row">
-              <span className="trip-code-label">Code</span>
-              <CodeReveal
-                compact
-                code={code}
-                title={b.title ?? 'Booking'}
-                kind={kind}
-                line={[start.t, b.place?.name].filter(Boolean).join(' · ')}
-                onCopy={onCopy}
-                onEdit={locked ? undefined : () => setCodeEditing(true)}
-              />
-            </div>
-          ) : codeEditing || (!code && !locked) ? (
-            <CodeField
-              initial={code ?? ''}
-              open={codeEditing}
-              onCommit={(v) => {
-                setCodeEditing(false)
-                if (v !== (code ?? '')) apply({ confirmation_code: v })
-              }}
+            <SheetIdentity
+              leading={kindTile}
+              title={b.title ?? ''}
+              onTitle={(v) => apply({ title: v })}
+              autoFocus={isNew && !b.title}
+              disabled={locked}
+              placeholder="Name this booking"
+              context={context}
             />
-          ) : null}
-
-          <NotesField
-            value={b.notes ?? ''}
-            max={LIMITS.itemNotesBytes}
-            disabled={locked}
-            onCommit={(v) => apply({ notes: v })}
-          />
-
-          {!isNew && linked && linked.length > 0 && (
-            <button
-              type="button"
-              className="trip-linked"
-              onClick={() => onOpenTodo?.(linked[0].id)}
-            >
-              Linked to {linked.map((l) => l.title).join(', ')} ›
-            </button>
-          )}
-
-          {isNew ? (
-            <div className="trip-sheet-foot is-create">
-              <Button
-                type="primary"
-                shape="round"
-                size="large"
-                block
-                disabled={!kind || !draft.title?.trim()}
-                onClick={create}
-              >
+          </>
+        }
+        actions={
+          <SheetActions>
+            {isNew ? (
+              <Button kind="key" disabled={!draft.title?.trim()} onClick={create}>
                 Add booking
               </Button>
-            </div>
-          ) : (
-            <div className="trip-sheet-foot">
-              {pin && (
-                <a
-                  className="ant-btn ant-btn-primary ant-btn-round ant-btn-lg trip-go"
+            ) : (
+              pin && (
+                <Button
+                  kind="key"
                   href={mapsUrl(pin.lat, pin.lng)}
                   target="_blank"
                   rel="noreferrer noopener"
                 >
-                  Open in Maps
-                </a>
-              )}
-              {byline && <p className="trip-byline">{byline}</p>}
-              {!locked && onDelete && (
-                <button type="button" className="trip-delete" onClick={onDelete}>
-                  Delete booking
-                </button>
-              )}
-            </div>
-          )}
-        </>
-      )}
-
+                  Open Maps
+                </Button>
+              )
+            )}
+            {code && (
+              <CodeReveal
+                code={code}
+                title={b.title ?? 'Booking'}
+                kind={k}
+                line={[start.t, b.place?.name].filter(Boolean).join(' · ')}
+                onCopy={onCopy}
+                onEdit={locked ? undefined : () => setCodeOpen(true)}
+              />
+            )}
+          </SheetActions>
+        }
+        details={
+          <DetailGroup label="Details">
+            <NavRow
+              label={rows.start}
+              value={whenText(start.d, start.t, b.start_tz) || 'Add a time'}
+              empty={!start.d}
+              disabled={locked}
+              defaultOpen={focusTime}
+              picker={{
+                title: rows.start,
+                content: () => (
+                  <WhenPick
+                    days={days}
+                    day={start.d || null}
+                    time={start.t || null}
+                    timeLabel="Starts"
+                    onDay={setStartDay}
+                    onTime={setStartTime}
+                  />
+                ),
+              }}
+            />
+            {rows.hasEnd && (
+              <NavRow
+                label={rows.end}
+                value={whenText(end.d, end.t, b.end_tz || b.start_tz) || 'Add a time'}
+                empty={!end.d}
+                disabled={locked}
+                picker={{
+                  title: rows.end,
+                  content: () => (
+                    <WhenPick
+                      days={days}
+                      day={end.d || start.d || null}
+                      time={end.t || null}
+                      clearableTime
+                      timeLabel="Ends"
+                      onDay={setEndDay}
+                      onTime={setEndTime}
+                    />
+                  ),
+                }}
+              />
+            )}
+            <NavRow
+              label={rows.place}
+              value={placeText || (rows.place === 'From' ? 'Add where from' : 'Add a place')}
+              empty={!placeText}
+              disabled={locked}
+              picker={{
+                title: 'Place',
+                content: (close) => (
+                  <PlacePicker
+                    label="Booking place"
+                    value={b.place}
+                    bias={bias}
+                    tz={tripTz}
+                    onChange={(p) => {
+                      apply({ place: p })
+                      if (p) close()
+                    }}
+                  />
+                ),
+              }}
+            />
+            <NavRow
+              label="Code"
+              value={code ? mask(code) : 'Add confirmation code'}
+              empty={!code}
+              disabled={locked}
+              open={codeOpen}
+              onOpenChange={setCodeOpen}
+              picker={{
+                title: 'Confirmation code',
+                content: (close) => (
+                  <Field
+                    aria-label="Confirmation code"
+                    defaultValue={code ?? ''}
+                    maxLength={64}
+                    placeholder="Confirmation code"
+                    // biome-ignore lint/a11y/noAutofocus: the picker opens to type in it
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+                    }}
+                    onBlur={(e) => {
+                      const v = e.target.value.trim()
+                      if (v !== (code ?? '')) apply({ confirmation_code: v })
+                      close()
+                    }}
+                  />
+                ),
+              }}
+            />
+            <NavRow
+              label="Note"
+              value={b.notes ? b.notes.split('\n')[0] : 'Add a note'}
+              empty={!b.notes}
+              disabled={locked}
+              picker={{
+                title: 'Note',
+                content: () => (
+                  <NotePick
+                    value={b.notes ?? ''}
+                    max={LIMITS.itemNotesBytes}
+                    onCommit={(v) => apply({ notes: v })}
+                  />
+                ),
+              }}
+            />
+            {!isNew && linked && linked.length > 0 && (
+              <NavRow
+                label="Linked to"
+                value={linked.map((l) => l.title).join(', ')}
+                onClick={() => onOpenTodo?.(linked[0].id)}
+              />
+            )}
+          </DetailGroup>
+        }
+        footer={
+          isNew ? undefined : (
+            <SheetFooter
+              who={byline}
+              onDelete={locked ? undefined : onDelete}
+              deleteLabel="Delete booking"
+            />
+          )
+        }
+      />
       <ZoneSheet
         open={zonesOpen}
         startTz={b.start_tz}
@@ -418,88 +493,7 @@ export const BookingSheet: React.FC<Props> = ({
         onClose={() => setZonesOpen(false)}
         onSave={(patch) => apply(patch)}
       />
-    </div>
-  )
-}
-
-/** The kind as a small chip ("STAY ▾") that opens the six kinds. */
-const KindChip: React.FC<{
-  kind: BookingKind
-  disabled?: boolean
-  onPick: (k: BookingKind) => void
-}> = ({ kind, disabled, onPick }) => {
-  const [open, setOpen] = useState(false)
-  const label = BOOKING_KINDS.find((k) => k.value === kind)?.label ?? 'Other'
-  return (
-    <>
-      <button
-        type="button"
-        className="trip-chip trip-kindchip"
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        aria-label={`Kind, ${label}`}
-        disabled={disabled}
-        onClick={() => setOpen(true)}
-      >
-        <span className="trip-kind-icon">{KIND_ICON[kind]}</span>
-        {label.toUpperCase()}
-      </button>
-      <Sheet title="Kind" open={open} onClose={() => setOpen(false)}>
-        <div className="trip-sheet-pad">
-          <div className="trip-kinds" role="group" aria-label="Kind of booking">
-            {BOOKING_KINDS.map((k) => (
-              <button
-                key={k.value}
-                type="button"
-                className="trip-kind"
-                aria-pressed={kind === k.value}
-                onClick={() => {
-                  setOpen(false)
-                  onPick(k.value)
-                }}
-              >
-                <span className="trip-kind-icon">{KIND_ICON[k.value]}</span>
-                <span className="trip-kind-label">{k.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      </Sheet>
     </>
-  )
-}
-
-/** The code: "Add confirmation code" until you tap it, then an inline field. */
-const CodeField: React.FC<{
-  initial: string
-  open: boolean
-  onCommit: (v: string) => void
-}> = ({ initial, open, onCommit }) => {
-  const [editing, setEditing] = useState(open)
-  if (!editing)
-    return (
-      <button type="button" className="trip-sheet-row" onClick={() => setEditing(true)}>
-        <span className="trip-sheet-row-text">
-          <span className="trip-muted">Add confirmation code</span>
-        </span>
-      </button>
-    )
-  return (
-    <input
-      className="trip-sheet-line"
-      aria-label="Confirmation code"
-      defaultValue={initial}
-      maxLength={64}
-      // biome-ignore lint/a11y/noAutofocus: the field opens because the row was tapped
-      autoFocus
-      onKeyDown={(e) => {
-        if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
-      }}
-      onBlur={(e) => {
-        setEditing(false)
-        onCommit(e.target.value.trim())
-      }}
-    />
   )
 }
 
@@ -528,48 +522,54 @@ const ZoneSheet: React.FC<{
       ) ?? [],
     )
   return (
-    <Sheet title="Time zone" open={open} onClose={onClose}>
-      <div className="trip-sheet-pad trip-zones">
-        <p className="trip-help">
-          Times follow the place. Change a zone here only if a time reads wrong.
-        </p>
-        <label className="trip-zone-field">
-          <span>Starts in</span>
-          <input
-            className="trip-chip"
-            list="trip-zone-list"
-            aria-label="Start time zone"
-            placeholder={tripTz ?? 'Europe/Lisbon'}
-            defaultValue={startTz ?? ''}
-            onFocus={load}
-            onBlur={(e) => commit('start_tz', e.target.value, startTz)}
-          />
-        </label>
-        <label className="trip-zone-field">
-          <span>Ends in</span>
-          <input
-            className="trip-chip"
-            list="trip-zone-list"
-            aria-label="End time zone"
-            placeholder="Same as start"
-            defaultValue={endTz ?? ''}
-            onFocus={load}
-            onBlur={(e) => commit('end_tz', e.target.value, endTz)}
-          />
-        </label>
-        {zones && (
-          <datalist id="trip-zone-list">
-            {zones.map((z) => (
-              <option key={z} value={z} />
-            ))}
-          </datalist>
-        )}
-        {error && (
-          <div role="alert" className="trip-error">
-            {error}
+    <Sheet
+      open={open}
+      onClose={onClose}
+      label="Time zone"
+      identity={
+        <SheetIdentity
+          title="Time zone"
+          context="Times follow the place. Change a zone here only if a time reads wrong."
+        />
+      }
+      details={
+        <DetailGroup label="Time zones">
+          <div className="ui-fieldrow">
+            <span className="ui-navrow-label">Starts in</span>
+            <Field
+              list="trip-zone-list"
+              aria-label="Start time zone"
+              placeholder={tripTz ?? 'Europe/Lisbon'}
+              defaultValue={startTz ?? ''}
+              onFocus={load}
+              onBlur={(e) => commit('start_tz', e.target.value, startTz)}
+            />
           </div>
-        )}
-      </div>
-    </Sheet>
+          <div className="ui-fieldrow">
+            <span className="ui-navrow-label">Ends in</span>
+            <Field
+              list="trip-zone-list"
+              aria-label="End time zone"
+              placeholder="Same as start"
+              defaultValue={endTz ?? ''}
+              onFocus={load}
+              onBlur={(e) => commit('end_tz', e.target.value, endTz)}
+            />
+          </div>
+          {zones && (
+            <datalist id="trip-zone-list">
+              {zones.map((z) => (
+                <option key={z} value={z} />
+              ))}
+            </datalist>
+          )}
+          {error && (
+            <div role="alert" className="trip-error">
+              {error}
+            </div>
+          )}
+        </DetailGroup>
+      }
+    />
   )
 }

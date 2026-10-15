@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
-import { Switch, Typography, message } from 'antd'
+import { message } from 'antd'
+import { Switch } from '@components/ui'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getMe, setMyPreferences } from '@api/endpoints'
 import type { User } from '@api/types'
@@ -58,11 +59,11 @@ export const TripsPreference: React.FC = () => {
           aria-describedby="trips-show-next-help"
         />
       </div>
-      <Typography.Text type="secondary" id="trips-show-next-help">
+      <p className="trips-pref-help" id="trips-show-next-help">
         {online
           ? 'Opens your trips on the next place to go. Applies to all your trips.'
           : 'Connect to change this.'}
-      </Typography.Text>
+      </p>
     </div>
   )
 }

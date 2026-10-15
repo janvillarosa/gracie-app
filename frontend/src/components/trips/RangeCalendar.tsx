@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Button } from 'antd'
+import { Button } from '@components/ui'
 import { CaretLeft, CaretRight } from '@phosphor-icons/react'
 import { addDays, diffDays, localDateKey } from '@lib/trips/schedule'
 
@@ -57,16 +57,16 @@ export const RangeCalendar: React.FC<Props> = ({ start, end, onChange, onDone })
     <div className="trip-cal">
       <div className="trip-cal-head">
         <Button
-          type="text"
-          shape="circle"
+          kind="text"
+          iconOnly
           icon={<CaretLeft />}
           aria-label="Previous month"
           onClick={() => setMonth(shiftMonth(month, -1))}
         />
         <strong>{MONTH.format(first)}</strong>
         <Button
-          type="text"
-          shape="circle"
+          kind="text"
+          iconOnly
           icon={<CaretRight />}
           aria-label="Next month"
           onClick={() => setMonth(shiftMonth(month, 1))}
@@ -113,7 +113,7 @@ export const RangeCalendar: React.FC<Props> = ({ start, end, onChange, onDone })
               : `${diffDays(end as string, start) + 1} days`}
         </p>
         <Button
-          type="text"
+          kind="text"
           className="trip-cal-clear"
           hidden={!start}
           onClick={() => onChange(null, null)}
@@ -121,7 +121,7 @@ export const RangeCalendar: React.FC<Props> = ({ start, end, onChange, onDone })
           Clear dates
         </Button>
         {onDone && (
-          <Button type="primary" shape="round" hidden={!start} onClick={onDone}>
+          <Button kind="key" hidden={!start} onClick={onDone}>
             Done
           </Button>
         )}

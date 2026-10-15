@@ -14,18 +14,7 @@ import {
 } from '@api/endpoints'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useLiveQueryOpts } from '@lib/liveQuery'
-import {
-  Card,
-  Typography,
-  Space,
-  Button,
-  Modal,
-  Input,
-  List as AntList,
-  Dropdown,
-  message,
-} from 'antd'
-import type { InputRef } from 'antd'
+import { Card, Typography, Space, Button, List as AntList, Dropdown, message } from 'antd'
 import {
   DotsThreeVertical,
   CaretRight,
@@ -48,6 +37,14 @@ import { TripsPanel } from '@components/trips/TripsPanel'
 import { useTripState, useTripStoreFor } from '@lib/trips/hooks'
 import { localDateKey, tripPhase } from '@lib/trips/schedule'
 import { toEmoji } from '../icons'
+import {
+  Button as KeyButton,
+  DetailGroup,
+  Field,
+  NavRow,
+  Sheet,
+  SheetActions,
+} from '@components/ui'
 import type { ListIcon } from '@api/types'
 import { useDocumentTitle } from '@lib/useDocumentTitle'
 
@@ -89,7 +86,6 @@ export const RoomPage: React.FC<{
   const tripStore = useTripStoreFor(roomId, userId, apiKey)
   const tripState = useTripState(tripStore)
   const [newTripOpen, setNewTripOpen] = useState(false)
-  const newNameRef = useRef<InputRef>(null)
   const today = localDateKey()
   const liveNow = Object.values(tripState.trips).some(
     (t) => !t.deleted && tripPhase(t, today) === 'during',
@@ -420,95 +416,137 @@ export const RoomPage: React.FC<{
         }}
       />
 
-      {/* Create List Modal */}
-      <Modal
-        title="Add list"
-        className="paper-modal"
+      {/* New list and Rename list: the same Sheet as the trip screens. */}
+      <Sheet
         open={createOpen}
-        afterOpenChange={(o) => o && newNameRef.current?.focus()}
-        onCancel={() => setCreateOpen(false)}
-        footer={
-          <Space>
-            <Button onClick={() => setCreateOpen(false)} icon={<X />}>
-              Cancel
-            </Button>
-            <Button
-              type="primary"
+        label="Add list"
+        onClose={() => setCreateOpen(false)}
+        identity={
+          <div className="ui-sheet-identity">
+            <div className="ui-sheet-identity-text">
+              <Field
+                className="ui-sheet-title"
+                placeholder="List name"
+                aria-label="List name"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !creating && newName.trim()) void onCreateList()
+                }}
+                // biome-ignore lint/a11y/noAutofocus: the sheet opens because the user asked for it
+                autoFocus
+              />
+              <p className="ui-sheet-context">Add list</p>
+            </div>
+          </div>
+        }
+        actions={
+          <SheetActions>
+            <KeyButton
+              kind="key"
               disabled={creating || !newName.trim()}
-              onClick={onCreateList}
-              icon={<Plus />}
+              onClick={() => void onCreateList()}
             >
               Create
-            </Button>
-          </Space>
+            </KeyButton>
+          </SheetActions>
         }
-      >
-        <Space direction="vertical" style={{ width: '100%' }}>
-          <Input
-            ref={newNameRef}
-            placeholder="List name"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            autoFocus
-          />
-          <Input
-            placeholder="Description (optional)"
-            value={newDesc}
-            onChange={(e) => setNewDesc(e.target.value)}
-          />
-          <div>
-            <Typography.Text type="secondary">Icon (optional)</Typography.Text>
-            <IconPicker value={newIcon} onChange={setNewIcon} />
-          </div>
-        </Space>
-      </Modal>
-
-      {/* Edit List Modal */}
-      <Modal
-        className="paper-modal"
-        title="Edit list"
-        open={editOpen}
-        onCancel={() => setEditOpen(false)}
-        footer={
-          <Space>
-            <Button onClick={() => setEditOpen(false)} icon={<X />}>
-              Cancel
-            </Button>
-            <Button
-              type="primary"
-              disabled={editing || !editName.trim()}
-              onClick={onSaveEdit}
-              icon={<FloppyDisk />}
-            >
-              Save
-            </Button>
-          </Space>
-        }
-      >
-        <Space direction="vertical" size="large" style={{ width: '100%', paddingTop: 8 }}>
-          <Input
-            placeholder="List name"
-            value={editName}
-            onChange={(e) => setEditName(e.target.value)}
-            autoFocus
-          />
-          <Input
-            placeholder="Description (optional)"
-            value={editDesc}
-            onChange={(e) => setEditDesc(e.target.value)}
-          />
-          <div>
-            <Typography.Text type="secondary">Icon</Typography.Text>
-            <IconPicker
-              value={editIcon}
-              onChange={(val) => {
-                setEditIcon(val)
-                setEditIconTouched(true)
+        details={
+          <DetailGroup label="Details">
+            <div className="ui-fieldrow">
+              <span className="ui-navrow-label">Description</span>
+              <Field
+                placeholder="Description (optional)"
+                value={newDesc}
+                onChange={(e) => setNewDesc(e.target.value)}
+              />
+            </div>
+            <NavRow
+              label="Icon"
+              value={newIcon ? (toEmoji(newIcon) ?? 'Add an icon') : 'Add an icon (optional)'}
+              empty={!newIcon}
+              picker={{
+                title: 'Icon',
+                content: (close) => (
+                  <IconPicker
+                    value={newIcon}
+                    onChange={(v) => {
+                      setNewIcon(v)
+                      close()
+                    }}
+                  />
+                ),
               }}
             />
+          </DetailGroup>
+        }
+      />
+
+      <Sheet
+        open={editOpen}
+        label="Edit list"
+        onClose={() => setEditOpen(false)}
+        identity={
+          <div className="ui-sheet-identity">
+            <div className="ui-sheet-identity-text">
+              <Field
+                className="ui-sheet-title"
+                placeholder="List name"
+                aria-label="List name"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !editing && editName.trim()) void onSaveEdit()
+                }}
+                // biome-ignore lint/a11y/noAutofocus: the sheet opens because the user asked for it
+                autoFocus
+              />
+              <p className="ui-sheet-context">Edit list</p>
+            </div>
           </div>
-        </Space>
-      </Modal>
+        }
+        actions={
+          <SheetActions>
+            <KeyButton
+              kind="key"
+              disabled={editing || !editName.trim()}
+              onClick={() => void onSaveEdit()}
+            >
+              Save
+            </KeyButton>
+          </SheetActions>
+        }
+        details={
+          <DetailGroup label="Details">
+            <div className="ui-fieldrow">
+              <span className="ui-navrow-label">Description</span>
+              <Field
+                placeholder="Description (optional)"
+                value={editDesc}
+                onChange={(e) => setEditDesc(e.target.value)}
+              />
+            </div>
+            <NavRow
+              label="Icon"
+              value={editIcon ? (toEmoji(editIcon) ?? 'Add an icon') : 'Add an icon'}
+              empty={!editIcon}
+              picker={{
+                title: 'Icon',
+                content: (close) => (
+                  <IconPicker
+                    value={editIcon}
+                    onChange={(val) => {
+                      setEditIcon(val)
+                      setEditIconTouched(true)
+                      close()
+                    }}
+                  />
+                ),
+              }}
+            />
+          </DetailGroup>
+        }
+      />
     </div>
   )
 }

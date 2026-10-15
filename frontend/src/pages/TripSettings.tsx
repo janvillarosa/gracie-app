@@ -1,16 +1,24 @@
 import React, { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { Card, Divider, Modal, Typography } from 'antd'
-import { CaretRight, PencilSimple } from '@phosphor-icons/react'
+import { Card } from 'antd'
+import { PencilSimple } from '@phosphor-icons/react'
 import { useAuth } from '@auth/AuthProvider'
 import { HouseLoader } from '@components/HouseLoader'
-import { IconPicker } from '@components/IconPicker'
 import { TopNav } from '@components/TopNav'
-import { Sheet } from '@components/trips/Sheet'
 import { WhenSheet } from '@components/trips/WhenSheet'
 import { TripsPreference } from '@components/trips/TripsPreference'
 import { WhereSheet } from '@components/trips/WhereSheet'
-import { TransitionLink } from '@components/TransitionLink'
+import {
+  Button,
+  DetailGroup,
+  Note,
+  NavRow,
+  SectionLabel,
+  Sheet,
+  SheetActions,
+  SheetFooter,
+  SheetIdentity,
+} from '@components/ui'
 import { createPackingList } from '@api/tripEndpoints'
 import type { Place } from '@api/tripTypes'
 import { errorMessage } from '@lib/errors'
@@ -20,43 +28,14 @@ import { usePacking } from '@lib/trips/usePacking'
 import { diffDays, routeText, shortRange } from '@lib/trips/schedule'
 import { useTransitionNavigate } from '@lib/viewTransition'
 import { TRIP_ICONS, TRIP_ICON_EMOJI, toTripEmoji, type TripIcon } from '../icons'
+import { ChipGroup } from '@components/ui'
 import '../trips.css'
 
 type SheetKind = 'icon' | 'where' | 'when' | null
 
-/** One setting as a list row: what it is, its value in muted type, and the yellow chevron. */
-const SettingRow: React.FC<{
-  label: string
-  value: string
-  onClick?: () => void
-  to?: string
-  disabled?: boolean
-  note?: string
-}> = ({ label, value, onClick, to, disabled, note }) => {
-  const inner = (
-    <>
-      <span className="list-row-text">
-        <span className="list-row-name">{label}</span>
-        <Typography.Text type="secondary" className="list-row-desc">
-          {note ?? value}
-        </Typography.Text>
-      </span>
-      <CaretRight className="list-row-caret is-inline" size={18} weight="bold" aria-hidden />
-    </>
-  )
-  return to ? (
-    <TransitionLink to={to} className="settings-row">
-      {inner}
-    </TransitionLink>
-  ) : (
-    <button type="button" className="settings-row" onClick={onClick} disabled={disabled}>
-      {inner}
-    </button>
-  )
-}
-
-/** Trip settings: what is shared with the House, then what is just for you. Everything saves
- *  as it changes, through the same outbox as the rest of the trip. */
+/** Trip settings, as a page in the same tiers as a sheet: the trip's identity, then what is
+ *  shared with the House, then what is just for you, then Delete. Everything saves as it
+ *  changes, through the same outbox as the rest of the trip. */
 export const TripSettings: React.FC = () => {
   const { tripId = '' } = useParams()
   const { apiKey } = useAuth()
@@ -72,7 +51,6 @@ export const TripSettings: React.FC = () => {
   const roomId = store?.roomId
   // The link counts only if the list still exists.
   const pack = usePacking(roomId, trip?.packing_list_id)
-  const linked = pack.listId ? { list_id: pack.listId } : undefined
 
   if (loading || !store || (!trip && !state.synced)) {
     return (
@@ -116,6 +94,7 @@ export const TripSettings: React.FC = () => {
   const when = trip.start_date
     ? `${shortRange(trip.start_date, trip.end_date)} · ${days} ${days === 1 ? 'day' : 'days'}`
     : 'Add dates'
+  const route = routeText(trip)
 
   const makePacking = async () => {
     setPackBusy(true)
@@ -134,98 +113,93 @@ export const TripSettings: React.FC = () => {
   return (
     <div className="container">
       <TopNav back={{ to: `/app/trips/${trip.trip_id}`, label: trip.title }} />
-      <Card>
-        <div className="settings-identity">
-          <button
-            type="button"
-            className="list-icon settings-icon"
-            aria-label="Change icon"
-            onClick={() => setSheet('icon')}
-          >
-            {toTripEmoji(trip.icon)}
-          </button>
-          <input
-            key={trip.title}
-            className="trip-sheet-title"
-            aria-label="Trip name"
-            defaultValue={trip.title}
-            maxLength={120}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
-            }}
-            onBlur={(e) => {
-              const v = e.target.value.trim()
-              if (!v) e.target.value = trip.title
-              else if (v !== trip.title) patch({ title: v })
-            }}
+      <Card className="trip-settings">
+        <div className="trip-settings-identity">
+          <SheetIdentity
+            leading={
+              <button
+                type="button"
+                className="list-icon settings-icon"
+                aria-label="Change icon"
+                onClick={() => setSheet('icon')}
+              >
+                {toTripEmoji(trip.icon)}
+              </button>
+            }
+            title={trip.title}
+            onTitle={(v) => patch({ title: v })}
+            titleLabel="Trip name"
           />
           <PencilSimple className="settings-pencil" aria-hidden />
         </div>
 
-        <section className="settings-group" aria-label="This trip">
-          <Typography.Title level={4}>This trip</Typography.Title>
-          <SettingRow
+        <SectionLabel>This trip</SectionLabel>
+        <DetailGroup label="This trip">
+          <NavRow
             label="Where"
-            value={routeText(trip) || 'Add a place'}
+            value={route || 'Add a place'}
+            empty={!route}
             onClick={() => setSheet('where')}
           />
-          <SettingRow label="When" value={when} onClick={() => setSheet('when')} />
-          {linked ? (
-            <SettingRow
+          <NavRow
+            label="When"
+            value={when}
+            empty={!trip.start_date}
+            onClick={() => setSheet('when')}
+          />
+          {pack.listId ? (
+            <NavRow
               label="Packing list"
               value={pack.text || 'Open the list'}
-              to={`/app/lists/${linked.list_id}`}
+              to={`/app/lists/${pack.listId}`}
             />
           ) : (
-            <SettingRow
+            <NavRow
               label="Packing list"
-              value="Make a packing list"
-              note={
+              value={
                 online ? (packBusy ? 'Making it…' : 'Make a packing list') : 'Connect to make one'
               }
+              empty
               onClick={makePacking}
               disabled={!online || packBusy}
             />
           )}
-          {packError && (
-            <p role="alert" className="trip-error">
-              {packError}
-            </p>
-          )}
-        </section>
+        </DetailGroup>
+        {packError && (
+          <Note role="alert" tone="warn">
+            {packError}
+          </Note>
+        )}
 
-        <Divider className="settings-divider" />
-
-        <section className="settings-group" aria-label="Just for you">
-          <Typography.Title level={4}>Just for you</Typography.Title>
+        <SectionLabel>Just for you</SectionLabel>
+        <DetailGroup label="Just for you">
           <TripsPreference />
-        </section>
+        </DetailGroup>
 
-        <div className="settings-danger">
-          <button type="button" className="trip-delete" onClick={() => setConfirming(true)}>
-            Delete trip
-          </button>
-        </div>
+        <SheetFooter onDelete={() => setConfirming(true)} deleteLabel="Delete trip" />
       </Card>
 
-      <Sheet title="Trip icon" open={sheet === 'icon'} onClose={() => setSheet(null)}>
-        <div className="trip-sheet-pad">
-          <IconPicker<TripIcon>
-            value={(trip.icon as TripIcon | undefined) ?? 'SUITCASE'}
-            options={TRIP_ICONS}
-            emoji={TRIP_ICON_EMOJI}
-            allowNone={false}
-            onChange={(v) => {
-              patch({ icon: v ?? 'SUITCASE' })
-              setSheet(null)
-            }}
-          />
-        </div>
+      <Sheet
+        open={sheet === 'icon'}
+        label="Trip icon"
+        onClose={() => setSheet(null)}
+        identity={<SheetIdentity title="Trip icon" />}
+      >
+        <IconChoices
+          value={(trip.icon as TripIcon | undefined) ?? 'SUITCASE'}
+          onPick={(v) => {
+            patch({ icon: v })
+            setSheet(null)
+          }}
+        />
       </Sheet>
-      <Sheet title="Where" height="80%" open={sheet === 'where'} onClose={() => setSheet(null)}>
-        <div className="trip-sheet-pad">
-          <WhereSheet stops={stops} tz={trip.tz} onChange={setStops} />
-        </div>
+      <Sheet
+        open={sheet === 'where'}
+        label="Where"
+        onClose={() => setSheet(null)}
+        identity={<SheetIdentity title="Where" context="The first place is the destination." />}
+      >
+        <WhereSheet stops={stops} tz={trip.tz} onChange={setStops} />
       </Sheet>
       <WhenSheet
         open={sheet === 'when'}
@@ -234,22 +208,56 @@ export const TripSettings: React.FC = () => {
         onChange={(s, e) => patch({ start_date: s, end_date: e })}
         onClose={() => setSheet(null)}
       />
-      <Modal
+      <Sheet
+        variant="confirm"
         open={confirming}
-        title={`Delete ${trip.title}?`}
-        onCancel={() => setConfirming(false)}
-        okText="Delete"
-        okButtonProps={{ danger: true }}
-        onOk={() => {
-          store.deleteTrip(trip.trip_id)
-          setConfirming(false)
-          navigate(`/app/trips/${trip.trip_id}`)
-        }}
-      >
-        Anyone in the House can restore it for 30 days.
-      </Modal>
+        label={`Delete ${trip.title}?`}
+        onClose={() => setConfirming(false)}
+        identity={
+          <SheetIdentity
+            title={`Delete ${trip.title}?`}
+            context="Anyone in the House can restore it for 30 days."
+          />
+        }
+        actions={
+          <SheetActions>
+            <Button kind="quiet" onClick={() => setConfirming(false)}>
+              Cancel
+            </Button>
+            <Button
+              kind="key"
+              danger
+              onClick={() => {
+                store.deleteTrip(trip.trip_id)
+                setConfirming(false)
+                navigate(`/app/trips/${trip.trip_id}`)
+              }}
+            >
+              Delete
+            </Button>
+          </SheetActions>
+        }
+      />
     </div>
   )
 }
+
+/** The travel icons as large choices. */
+const IconChoices: React.FC<{ value: TripIcon; onPick: (v: TripIcon) => void }> = ({
+  value,
+  onPick,
+}) => (
+  <ChipGroup<TripIcon>
+    label="Trip icon"
+    value={value}
+    options={TRIP_ICONS.map((i) => ({
+      value: i,
+      label: i.charAt(0) + i.slice(1).toLowerCase().replace('_', ' '),
+      icon: TRIP_ICON_EMOJI[i],
+    }))}
+    columns={4}
+    onChange={onPick}
+  />
+)
 
 export default TripSettings

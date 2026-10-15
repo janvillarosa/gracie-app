@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react'
-import { Button, Dropdown, List as AntList, Typography, message } from 'antd'
+import { Button } from '@components/ui'
+import { Dropdown, List as AntList, Typography, message } from 'antd'
 import type { MenuProps } from 'antd'
 import { CaretRight, DotsThreeVertical } from '@phosphor-icons/react'
 import type { Trip } from '@api/tripTypes'
@@ -68,10 +69,10 @@ const TripRow = React.memo(function TripRow({
         }}
       >
         <Button
+          kind="text"
+          iconOnly
           className="list-row-menu"
           icon={<DotsThreeVertical size={20} weight="bold" />}
-          type="text"
-          shape="circle"
           aria-label={`Actions for ${trip.title}`}
         />
       </Dropdown>
@@ -101,8 +102,7 @@ export const TripsPanel: React.FC<Props> = ({ trips, store, ready }) => {
         <span>
           Deleted {t.title}.{' '}
           <Button
-            type="link"
-            size="small"
+            kind="text"
             onClick={() => {
               store?.restoreTrip(t.trip_id)
               message.destroy(`del-${t.trip_id}`)

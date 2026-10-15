@@ -55,7 +55,7 @@ describe('Bookings tab', () => {
     open()
     await userEvent.click(await screen.findByRole('button', { name: 'Lunch at Tascantiga' }))
     const panel = await screen.findByRole('dialog', { name: 'Lunch at Tascantiga' })
-    await userEvent.click(within(panel).getByRole('button', { name: /Link a booking/ }))
+    await userEvent.click(within(panel).getByRole('button', { name: /^Booking / }))
     await userEvent.click(await screen.findByRole('button', { name: /London to Lisbon/ }))
     const todo = () => serverTrip()?.todos.find((t) => t.title === 'Lunch at Tascantiga')
     await waitFor(() => expect(todo()?.booking_id).toBe(TRIP.bookings[0].booking_id))
@@ -80,18 +80,19 @@ describe('Item sheet fields and places', () => {
     seed(TRIP)
     open()
     const panel = await openRow('Pack the daypack')
+    await userEvent.click(within(panel).getByRole('button', { name: /^When / }))
     // Length only appears once there is a time.
-    expect(within(panel).queryByRole('button', { name: /^Length, / })).not.toBeInTheDocument()
-    await userEvent.click(within(panel).getByRole('button', { name: 'Time, not set' }))
-    await userEvent.click(await screen.findByRole('option', { name: '08:30' }))
-    await userEvent.click(await within(panel).findByRole('button', { name: 'Length, not set' }))
-    await userEvent.click(await screen.findByRole('option', { name: '1 h' }))
-    await userEvent.click(within(panel).getByRole('button', { name: 'Category, Sight' }))
-    await userEvent.click(await screen.findByRole('button', { name: 'Category: Shopping' }))
+    expect(screen.queryByText('Length')).not.toBeInTheDocument()
+    await userEvent.click(await screen.findByRole('button', { name: '08:30' }))
+    await userEvent.click(await screen.findByRole('button', { name: '1 h' }))
+    await userEvent.keyboard('{Escape}')
+    await userEvent.click(within(panel).getByRole('button', { name: /^Category Sight/ }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Shopping' }))
     expect(
-      await within(panel).findByRole('button', { name: 'Category, Shopping' }),
+      await within(panel).findByRole('button', { name: /^Category Shopping/ }),
     ).toBeInTheDocument()
-    await userEvent.type(within(panel).getByPlaceholderText('Add a note'), 'Water, sunscreen')
+    await userEvent.click(within(panel).getByRole('button', { name: /^Note / }))
+    await userEvent.type(await screen.findByLabelText('Notes'), 'Water, sunscreen')
     await userEvent.tab()
     await waitFor(() => {
       expect(todo('Pack the daypack')).toMatchObject({
@@ -124,25 +125,22 @@ describe('Item sheet fields and places', () => {
     expect(within(panel).queryByText(/Regaleira · Sintra/)).not.toBeInTheDocument()
   })
 
-  it('keeps day, time and length on one row of real chips (24-hour times)', async () => {
+  it('picks day, time and length in one When picker (24-hour times, no native inputs)', async () => {
     seed(TRIP)
     open()
     const panel = await openRow('Lunch at Tascantiga')
-    const row = within(panel).getByRole('button', { name: 'Time, 12:30' })
-      .parentElement as HTMLElement
-    expect(within(row).getByRole('button', { name: /^Day, / })).toBeInTheDocument()
-    expect(within(row).getByRole('button', { name: /^Length, / })).toBeInTheDocument()
-    expect(row.querySelector('select, input[type="time"]')).toBeNull()
-    await userEvent.click(within(panel).getByRole('button', { name: 'Time, 12:30' }))
-    const list = await screen.findByRole('listbox', { name: 'Time options' })
-    expect(within(list).getByRole('option', { name: '12:30' })).toHaveAttribute(
-      'aria-selected',
+    await userEvent.click(within(panel).getByRole('button', { name: /^When / }))
+    const times = await screen.findByRole('group', { name: 'Time options' })
+    expect(within(times).getByRole('button', { name: '12:30' })).toHaveAttribute(
+      'aria-pressed',
       'true',
     )
-    expect(within(list).queryByText(/[ap]m/i)).not.toBeInTheDocument()
+    expect(within(times).queryByText(/[ap]m/i)).not.toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Length options' })).toBeInTheDocument()
+    expect(document.querySelector('select, input[type="time"]')).toBeNull()
     await userEvent.keyboard('{Escape}')
-    await waitFor(() => expect(screen.queryByRole('listbox')).not.toBeInTheDocument())
-    // Esc closed only the chip; the sheet is still there.
+    await waitFor(() => expect(screen.queryByRole('group', { name: 'Time options' })).toBeNull())
+    // Esc closed only the picker; the sheet is still there.
     expect(screen.getByRole('dialog', { name: 'Lunch at Tascantiga' })).toBeInTheDocument()
   })
 
@@ -150,19 +148,19 @@ describe('Item sheet fields and places', () => {
     seed(TRIP)
     open()
     const panel = await openRow('Lunch at Tascantiga')
-    await userEvent.click(within(panel).getByRole('button', { name: 'Length, not set' }))
-    await userEvent.click(await screen.findByRole('option', { name: 'Custom' }))
+    await userEvent.click(within(panel).getByRole('button', { name: /^When / }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Custom' }))
     const minutes = await screen.findByLabelText('Duration in minutes')
     await userEvent.type(minutes, '45{Enter}')
     await waitFor(() => expect(todo('Lunch at Tascantiga')?.duration_min).toBe(45))
   })
 
-  it('moves the item to another day, or to Ideas, with the day chip', async () => {
+  it('moves the item to another day, or to Ideas, from the When picker', async () => {
     seed(TRIP)
     open()
     const panel = await openRow('Buy souvenirs')
-    await userEvent.click(within(panel).getByRole('button', { name: /^Day, / }))
-    await userEvent.click(await screen.findByRole('button', { name: 'Ideas' }))
+    await userEvent.click(within(panel).getByRole('button', { name: /^When / }))
+    await userEvent.click(await screen.findByRole('button', { name: /^Ideas/ }))
     await waitFor(() => expect(todo('Buy souvenirs')?.day ?? null).toBeNull())
   })
 
@@ -170,19 +168,19 @@ describe('Item sheet fields and places', () => {
     seed(TRIP)
     open()
     const panel = await openRow('Pack the daypack')
-    await userEvent.click(within(panel).getByRole('button', { name: /Add a place/ }))
-    await userEvent.type(await within(panel).findByRole('combobox', { name: 'Place' }), 'Pena')
-    const slip = await within(panel).findByRole('option', { name: /Pena Palace/ })
-    expect(within(panel).getByText(/OpenStreetMap contributors \(ODbL\)/)).toBeInTheDocument()
+    await userEvent.click(within(panel).getByRole('button', { name: /^Place Add a place/ }))
+    await userEvent.type(await screen.findByRole('combobox', { name: 'Place' }), 'Pena')
+    const slip = await screen.findByRole('option', { name: /Pena Palace/ })
+    expect(screen.getByText(/OpenStreetMap contributors \(ODbL\)/)).toBeInTheDocument()
     await userEvent.click(slip)
     await waitFor(() => expect(todo('Pack the daypack')?.place?.name).toBe('Pena Palace'))
-    // Back on the sheet: the place shows as a row, and Open in Maps appears.
-    expect(await within(panel).findByRole('link', { name: 'Open in Maps' })).toHaveAttribute(
+    // Back on the sheet: the place shows as a row, and Open Maps appears.
+    expect(await within(panel).findByRole('link', { name: 'Open Maps' })).toHaveAttribute(
       'href',
       expect.stringContaining('maps'),
     )
-    await userEvent.click(within(panel).getByRole('button', { name: /Pena Palace/ }))
-    await userEvent.click(await within(panel).findByRole('button', { name: 'Remove place' }))
+    await userEvent.click(within(panel).getByRole('button', { name: /^Place Pena Palace/ }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Remove place' }))
     await waitFor(() => expect(todo('Pack the daypack')?.place ?? null).toBeNull())
   })
 
@@ -190,12 +188,9 @@ describe('Item sheet fields and places', () => {
     seed(TRIP)
     open()
     const panel = await openRow('Pack the daypack')
-    await userEvent.click(within(panel).getByRole('button', { name: /Add a place/ }))
-    await userEvent.type(
-      await within(panel).findByRole('combobox', { name: 'Place' }),
-      '38.7876, -9.3906',
-    )
-    await userEvent.click(await within(panel).findByRole('button', { name: /Drop a pin at/ }))
+    await userEvent.click(within(panel).getByRole('button', { name: /^Place Add a place/ }))
+    await userEvent.type(await screen.findByRole('combobox', { name: 'Place' }), '38.7876, -9.3906')
+    await userEvent.click(await screen.findByRole('button', { name: /Drop a pin at/ }))
     await waitFor(() => {
       const p = todo('Pack the daypack')?.place
       expect(p?.source).toBe('pin')
@@ -207,12 +202,9 @@ describe('Item sheet fields and places', () => {
     seed(TRIP)
     open()
     const panel = await openRow('Pack the daypack')
-    await userEvent.click(within(panel).getByRole('button', { name: /Add a place/ }))
-    await userEvent.type(
-      await within(panel).findByRole('combobox', { name: 'Place' }),
-      'zzz street 12',
-    )
-    await userEvent.click(await within(panel).findByRole('button', { name: /as the address/ }))
+    await userEvent.click(within(panel).getByRole('button', { name: /^Place Add a place/ }))
+    await userEvent.type(await screen.findByRole('combobox', { name: 'Place' }), 'zzz street 12')
+    await userEvent.click(await screen.findByRole('button', { name: /as the address/ }))
     await waitFor(() => expect(todo('Pack the daypack')?.place?.source).toBe('manual'))
   })
 
@@ -221,12 +213,12 @@ describe('Item sheet fields and places', () => {
     seed(TRIP)
     open()
     const panel = await openRow('Pack the daypack')
-    await userEvent.click(within(panel).getByRole('button', { name: /Add a place/ }))
-    await userEvent.type(await within(panel).findByRole('combobox', { name: 'Place' }), 'Rossio')
+    await userEvent.click(within(panel).getByRole('button', { name: /^Place Add a place/ }))
+    await userEvent.type(await screen.findByRole('combobox', { name: 'Place' }), 'Rossio')
     expect(
-      await within(panel).findByText('Search is unavailable. Drop a pin or type the address.'),
+      await screen.findByText('Search is unavailable. Drop a pin or type the address.'),
     ).toBeInTheDocument()
-    expect(await within(panel).findByRole('button', { name: /as the address/ })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: /as the address/ })).toBeInTheDocument()
   })
 
   it('shows the linked booking as a row, with its code behind the same slip', async () => {
@@ -425,7 +417,7 @@ describe('Map', () => {
     await waitFor(() => expect(document.querySelectorAll('.map-pin')).toHaveLength(1))
     expect(document.querySelector('.trip-map [aria-label="Map of the ideas"]')).not.toBeNull()
     expect(screen.queryByRole('region', { name: 'Next stop' })).not.toBeInTheDocument()
-    await userEvent.click(within(drawer).getByRole('button', { name: /^Close ideas/ }))
+    await userEvent.click(within(drawer).getByRole('button', { name: 'Close' }))
     await waitFor(() =>
       expect(screen.queryByRole('dialog', { name: 'Ideas' })).not.toBeInTheDocument(),
     )

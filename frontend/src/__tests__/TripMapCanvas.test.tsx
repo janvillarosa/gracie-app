@@ -215,7 +215,7 @@ describe('following the day, and pausing when you move the map', () => {
     const fitDay = screen.getByRole('button', { name: 'Fit day' })
     await waitFor(() => expect(fitDay).toHaveClass('is-key'))
     await userEvent.click(screen.getByRole('button', { name: /Day 3 of 5/ }))
-    const list = await screen.findByRole('list', { name: 'Days' })
+    const list = await screen.findByRole('group', { name: 'Days' })
     await userEvent.click(within(list).getAllByRole('button')[3])
     await waitFor(() => expect(fitDay).not.toHaveClass('is-key'))
   })
@@ -282,8 +282,8 @@ describe('click to add a stop', () => {
     const map = await ready()
     click(map, 'Jardim')
     const card = await screen.findByRole('dialog', { name: /Jardim/ })
-    await userEvent.click(within(card).getByRole('button', { name: 'Choose another day' }))
-    await userEvent.click(await screen.findByRole('button', { name: 'Ideas' }))
+    await userEvent.click(within(card).getByRole('button', { name: /^Add to, / }))
+    await userEvent.click(await screen.findByRole('button', { name: /^Ideas/ }))
     await userEvent.click(within(card).getByRole('button', { name: 'Add to Ideas' }))
     await waitFor(() =>
       expect(
@@ -404,6 +404,6 @@ describe('without a connection', () => {
     renderTrips(`/app/trips/${t.trip_id}`)
     await userEvent.click(await screen.findByRole('button', { name: 'Buy souvenirs' }))
     const sheet = await screen.findByRole('dialog')
-    expect(sheet.closest('.trip-sheet-drawer')).not.toBeNull()
+    expect(document.querySelector('.ui-dialog.is-sheet, .ui-drawer.is-sheet')).not.toBeNull()
   })
 })

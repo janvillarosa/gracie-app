@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Button } from '@components/ui'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   DndContext,
@@ -10,7 +11,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from '@dnd-kit/core'
-import { Button, Card, Modal, message } from 'antd'
+import { Card, message } from 'antd'
 import { CaretRight, Check, MapTrifold } from '@phosphor-icons/react'
 import { useAuth } from '@auth/AuthProvider'
 import { TopNav } from '@components/TopNav'
@@ -45,11 +46,15 @@ import {
 import { WhenSheet } from '@components/trips/WhenSheet'
 import { BookingsPanel, type BookingActions } from '@components/trips/Bookings'
 import { BookingSheet } from '@components/trips/BookingSheet'
-import { TodoDetail } from '@components/trips/ItemDetail'
-import { DayList, type DayRow } from '@components/trips/DayList'
+import { TodoSheet } from '@components/trips/TodoSheet'
+import { DayPick } from '@components/trips/pickers'
+import { IdeasPanel } from '@components/trips/IdeasPanel'
+import type { TabId } from '@components/trips/tabs'
+import { NotePick } from '@components/trips/pickers'
+import { LIMITS as TRIP_LIMITS } from '@lib/trips/limits'
+import { Sheet, SheetIdentity } from '@components/ui'
 import { NextStopDeck, type Stop, type Tomorrow } from '@components/trips/NextStop'
 import { useMedia } from '@components/trips/Phone'
-import { IdeasPanel, NotesPane, Panel, type TabId } from '@components/trips/Panels'
 import { AddBar, type QuickAddItem } from '@components/trips/QuickAdd'
 import {
   DaySection,
@@ -207,8 +212,7 @@ function useScreenActions(ctx: React.MutableRefObject<Ctx>) {
             <span>
               Deleted {td.title}.{' '}
               <Button
-                type="link"
-                size="small"
+                kind="text"
                 onClick={() => {
                   const t = timers.current.get(id)
                   if (t) clearTimeout(t)
@@ -415,10 +419,8 @@ const TripScreen: React.FC<{
     showDay: (date) => setOverride((o) => (o[date] === true ? o : { ...o, [date]: true })),
   }
   const { add, rowActions, bookingActions, setDayLabel } = useScreenActions(ctx)
-  const [bookingDraft, setBookingDraft] = useState<{ title: string } | null>(null)
-  // A new booking with something entered asks before it is closed.
-  const [bookingDirty, setBookingDirty] = useState(false)
-  const [discardOpen, setDiscardOpen] = useState(false)
+  const draftCount = useRef(0)
+  const [bookingDraft, setBookingDraft] = useState<{ title: string; n: number } | null>(null)
 
   const bias = useMemo(() => {
     const p = trip.destination ?? trip.stops?.[0]
@@ -1067,52 +1069,19 @@ const TripScreen: React.FC<{
     return () => document.removeEventListener('keydown', onKey)
   }, [desktop])
 
-  // ---- panels --------------------------------------------------------------------------
+  // ---- sheets --------------------------------------------------------------------------
+  // One at a time: an item, a new booking, the notes, or (wide screens) the ideas. Docked over
+  // the map when there is a map, otherwise a sheet.
   const closeSelected = () => setSelected(null)
-  const detailNode = selTodo ? (
-    <TodoDetail
-      key={selTodo.todo_id}
-      todo={selTodo}
-      fresh={selTodo.todo_id === freshId}
-      focusTime={focusTime === selTodo.todo_id}
-      onCopy={bookingActions.copy}
+  const sheetVariant = docked ? 'panel' : 'sheet'
+  const bookingsNode = (
+    <BookingsPanel
       bookings={trip.bookings}
-      days={moveTargets}
+      nowMs={nowMs}
       tripTz={trip.tz}
-      bias={bias}
-      byline={bylineFor(selTodo, userId, members)}
-      locked={locked}
-      onPatch={(p) => rowActions.patch(selTodo.todo_id, p)}
-      onMove={(d) => rowActions.move(selTodo.todo_id, d)}
-      onDelete={() => rowActions.remove(selTodo.todo_id)}
+      onOpen={rowActions.open}
     />
-  ) : selBooking ? (
-    <BookingSheet
-      key={selBooking.booking_id}
-      mode="edit"
-      booking={selBooking}
-      note={
-        state.notes[selBooking.booking_id]
-          ? 'A housemate changed this after your offline edit'
-          : undefined
-      }
-      onDismissNote={() => store.dismissNote(selBooking.booking_id)}
-      days={moveTargets}
-      focusTime={focusTime === selBooking.booking_id}
-      tripTz={trip.tz}
-      bias={bias}
-      byline={bylineFor(selBooking, userId, members)}
-      locked={locked}
-      linked={trip.todos
-        .filter((t) => t.booking_id === selBooking.booking_id)
-        .map((t) => ({ id: t.todo_id, title: t.title }))}
-      onOpenTodo={rowActions.open}
-      onSave={(id, patch) => bookingActions.save(id, patch)}
-      onDelete={() => bookingActions.remove(selBooking.booking_id)}
-      onCopy={bookingActions.copy}
-    />
-  ) : null
-
+  )
   const ideasNode = (
     <IdeasPanel
       ideas={schedule.ideas}
@@ -1120,14 +1089,6 @@ const TripScreen: React.FC<{
       moveOpenId={moveOpenId}
       selectedId={selected}
       enteringId={enteringId}
-    />
-  )
-  const bookingsNode = (
-    <BookingsPanel
-      bookings={trip.bookings}
-      nowMs={nowMs}
-      tripTz={trip.tz}
-      onOpen={rowActions.open}
     />
   )
   // A new booking starts at the next full hour today during the trip, else on day one at 09:00,
@@ -1138,69 +1099,132 @@ const TripScreen: React.FC<{
       : trip.start_date
         ? `${trip.start_date}T09:00`
         : undefined
-  const closeBookingDraft = () => {
-    setBookingDraft(null)
-    setBookingDirty(false)
-    setDiscardOpen(false)
-  }
-  const bookingFormNode = bookingDraft ? (
-    <BookingSheet
-      mode="new"
-      initialTitle={bookingDraft.title}
-      tripTz={trip.tz}
-      bias={bias}
-      days={moveTargets}
-      defaultStart={defaultStart}
-      onDirty={setBookingDirty}
-      onSave={(id, patch) => {
-        bookingActions.save(id, patch)
-        closeBookingDraft()
-      }}
-      onCopy={bookingActions.copy}
-    />
-  ) : null
-  const extraNode =
-    extra === 'notes' ? (
-      <NotesPane
-        key={trip.version}
-        notes={trip.notes ?? ''}
+  const closeBookingDraft = () => setBookingDraft(null)
+
+  let sheet: React.ReactElement | null = null
+  if (selTodo) {
+    sheet = (
+      <TodoSheet
+        key={selTodo.todo_id}
+        variant={sheetVariant}
+        open
+        onClose={closeSelected}
+        todo={selTodo}
+        fresh={selTodo.todo_id === freshId}
+        focusTime={focusTime === selTodo.todo_id}
+        onCopy={bookingActions.copy}
+        bookings={trip.bookings}
+        days={moveTargets}
+        tripTz={trip.tz}
+        bias={bias}
+        byline={bylineFor(selTodo, userId, members)}
         locked={locked}
-        onSave={(v) => store.updateTrip(trip.trip_id, { notes: v })}
+        onPatch={(p) => rowActions.patch(selTodo.todo_id, p)}
+        onMove={(d) => rowActions.move(selTodo.todo_id, d)}
+        onDelete={() => rowActions.remove(selTodo.todo_id)}
       />
-    ) : null
-
-  // One panel at a time: an item's detail wins, then notes or packing, then (desktop) the tab.
-  let panel: { key: string; title: string; node: React.ReactNode; close: () => void } | null = null
-  if (detailNode) {
-    panel = {
-      key: `item-${selected}`,
-      title: selTodo?.title ?? selBooking?.title ?? 'Details',
-      node: detailNode,
-      close: closeSelected,
-    }
-  } else if (bookingFormNode) {
-    panel = {
-      key: 'item-booking-new',
-      title: 'New booking',
-      node: bookingFormNode,
-      // Anything entered asks before it is thrown away.
-      close: () => (bookingDirty ? setDiscardOpen(true) : closeBookingDraft()),
-    }
-  } else if (extraNode) {
-    panel = {
-      key: `extra-${extra}`,
-      title: 'Notes',
-      node: extraNode,
-      close: () => setExtra(null),
-    }
+    )
+  } else if (selBooking) {
+    sheet = (
+      <BookingSheet
+        key={selBooking.booking_id}
+        mode="edit"
+        variant={sheetVariant}
+        open
+        onClose={closeSelected}
+        booking={selBooking}
+        nowMs={nowMs}
+        note={
+          state.notes[selBooking.booking_id]
+            ? 'A housemate changed this after your offline edit'
+            : undefined
+        }
+        onDismissNote={() => store.dismissNote(selBooking.booking_id)}
+        days={moveTargets}
+        focusTime={focusTime === selBooking.booking_id}
+        tripTz={trip.tz}
+        bias={bias}
+        byline={bylineFor(selBooking, userId, members)}
+        locked={locked}
+        linked={trip.todos
+          .filter((t) => t.booking_id === selBooking.booking_id)
+          .map((t) => ({ id: t.todo_id, title: t.title }))}
+        onOpenTodo={rowActions.open}
+        onSave={(id, patch) => bookingActions.save(id, patch)}
+        onDelete={() => bookingActions.remove(selBooking.booking_id)}
+        onCopy={bookingActions.copy}
+      />
+    )
+  } else if (bookingDraft) {
+    sheet = (
+      <BookingSheet
+        key={`new-booking-${bookingDraft.n}`}
+        mode="new"
+        variant={sheetVariant}
+        open
+        onClose={closeBookingDraft}
+        initialTitle={bookingDraft.title}
+        tripTz={trip.tz}
+        bias={bias}
+        days={moveTargets}
+        defaultStart={defaultStart}
+        nowMs={nowMs}
+        onSave={(id, patch) => {
+          bookingActions.save(id, patch)
+          closeBookingDraft()
+        }}
+        onCopy={bookingActions.copy}
+      />
+    )
+  } else if (extra === 'notes') {
+    sheet = (
+      <Sheet
+        key="notes"
+        variant={sheetVariant}
+        open
+        label="Notes"
+        onClose={() => setExtra(null)}
+        identity={
+          <SheetIdentity
+            title="Notes"
+            context="Anything the House should know: visa rules, meeting points, the plan B."
+          />
+        }
+      >
+        <NotePick
+          key={trip.version}
+          label="Trip notes"
+          placeholder="Add a note"
+          value={trip.notes ?? ''}
+          max={TRIP_LIMITS.tripNotesBytes}
+          onCommit={(v) => store.updateTrip(trip.trip_id, { notes: v })}
+        />
+      </Sheet>
+    )
   } else if (ideasOpen) {
-    panel = { key: 'ideas', title: 'Ideas', node: ideasNode, close: () => setTab('plan') }
+    sheet = (
+      <Sheet
+        key="ideas"
+        variant="panel"
+        open
+        label="Ideas"
+        onClose={() => setTab('plan')}
+        identity={
+          <SheetIdentity
+            title="Ideas"
+            context="Places you might go. Move one onto a day when you’re ready."
+          />
+        }
+      >
+        {ideasNode}
+      </Sheet>
+    )
   }
-
-  // The sheet stays mounted while it closes, so focus returns to what opened it.
-  const lastPanel = useRef(panel)
-  if (panel) lastPanel.current = panel
-  const shownPanel = panel ?? lastPanel.current
+  // A sheet that was just closed stays mounted (closed), so focus returns to what opened it.
+  const lastSheet = useRef<React.ReactElement | null>(sheet)
+  if (sheet) lastSheet.current = sheet
+  const shownSheet =
+    sheet ?? (lastSheet.current ? React.cloneElement(lastSheet.current, { open: false }) : null)
   const showSide = docked
   const showAdd = !locked
 
@@ -1264,23 +1288,41 @@ const TripScreen: React.FC<{
   )
 
   const emptyPlan = trip.todos.length === 0 && trip.bookings.length === 0
-  const dayRows: DayRow[] = schedule.days.map((d) => {
-    const todos = d.entries.filter((e) => e.kind === 'todo').length
-    return {
-      value: d.date,
-      title: `${d.date === today && phase === 'during' ? 'Today' : shortDay(d.date)}${d.label || d.suggested ? ` · ${d.label || d.suggested}` : ''}`,
-      note: doneDays.has(d.date) ? 'All done' : todos === 0 ? 'Nothing planned' : '',
-      current: d.date === currentDay,
-      flag: d.date >= today && !!d.clash,
-    }
-  })
+  const dayTargets = schedule.days.map((d) => ({
+    value: d.date as string | null,
+    label: fullDay(d.date),
+  }))
+  const dayNotes = Object.fromEntries(
+    schedule.days.map((d) => {
+      const todos = d.entries.filter((e) => e.kind === 'todo').length
+      const label = d.label || d.suggested
+      const flagged = d.date >= today && !!d.clash
+      return [
+        d.date,
+        [
+          d.date === today && phase === 'during' ? 'Today' : '',
+          label,
+          flagged
+            ? 'Two things overlap'
+            : doneDays.has(d.date)
+              ? 'All done'
+              : todos === 0
+                ? 'Nothing planned'
+                : '',
+        ]
+          .filter(Boolean)
+          .join(' · '),
+      ]
+    }),
+  )
   const dayListNode = (
-    <DayList
-      label="Days"
-      rows={dayRows}
+    <DayPick
+      days={dayTargets}
+      value={currentDay}
+      notes={dayNotes}
       onPick={(date) => {
         setDaysOpen(false)
-        goToDay(date)
+        if (date) goToDay(date)
       }}
     />
   )
@@ -1335,7 +1377,7 @@ const TripScreen: React.FC<{
           <h3>Where to first?</h3>
           <p>Add a place or a plan below. You can sort it into days later.</p>
           {!trip.start_date && !locked && (
-            <Button shape="round" onClick={() => setWhenOpen(true)}>
+            <Button kind="quiet" onClick={() => setWhenOpen(true)}>
               When are you going?
             </Button>
           )}
@@ -1400,7 +1442,6 @@ const TripScreen: React.FC<{
                   k === 'details' ? goSettings() : k === 'packing' ? onPacking() : setExtra(k)
                 }
                 packing={packingMenu}
-                desktop={desktop}
                 daysOpen={daysOpen}
                 onDaysOpen={setDaysOpen}
                 dayList={dayListNode}
@@ -1413,8 +1454,8 @@ const TripScreen: React.FC<{
                     extra={
                       phone && hasPlaces && mapOk ? (
                         <Button
+                          kind="quiet"
                           ref={mapPill}
-                          shape="round"
                           icon={<MapTrifold />}
                           aria-label={`Show map for ${currentModel ? shortDay(currentModel.date) : 'the trip'}`}
                           onClick={() => setScreenOpen(true)}
@@ -1442,7 +1483,7 @@ const TripScreen: React.FC<{
                     target={target}
                     onTarget={setAddTarget}
                     onAdd={(item) => add(target === 'ideas' ? null : target, item)}
-                    onLaunch={(typed) => setBookingDraft({ title: typed })}
+                    onLaunch={(typed) => setBookingDraft({ title: typed, n: ++draftCount.current })}
                     onPreview={
                       docked
                         ? (pl) =>
@@ -1465,17 +1506,7 @@ const TripScreen: React.FC<{
           {showSide && (
             <aside className="trip-side" aria-label="Map">
               {mapNode}
-              {docked && panel && (
-                <Panel
-                  key={panel.key}
-                  desktop
-                  bare={panel.key.startsWith('item-')}
-                  title={panel.title}
-                  onClose={panel.close}
-                >
-                  {panel.node}
-                </Panel>
-              )}
+              {docked && shownSheet}
             </aside>
           )}
         </div>
@@ -1505,35 +1536,7 @@ const TripScreen: React.FC<{
             opener={mapPill}
           />
         )}
-        {!docked && (
-          <Panel desktop={false} open={daysOpen} title="Days" onClose={() => setDaysOpen(false)}>
-            {daysOpen ? dayListNode : null}
-          </Panel>
-        )}
-        {!docked && shownPanel && (
-          <Panel
-            key={shownPanel.key}
-            desktop={false}
-            open={!!panel}
-            bare={shownPanel.key.startsWith('item-')}
-            title={shownPanel.title}
-            onClose={shownPanel.close}
-          >
-            {panel ? shownPanel.node : null}
-          </Panel>
-        )}
-        <Modal
-          open={discardOpen}
-          className="paper-modal"
-          title="Discard this booking?"
-          okText="Discard"
-          okButtonProps={{ danger: true }}
-          cancelText="Keep editing"
-          onOk={closeBookingDraft}
-          onCancel={() => setDiscardOpen(false)}
-        >
-          What you entered will be lost.
-        </Modal>
+        {!docked && shownSheet}
         <div className="sr-only" role="status" aria-live="polite">
           {announcement}
         </div>

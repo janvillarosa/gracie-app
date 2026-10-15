@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { Button, Checkbox } from 'antd'
+import { Button } from '@components/ui'
+import { Checkbox } from 'antd'
 import { CalendarPlus, DotsSixVertical, Trash } from '@phosphor-icons/react'
 import { useDraggable, useDroppable } from '@dnd-kit/core'
 import type { TripTodo } from '@api/tripTypes'
@@ -210,9 +211,8 @@ export const TodoRow = React.memo<Props>(function TodoRow({
               {!locked && (
                 <span className="trip-acts">
                   <Button
-                    type="text"
-                    shape="circle"
-                    size="small"
+                    kind="text"
+                    iconOnly
                     aria-label={`Delete ${todo.title}`}
                     onClick={() => actions.remove(id)}
                     icon={<Trash />}
@@ -221,10 +221,9 @@ export const TodoRow = React.memo<Props>(function TodoRow({
               )}
               {idea && !locked && (
                 <Button
+                  kind="text"
+                  iconOnly
                   className="trip-addday"
-                  type="text"
-                  shape="circle"
-                  size="small"
                   aria-label={`Add ${todo.title} to a day`}
                   aria-haspopup="menu"
                   aria-expanded={moveOpen}
@@ -251,7 +250,7 @@ export const TodoRow = React.memo<Props>(function TodoRow({
       {note && (
         <div className="trip-note" role="status">
           <span>{note.text}</span>
-          <Button size="small" type="link" onClick={() => actions.seeTheirs(id)}>
+          <Button kind="text" onClick={() => actions.seeTheirs(id)}>
             See theirs
           </Button>
         </div>

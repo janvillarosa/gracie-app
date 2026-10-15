@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Button } from 'antd'
+import { Button } from '@components/ui'
 import { CaretDown, CaretRight } from '@phosphor-icons/react'
 import type { Booking } from '@api/tripTypes'
 import { bookingHeadline, bookingSub, groupBookings, nextMeta, nowMeta } from '@lib/trips/bookings'
@@ -66,7 +66,7 @@ export const BookingLine = React.memo<LineProps>(function BookingLine({
       {note && (
         <div className="trip-note" role="status">
           <span>{note.text}</span>
-          <Button size="small" type="link" onClick={() => onSeeTheirs?.(b.booking_id)}>
+          <Button kind="text" onClick={() => onSeeTheirs?.(b.booking_id)}>
             See theirs
           </Button>
         </div>

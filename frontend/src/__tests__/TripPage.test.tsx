@@ -119,10 +119,8 @@ describe('Overlaps', () => {
       await screen.findByRole('button', { name: /Jerónimos Monastery and Pastéis/ }),
     )
     const sheet = await screen.findByRole('dialog', { name: 'Pastéis de Belém' })
-    const time = within(sheet).getByRole('button', { name: /^Time, / })
-    expect(time).toHaveFocus()
-    await userEvent.click(time)
-    await userEvent.click(await screen.findByRole('option', { name: '12:30' }))
+    // The When picker is already open on the time.
+    await userEvent.click(await screen.findByRole('button', { name: '12:30' }))
     await waitFor(() =>
       expect(screen.queryByRole('button', { name: /overlap/ })).not.toBeInTheDocument(),
     )
@@ -144,10 +142,10 @@ describe('Overlaps', () => {
     seed(clashing())
     open()
     await userEvent.click(await screen.findByRole('button', { name: /Day 3 of 5/ }))
-    const list = await screen.findByRole('list', { name: 'Days' })
+    const list = await screen.findByRole('group', { name: 'Days' })
     const row = within(list).getByRole('button', { name: new RegExp(shortDay(rel(1))) })
-    expect(within(row).getByRole('img', { name: 'Two things overlap' })).toBeInTheDocument()
-    expect(within(list).getAllByRole('img', { name: 'Two things overlap' })).toHaveLength(1)
+    expect(row).toHaveTextContent('Two things overlap')
+    expect(within(list).getAllByText('Two things overlap')).toHaveLength(1)
   })
 })
 
@@ -156,9 +154,9 @@ describe('Header day list', () => {
     seed(TRIP)
     open()
     await userEvent.click(await screen.findByRole('button', { name: /Day 3 of 5/ }))
-    const list = await screen.findByRole('list', { name: 'Days' })
+    const list = await screen.findByRole('group', { name: 'Days' })
     expect(within(list).getAllByRole('button')).toHaveLength(5)
-    expect(within(list).getAllByText('All done')).toHaveLength(2)
+    expect(within(list).getAllByText(/All done/)).toHaveLength(2)
     expect(within(list).getByText('Nothing planned')).toBeInTheDocument()
     scrollIntoView.mockClear()
     await userEvent.click(within(list).getByRole('button', { name: new RegExp(shortDay(rel(1))) }))
@@ -170,7 +168,7 @@ describe('Header day list', () => {
     seed(TRIP)
     open()
     await userEvent.click(await screen.findByRole('button', { name: /Day 3 of 5/ }))
-    const list = await screen.findByRole('list', { name: 'Days' })
+    const list = await screen.findByRole('group', { name: 'Days' })
     await userEvent.click(within(list).getByRole('button', { name: /Arrival/ }))
     expect(await screen.findByRole('heading', { name: shortDay(rel(-2)) })).toBeInTheDocument()
   })
@@ -560,14 +558,14 @@ describe('Rows', () => {
     // The title is one borderless heading, not repeated in a header.
     const title = within(panel).getByLabelText('Title')
     expect(title).toHaveValue('Lunch at Tascantiga')
-    expect(within(panel).getByRole('button', { name: /Add a place/ })).toBeInTheDocument()
-    expect(
-      within(panel).getByRole('button', { name: `Day, ${shortDay(rel(0))}` }),
-    ).toBeInTheDocument()
-    // Only the chosen stamp shows; the seven wait behind it.
-    expect(within(panel).getByRole('button', { name: 'Category, Sight' })).toBeInTheDocument()
-    expect(within(panel).queryByRole('button', { name: 'Category: Food' })).not.toBeInTheDocument()
-    expect(within(panel).getByPlaceholderText('Add a note')).toBeInTheDocument()
+    // The details are one group of rows: label on the left, value on the right.
+    const details = within(panel).getByRole('group', { name: 'Details' })
+    expect(within(details).getByRole('button', { name: /^When /i })).toHaveTextContent(
+      shortDay(rel(0)),
+    )
+    expect(within(details).getByRole('button', { name: /^Place Add a place/ })).toBeInTheDocument()
+    expect(within(details).getByRole('button', { name: /^Category Sight/ })).toBeInTheDocument()
+    expect(within(details).getByRole('button', { name: /^Note Add a note/ })).toBeInTheDocument()
     // No Save button, and a quiet Delete at the bottom.
     expect(within(panel).queryByRole('button', { name: /^Save/ })).not.toBeInTheDocument()
     expect(within(panel).getByRole('button', { name: 'Delete' })).toBeInTheDocument()
@@ -681,8 +679,8 @@ describe('Rows', () => {
     open()
     await userEvent.click(await screen.findByRole('button', { name: 'Buy souvenirs' }))
     const panel = await screen.findByRole('dialog', { name: 'Buy souvenirs' })
-    await userEvent.click(within(panel).getByRole('button', { name: 'Time, not set' }))
-    await userEvent.click(await screen.findByRole('option', { name: '11:00' }))
+    await userEvent.click(within(panel).getByRole('button', { name: /^When / }))
+    await userEvent.click(await screen.findByRole('button', { name: '11:00' }))
     // Between Pena Palace (10:15, the deck) and Lunch (12:30).
     await waitFor(() =>
       expect(rowTitles().slice(0, 3)).toEqual([
@@ -818,7 +816,7 @@ describe('The add bar', () => {
     open()
     const field = await screen.findByRole('combobox', { name: 'Add to today' })
     expect(screen.getAllByPlaceholderText(/^Add (a|an|to) /)).toHaveLength(1)
-    expect(screen.getByRole('button', { name: /Adding to Today/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Adding to, Today/ })).toBeInTheDocument()
     await userEvent.type(field, '14:00 Quinta da Regaleira{Enter}')
     const row = (await screen.findByRole('button', { name: 'Quinta da Regaleira' })).closest(
       'li',
@@ -846,9 +844,9 @@ describe('The add bar', () => {
     seed(TRIP)
     open()
     await screen.findByRole('combobox', { name: 'Add to today' })
-    await userEvent.click(screen.getByRole('button', { name: /Adding to Today/ }))
-    const list = await screen.findByRole('list', { name: 'Add to' })
-    await userEvent.click(within(list).getByRole('button', { name: 'Ideas' }))
+    await userEvent.click(screen.getByRole('button', { name: /Adding to, Today/ }))
+    const list = await screen.findByRole('group', { name: 'Days' })
+    await userEvent.click(within(list).getByRole('button', { name: /^Ideas/ }))
     const field = await screen.findByRole('combobox', { name: 'Add an idea' })
     await userEvent.type(field, 'Fado night{Enter}')
     await waitFor(() => {
@@ -874,7 +872,7 @@ describe('The add bar', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Add with details' }))
     const panel = await screen.findByRole('dialog', { name: 'Ginjinha stop' })
     expect(within(panel).getByLabelText('Title')).toHaveValue('Ginjinha stop')
-    expect(within(panel).getByRole('button', { name: 'Time, 16:00' })).toBeInTheDocument()
+    expect(within(panel).getByRole('button', { name: /^When .*16:00/ })).toBeInTheDocument()
     await waitFor(() => expect(serverTodos().some((x) => x.title === 'Ginjinha stop')).toBe(true))
   })
 
@@ -980,8 +978,8 @@ describe('Phone', () => {
     open()
     await userEvent.click(await screen.findByRole('button', { name: /Day 3 of 5/ }))
     const sheet = await screen.findByRole('dialog')
-    expect(sheet.closest('.trip-sheet-drawer')).not.toBeNull()
-    expect(within(sheet).getByRole('list', { name: 'Days' })).toBeInTheDocument()
+    expect(sheet.closest('.ui-drawer')).not.toBeNull()
+    expect(within(sheet).getByRole('group', { name: 'Days' })).toBeInTheDocument()
   })
 
   it('opens today and tomorrow, and folds later days to a header line', async () => {
@@ -1002,7 +1000,7 @@ describe('Phone', () => {
     open()
     await userEvent.click(await screen.findByRole('button', { name: /Day 3 of 5/ }))
     const sheet = await screen.findByRole('dialog')
-    expect(within(sheet).getByRole('list', { name: 'Days' })).toBeInTheDocument()
+    expect(within(sheet).getByRole('group', { name: 'Days' })).toBeInTheDocument()
     scrollIntoView.mockClear()
     await userEvent.click(within(sheet).getByRole('button', { name: new RegExp(shortDay(rel(2))) }))
     await waitFor(() => expect(scrollIntoView).toHaveBeenCalled())

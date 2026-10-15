@@ -1,8 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react'
-import { Button, Popover } from 'antd'
-import { CaretDown } from '@phosphor-icons/react'
+import React, { useEffect, useRef } from 'react'
+import { Button, Chip } from '@components/ui'
 import type { Place } from '@api/tripTypes'
-import { DayList } from './DayList'
+import { DayPick } from './pickers'
 
 type Props = {
   // Where the click landed, in the map pane's pixels, and the pane's size (to keep the card inside).
@@ -44,7 +43,6 @@ export const MapAddPopover: React.FC<Props> = ({
   onDismiss,
 }) => {
   const root = useRef<HTMLDivElement>(null)
-  const [dayOpen, setDayOpen] = useState(false)
   const ready = !!place
   const title = ready ? (degraded ? 'Dropped pin' : place.name) : 'Finding the place…'
 
@@ -52,7 +50,7 @@ export const MapAddPopover: React.FC<Props> = ({
   useEffect(() => {
     root.current?.focus({ preventScroll: true })
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !dayOpen) {
+      if (e.key === 'Escape') {
         e.preventDefault()
         onDismiss()
       }
@@ -87,7 +85,7 @@ export const MapAddPopover: React.FC<Props> = ({
       document.removeEventListener('keydown', onKey)
       document.removeEventListener('pointerdown', onDown, true)
     }
-  }, [dayOpen, onDismiss])
+  }, [onDismiss])
 
   const left = Math.min(
     Math.max(at.x, WIDTH / 2 + 8),
@@ -125,34 +123,24 @@ export const MapAddPopover: React.FC<Props> = ({
         <p className="map-add-line">{place.locality}</p>
       )}
       <div className="map-add-actions">
-        <Button type="primary" shape="round" disabled={!ready} onClick={onAdd}>
+        <Button kind="key" disabled={!ready} onClick={onAdd}>
           Add to {targetLabel}
         </Button>
-        <Popover
-          trigger="click"
-          placement="bottomRight"
-          open={dayOpen}
-          onOpenChange={setDayOpen}
-          overlayClassName="trip-gaps-pop trip-days-pop"
-          content={
-            <DayList
-              label="Add to"
-              rows={targets.map((t) => ({
-                value: t.value,
-                title: t.label,
-                current: t.value === target,
-              }))}
-              onPick={(v) => {
-                setDayOpen(false)
-                onTarget(v)
+        <Chip label="Add to" value={targetLabel} title="Add to" className="map-add-day">
+          {(close) => (
+            <DayPick
+              days={targets
+                .filter((t) => t.value !== 'ideas')
+                .map((t) => ({ value: t.value as string | null, label: t.label }))}
+              value={target === 'ideas' ? null : target}
+              allowIdeas={targets.some((t) => t.value === 'ideas')}
+              onPick={(d) => {
+                close()
+                onTarget(d === null ? 'ideas' : d)
               }}
             />
-          }
-        >
-          <button type="button" className="trip-chip map-add-day" aria-label="Choose another day">
-            <CaretDown aria-hidden />
-          </button>
-        </Popover>
+          )}
+        </Chip>
       </div>
       {ready && (
         <button type="button" className="map-add-more" onClick={onMore}>

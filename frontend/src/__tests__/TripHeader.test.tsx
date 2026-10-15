@@ -27,7 +27,6 @@ const header = (n: number) =>
       onRestore={() => {}}
       onMenu={() => {}}
       packing={{ label: 'Make a packing list', disabled: false }}
-      desktop
       daysOpen={false}
       onDaysOpen={() => {}}
       dayList={null}

@@ -421,6 +421,14 @@ export function orderBetween(prev?: number, next?: number): number {
   return (prev + next) / 2
 }
 
+/** "14:00" plus 120 minutes is "16:00" (wall clock; past midnight wraps to the next day's clock). */
+export function endClock(start: string, minutes?: number | null): string {
+  if (!minutes) return ''
+  const [h, m] = start.split(':').map(Number)
+  const total = (h * 60 + m + minutes) % (24 * 60)
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`
+}
+
 export function mapsUrl(lat: number, lng: number): string {
   return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
 }

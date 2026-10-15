@@ -2849,6 +2849,50 @@ textarea.notes-textarea {
   --pip-other: #767676;
   --pip-done: #A9ADA6;
 
+  /* UI primitives (components/ui): the scale every trip screen and sheet is drawn from. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-sheet: 20px;
+  --radius-pill: 999px;
+  /* Control heights: chip and quiet button, text action and key, a detail row. */
+  --control-md: 36px;
+  --control-lg: 44px;
+  --row-h: 52px;
+  /* Type */
+  --size-body: 15px;
+  --size-context: 15px;
+  --size-meta: 13px;
+  --size-label: 12px;
+  --title-sheet: 26px;
+  --title-page: 28px;
+  /* The row grid: [lead] 12 [time] 12 [title] [trail]. A day without times sets --tcol to 0. */
+  --lead: 24px;
+  --gap: 12px;
+  --lead-col: calc(var(--lead) + var(--gap));
+  --time-w: 48px;
+  --detail-label-w: 96px;
+  --detail-inset: 16px;
+  /* Sheets: side inset, scrim, tallest content, and the space between the four tiers. */
+  --sheet-inset: 20px;
+  --sheet-scrim: rgba(0, 0, 0, 0.35);
+  --sheet-max-h: 90dvh;
+  --tier-identity-actions: 18px;
+  --tier-actions-details: 26px;
+  --tier-details-footer: 22px;
+  /* Warn (an overlap): amber, 6.8:1 for the text on its ground. Not red: it is not an error. */
+  --warn-bg: #FFF4D6;
+  --warn-ink: #7A4B00;
+  --warn-rule: var(--brand-yellow-deep);
+  --on-red: #FFFFFF;
+
   /* Category stamps: tinted ground, darker ink of the same hue (4.5:1 on the tint). */
   --trip-cat-food-bg: #FDE7D2;
   --trip-cat-food-fg: #8A4209;
@@ -3062,4 +3106,34 @@ textarea.notes-textarea {
   .settings-pencil {
     opacity: 0.45;
   }
+}
+
+/* Dev gallery (/dev/ui): frames and blocks around the primitives. */
+.dev-frames {
+  display: flex;
+  gap: var(--space-6);
+  align-items: flex-start;
+  padding: var(--space-6);
+  overflow-x: auto;
+}
+.dev-frames iframe {
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--bg);
+}
+.dev-frames figcaption {
+  margin-bottom: var(--space-2);
+  color: var(--muted);
+  font-size: var(--size-meta);
+}
+.dev-gallery {
+  display: grid;
+  gap: var(--space-5);
+  padding: var(--space-5);
+}
+.dev-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
 }

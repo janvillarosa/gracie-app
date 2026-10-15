@@ -23,6 +23,11 @@ const ListsIndex = lazyPage(() => import('@pages/ListsIndex'), 'ListsIndex')
 const TripsDashboard = lazyPage(() => import('@pages/Dashboard'), 'TripsDashboard')
 const TripPage = lazyPage(() => import('@pages/TripPage'), 'TripPage')
 const TripSettings = lazyPage(() => import('@pages/TripSettings'), 'TripSettings')
+// Dev only: the UI primitives gallery. `import.meta.env.DEV` is false in a production build, so
+// this import (and the route) is dropped with it.
+const DevUi = import.meta.env.DEV
+  ? React.lazy(() => import('@pages/DevUi').then((m) => ({ default: m.DevUi })))
+  : null
 
 const RequireAuth: React.FC<React.PropsWithChildren> = ({ children }) => {
   const { isAuthed } = useAuth()
@@ -148,6 +153,7 @@ export const AppRoutes: React.FC = () => {
               </RequireAuth>
             }
           />
+          {DevUi && <Route path="/dev/ui" element={<DevUi />} />}
           <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="*" element={<Navigate to="/app" replace />} />
         </Routes>

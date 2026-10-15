@@ -1,10 +1,10 @@
 import React, { useEffect, useId, useRef, useState } from 'react'
-import { Button, Input, Popover } from 'antd'
-import { ArrowsOutSimple, CaretDown, Plus } from '@phosphor-icons/react'
+import { Button, Chip, Field } from '@components/ui'
+import { ArrowsOutSimple, Plus } from '@phosphor-icons/react'
 import type { Place } from '@api/tripTypes'
 import { parseQuickAdd } from '@lib/trips/schedule'
 import { titleProblem } from '@lib/trips/limits'
-import { DayList } from './DayList'
+import { DayPick } from './pickers'
 import { DEGRADED_TEXT, OSM_ATTRIBUTION, PlaceSlip, usePlaceSearch } from './places'
 
 export type QuickAddItem = { title: string; start_time?: string; place?: Place }
@@ -114,7 +114,11 @@ export const AddBar: React.FC<Props> = ({
     }
   }
 
-  const [chipOpen, setChipOpen] = useState(false)
+  // One line, growing to three as you type.
+  const grow = (el: HTMLTextAreaElement | HTMLInputElement) => {
+    el.style.height = 'auto'
+    el.style.height = `${Math.min(el.scrollHeight, 22 * 3 + 20)}px`
+  }
 
   // The highlighted suggestion previews on the map; nothing highlighted (or no bar) clears it.
   const previewed = open && active >= 0 ? slips[active] : null
@@ -145,49 +149,41 @@ export const AddBar: React.FC<Props> = ({
       <div className="add-row">
         <div className={mode === 'todo' ? 'add-field trip-add-field has-target' : 'add-field'}>
           {mode === 'todo' && (
-            <Popover
-              trigger="click"
-              placement="topLeft"
-              open={chipOpen}
-              onOpenChange={setChipOpen}
-              overlayClassName="trip-gaps-pop trip-days-pop"
-              content={
-                <DayList
-                  label="Add to"
-                  rows={targets.map((t) => ({
-                    value: t.value,
-                    title: t.label,
-                    current: t.value === target,
-                  }))}
-                  onPick={(v) => {
-                    setChipOpen(false)
-                    onTarget(v)
+            <Chip
+              label="Adding to"
+              value={current?.label ?? 'a day'}
+              title="Add to"
+              className="trip-target-chip"
+            >
+              {(close) => (
+                <DayPick
+                  days={targets
+                    .filter((t) => t.value !== 'ideas')
+                    .map((t) => ({ value: t.value as string | null, label: t.label }))}
+                  value={target === 'ideas' ? null : target}
+                  allowIdeas={targets.some((t) => t.value === 'ideas')}
+                  onPick={(d) => {
+                    close()
+                    onTarget(d === null ? 'ideas' : d)
                   }}
                 />
-              }
-            >
-              <button
-                type="button"
-                className="trip-target-chip"
-                aria-label={`Adding to ${current?.label ?? 'a day'}. Change where`}
-              >
-                {current?.label}
-                <CaretDown aria-hidden />
-              </button>
-            </Popover>
+              )}
+            </Chip>
           )}
-          <Input.TextArea
+          <Field
+            multiline
             id={inputId}
             ref={ref as never}
             className="add-input"
             value={value}
+            rows={1}
             onChange={(e) => {
               setValue(e.target.value)
               setActive(-1)
               setDismissed(false)
+              grow(e.target)
             }}
             placeholder={placeholder}
-            autoSize={{ minRows: 1, maxRows: 3 }}
             enterKeyHint="enter"
             onKeyDown={onKeyDown}
             onBlur={() => setActive(-1)}
@@ -206,8 +202,8 @@ export const AddBar: React.FC<Props> = ({
         </div>
         {mode === 'todo' && onExpand && armed && (
           <Button
-            type="text"
-            shape="circle"
+            kind="text"
+            iconOnly
             aria-label="Add with details"
             title="Add with details (Shift+Enter)"
             onClick={expand}
@@ -215,10 +211,9 @@ export const AddBar: React.FC<Props> = ({
           />
         )}
         <Button
+          kind="key"
+          iconOnly
           className={armed || mode === 'booking' ? 'add-btn is-armed' : 'add-btn'}
-          type="primary"
-          shape="circle"
-          size="large"
           aria-label={`${label}, add`}
           disabled={mode === 'todo' && !armed}
           onClick={mode === 'booking' ? launch : submit}

@@ -1,13 +1,13 @@
 import React from 'react'
-import { Button, Card, Dropdown, Popover, Typography } from 'antd'
+import { Button, Note, Sheet } from '@components/ui'
+import { Card, Dropdown, Typography } from 'antd'
 import type { MenuProps } from 'antd'
-import { ArrowDown, ArrowUp, CaretDown, DotsThreeVertical, X } from '@phosphor-icons/react'
-import type { Place, Trip } from '@api/tripTypes'
+import { CaretDown, DotsThreeVertical } from '@phosphor-icons/react'
+import type { Trip } from '@api/tripTypes'
 import { countdown, routeText, shortDay, shortRange, tripPhase } from '@lib/trips/schedule'
 import { Avatar } from '@components/Avatar'
 import type { Member } from '@lib/trips/hooks'
 import { toTripEmoji } from '../../icons'
-import { PlacePicker } from './PlacePicker'
 
 type HeaderProps = {
   trip: Trip
@@ -27,9 +27,7 @@ type HeaderProps = {
   onMenu: (key: 'notes' | 'packing' | 'details') => void
   // The packing list carries its state in the menu: "Packing list · 4 of 12 packed".
   packing: { label: string; disabled: boolean }
-  // The friendly line opens a list of days: a popover on desktop, a sheet (owned by the page)
-  // elsewhere.
-  desktop: boolean
+  // The friendly line opens the list of days (a popover on wide screens, a small sheet elsewhere).
   daysOpen: boolean
   onDaysOpen: (open: boolean) => void
   dayList: React.ReactNode
@@ -58,7 +56,6 @@ export const TripHeader: React.FC<HeaderProps> = ({
   onRestore,
   onMenu,
   packing,
-  desktop,
   daysOpen,
   onDaysOpen,
   dayList,
@@ -81,7 +78,7 @@ export const TripHeader: React.FC<HeaderProps> = ({
       {deletedBy && (
         <div className="trip-banner" role="status">
           <span>{deletedBy} deleted this trip.</span>
-          <Button size="small" type="primary" onClick={onRestore}>
+          <Button kind="key" onClick={onRestore}>
             Restore
           </Button>
         </div>
@@ -104,9 +101,9 @@ export const TripHeader: React.FC<HeaderProps> = ({
             menu={{ items, onClick: ({ key }) => onMenu(key as 'notes' | 'packing' | 'details') }}
           >
             <Button
+              kind="text"
+              iconOnly
               icon={<DotsThreeVertical />}
-              type="text"
-              shape="circle"
               aria-label="More trip options"
             />
           </Dropdown>
@@ -115,34 +112,22 @@ export const TripHeader: React.FC<HeaderProps> = ({
           {phase === 'draft' ? (
             <Typography.Text className="list-meta">{line}</Typography.Text>
           ) : (
-            (() => {
-              const button = (
-                <button
-                  type="button"
-                  className="list-meta trip-dayline"
-                  aria-haspopup="dialog"
-                  aria-expanded={daysOpen}
-                  onClick={desktop ? undefined : () => onDaysOpen(true)}
-                >
+            <Sheet
+              variant="chips"
+              open={daysOpen}
+              onOpen={() => onDaysOpen(true)}
+              onClose={() => onDaysOpen(false)}
+              label="Days"
+              title="Days"
+              anchor={
+                <button type="button" className="list-meta trip-dayline">
                   {line}
                   <CaretDown aria-hidden />
                 </button>
-              )
-              return desktop ? (
-                <Popover
-                  trigger="click"
-                  placement="bottomLeft"
-                  open={daysOpen}
-                  onOpenChange={onDaysOpen}
-                  overlayClassName="trip-gaps-pop trip-days-pop"
-                  content={dayList}
-                >
-                  {button}
-                </Popover>
-              ) : (
-                button
-              )
-            })()
+              }
+            >
+              {daysOpen ? dayList : null}
+            </Sheet>
           )}
           <span className="trip-avatars" role="img" aria-label={sharedWith(members)}>
             {members.slice(0, members.length > 4 ? 3 : 4).map((m) => (
@@ -163,12 +148,18 @@ export const TripHeader: React.FC<HeaderProps> = ({
         </div>
       </div>
       {notes.map((n) => (
-        <div key={n.key} className="trip-note trip-note-trip" role="status">
-          <span>{n.text}</span>
-          <Button size="small" type="link" onClick={() => onDismissNote(n.key)}>
-            Got it
-          </Button>
-        </div>
+        <Note
+          key={n.key}
+          role="status"
+          className="trip-note-trip"
+          action={
+            <Button kind="text" onClick={() => onDismissNote(n.key)}>
+              Got it
+            </Button>
+          }
+        >
+          {n.text}
+        </Note>
       ))}
       {(offline || pending > 0 || readOnlyOver || persistFailed) && (
         <div className="trip-header-row">
