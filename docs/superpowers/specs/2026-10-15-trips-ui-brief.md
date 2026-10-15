@@ -216,7 +216,11 @@ adventure or a scavenger hunt.
   - A muted subheading under the title gives the time ("Anytime" when untimed), plus the linked booking ("10:15 · Timed entry booked").
   - The one yellow key is **Open Maps**.
   - A booking's confirmation code is hidden behind a "Show code" button.
-  - "Skip for now", the Done button and the progress shapes are removed. "2 more today" remains.
+  - "Skip for now", the Done button, the progress shapes and the "N more today" line are removed.
+    The peeking sheet edges are the only hint that more cards remain.
+  - The heading is only where to go: the place name, falling back to the title. Booking
+    descriptors and a differing todo title go in the subheading ("Lunch · 12:30", "10:00 · Timed
+    entry · Booked").
 
 ## 6e. Trip settings and the next-stop preference (2026-10-15)
 
