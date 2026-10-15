@@ -1,0 +1,229 @@
+/* The Google map: our own markers, clusters and controls. The map style itself (a quiet light
+   Map ID) is light in both themes, so the marker text keeps a dark ink on a white halo. Google's
+   logo (bottom-left) and terms (bottom-right) are never covered: the +/- sit above the terms. */
+.gm-wrap {
+  --gm-ink: #1a1a1a;
+  --gm-halo: #ffffff;
+  --gm-muted: #5d635c;
+  position: relative;
+  isolation: isolate;
+}
+.gm-wrap .gm-map {
+  position: absolute;
+  inset: 0;
+}
+
+/* ---- a marker: a 0x0 box whose bottom-centre is the stop's exact point ---------------------- */
+.gm-pin {
+  position: relative;
+  width: 0;
+  height: 0;
+  cursor: pointer;
+  font-family: var(--font-body);
+}
+.gm-pip {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 13px;
+  height: 13px;
+  box-sizing: border-box;
+  border: 2.5px solid var(--gm-stroke, var(--on-pin));
+  border-radius: 50%;
+  background: var(--gm-fill, var(--pip-other));
+  transform: translate(-50%, -50%);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
+}
+/* a comfortable tap target without a bigger pip */
+.gm-pip::before {
+  content: '';
+  position: absolute;
+  inset: -12px;
+}
+.gm-pin.is-selected .gm-pip,
+.gm-pin.is-next .gm-pip {
+  box-shadow:
+    0 0 0 3px var(--brand-yellow),
+    0 1px 2px rgba(0, 0, 0, 0.28);
+}
+.gm-pin.is-hollow .gm-pip {
+  background: var(--panel);
+  border-color: var(--gm-stroke);
+}
+.gm-pin.is-done .gm-pip {
+  background: var(--pip-done);
+}
+.gm-pin.is-hot .gm-pip {
+  transform: translate(-50%, -50%) scale(1.35);
+}
+.gm-pin.is-dim {
+  opacity: 0.4;
+}
+
+.gm-label {
+  position: absolute;
+  display: none;
+  white-space: nowrap;
+  pointer-events: none;
+  color: var(--gm-ink);
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 18px;
+  /* the white halo, in CSS */
+  -webkit-text-stroke: 3.5px var(--gm-halo);
+  paint-order: stroke fill;
+  text-shadow: 0 0 2px var(--gm-halo);
+}
+.gm-pin.is-labelled:not(.label-hidden) .gm-label,
+.gm-pin:hover .gm-label,
+.gm-pin.is-hot .gm-label {
+  display: block;
+}
+.gm-pin.is-done .gm-label {
+  color: var(--gm-muted);
+  text-decoration: line-through;
+}
+.gm-pin.a-right .gm-label {
+  left: 13px;
+  top: -9px;
+}
+.gm-pin.a-left .gm-label {
+  right: 13px;
+  top: -9px;
+}
+.gm-pin.a-top .gm-label {
+  left: 0;
+  top: -29px;
+  transform: translateX(-50%);
+}
+.gm-pin.a-bottom .gm-label {
+  left: 0;
+  top: 11px;
+  transform: translateX(-50%);
+}
+/* the next stop's name sits in a paper pill with the yellow border */
+.gm-pin.is-next .gm-label {
+  padding: 0 8px;
+  margin: 0 -8px;
+  border-radius: 999px;
+  background: var(--gm-halo);
+  border: 2px solid var(--brand-yellow);
+  line-height: 14px;
+  -webkit-text-stroke: 0;
+  text-shadow: none;
+}
+.gm-pin.is-next.a-right .gm-label {
+  left: 20px;
+  top: -10px;
+}
+.gm-pin.is-next.a-left .gm-label {
+  right: 20px;
+  top: -10px;
+}
+.gm-pin.is-next.a-top .gm-label {
+  top: -31px;
+}
+.gm-pin.is-next.a-bottom .gm-label {
+  top: 13px;
+}
+/* a hover shows this label above its neighbours */
+.gm-pin:hover,
+.gm-pin.is-hot {
+  z-index: 2;
+}
+
+/* ---- a cluster: a white disc with +N and an ink border ---------------------------------------- */
+.gm-cluster {
+  position: relative;
+  width: 0;
+  height: 0;
+  cursor: pointer;
+}
+.gm-cluster-disc {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: grid;
+  place-items: center;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 4px;
+  box-sizing: border-box;
+  transform: translate(-50%, -50%);
+  border: 2px solid var(--gm-ink);
+  border-radius: 999px;
+  background: var(--gm-halo);
+  color: var(--gm-ink);
+  font-family: var(--font-body);
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- the previewed place: a hollow pin ----------------------------------------------------------- */
+.gm-preview {
+  position: relative;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+.gm-preview-ring {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 18px;
+  height: 18px;
+  box-sizing: border-box;
+  transform: translate(-50%, -50%);
+  border: 2.5px solid var(--gm-ink);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.4);
+}
+
+/* ---- our +/- (the default controls are off) -------------------------------------------------------- */
+.gm-zoom {
+  position: absolute;
+  z-index: 1;
+  right: 12px;
+  /* above Google's terms strip, which stays visible in the bottom-right corner */
+  bottom: 44px;
+  display: grid;
+  overflow: hidden;
+  border: 1px solid var(--border-strong);
+  border-radius: 14px;
+  background: var(--panel);
+  box-shadow: var(--lift-1);
+}
+.gm-zoom button {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  cursor: pointer;
+}
+.gm-zoom button + button {
+  border-top: 1px solid var(--border);
+}
+@media (hover: hover) {
+  .gm-zoom button:hover {
+    background: var(--brand-yellow);
+  }
+}
+.gm-zoom button:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* ---- the phone: the card sits under the map, never over Google's logo ------------------------------- */
+.map-screen-map .gm-wrap {
+  margin-bottom: calc(180px + env(safe-area-inset-bottom, 0px));
+}
+.map-screen-map .gm-wrap.is-phone {
+  min-height: 0;
+}
