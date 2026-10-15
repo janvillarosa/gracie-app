@@ -336,7 +336,7 @@ func TestMongoTripDocumentSizes(t *testing.T) {
 	tr.Notes = strings.Repeat("n", 16384)
 	for i := 0; i < trips.MaxTodos; i++ {
 		tr.Todos = append(tr.Todos, models.TripTodo{TodoID: "ttd_" + randHex(16), Title: strings.Repeat("t", 200), Notes: strings.Repeat("x", 2048),
-			Place: &models.Place{Name: strings.Repeat("p", 200), Address: strings.Repeat("a", 300), Source: "photon"}, FieldAt: map[string]int64{"title": 1}})
+			Place: &models.Place{Name: strings.Repeat("p", 200), Address: strings.Repeat("a", 300), Source: "manual"}, FieldAt: map[string]int64{"title": 1}})
 	}
 	for i := 0; i < trips.MaxBookings; i++ {
 		tr.Bookings = append(tr.Bookings, models.Booking{BookingID: "tbk_" + randHex(16), Kind: "flight", Title: "x", Notes: strings.Repeat("x", 2048), FieldAt: map[string]int64{}})
@@ -348,23 +348,5 @@ func TestMongoTripDocumentSizes(t *testing.T) {
 	t.Logf("worst-case trip JSON: %d KB", len(raw)/1024)
 	if len(raw) > 2<<20 {
 		t.Fatalf("worst-case trip exceeds 2MB (%d bytes); the spec expects ~0.6MB", len(raw))
-	}
-}
-
-func TestMongoPlaceCacheRoundtripAndTTLIndex(t *testing.T) {
-	c := connectOrSkip(t)
-	r := NewPlaceCacheRepo(c)
-	ctx := context.Background()
-	if err := r.EnsureIndexes(ctx); err != nil {
-		t.Fatal(err)
-	}
-	if _, ok, _ := r.Get(ctx, "k1"); ok {
-		t.Fatalf("empty cache hit")
-	}
-	_ = r.Put(ctx, "k1", []models.Place{{Name: "Kyoto", Source: "photon"}}, time.Now().UTC())
-	_ = r.Put(ctx, "k1", []models.Place{{Name: "Kyoto Station", Source: "photon"}}, time.Now().UTC()) // upsert
-	got, ok, _ := r.Get(ctx, "k1")
-	if !ok || len(got) != 1 || got[0].Name != "Kyoto Station" {
-		t.Fatalf("cache: %v %v", got, ok)
 	}
 }

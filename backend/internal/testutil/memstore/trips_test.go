@@ -103,16 +103,3 @@ func TestTripRepoLinkPackingList(t *testing.T) {
 		t.Fatalf("link state: %+v", got)
 	}
 }
-
-func TestPlaceCacheRepo(t *testing.T) {
-	ctx := context.Background()
-	c := Compose().Places
-	if _, ok, _ := c.Get(ctx, "k"); ok {
-		t.Fatal("empty cache hit")
-	}
-	_ = c.Put(ctx, "k", []models.Place{{Name: "Kyoto"}}, time.Now())
-	got, ok, _ := c.Get(ctx, "k")
-	if !ok || len(got) != 1 || got[0].Name != "Kyoto" {
-		t.Fatalf("cache roundtrip failed: %v %v", got, ok)
-	}
-}

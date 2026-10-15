@@ -21,6 +21,7 @@ type harness struct {
 	now   time.Time
 	seq   map[string]int64
 	actor string
+	tz    func(lat, lng float64) string
 }
 
 func newHarness(t *testing.T) *harness {
@@ -48,7 +49,7 @@ func (h *harness) doSeq(client string, seq int64, typ, entity string, patch any,
 	}
 	op := models.Op{V: 1, OpID: fmt.Sprintf("op-%s-%d", client, seq), ClientID: client, Seq: seq, At: at,
 		Type: typ, TripID: testTripID, EntityID: entity, Patch: raw}
-	res, _ := ApplyOp(h.trip, op, Ctx{Actor: h.actor, Now: h.now, NewV: h.trip.Version + 1})
+	res, _ := ApplyOp(h.trip, op, Ctx{Actor: h.actor, Now: h.now, NewV: h.trip.Version + 1, TZ: h.tz})
 	return res
 }
 
