@@ -8,7 +8,7 @@ import { loadGoogle, resetGoogleLoader, type Google } from '@components/trips/gm
 import { mapsConfig, mapsEnabled } from '@components/trips/gmap/config'
 import { pinState, pipColours } from '@components/trips/gmap/pin'
 import type { MapViewProps } from '@components/trips/mapView'
-import { EMPTY_SCENE, type MapScene, type MapStop } from '@lib/trips/mapScene'
+import { buildScene, EMPTY_SCENE, type MapScene, type MapStop } from '@lib/trips/mapScene'
 import {
   FakeClusterer,
   FakeGeocoder,
@@ -602,5 +602,47 @@ describe('without a key', () => {
     render(<TripMap {...props(scene([A]))} />)
     expect(screen.getByText('Map preview')).toBeInTheDocument()
     expect(importLibrary).not.toHaveBeenCalled()
+  })
+})
+
+describe('one marker per place per day', () => {
+  it('shows a booking linked to a todo at the same place once, keeping the selected one', () => {
+    const place = { name: 'Pena Palace', lat: 38.78, lng: -9.39, source: 'google' }
+    const mk = (selectedId: string | null) =>
+      buildScene({
+        mode: 'day',
+        day: 'd1',
+        selectedId,
+        schedule: {
+          ideas: [],
+          days: [
+            {
+              date: 'd1',
+              entries: [
+                {
+                  kind: 'todo',
+                  todo: { todo_id: 't1', title: 'Pena', place, category: 'sight', done: false },
+                },
+                {
+                  kind: 'booking',
+                  booking: { booking_id: 'b1', title: 'Ticket', place, kind: 'ticket' },
+                },
+                {
+                  kind: 'todo',
+                  todo: {
+                    todo_id: 't2',
+                    title: 'Other',
+                    place: { ...place, lat: 38.8 },
+                    category: 'food',
+                    done: false,
+                  },
+                },
+              ],
+            },
+          ],
+        } as never,
+      })
+    expect(mk(null).stops.map((s) => s.id)).toEqual(['t1', 't2'])
+    expect(mk('b1').stops.map((s) => s.id)).toEqual(['b1', 't2'])
   })
 })

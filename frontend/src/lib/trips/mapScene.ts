@@ -152,6 +152,9 @@ export function buildScene({
     const i = schedule.days.findIndex((d) => d.date === day)
     if (i >= 0) stops = dayStops(schedule.days[i], i)
   }
+  // One marker per place per day: a booking linked to a todo (or two todos) at the same spot
+  // would stack two pips and two names. Keep the selected or next one, else the first.
+  stops = dedupeByPlace(stops, selectedId, nextId)
   // Selected and next outrank the day's order.
   stops = stops.map((s) =>
     s.id === selectedId ? { ...s, priority: 0 } : s.id === nextId ? { ...s, priority: 1 } : s,
@@ -165,6 +168,21 @@ export function buildScene({
     route: mode === 'day',
     ...(emphasisDay === undefined ? {} : { emphasisDay }),
   }
+}
+
+function dedupeByPlace(stops: MapStop[], selectedId: string | null, nextId: string | null) {
+  const rank = (x: MapStop) => (x.id === selectedId ? 0 : x.id === nextId ? 1 : 2)
+  const out: MapStop[] = []
+  const at = new Map<string, number>()
+  for (const s of stops) {
+    const key = `${s.dayIndex}:${s.lat}:${s.lng}`
+    const i = at.get(key)
+    if (i === undefined) {
+      at.set(key, out.length)
+      out.push(s)
+    } else if (rank(s) < rank(out[i])) out[i] = { ...s, priority: out[i].priority }
+  }
+  return out
 }
 
 /** Whether the trip has anything to put on a map at all (idea or day place). */
