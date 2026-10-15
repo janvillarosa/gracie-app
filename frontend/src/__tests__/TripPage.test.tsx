@@ -296,7 +296,8 @@ describe('Next-stop deck', () => {
     open()
     const card = await deck()
     expect(within(card).getByRole('heading', { name: 'Tascantiga' })).toBeInTheDocument()
-    expect(within(card).getByText('Lunch · 12:30')).toBeInTheDocument()
+    // The fixture runs on the real clock: after 12:30 the time reads "Planned for 12:30".
+    expect(within(card).getByText(/^Lunch · (Planned for )?12:30$/)).toBeInTheDocument()
   })
 
   it('deals an unlinked booking as a card headed by its place, with the code behind a ticket slip', async () => {
