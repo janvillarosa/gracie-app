@@ -112,6 +112,9 @@ export class TripStore {
   private offsetMs = 0
   private rendered: Record<string, Trip> = {}
   private notes: Record<string, ConflictNote> = {}
+  // Notes made by the results being handled right now: the pull that follows (a stale delta means
+  // a housemate wrote in between, which is exactly when the note matters) must not forget them.
+  private freshNotes = new Set<string>()
   private toasts: Toast[] = []
   private toastSeq = 0
   private ready = false
@@ -517,6 +520,15 @@ export class TripStore {
   }
 
   private async runLocked(): Promise<void> {
+    try {
+      await this.runPasses()
+    } finally {
+      // Notes made by this run survived its own pulls; from now on a changed trip forgets them.
+      this.freshNotes.clear()
+    }
+  }
+
+  private async runPasses(): Promise<void> {
     do {
       this.again = false
       const pushed = await this.pushOps()
@@ -665,6 +677,7 @@ export class TripStore {
           : op.type.startsWith('todo')
             ? 'todo'
             : 'trip'
+        this.freshNotes.add(key)
         this.notes = {
           ...this.notes,
           [key]: { key, tripId: op.trip_id, kind, fields: r.skipped_fields ?? [], at: this.now() },
@@ -716,7 +729,9 @@ export class TripStore {
   }
 
   private forgetNotes(tripId: string) {
-    const keep = Object.entries(this.notes).filter(([, n]) => n.tripId !== tripId)
+    const keep = Object.entries(this.notes).filter(
+      ([k, n]) => n.tripId !== tripId || this.freshNotes.has(k),
+    )
     if (keep.length !== Object.keys(this.notes).length) this.notes = Object.fromEntries(keep)
   }
 

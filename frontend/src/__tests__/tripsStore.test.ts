@@ -279,6 +279,7 @@ describe('TripStore', () => {
     const { store } = make(srv)
     await store.hydrate()
     const id = store.createTrip({ title: 'T' })
+    await store.settle()
     const first = { ...store['outbox'][0] }
     await store.flush()
     // The response was lost: the same op is sent again.
