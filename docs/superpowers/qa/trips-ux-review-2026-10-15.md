@@ -121,3 +121,29 @@ Checked at 375px on a later build: K1 and K2 were already fixed (one add bar, on
 | ID | VP | Lens | Sev | What I saw | What it should be |
 |---|---|---|---|---|---|
 | G4 | M+D | L7 L4 | **B** | At least five overlay layouts. The close button is top-left, top-right or missing (Packing, phone map). Titles vary between Figtree, missing and stock Ant. Insets differ (0, 14 and 20px). Footers vary between Cancel/Save in the corner, centred text, a blue link and right-aligned keys. | One `Sheet` component: drag handle on the phone, Outfit 18 title on the left, ✕ on the right everywhere, 20px insets, a sticky footer with the yellow key (full width on the phone), and no Cancel buttons except in confirms. Variants: sheet, panel, slip, confirm, chips. The full-screen phone map is the one exception (✕ on the left). Supersedes G3. |
+
+## S13 pass B: CRUD against the real Go backend + Mongo (feature/trips a9ba8c6)
+
+**Setup:**
+- API on :8081 with Mongo DB `gracie_qa`.
+- Frontend on :5175 with `VITE_API_BASE_URL=http://localhost:8081`.
+- Two throwaway accounts (A, B) in one House.
+- Server state was checked through `/trips/sync` as account B.
+- Place search was degraded throughout. Public Photon took about 4s, against the proxy's 2s timeout, so only manual places were tested.
+
+| Entity / op | Works | UX rule | Notes |
+|---|---|---|---|
+| Trip create (name only) | ✅ persisted, B sees it | ✅ one field, autofocus | The tz is the device zone (Europe/London). |
+| Trip dates (When calendar) | ✅ 20–22 Oct persisted | ✅ range, Done | "3 days" appears twice (context line and footer). |
+| Idea create (add bar on Plan, no dates) | ✅ persisted (day null) | ❌ | Plan tab goes **blank** after the add, and "When are you going?" disappears (R2-1). |
+| Todo create "14:00 Pena Palace" | ✅ day + 14:00 + created_by | ✅ time parsed | — |
+| Todo edit sheet | ✅ opens | ⚠️ | The title is about 16px bold, not Outfit 26 (R2-2), and the checkbox is heavy. |
+| Todo delete + Undo | ✅ toast, row returns | ✅ | Touch swipe was not exercised (mouse only). |
+| Booking create "TP1351 flight to Porto" | ✅ persisted (flight, 09:00) | ⚠️ | The kind was preselected ✅. The title shows as "TP1351 flight → Porto" in the list (R2-3). `start_tz` was sent empty with no place; it should fall back to the trip tz (R2-4). The title field's focus ring overflows the right edge (R2-5). |
+| Settings: next-stop switch | ✅ reads the account value (off) from `/me` | ✅ | — |
+| Trip delete / restore, packing link, booking link + delete cascade, day label, stale offline conflict, duplicate replay, prefs | ✅ via the API smoke test (`smoke.sh`) | — | UI paths for these come in the round 2 visual pass. |
+
+**Layout bugs seen during pass B:**
+- **R2-6:** Trip settings identity block: the title overlaps the icon and the pencil sits stranded below it.
+- **R2-7:** Add bar: the placeholder is top-aligned in a field taller than the control height.
+- **R2-8:** "Nothing planned yet" starts at the time column, not the title column. A muted "Add a label" shows on every day header, which is noise; show it on hover/focus only, or only on today.
