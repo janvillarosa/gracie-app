@@ -115,3 +115,9 @@ Checked at 375px on a later build: K1 and K2 were already fixed (one add bar, on
 | K9 | M | L4 L6 | Ma | The add form's inputs and the Cancel/Save buttons touch the sheet edges. | 20px insets; a full-width "Add booking" key, enabled when kind + title exist. |
 | K10 | M+D | L2 | Mi | A stay reads "From / To", and the kind is a native select. | "Check-in / Check-out"; the kind is a chip ("STAY ▾"). |
 | K11 | M+D | L2 L4 | Mi | The list is grouped by kind, so the current stay doesn't stand out, and there's an empty gap above the first group. | Chronological order: Now, then Next, then upcoming, then used (folded). The kind is the leading icon. |
+
+## Addendum: overlay consistency (user: "modals look inconsistent")
+
+| ID | VP | Lens | Sev | What I saw | What it should be |
+|---|---|---|---|---|---|
+| G4 | M+D | L7 L4 | **B** | At least five overlay layouts. The close button is top-left, top-right or missing (Packing, phone map). Titles vary between Figtree, missing and stock Ant. Insets differ (0, 14 and 20px). Footers vary between Cancel/Save in the corner, centred text, a blue link and right-aligned keys. | One `Sheet` component: drag handle on the phone, Outfit 18 title on the left, ✕ on the right everywhere, 20px insets, a sticky footer with the yellow key (full width on the phone), and no Cancel buttons except in confirms. Variants: sheet, panel, slip, confirm, chips. The full-screen phone map is the one exception (✕ on the left). Supersedes G3. |
