@@ -173,6 +173,27 @@ section wins. Hierarchy now has three levels:
   time have no empty time column. The Now marker, overlap gaps and time display apply only to
   timed todos. Duration is optional and lives in the detail.
 
+## 6c. Charm and simplicity (2026-10-15, second live review)
+
+User feedback: "looks like Bauhouse, but doesn't have the Bauhouse charm and metaphor or stacked
+papers and unintimidating UI. The prompt should be dead simple. If it's too complex, I won't use
+this." This section outranks feature completeness; when in doubt, show less.
+
+- The trip page is a **paper stack**, built with the List page's own classes and arrival motion.
+  The top sheet is the trip header (icon via IconPicker, big title, one friendly line, avatars).
+  The plan sheet sits beneath it, with days as sections inside it. The peeking sheet edge stays.
+- Tabs use the List page's pill segmented control (Plan · Ideas · Bookings). Notes, Packing and
+  Trip details live in the ⋮ menu.
+- Each screen answers one question. During the trip, today opens with "Next up: … at 14:00".
+  Copy uses the House voice ("Today in Sintra", "Nothing planned yet", "2 things to look at").
+  Count summaries are dropped from day headers.
+- Plan shows only tonight's stay and the next booking as stubs; the rest live in Bookings.
+- The add bar matches the List add bar, with the day target as a chip in the placeholder. The
+  expand control appears only after typing.
+- **New trip asks only for a name.** Dates, destination and stops come later, from Trip details
+  or a gentle prompt in the empty plan.
+- Done days fold into one quiet line at the top of the plan sheet, like "Show checked-off items".
+
 ## 7. Constraints and open decisions
 
 Constraints:
