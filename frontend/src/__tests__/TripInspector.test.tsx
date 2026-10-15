@@ -136,6 +136,31 @@ describe('the desktop inspector edits in place', () => {
     expect(within(panel).getByRole('textbox', { name: 'Confirmation code' })).toBeInTheDocument()
   })
 
+  it('searches for the place in place, and stores only the Google place id and coordinates', async () => {
+    seed(TRIP)
+    open()
+    const panel = await openRow('Pack the daypack')
+    await userEvent.type(within(panel).getByRole('combobox', { name: 'Place' }), 'Heathrow')
+    await userEvent.click(await screen.findByRole('option', { name: /Heathrow/ }))
+    await waitFor(() => expect(todo('Pack the daypack')?.place?.place_id).toBe('demo:heathrow'))
+    expect(todo('Pack the daypack')?.place?.name).toBeUndefined()
+    // No picker sheet: still the one inspector dialog, with the place shown and removable.
+    expect(screen.getAllByRole('dialog')).toHaveLength(1)
+    await userEvent.click(within(panel).getByRole('button', { name: 'Remove place' }))
+    await waitFor(() => expect(todo('Pack the daypack')?.place ?? null).toBeNull())
+  })
+
+  it('drops a pin from typed coordinates with Enter', async () => {
+    seed(TRIP)
+    open()
+    const panel = await openRow('Pack the daypack')
+    await userEvent.type(
+      within(panel).getByRole('combobox', { name: 'Place' }),
+      '38.7139, -9.1334{Enter}',
+    )
+    await waitFor(() => expect(todo('Pack the daypack')?.place?.source).toBe('pin'))
+  })
+
   it('keeps the phone on pickers', async () => {
     setViewport('phone')
     seed(TRIP)

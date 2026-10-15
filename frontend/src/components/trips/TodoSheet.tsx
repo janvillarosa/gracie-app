@@ -7,6 +7,7 @@ import { endClock, mapsUrl, shortDay } from '@lib/trips/schedule'
 import {
   Button,
   DetailGroup,
+  InlinePlace,
   InlineSelect,
   InlineWhen,
   NavRow,
@@ -20,6 +21,7 @@ import {
 import { CodeReveal } from './CodeReveal'
 import type { MoveTarget } from './MoveMenu'
 import { PlacePicker } from './PlacePicker'
+import { placeFromTyped } from './typedPlace'
 import { BookingPick, CategoryPick, NotePick, WhenPick, lengthText } from './pickers'
 import { CATEGORIES, categoryLabel } from './tripUi'
 
@@ -193,27 +195,42 @@ export const TodoSheet: React.FC<Props> = ({
               }}
             />
           )}
-          <NavRow
-            label="Place"
-            value={placeText || 'Add a place'}
-            empty={!placeText}
-            disabled={locked}
-            picker={{
-              title: 'Place',
-              content: (close) => (
-                <PlacePicker
-                  label="Place"
-                  value={todo.place}
-                  bias={bias}
-                  tz={tripTz}
-                  onChange={(p) => {
-                    onPatch({ place: p })
-                    if (p) close()
-                  }}
-                />
-              ),
-            }}
-          />
+          {inline ? (
+            <div className="ui-inline-row is-top">
+              <span className="ui-navrow-label" aria-hidden>
+                Place
+              </span>
+              <InlinePlace
+                label="Place"
+                value={todo.place}
+                bias={bias}
+                onChange={(p) => onPatch({ place: p })}
+                onText={(t) => onPatch({ place: placeFromTyped(t, bias, tripTz) })}
+              />
+            </div>
+          ) : (
+            <NavRow
+              label="Place"
+              value={placeText || 'Add a place'}
+              empty={!placeText}
+              disabled={locked}
+              picker={{
+                title: 'Place',
+                content: (close) => (
+                  <PlacePicker
+                    label="Place"
+                    value={todo.place}
+                    bias={bias}
+                    tz={tripTz}
+                    onChange={(p) => {
+                      onPatch({ place: p })
+                      if (p) close()
+                    }}
+                  />
+                ),
+              }}
+            />
+          )}
           {inline ? (
             <StampSelect
               rowLabel="Category"

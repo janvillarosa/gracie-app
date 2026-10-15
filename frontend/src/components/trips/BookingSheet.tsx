@@ -19,6 +19,7 @@ import {
   Button,
   DetailGroup,
   Field,
+  InlinePlace,
   InlineWhen,
   NavRow,
   Sheet,
@@ -29,6 +30,7 @@ import {
 import { CodeReveal } from './CodeReveal'
 import type { MoveTarget } from './MoveMenu'
 import { PlacePicker } from './PlacePicker'
+import { placeFromTyped } from './typedPlace'
 import { KindPick, NotePick, WhenPick } from './pickers'
 import { BOOKING_KINDS, KIND_ICON } from './tripUi'
 
@@ -473,28 +475,58 @@ export const BookingSheet: React.FC<Props> = ({
                 }}
               />
             )}
-            <NavRow
-              label={rows.place}
-              value={placeText || (rows.place === 'From' ? 'Add where from' : 'Add a place')}
-              empty={!placeText}
-              disabled={locked}
-              picker={{
-                title: 'Place',
-                content: (close) => (
-                  <PlacePicker
-                    label="Booking place"
-                    value={b.place}
-                    bias={bias}
-                    tz={tripTz}
-                    onChange={(p) => {
-                      apply({ place: p })
-                      if (p) close()
-                    }}
-                  />
-                ),
-              }}
-            />
-            {rows.endPlace && (
+            {inline && (
+              <div className="ui-inline-row is-top">
+                <span className="ui-navrow-label" aria-hidden>
+                  {rows.place}
+                </span>
+                <InlinePlace
+                  label="Booking place"
+                  value={b.place}
+                  bias={bias}
+                  onChange={(p) => apply({ place: p })}
+                  onText={(t) => apply({ place: placeFromTyped(t, bias, tripTz) })}
+                />
+              </div>
+            )}
+            {inline && rows.endPlace && (
+              <div className="ui-inline-row is-top">
+                <span className="ui-navrow-label" aria-hidden>
+                  {rows.endPlace}
+                </span>
+                <InlinePlace
+                  label="Booking end place"
+                  value={b.end_place}
+                  bias={bias}
+                  onChange={(p) => apply({ end_place: p })}
+                  onText={(t) => apply({ end_place: placeFromTyped(t, bias, tripTz) })}
+                />
+              </div>
+            )}
+            {!inline && (
+              <NavRow
+                label={rows.place}
+                value={placeText || (rows.place === 'From' ? 'Add where from' : 'Add a place')}
+                empty={!placeText}
+                disabled={locked}
+                picker={{
+                  title: 'Place',
+                  content: (close) => (
+                    <PlacePicker
+                      label="Booking place"
+                      value={b.place}
+                      bias={bias}
+                      tz={tripTz}
+                      onChange={(p) => {
+                        apply({ place: p })
+                        if (p) close()
+                      }}
+                    />
+                  ),
+                }}
+              />
+            )}
+            {!inline && rows.endPlace && (
               <NavRow
                 label={rows.endPlace}
                 value={endPlaceText || 'Add where to'}
