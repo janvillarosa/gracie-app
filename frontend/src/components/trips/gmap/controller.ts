@@ -57,9 +57,15 @@ export class MapController {
   private preview: google.maps.marker.AdvancedMarkerElement | null = null
   private hotId: string | null = null
   private lastFit = ''
-  // True while our own camera move runs, so it is not mistaken for the person moving the map.
-  private programmatic = true
+  // Token of our own camera move that has not reported idle yet (0: none), so the move is not
+  // mistaken for the person moving the map. Each move gets its own token; a move's fallback timer
+  // and the idle that ends it only clear their own, never a later move's.
+  private moveSeq = 0
+  private activeMove = 0
   private programmaticTimer = 0
+  // A fit asked for before the map was up (the first idle): run once it is, so its own idle is
+  // the one that ends it and the map's start-up idle is not taken for it.
+  private pendingFit: 'auto' | 'forced' | null = null
   private raf = 0
   private clickSeq = 0
   private disposed = false
@@ -105,15 +111,18 @@ export class MapController {
 
     this.map.addListener('dragstart', () => this.userMoved())
     this.map.addListener('zoom_changed', () => {
-      if (!this.programmatic) this.userMoved()
+      if (!this.activeMove) this.userMoved()
     })
     this.map.addListener('idle', () => {
-      this.programmatic = false
+      this.activeMove = 0
       window.clearTimeout(this.programmaticTimer)
       this.scheduleLabels()
       if (!this.ready) {
         this.ready = true
         this.onReady?.()
+        const pending = this.pendingFit
+        this.pendingFit = null
+        if (pending) this.fit(pending === 'forced')
       }
     })
     this.map.addListener('click', (e: google.maps.MapMouseEvent | google.maps.IconMouseEvent) => {
@@ -152,11 +161,19 @@ export class MapController {
 
   // ---- camera ------------------------------------------------------------------------------
 
+  /** Start one of our own camera moves (`on`), or hand the camera to the person (`off`). */
   private markProgrammatic(on: boolean) {
-    this.programmatic = on
     window.clearTimeout(this.programmaticTimer)
+    if (!on) {
+      this.activeMove = 0
+      return
+    }
+    const token = ++this.moveSeq
+    this.activeMove = token
     // A move that changes nothing never reports idle: do not stay "ours" forever.
-    if (on) this.programmaticTimer = window.setTimeout(() => (this.programmatic = false), 1500)
+    this.programmaticTimer = window.setTimeout(() => {
+      if (this.activeMove === token) this.activeMove = 0
+    }, 1500)
   }
 
   private userMoved() {
@@ -183,6 +200,10 @@ export class MapController {
     if (!stops.length) return
     const key = all.map((s) => `${s.id}:${s.lat}:${s.lng}`).join('|')
     if (!force && (!p.following || key === this.lastFit)) return
+    if (!this.ready) {
+      this.pendingFit = force || this.pendingFit === 'forced' ? 'forced' : 'auto'
+      return
+    }
     this.lastFit = key
     this.markProgrammatic(true)
     const first = stops[0]

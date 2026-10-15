@@ -66,7 +66,10 @@ const make = (p: MapViewProps) => {
     config: { key: 'k', mapId: 'DEMO_MAP_ID' },
     props: p,
   })
-  return { ctl, container, map: FakeMap.last as FakeMap }
+  const map = FakeMap.last as FakeMap
+  // The map's first idle: it is up, and the first fit runs.
+  map.emit('idle')
+  return { ctl, container, map }
 }
 const pin = (id: string) => FakeMarker.pins().find((m) => m.title === id) as FakeMarker
 
@@ -201,6 +204,36 @@ describe('the adapter contract on the Google map (setDay / setPins / setPreview 
     ctl.zoomBy(1)
     expect(map.setZoom).toHaveBeenLastCalledWith(11)
     expect(p.onUserMove).toHaveBeenCalledTimes(3)
+  })
+
+  it('waits for the map to be up, so its start-up idle is not taken for the fit that follows', () => {
+    const p = props(scene([A, B]), { onUserMove: vi.fn() })
+    const container = document.createElement('div')
+    document.body.append(container)
+    new MapController({ google: google(), container, config: { key: 'k', mapId: 'M' }, props: p })
+    const map = FakeMap.last as FakeMap
+    expect(map.fitBounds).not.toHaveBeenCalled()
+    // The first idle: the map is up, and the first fit runs and is still running.
+    map.emit('idle')
+    expect(map.fitBounds).toHaveBeenCalledTimes(1)
+    map.emit('zoom_changed')
+    expect(p.onUserMove).not.toHaveBeenCalled()
+    // Its own idle ends the move; after that a zoom is the person.
+    map.emit('idle')
+    map.emit('zoom_changed')
+    expect(p.onUserMove).toHaveBeenCalledTimes(1)
+  })
+
+  it('a later move keeps its own claim when an earlier move times out', () => {
+    vi.useFakeTimers()
+    const p = props(scene([A, B]), { onUserMove: vi.fn() })
+    const { ctl, map } = make(p)
+    vi.advanceTimersByTime(1000)
+    ctl.sync(props(scene([A, B]), { fitToken: 1, onUserMove: p.onUserMove }))
+    vi.advanceTimersByTime(600)
+    // The first move's 1.5s fallback has passed; the second is still running.
+    map.emit('zoom_changed')
+    expect(p.onUserMove).not.toHaveBeenCalled()
   })
 
   it('clears everything on destroy', () => {

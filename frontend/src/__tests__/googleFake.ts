@@ -39,12 +39,11 @@ export class FakeMap {
     return { remove: () => {} }
   }
   emit(type: string, e?: unknown) {
+    // One-shot listeners added while this event runs wait for the next one, as on Google's map.
+    const once = type === 'idle' ? (this.once.get('idle') ?? []) : []
+    if (type === 'idle') this.once.delete('idle')
     for (const fn of this.listeners.get(type) ?? []) fn(e)
-    if (type === 'idle') {
-      const once = this.once.get('idle') ?? []
-      this.once.delete('idle')
-      for (const fn of once) fn()
-    }
+    for (const fn of once) fn()
   }
   getBounds() {
     const v = this.view
