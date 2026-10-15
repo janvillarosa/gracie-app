@@ -33,8 +33,12 @@ export async function startMockTrips() {
   ;(window as unknown as { __mockTrips: MockTripServer }).__mockTrips = srv
 
   const now = new Date().toISOString()
-  const prefs = { trips_show_next_stop: true }
-  const user = () => ({ ...userBase, preferences: { ...prefs } })
+  srv.memberOf = ROOM
+  srv.members = [
+    { user_id: ME, name: 'Jan', avatar_key: 'jan' },
+    { user_id: MIA, name: 'Mia', avatar_key: 'mia' },
+  ]
+  const user = () => ({ ...userBase, ...srv.getMe() })
   const userBase = {
     user_id: ME,
     name: 'Jan',
@@ -67,19 +71,16 @@ export async function startMockTrips() {
     ...tripHandlers(srv, { latencyMs: 80 }),
     http.get('/api/me', () => HttpResponse.json(user())),
     http.put('/api/me', async ({ request }) => {
-      const body = (await request.json()) as { preferences?: { trips_show_next_stop?: boolean } }
-      if (body.preferences?.trips_show_next_stop !== undefined)
-        prefs.trips_show_next_stop = body.preferences.trips_show_next_stop
-      return HttpResponse.json(user())
+      const r = srv.putMe(await request.json().catch(() => null))
+      return r.status === 204
+        ? new HttpResponse(null, { status: 204 })
+        : HttpResponse.json(r.body, { status: 400 })
     }),
     http.get('/api/rooms/me', () =>
       HttpResponse.json({
         display_name: 'The Villarosa House (synthetic)',
         members: ['Jan', 'Mia'],
-        members_meta: [
-          { name: 'Jan', avatar_key: 'jan', user_id: ME },
-          { name: 'Mia', avatar_key: 'mia', user_id: MIA },
-        ],
+        members_meta: srv.membersMeta(),
         created_at: now,
         updated_at: now,
       }),
