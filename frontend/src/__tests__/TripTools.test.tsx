@@ -175,6 +175,8 @@ describe('Item sheet fields and places', () => {
   })
 
   it('picks a searched place in a sub-view, then removes it', async () => {
+    // The place picker sheet is the phone's editor; a desk searches in place.
+    setViewport('phone')
     seed(TRIP)
     open()
     const panel = await openRow('Pack the daypack')
@@ -198,6 +200,8 @@ describe('Item sheet fields and places', () => {
   })
 
   it('drops a pin from typed coordinates', async () => {
+    // The place picker sheet is the phone's editor; a desk searches in place.
+    setViewport('phone')
     seed(TRIP)
     open()
     const panel = await openRow('Pack the daypack')
@@ -212,6 +216,8 @@ describe('Item sheet fields and places', () => {
   })
 
   it('takes a typed address when nothing matches, and says it is not on the map', async () => {
+    // The place picker sheet is the phone's editor; a desk searches in place.
+    setViewport('phone')
     seed(TRIP)
     open()
     const panel = await openRow('Pack the daypack')
@@ -222,6 +228,8 @@ describe('Item sheet fields and places', () => {
   })
 
   it('names the fallback when search is down and still offers the address', async () => {
+    // The place picker sheet is the phone's editor; a desk searches in place.
+    setViewport('phone')
     setPlacesSource({
       ...demoSource,
       suggest: async () => {
