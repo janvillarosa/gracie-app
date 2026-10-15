@@ -380,6 +380,7 @@ describe('Next-stop deck', () => {
 
 describe('Page order', () => {
   it('puts the pills right under the header, with the deck as the first thing inside Plan', async () => {
+    setViewport('phone')
     seed(TRIP)
     open()
     const card = await deck()
@@ -1080,7 +1081,9 @@ describe('Phone', () => {
   })
 
   it('hides the map key until the trip has a place', async () => {
-    seed(TRIP)
+    const t = lisbonTrip()
+    t.todos[0] = { ...t.todos[0], place: undefined }
+    seed(t)
     open()
     await deck()
     expect(screen.queryByRole('button', { name: /^Show map for / })).not.toBeInTheDocument()

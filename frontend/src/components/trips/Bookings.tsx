@@ -56,7 +56,9 @@ export const BookingLine = React.memo<LineProps>(function BookingLine({
         aria-haspopup="dialog"
         onClick={() => onOpen(b.booking_id)}
       >
-        <span className="trip-stub-icon">{KIND_ICON[b.kind]}</span>
+        <span className="trip-stub-icon" data-kind={b.kind}>
+          {KIND_ICON[b.kind]}
+        </span>
         <span className="trip-time">
           {clash && <Warning className="trip-time-flag" weight="bold" aria-hidden />}
           {tonight ? 'Tonight' : (b.starts_at?.split('T')[1] ?? '')}

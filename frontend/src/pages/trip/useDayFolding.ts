@@ -101,11 +101,13 @@ export function useDayFolding({ days, doneDays, phone, phase, today, announce, o
     [days, isOpenDay, onToggle],
   )
   const openDay = useCallback((date: string) => setOverride((o) => ({ ...o, [date]: true })), [])
+  // Fold a day again (a day that opened under a drag, once the drop is done).
+  const foldDay = useCallback((date: string) => setOverride((o) => ({ ...o, [date]: false })), [])
   // A new item added to a day shows that day.
   const showDay = useCallback(
     (date: string) => setOverride((o) => (o[date] === true ? o : { ...o, [date]: true })),
     [],
   )
 
-  return { override, celebrating, isOpenDay, toggleDay, openDay, showDay }
+  return { override, celebrating, isOpenDay, toggleDay, openDay, foldDay, showDay }
 }

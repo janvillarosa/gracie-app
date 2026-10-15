@@ -2288,57 +2288,60 @@
 }
 
 /* ---- the planning desk (1024px and wider): Ideas | Days | Map ------------------------------- */
+/* One centred frame, so the top bar and the columns share their edges at any width. */
+.trip-desk-frame {
+  max-width: 1440px;
+  margin: 0 auto;
+}
 @media (min-width: 1024px) {
   .trip-shell.is-desk {
     display: grid;
     grid-template-columns: 300px minmax(0, 1fr);
     gap: 20px;
     align-items: start;
-    max-width: 1560px;
+    max-width: none;
+    margin: 0;
   }
-  .trip-shell.is-desk.is-wide:not(.is-mapless) {
+  /* The map column exists only once there is a place to show. */
+  .trip-shell.is-desk.has-map {
     grid-template-columns: 300px minmax(0, 1fr) 420px;
   }
   .trip-shell.is-desk .trip-days-col {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
     max-width: none;
     margin: 0;
     padding: 0;
     min-width: 0;
   }
-  /* Header, readiness and plan are separate sheets in the Days column, not a stack. */
-  .trip-days-col .paper-meta {
-    border-bottom: 1px solid var(--border-strong) !important;
-    border-radius: var(--radius-squircle) !important;
-    margin: 0;
-  }
-  .trip-plan-sheet {
-    margin: 0;
-  }
-  .trip-desk-add {
-    position: sticky;
-    bottom: 16px;
-    z-index: 5;
-  }
-  .trip-desk-add .add-bar {
-    position: static;
-    margin: 0;
-    padding: var(--space-2) var(--space-3);
-    background: var(--panel);
-    border: 1px solid var(--border-strong);
-    border-radius: var(--radius-squircle);
-    box-shadow: var(--paper-edge), var(--lift-1);
+}
+@media (min-width: 1200px) and (max-width: 1359px) {
+  .trip-shell.is-desk.has-map {
+    grid-template-columns: 300px minmax(0, 1fr) 360px;
   }
 }
 
-/* The header on a desk: icon tile, then the title on one line (ellipsis, never wrapping), the
-   route, dates and countdown under it, avatars at the right. */
-.paper-meta.is-desk h2.ant-typography {
+/* The header, on a desk: one row, [icon] [title over the day line] ... [avatars] [menu]. */
+.paper-meta.is-desk .ant-card-body {
+  padding-block: var(--space-4);
+}
+.trip-desk-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-height: 64px;
+}
+.trip-desk-icon {
+  width: 52px;
+  height: 52px;
+  font-size: 26px;
+}
+.trip-desk-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.paper-meta.is-desk h2.trip-desk-title.ant-typography {
+  margin: 0;
   font-size: 32px;
   line-height: 1.1 !important;
-  min-width: 0;
 }
 .paper-meta.is-desk .trip-title-text {
   display: block;
@@ -2347,8 +2350,21 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.paper-meta.is-desk .list-header-grid .trip-metaline {
-  padding-left: calc(var(--control-lg) + var(--space-3));
+.trip-desk-meta {
+  margin-top: var(--space-1);
+}
+.trip-desk-head .trip-avatars {
+  margin: 0;
+}
+
+/* The band at the foot of the header sheet: Ready to go?, or the Next stop card. */
+.trip-head-band {
+  margin: var(--space-4) calc(var(--space-6) * -1) 0;
+  padding: var(--space-4) var(--space-6) 0;
+  border-top: 1px solid var(--border);
+}
+.trip-deck-flat .trip-deck-card {
+  padding: 0;
 }
 
 /* The Ideas column: its own paper sheet; the rows are flat row-grid rows, no cards. */
@@ -2390,136 +2406,75 @@
 .trip-ideas-col .trip-ideas.is-over {
   background: color-mix(in srgb, var(--brand-yellow) 20%, white);
 }
-
-/* Empty days on a desk are dashed slots; they turn yellow while something is being dragged. */
-.trip-shell.is-desk .trip-empty-row {
-  margin: var(--space-2) 0 var(--space-3);
-  padding: var(--space-3) var(--space-3);
-  border: 1.5px dashed var(--border-strong);
-  border-radius: var(--radius-md);
-  color: var(--muted);
-  font-size: var(--size-meta);
-  text-align: center;
+/* Rows: one rule for every pip and leading glyph. A mark sits on the title's first line: its top
+   margin is the first line's centre minus half its own size. (Title: 12px above, 20px line.) */
+:root {
+  --row-first-line: 22px;
 }
-.trip-page.is-dragging .trip-shell.is-desk .trip-day .trip-empty-row {
-  border-color: var(--brand-yellow-deep);
-  background: color-mix(in srgb, var(--brand-yellow) 16%, white);
-  color: var(--ink);
+.trip-row-line > .trip-catdot,
+.trip-trail > .trip-catdot {
+  margin-top: calc(var(--row-first-line) - 4px);
 }
-.trip-page.is-dragging .trip-shell.is-desk .trip-day.is-over .trip-empty-row {
-  background: color-mix(in srgb, var(--brand-yellow) 34%, white);
+.trip-trail > .trip-whodot {
+  margin-top: calc(var(--row-first-line) - 9px);
 }
-
-/* Ready to go?: before the trip, in the Days column where the Next stop card goes later. */
-.trip-ready {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: var(--space-5);
-  align-items: start;
-  padding: var(--space-4) var(--space-5);
-  background: var(--panel);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-squircle);
-  box-shadow: var(--paper-edge), var(--lift-0);
+.trip-row-line > .trip-check {
+  margin-top: calc(var(--row-first-line) - 11.5px);
 }
-.trip-ready.is-done {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-block: var(--space-2);
+.trip-row-line > .trip-idea-dot {
+  height: 24px;
+  margin-top: calc(var(--row-first-line) - 12px);
 }
-.trip-ready-main .ui-section-label,
-.trip-ready-side .ui-section-label {
-  margin: 0 0 var(--space-2);
+.trip-row-line > .trip-idea-dot .trip-catdot {
+  margin-top: 0;
 }
-.trip-ready-side {
-  padding-left: var(--space-5);
-  border-left: 1px solid var(--border);
-  min-width: 220px;
+.trip-trail .trip-grip {
+  margin-top: calc(var(--row-first-line) - 8px);
 }
-.trip-ready-list {
-  display: grid;
-  gap: var(--space-1);
-  margin: 0;
-  padding: 0;
-  list-style: none;
+.trip-trail .trip-acts,
+.trip-trail .trip-addday {
+  margin-top: calc(var(--row-first-line) - 18px);
 }
-.trip-ready-line,
-.trip-ready-all {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin: 0;
-  font-size: var(--size-meta);
-  line-height: 1.4;
-}
-.trip-ready-all {
-  font-weight: 600;
-  color: var(--ok-ink);
-}
-.trip-ready .ui-btn.is-text {
-  min-height: 28px;
-  padding-inline: var(--space-1);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-.trip-ready-mark {
-  flex: none;
-  width: 14px;
-  height: 14px;
-}
-.trip-ready-line.is-ok .trip-ready-mark {
-  color: var(--ok-ink);
-}
-.trip-ready-line.is-todo .trip-ready-mark {
-  color: var(--warn-ink);
-}
-.trip-ready-line.is-todo .trip-ready-text {
-  color: var(--ink);
-}
-.trip-ready-text {
-  color: var(--muted);
+.trip-acts .ui-btn:hover {
+  color: var(--brand-red);
 }
 
-/* The map column: sticky, and quiet until there are places. */
-.trip-map.is-empty {
-  align-items: center;
-  justify-content: center;
-  background: var(--trip-map-ground);
-}
-.trip-map.is-empty p {
-  margin: 0;
-  color: var(--muted);
-  font-size: var(--size-meta);
-  text-align: center;
-}
-/* 1024-1199px: the map opens over Ideas and Days from the Map pill. */
-.trip-side.is-over {
-  position: fixed;
-  top: 16px;
-  right: 16px;
-  bottom: 16px;
-  z-index: 900;
-  width: min(480px, calc(100vw - 32px));
-  height: auto;
-  margin: 0;
-  box-shadow: var(--paper-edge), 0 12px 40px rgba(0, 0, 0, 0.18);
-}
-.trip-side .trip-side-close {
-  position: absolute;
-  top: var(--space-2);
-  right: var(--space-2);
-  z-index: 3;
-  background: var(--panel);
-}
-
-/* Ideas rows (a column of their own): lead and title only; the row's actions float in over the
-   title's right end on hover and focus, so the title gets the whole width. */
+/* Ideas rows (their own column): [grip] [pip] [title]. The grip shows at rest, so they look like
+   something you can pick up; the actions float in over the title's end. */
 .trip-ideas {
   --tcol: 0px;
 }
 .trip-ideas-col .trip-row-line {
-  grid-template-columns: var(--lead-col) minmax(0, 1fr);
+  grid-template-columns: 18px var(--lead-col) minmax(0, 1fr);
+  cursor: grab;
+}
+.trip-row-line > .trip-grip.is-lead {
+  display: none;
+}
+.trip-ideas-col .trip-row-line > .trip-grip.is-lead {
+  display: grid;
+  grid-column: 1;
+  grid-row: 1;
+  place-items: center;
+  width: 18px;
+  height: 16px;
+  margin-top: calc(var(--row-first-line) - 8px);
+  color: var(--muted);
+  opacity: 0.8;
+  font-size: 12px;
+}
+.trip-ideas-col .trip-row-line > .trip-idea-dot {
+  grid-column: 2;
+  grid-row: 1;
+}
+.trip-ideas-col .trip-row-line > .trip-main {
+  grid-column: 3;
+  grid-row: 1;
+  cursor: inherit;
+}
+.trip-ideas-col .trip-title {
+  -webkit-line-clamp: 1;
+  overflow-wrap: anywhere;
 }
 .trip-ideas-col .trip-row-line > .trip-trail {
   position: absolute;
@@ -2534,23 +2489,201 @@
 .trip-ideas-col .trip-row:focus-within .trip-trail {
   opacity: 1;
 }
-@media (hover: none) {
-  .trip-ideas-col .trip-row-line > .trip-trail {
+/* The scrolling list keeps a little room so a focus ring is never cut by its edge. */
+.trip-ideas-col .trip-ideas {
+  margin: -4px;
+  padding: 4px;
+}
+.trip-ideas-col .trip-main:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+@media (hover: hover) and (pointer: fine) {
+  .trip-ideas-col .trip-row:hover .trip-row-line {
+    background: var(--panel);
+    box-shadow: var(--lift-0);
+    border-radius: var(--radius-md);
+  }
+  .trip-ideas-col .trip-row:hover .trip-grip.is-lead {
+    color: var(--ink);
     opacity: 1;
   }
 }
-.trip-ideas-col .trip-row-line > .trip-main {
-  grid-column: 2;
-}
-
-/* A narrower Days column (1200-1359px): a slimmer map, and the readiness sheet stacks. */
-@media (min-width: 1200px) and (max-width: 1359px) {
-  .trip-shell.is-desk.is-wide:not(.is-mapless) {
-    grid-template-columns: 300px minmax(0, 1fr) 360px;
+/* Touch (an iPad, a touch laptop): nothing hides behind a hover. The actions are there at rest and
+   the title keeps clear of them; a swipe left deletes. */
+@media (pointer: coarse) {
+  .trip-ideas-col .trip-row-line > .trip-trail {
+    opacity: 1;
+  }
+  .trip-ideas-col .trip-row-line > .trip-main {
+    padding-right: 96px;
+  }
+  .trip-acts {
+    display: inline-flex;
+    opacity: 1;
   }
 }
-.trip-days-col {
-  container-type: inline-size;
+
+/* While dragging: the source leaves a dashed place, the lifted row follows the pointer, and the
+   place it would land is a 2px yellow line. */
+.trip-page.is-dragging,
+.trip-page.is-dragging * {
+  cursor: grabbing;
+}
+.trip-row.is-dragging {
+  opacity: 1;
+  border: 1.5px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+}
+.trip-row.is-dragging > .item-swipe {
+  visibility: hidden;
+}
+.trip-drag-chip {
+  box-shadow: var(--paper-edge), var(--lift-2, 0 14px 32px -8px rgba(0, 0, 0, 0.28));
+  transform: scale(1.02);
+}
+.trip-row {
+  position: relative;
+}
+.trip-row.is-drop-before::before,
+.trip-row.is-drop-after::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--brand-yellow-deep);
+  z-index: 4;
+  pointer-events: none;
+}
+.trip-row.is-drop-before::before {
+  top: -1px;
+}
+.trip-row.is-drop-after::after {
+  bottom: -1px;
+}
+.trip-page.is-dragging .trip-day.is-over .trip-list::after {
+  content: '';
+  display: block;
+  height: 2px;
+  margin-top: 2px;
+  border-radius: 2px;
+  background: var(--brand-yellow-deep);
+}
+
+/* The first hover on an idea says how it works, once. */
+.trip-ideas-tip {
+  position: absolute;
+  top: 44px;
+  left: var(--space-4);
+  right: var(--space-4);
+  z-index: 6;
+  padding: var(--space-2) var(--space-3);
+  background: var(--ink);
+  color: var(--on-red);
+  border-radius: var(--radius-md);
+  font-size: var(--size-meta);
+  line-height: 1.35;
+  pointer-events: none;
+}
+
+/* Empty days on a desk are dashed slots; they turn yellow while something is being dragged. */
+.trip-shell.is-desk .trip-empty-row {
+  margin: var(--space-2) 0 var(--space-3);
+  padding: var(--space-3);
+  border: 1.5px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  color: var(--muted);
+  font-size: var(--size-meta);
+  text-align: center;
+}
+.trip-page.is-dragging .trip-shell.is-desk .trip-day .trip-empty-row {
+  border-color: var(--brand-yellow-deep);
+  background: color-mix(in srgb, var(--brand-yellow) 16%, white);
+  color: var(--ink);
+}
+.trip-page.is-dragging .trip-shell.is-desk .trip-day.is-over .trip-empty-row {
+  background: color-mix(in srgb, var(--brand-yellow) 34%, white);
+}
+.trip-map-note {
+  margin: var(--space-4) 0 var(--space-2);
+  color: var(--muted);
+  font-size: var(--size-meta);
+}
+
+/* Ready to go?, in the header sheet's band: no card of its own, just two groups. */
+.trip-ready {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-5);
+  align-items: start;
+  padding-bottom: var(--space-3);
+}
+.trip-ready.is-done {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: var(--space-2);
+}
+.trip-ready-main .ui-section-label,
+.trip-ready-side .ui-section-label {
+  margin: 0 0 var(--space-2);
+}
+.trip-ready-side {
+  min-width: 240px;
+  padding-left: var(--space-5);
+  border-left: 1px solid var(--border);
+}
+.trip-ready-list {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.trip-ready-line,
+.trip-ready-all {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--size-body-sm, 14px);
+  line-height: 1.5;
+}
+.trip-ready-all {
+  align-items: center;
+  font-weight: 600;
+  color: var(--ok-ink);
+}
+/* The mark sits on the first line's centre: (line height - mark) / 2. */
+.trip-ready-mark {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  margin-top: calc((1.5em - 14px) / 2);
+}
+.trip-ready-all .trip-ready-mark {
+  margin-top: 0;
+}
+.trip-ready-line.is-ok .trip-ready-mark {
+  color: var(--ok-ink);
+}
+.trip-ready-line.is-ok .trip-ready-text,
+.trip-ready-meta {
+  color: var(--muted);
+}
+.trip-ready-line.is-todo .trip-ready-mark {
+  color: var(--warn-ink);
+}
+.trip-ready-line.is-todo .trip-ready-text {
+  color: var(--ink);
+}
+/* The fix is the system's text button, set to the line. */
+.trip-ready .ui-btn.is-text {
+  min-height: 0;
+  padding: 0 var(--space-1);
+  font-size: inherit;
+  line-height: inherit;
 }
 @container (max-width: 560px) {
   .trip-ready {
@@ -2564,16 +2697,434 @@
     border-top: 1px solid var(--border);
   }
 }
-.trip-side.is-over .trip-map-bar {
-  padding-right: calc(var(--control-md) + var(--space-4));
+.trip-days-col {
+  container-type: inline-size;
+}
+
+/* The map column: sticky, only when there are places. */
+.trip-side {
+  align-self: start;
 }
 
 /* A phone's tab row: Plan, Ideas, Bookings and the Map pill must fit one line at 375px. */
 @media (max-width: 767px) {
   .trip-page .pill-nav-tab {
-    padding-inline: 11px;
+    padding-inline: 9px;
   }
   .trip-page .pill-nav-extra .ui-btn {
-    padding-inline: var(--space-3);
+    padding-inline: 10px;
+    gap: var(--space-1);
   }
+}
+
+/* The idea's pip is centred in its cell (the shared rule gives it flex-start). */
+.trip-idea-dot .trip-catdot {
+  align-self: center;
+}
+
+/* "at 14:00": a timed item lands at its time, wherever the pointer is. */
+.trip-row.is-drop-before[data-drop-label]::after,
+.trip-row.is-drop-after[data-drop-label]::before {
+  content: attr(data-drop-label);
+  position: absolute;
+  right: var(--space-2);
+  z-index: 5;
+  padding: 0 var(--space-2);
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 14px;
+  pointer-events: none;
+}
+.trip-row.is-drop-before[data-drop-label]::after {
+  top: -8px;
+}
+.trip-row.is-drop-after[data-drop-label]::before {
+  bottom: -8px;
+}
+
+/* The date rail: only while dragging through a long trip. It takes no room (zero height), so the
+   page does not shift when it appears. */
+.trip-date-rail {
+  position: sticky;
+  top: 8px;
+  z-index: 8;
+  height: 0;
+}
+.trip-date-rail-inner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  overflow-x: auto;
+  background: var(--panel);
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  box-shadow: var(--lift-1);
+  scrollbar-width: none;
+}
+.trip-rail-chip {
+  flex: none;
+  min-height: var(--control-sm, 28px);
+  padding-inline: var(--space-3);
+  font-size: var(--size-meta);
+  user-select: none;
+}
+.trip-rail-chip.is-over {
+  background: var(--brand-yellow);
+  border-color: var(--brand-yellow-deep);
+}
+
+/* ---- Ideas rows: grip, pip and title share one optical centre -------------------------------
+   The title's x-height centre (15.5px Figtree 600 in a 20px line, 12px from the row top) is 23.7px
+   from the row top, 1.6px below the line box's middle. Grip (10) 8 pip (9) 10 title. */
+.trip-ideas-col {
+  --idea-mark-y: 23.7px;
+}
+.trip-ideas-col .trip-row-line {
+  grid-template-columns: 10px 8px 9px 10px minmax(0, 1fr);
+}
+.trip-ideas-col .trip-row-line > .trip-grip.is-lead {
+  grid-column: 1;
+  width: 10px;
+  height: 12px;
+  margin-top: calc(var(--idea-mark-y) - 6px);
+  font-size: 12px;
+}
+.trip-ideas-col .trip-row-line > .trip-idea-dot {
+  grid-column: 3;
+  width: 9px;
+  height: 9px;
+  margin-top: calc(var(--idea-mark-y) - 4.5px);
+}
+.trip-ideas-col .trip-idea-dot .trip-catdot {
+  width: 9px;
+  height: 9px;
+}
+.trip-ideas-col .trip-row-line > .trip-main {
+  grid-column: 5;
+}
+
+/* ---- Times are right-aligned in their column, so a warning glyph sits inside it ----------------
+   The column keeps its left edge 12px after the checkbox; the glyph takes the empty space left of
+   the digits (4px away from them), and the digits of every row end at the same x. */
+.trip-row-line > .trip-time,
+.trip-stubline > .trip-time {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  text-align: right;
+}
+.trip-time-flag {
+  position: static;
+  flex: none;
+  width: 12px;
+  height: 12px;
+  margin: 0;
+  transform: none;
+}
+
+/* ---- The composer: on a desk the add bar floats ---------------------------------------------
+   Fixed to the window's bottom, centred on the Days column, 24px in from its sides. The star of
+   the planning desk: bigger than the phone's bar, on elevated paper. */
+.trip-desk-frame {
+  --composer-h: 56px;
+}
+.trip-composer {
+  position: fixed;
+  bottom: 24px;
+  left: var(--composer-left, 50%);
+  width: var(--composer-width, min(640px, calc(100vw - 48px)));
+  z-index: 40;
+  transition: opacity var(--dur-fast) ease;
+}
+.trip-composer .add-bar {
+  position: static;
+  box-sizing: border-box;
+  min-height: var(--composer-h);
+  margin: 0;
+  padding: 0 var(--space-2) 0 var(--space-2);
+  display: flex;
+  align-items: center;
+  background: var(--panel);
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  box-shadow: var(--paper-edge), var(--lift-2);
+}
+.trip-composer .add-bar:focus-within {
+  border-color: var(--brand-yellow-deep);
+  box-shadow:
+    var(--paper-edge),
+    var(--lift-2),
+    0 0 0 3px color-mix(in srgb, var(--brand-yellow) 55%, transparent);
+}
+.trip-composer .add-row,
+.trip-composer .add-field {
+  align-items: center;
+}
+.trip-composer .add-bar .add-input.ant-input,
+.trip-composer .add-bar textarea.add-input {
+  min-height: 44px !important;
+  font-size: 17px !important;
+  background: transparent;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+.trip-composer .trip-target-chip {
+  min-height: 32px;
+}
+.trip-composer .add-btn {
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  box-shadow: var(--shadow-key);
+}
+/* A muted "/" at the right of an empty, unfocused field (a keyboard in hand). */
+@media (hover: hover) and (pointer: fine) {
+  .trip-composer .add-field:has(textarea:placeholder-shown:not(:focus))::after {
+    content: '/';
+    position: absolute;
+    right: var(--space-4);
+    top: 50%;
+    transform: translateY(-50%);
+    min-width: 22px;
+    padding: 1px 0;
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 18px;
+    text-align: center;
+    pointer-events: none;
+  }
+}
+/* The plan sheet leaves room under its last row for the composer. */
+.trip-days-col .paper-list .ant-card-body {
+  padding-bottom: calc(var(--composer-h) + 48px);
+}
+/* While a drag is held the composer steps back and lets drops through. */
+.trip-page.is-dragging .trip-composer {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+/* ---- One lead column: every line of the plan keeps a 24px lead cell, mark centred in it --------
+   Checkboxes are 22x22. A booking's kind icon sits in the same 22x22 tile (radius 6, subtle fill,
+   hairline), glyph at 14px. A warning note puts its glyph in the lead cell and its text on the
+   time column; the Now marker and the done line follow the same two edges. */
+.trip-stubline > .trip-stub-icon {
+  display: grid;
+  place-items: center;
+  align-self: center;
+  box-sizing: border-box;
+  width: 22px;
+  height: 22px;
+  margin-left: 1px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel-subtle);
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1;
+}
+/* An optical nudge for glyphs whose mass is not in the middle of their box. */
+.trip-stub-icon[data-kind='flight'] svg {
+  transform: translateX(0.5px);
+}
+.trip-stub-icon[data-kind='train'] svg {
+  transform: translateY(-0.5px);
+}
+.trip-day .trip-clash {
+  display: grid;
+  grid-template-columns: var(--lead-col) minmax(0, 1fr);
+  align-items: start;
+  column-gap: 0;
+  padding: var(--space-1) 0;
+  text-align: left;
+}
+.trip-day .trip-clash .ui-note-flag {
+  grid-column: 1;
+  justify-self: start;
+  width: 14px;
+  height: 14px;
+  margin: 2px 5px 0;
+}
+.trip-day .trip-clash > span {
+  grid-column: 2;
+}
+.trip-now::before {
+  flex: 0 0 var(--lead-col);
+}
+.trip-now {
+  gap: 0;
+}
+.trip-donetoggle {
+  gap: 0;
+}
+.trip-donetoggle > svg {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  margin-inline: 5px calc(var(--lead-col) - 24px + 5px);
+}
+
+/* A name in a sheet's context line is followed by its stamp 8px later, on the x-height centre. */
+.ui-sheet-context .ui-stamp {
+  margin-left: var(--space-2);
+  vertical-align: middle;
+}
+
+/* ---- The composer, tightened: the key at the right end, the "/" hint inside the field ---------- */
+.trip-composer .add-bar > div:not(.trip-add-status) {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.trip-composer .add-row {
+  display: flex;
+  width: 100%;
+  gap: var(--space-2);
+}
+.trip-composer .add-field {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.trip-composer .add-bar textarea.add-input {
+  padding-right: calc(var(--space-6) + 16px) !important;
+  text-overflow: ellipsis;
+}
+.trip-composer .add-btn {
+  flex: none;
+  margin-left: auto;
+}
+.trip-composer .add-field:has(textarea:placeholder-shown:not(:focus))::after {
+  right: var(--space-3);
+}
+.trip-composer .trip-add-status {
+  position: absolute;
+  left: var(--space-4);
+  bottom: calc(100% + var(--space-2));
+}
+
+/* ---- The desk is an app shell: the window does not scroll, each pane does ------------------------
+   Ideas (its list scrolls under a fixed header), Days (one container: the header sheet, the
+   pills and the plan, with sticky day headers) and the map / inspector (fills its height). The
+   wheel scrolls only the pane under the pointer. */
+@media (min-width: 1024px) {
+  html.trip-desk-shell,
+  html.trip-desk-shell body {
+    height: 100%;
+    overflow: hidden;
+  }
+  .trip-page.is-desk-shell {
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    height: 100dvh;
+    padding-bottom: var(--space-4);
+    overflow: hidden;
+  }
+  .trip-page.is-desk-shell > .trip-desk-frame {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    width: 100%;
+    min-height: 0;
+  }
+  .trip-page.is-desk-shell .trip-shell.is-desk {
+    flex: 1 1 auto;
+    min-height: 0;
+    grid-template-rows: minmax(0, 1fr);
+    align-items: stretch;
+  }
+  /* Ideas: a sheet with a fixed header; the list scrolls inside it. */
+  .trip-shell.is-desk .trip-ideas-col {
+    position: relative;
+    top: auto;
+    max-height: none;
+    min-height: 0;
+    height: 100%;
+  }
+  .trip-shell.is-desk .trip-ideas-col .trip-ideas {
+    --fade-top: 0px;
+    --fade-bottom: 0px;
+    overscroll-behavior: contain;
+    -webkit-mask-image: linear-gradient(
+      to bottom,
+      transparent 0,
+      black var(--fade-top),
+      black calc(100% - var(--fade-bottom)),
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      to bottom,
+      transparent 0,
+      black var(--fade-top),
+      black calc(100% - var(--fade-bottom)),
+      transparent 100%
+    );
+  }
+  /* Days: the one scroll container. It clears the floating composer at its foot. */
+  .trip-shell.is-desk .trip-days-col {
+    height: 100%;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 0 0 calc(var(--composer-h) + 48px);
+    scrollbar-gutter: stable;
+  }
+  .trip-days-col .paper-list .ant-card-body {
+    padding-bottom: 24px;
+  }
+  /* Day headers stay under the top edge of their pane, so you always see which day you are in. */
+  .trip-days-col .trip-day.is-open > .trip-day-head {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    background: var(--panel);
+  }
+  .trip-days-col .trip-day {
+    scroll-margin-top: 4px;
+  }
+  /* The map column fills its height; it does not scroll. */
+  .trip-shell.is-desk .trip-side {
+    position: relative;
+    top: auto;
+    height: 100%;
+    margin-top: 0;
+  }
+}
+
+/* ---- The inspector (an open item on a desk) ------------------------------------------------------
+   1200px and up it takes the right column's place (the map returns when it closes); 1024-1199px
+   it is an overlay panel at the right edge. Opening, switching and closing it never moves the
+   Days pane: a row that would be hidden under the sticky header or the composer is scrolled just
+   into view (scroll-margin makes `nearest` account for both). */
+.trip-inspector-overlay {
+  position: fixed;
+  z-index: 900;
+  top: var(--space-4);
+  right: var(--space-4);
+  bottom: var(--space-4);
+  width: min(440px, calc(100vw - 32px));
+  overflow: hidden;
+  background: var(--panel);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-squircle);
+  box-shadow: var(--paper-edge), var(--lift-2);
+}
+.trip-inspector-overlay .ui-sheet-panel {
+  width: 100%;
+}
+.trip-shell.is-desk .trip-side > .ui-sheet-panel {
+  width: 100%;
+  box-shadow: none;
+}
+.trip-days-col .trip-row,
+.trip-days-col .trip-stub {
+  scroll-margin-block: 52px calc(var(--composer-h) + 40px);
 }

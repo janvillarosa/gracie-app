@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { titleProblem } from '@lib/trips/limits'
 import { Field } from './Field'
 import './ui.css'
@@ -25,19 +25,24 @@ export const SheetTitle: React.FC<Props> = ({
   label = 'Title',
 }) => {
   const [problem, setProblem] = useState('')
+  const field = useRef<HTMLInputElement>(null)
+  // A new item opens with its title ready to type: focus it without scrolling anything.
+  useEffect(() => {
+    if (!autoFocus) return
+    field.current?.focus({ preventScroll: true })
+    field.current?.select()
+  }, [autoFocus])
   if (!onCommit) return <h2 className="ui-sheet-title">{value}</h2>
   return (
     <Field
       key={value}
+      ref={field as never}
       className="ui-sheet-title"
       aria-label={label}
       defaultValue={value}
       placeholder={placeholder}
       disabled={disabled}
       error={problem}
-      // biome-ignore lint/a11y/noAutofocus: a new item opens with its title ready to type
-      autoFocus={autoFocus}
-      onFocus={(e) => autoFocus && e.target.select()}
       onChange={(e) => setProblem(titleProblem(e.target.value))}
       onKeyDown={(e) => {
         if (e.key === 'Enter') (e.target as HTMLInputElement).blur()

@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import type { DropHint } from '@lib/trips/dragDrop'
 import { useDroppable } from '@dnd-kit/core'
 import { CaretDown, CaretRight } from '@phosphor-icons/react'
 import type { Booking, TripTodo } from '@api/tripTypes'
@@ -26,6 +27,8 @@ export type Shared = {
   lazyDnd: boolean
   // A drag is under way: every row becomes a drop target.
   dragging: boolean
+  // Where the drag in progress would land (a line before or after that row).
+  drop?: DropHint
   // Opens an item's sheet with its time ready to change (from the overlap line).
   onClash: (id: string) => void
 }
@@ -172,6 +175,14 @@ export const EntryRows: React.FC<RowsProps> = ({
           idea={ideas}
           lazyDnd={shared.lazyDnd}
           dragging={shared.dragging}
+          dropLine={
+            shared.drop?.anchor?.id === td.todo_id
+              ? shared.drop.anchor.before
+                ? 'before'
+                : 'after'
+              : undefined
+          }
+          dropLabel={shared.drop?.anchor?.id === td.todo_id ? shared.drop.label : undefined}
           actions={shared.actions}
         />,
       )

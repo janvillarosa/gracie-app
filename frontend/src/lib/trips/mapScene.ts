@@ -91,14 +91,30 @@ const bookingStop = (b: Booking, order: number, dayIndex: number): MapStop | nul
       }
     : null
 
-const dayStops = (d: DayModel, dayIndex: number): MapStop[] => {
+// A booking that a todo points at is drawn by that todo: it never gets a pin of its own.
+const dayStops = (d: DayModel, dayIndex: number, linked: ReadonlySet<string>): MapStop[] => {
   const out: MapStop[] = []
   d.entries.forEach((e, i) => {
+    if (e.kind === 'booking' && linked.has(e.booking.booking_id)) return
     const s =
       e.kind === 'todo' ? todoStop(e.todo, i, dayIndex) : bookingStop(e.booking, i, dayIndex)
     if (s) out.push(s)
   })
   return out
+}
+
+/** One pip and one label per place per day: of the stops at the same spot, the one that matters
+ *  most (selected, then next, then the day's order) stays. */
+function onePerPlace(stops: MapStop[]): MapStop[] {
+  const best = new Map<string, MapStop>()
+  for (const s of stops) {
+    const key = `${s.dayIndex}|${s.lat.toFixed(5)}|${s.lng.toFixed(5)}`
+    const have = best.get(key)
+    if (!have || s.priority < have.priority) best.set(key, s)
+  }
+  return stops.filter(
+    (s) => best.get(`${s.dayIndex}|${s.lat.toFixed(5)}|${s.lng.toFixed(5)}`) === s,
+  )
 }
 
 type Opts = {
@@ -124,6 +140,11 @@ export function buildScene({
   colourIndex = 0,
 }: Opts): MapScene {
   let stops: MapStop[] = []
+  const linked = new Set<string>(
+    [...schedule.days.flatMap((d) => d.entries), ...schedule.outside].flatMap((e) =>
+      e.kind === 'todo' && e.todo.booking_id ? [e.todo.booking_id] : [],
+    ),
+  )
   if (mode === 'ideas') {
     stops = schedule.ideas.flatMap((t, i) => {
       const s = todoStop(t, i, 0)
@@ -132,15 +153,17 @@ export function buildScene({
   } else if (mode === 'all') {
     schedule.days.forEach((d, i) => {
       if (skipDays?.has(d.date)) return
-      stops.push(...dayStops(d, i))
+      stops.push(...dayStops(d, i, linked))
     })
   } else {
     const i = schedule.days.findIndex((d) => d.date === day)
-    if (i >= 0) stops = dayStops(schedule.days[i], i)
+    if (i >= 0) stops = dayStops(schedule.days[i], i, linked)
   }
   // Selected and next outrank the day's order.
-  stops = stops.map((s) =>
-    s.id === selectedId ? { ...s, priority: 0 } : s.id === nextId ? { ...s, priority: 1 } : s,
+  stops = onePerPlace(
+    stops.map((s) =>
+      s.id === selectedId ? { ...s, priority: 0 } : s.id === nextId ? { ...s, priority: 1 } : s,
+    ),
   )
   return {
     mode,

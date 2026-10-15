@@ -7,6 +7,8 @@ export type CheckLine = {
   key: 'travel' | 'stays' | 'days' | 'packing'
   ok: boolean
   text: string
+  // Muted after the text: a count ("· 4").
+  meta?: string
   // What fixes it: the inline button's label and what it does.
   fix?: {
     label: string
@@ -41,8 +43,10 @@ export function uncoveredNights(trip: Trip): string[] {
   )
 }
 
-const travelText = (travel: Booking[]) =>
-  travel.length === 1 ? `${travel[0].title} booked` : `${travel.length} travel bookings`
+const travelLine = (travel: Booking[]): Pick<CheckLine, 'text' | 'meta'> =>
+  travel.length === 1
+    ? { text: `${travel[0].title} booked` }
+    : { text: 'Travel booked', meta: String(travel.length) }
 
 type Packing = { listId?: string | null; packed?: number; total?: number }
 
@@ -52,7 +56,7 @@ export function readiness(trip: Trip, days: DayModel[], packing: Packing): Check
   const travel = trip.bookings.filter((b) => TRAVEL.has(b.kind))
   lines.push(
     travel.length
-      ? { key: 'travel', ok: true, text: travelText(travel) }
+      ? { key: 'travel', ok: true, ...travelLine(travel) }
       : {
           key: 'travel',
           ok: false,

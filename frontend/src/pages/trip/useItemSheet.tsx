@@ -75,6 +75,7 @@ export function useItemSheet({
   bias,
 }: Args): React.ReactElement | null {
   const closeSelected = () => setSelected(null)
+  // On a desk the item is an inspector panel (docked at 1200px and up, an overlay below that).
   const sheetVariant = docked ? 'panel' : 'sheet'
   // A new booking starts at the next full hour today during the trip, else on day one at 09:00,
   // so it never lands in the past by default.
@@ -90,7 +91,6 @@ export function useItemSheet({
   if (selTodo) {
     sheet = (
       <TodoSheet
-        key={selTodo.todo_id}
         variant={sheetVariant}
         open
         onClose={closeSelected}
@@ -112,7 +112,6 @@ export function useItemSheet({
   } else if (selBooking) {
     sheet = (
       <BookingSheet
-        key={selBooking.booking_id}
         mode="edit"
         variant={sheetVariant}
         open

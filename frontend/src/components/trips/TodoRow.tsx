@@ -47,8 +47,15 @@ type Props = {
   lazyDnd?: boolean
   // A drag is under way: every row is a drop target.
   dragging?: boolean
+  // A drag would land just before or after this row: a 2px yellow line.
+  dropLine?: 'before' | 'after'
+  // "at 14:00": a timed item lands at its time, wherever the pointer is.
+  dropLabel?: string
   actions: RowActions
 }
+
+/** Set while a drop is settling: the row that just landed must not pull the page to itself. */
+export const quietEnter = { current: false }
 
 type DndListeners = ReturnType<typeof useDraggable>['listeners']
 
@@ -94,6 +101,8 @@ export const TodoRow = React.memo<Props>(function TodoRow({
   idea,
   lazyDnd,
   dragging,
+  dropLine,
+  dropLabel,
   actions,
 }) {
   const id = todo.todo_id
@@ -112,7 +121,7 @@ export const TodoRow = React.memo<Props>(function TodoRow({
 
   // A row that was just added scrolls into view if it is off screen.
   useEffect(() => {
-    if (entering) liRef.current?.scrollIntoView?.({ block: 'nearest' })
+    if (entering && !quietEnter.current) liRef.current?.scrollIntoView?.({ block: 'nearest' })
   }, [entering])
 
   const onToggle = (e: { target: { checked: boolean } }) => {
@@ -129,6 +138,16 @@ export const TodoRow = React.memo<Props>(function TodoRow({
       e.preventDefault()
       actions.reorder(id, e.key === 'ArrowUp' ? -1 : 1)
     }
+    // An idea goes with Delete or Backspace (behind the same Undo as the trash).
+    if (
+      idea &&
+      !locked &&
+      (e.key === 'Delete' || e.key === 'Backspace') &&
+      (e.target as HTMLElement).closest('.trip-main, .trip-row-line')
+    ) {
+      e.preventDefault()
+      actions.remove(id)
+    }
   }
 
   const sub = todo.place?.name && todo.place.name !== todo.title ? todo.place.name : ''
@@ -144,6 +163,7 @@ export const TodoRow = React.memo<Props>(function TodoRow({
       onTouchStartCapture={armed ? undefined : () => setArmed(true)}
       id={`row-${id}`}
       data-entry-id={id}
+      data-drop-label={dropLabel}
       className={[
         'trip-row',
         todo.done ? 'is-done' : '',
@@ -153,6 +173,7 @@ export const TodoRow = React.memo<Props>(function TodoRow({
         overdue ? 'is-overdue' : '',
         clash ? 'is-clash' : '',
         idea ? 'is-idea' : '',
+        dropLine ? `is-drop-${dropLine}` : '',
       ]
         .filter(Boolean)
         .join(' ')}
@@ -165,6 +186,11 @@ export const TodoRow = React.memo<Props>(function TodoRow({
         </div>
         <div ref={swipe.slideRef} className="item-slide" {...swipe.handlers}>
           <div className="trip-row-line" {...listeners}>
+            {idea && (
+              <span className="trip-grip is-lead" aria-hidden>
+                <DotsSixVertical />
+              </span>
+            )}
             {idea ? (
               <span className="trip-check trip-idea-dot">
                 <span
@@ -196,7 +222,9 @@ export const TodoRow = React.memo<Props>(function TodoRow({
               onClick={() => actions.open(id)}
             >
               <span className="trip-titleline">
-                <span className="trip-title">{todo.title}</span>
+                <span className="trip-title" title={idea ? todo.title : undefined}>
+                  {todo.title}
+                </span>
               </span>
               {second && <span className="trip-sub">{second}</span>}
             </button>
@@ -236,9 +264,11 @@ export const TodoRow = React.memo<Props>(function TodoRow({
                   icon={<CalendarPlus />}
                 />
               )}
-              <span className="trip-grip" aria-hidden>
-                <DotsSixVertical />
-              </span>
+              {!idea && (
+                <span className="trip-grip" aria-hidden>
+                  <DotsSixVertical />
+                </span>
+              )}
             </span>
             {moveOpen && (
               <MoveMenu

@@ -111,6 +111,13 @@ why the config forces a single fork.
   stop card goes during the trip. With no places the map column shows "Places you add show up here"
   and renders no map. Tests set the viewport with `setViewport('desktop' | 'mid' | 'phone')`:
   `desktop` is a 1440px screen (matches the 1024 and 1200 queries), `mid` is 1024-1199px.
+- **Desk shell and inspector:** at 1024px and wider the window does not scroll (`html.trip-desk-shell`):
+  the Ideas list and the Days column (`.trip-days-col`, the sticky-header scroll container and the
+  IntersectionObserver root) scroll on their own, and each pane's position is kept in
+  `sessionStorage` per trip. An open todo or booking is an inspector: it takes the right column at
+  1200px and wider, a fixed overlay panel at 1024-1199px. Opening, switching or closing it never
+  moves the Days pane (focus uses `preventScroll`; a selected row that is hidden is scrolled just
+  into view). Tested in `__tests__/TripScroll.test.tsx`.
 - **Dev mock (no backend needed):** `cd frontend && VITE_MOCK_TRIPS=1 pnpm dev --port 5174 --strictPort --host 127.0.0.1`
   (or just `pnpm dev`). It boots an MSW worker (a fetch
   shim if a service worker can't register) backed by `mocks/tripsServer.ts`, seeded from
