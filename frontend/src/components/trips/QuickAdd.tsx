@@ -114,7 +114,8 @@ export const AddBar: React.FC<Props> = ({
   // One line, growing to three as you type.
   const grow = (el: HTMLTextAreaElement | HTMLInputElement) => {
     el.style.height = 'auto'
-    el.style.height = `${Math.min(el.scrollHeight, 22 * 3 + 20)}px`
+    const border = el.offsetHeight - el.clientHeight // the 1px frame that matches the List bar
+    el.style.height = `${Math.min(el.scrollHeight + border, 22 * 3 + 20 + border)}px`
   }
 
   return (
