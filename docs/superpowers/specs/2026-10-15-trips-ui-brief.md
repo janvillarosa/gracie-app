@@ -286,6 +286,8 @@ flagged done days, and it didn't say which items clashed. Gaps now show where th
 - An **empty day** says "Nothing planned yet".
 - Todos **outside trip dates** sit in their own end section, with one explanatory line.
 - The day list marks days that have an overlap with a small amber dot.
+- A warned todo stays completable. Ticking either clashing item clears the warning (done todos and
+  bookings that have passed don't count as overlapping); unticking brings it back.
 
 ## 6j. Interactive map (2026-10-15)
 
