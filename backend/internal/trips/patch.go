@@ -37,6 +37,7 @@ type TripPatch struct {
 	StartDate   Opt[string]       `json:"start_date"`
 	EndDate     Opt[string]       `json:"end_date"`
 	TZ          *string           `json:"tz"`
+	Icon        *string           `json:"icon"` // "" clears
 	// Stops replaces the whole route; null or [] clears it.
 	Stops Opt[[]models.Place] `json:"stops"`
 	// Days sets labels per date; an empty string removes the label.

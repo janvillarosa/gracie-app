@@ -76,6 +76,9 @@ Spec: `docs/superpowers/specs/2026-10-14-trips-api-persistence-design.md`.
   cap 60; `""` removes; clock `field_at["days.<date>"]`, so labelling different days never
   conflicts). Over-cap patches are rejected with code `cap`. `field_at` keys with dots are
   fine because trips are only ever written as whole documents (`ReplaceCAS`).
+- **Trip icon:** `icon` (omitempty) on the trip fields, set via trip.create/update, clock
+  `field_at["icon"]`; one of SUITCASE, PLANE, BEACH, MOUNTAIN, CITY, TRAIN, ROAD_TRIP,
+  CAMPING, MAP, LANDMARK, WINE, SKI; `""` clears; anything else is `invalid`.
 - **Todo -> booking link:** `TripTodo.booking_id` (optional, `null` clears) is set through
   todo.create/update. It must name a live booking of the same trip, else `invalid`; it has
   the normal clock `field_at["booking_id"]`. `booking.delete` clears the link on every todo

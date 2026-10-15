@@ -48,6 +48,8 @@ var (
 
 	categories   = map[string]bool{"food": true, "sight": true, "activity": true, "transport": true, "stay": true, "shopping": true, "other": true}
 	bookingKinds = map[string]bool{"flight": true, "stay": true, "train": true, "car": true, "ticket": true, "other": true}
+	tripIcons    = map[string]bool{"SUITCASE": true, "PLANE": true, "BEACH": true, "MOUNTAIN": true, "CITY": true, "TRAIN": true,
+		"ROAD_TRIP": true, "CAMPING": true, "MAP": true, "LANDMARK": true, "WINE": true, "SKI": true}
 	placeSources = map[string]bool{"photon": true, "pin": true, "manual": true}
 )
 
@@ -122,6 +124,9 @@ func validTripPatch(p TripPatch, create bool) bool {
 		if !validDate(date) || utf8.RuneCountInString(label) > maxDayLabel {
 			return false
 		}
+	}
+	if p.Icon != nil && *p.Icon != "" && !tripIcons[*p.Icon] {
+		return false
 	}
 	return p.TZ == nil || validTZ(*p.TZ)
 }
