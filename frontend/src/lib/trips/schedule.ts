@@ -1,0 +1,340 @@
+// Pure scheduling helpers: day lists, absolute-time sorting, gaps, fullness, countdown.
+import type { Booking, Trip, TripTodo } from '../../api/tripTypes'
+
+const DAY_MS = 86400000
+export const MAX_DAYS = 120
+
+// ---- dates ----------------------------------------------------------------------------
+export function localDateKey(d: Date = new Date()): string {
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${d.getFullYear()}-${m}-${day}`
+}
+
+const toUtc = (key: string) => {
+  const [y, m, d] = key.split('-').map(Number)
+  return Date.UTC(y, m - 1, d)
+}
+const fromUtc = (ms: number) => new Date(ms).toISOString().slice(0, 10)
+
+export function addDays(key: string, n: number): string {
+  return fromUtc(toUtc(key) + n * DAY_MS)
+}
+export function diffDays(a: string, b: string): number {
+  return Math.round((toUtc(a) - toUtc(b)) / DAY_MS)
+}
+export function eachDay(start?: string | null, end?: string | null): string[] {
+  if (!start || !end || end < start) return []
+  const n = Math.min(diffDays(end, start), MAX_DAYS - 1)
+  return Array.from({ length: n + 1 }, (_, i) => addDays(start, i))
+}
+
+const WEEKDAY = new Intl.DateTimeFormat('en-GB', { weekday: 'short', timeZone: 'UTC' })
+const MONTH = new Intl.DateTimeFormat('en-GB', { month: 'short', timeZone: 'UTC' })
+/** "Sat 24" */
+export function shortDay(key: string): string {
+  const d = new Date(toUtc(key))
+  return `${WEEKDAY.format(d)} ${d.getUTCDate()}`
+}
+/** "Thu 22 Oct" */
+export function fullDay(key: string): string {
+  const d = new Date(toUtc(key))
+  return `${shortDay(key)} ${MONTH.format(d)}`
+}
+export function dateRange(start?: string | null, end?: string | null): string {
+  if (!start || !end) return ''
+  if (start === end) return fullDay(start)
+  const a = new Date(toUtc(start))
+  const b = new Date(toUtc(end))
+  return a.getUTCMonth() === b.getUTCMonth()
+    ? `${shortDay(start)} – ${fullDay(end)}`
+    : `${fullDay(start)} – ${fullDay(end)}`
+}
+
+// ---- time zones -----------------------------------------------------------------------
+const fmtCache = new Map<string, Intl.DateTimeFormat>()
+function zoneFormat(tz: string) {
+  let f = fmtCache.get(tz)
+  if (!f) {
+    f = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz,
+      hourCycle: 'h23',
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: 'numeric',
+      second: 'numeric',
+    })
+    fmtCache.set(tz, f)
+  }
+  return f
+}
+
+function offsetAt(utcMs: number, tz: string): number {
+  const parts: Record<string, number> = {}
+  for (const p of zoneFormat(tz).formatToParts(new Date(utcMs))) {
+    if (p.type !== 'literal') parts[p.type] = Number(p.value)
+  }
+  const asUtc = Date.UTC(
+    parts.year,
+    parts.month - 1,
+    parts.day,
+    parts.hour % 24,
+    parts.minute,
+    parts.second,
+  )
+  return asUtc - Math.floor(utcMs / 1000) * 1000
+}
+
+/** Wall-clock date + time in an IANA zone to an absolute instant (ms). Zone-less = UTC. */
+export function wallToUtc(date: string, time: string, tz?: string | null): number {
+  const [h, m] = time.split(':').map(Number)
+  const wall = toUtc(date) + (h * 60 + m) * 60000
+  if (!tz) return wall
+  try {
+    let guess = wall - offsetAt(wall, tz)
+    guess = wall - offsetAt(guess, tz)
+    return guess
+  } catch {
+    return wall
+  }
+}
+
+export function zoneLabel(tz?: string | null): string {
+  if (!tz) return ''
+  const city = tz.split('/').pop() ?? tz
+  return city.replace(/_/g, ' ')
+}
+
+// ---- schedule model -------------------------------------------------------------------
+export type Entry =
+  | {
+      kind: 'todo'
+      id: string
+      day: string
+      startMs: number | null
+      endMs: number | null
+      todo: TripTodo
+    }
+  | {
+      kind: 'booking'
+      id: string
+      day: string
+      startMs: number | null
+      endMs: number | null
+      booking: Booking
+    }
+
+export type DayModel = {
+  date: string
+  label: string
+  suggested: string
+  entries: Entry[]
+}
+
+export type Gap = { id: string; text: string; target: string }
+
+export type Schedule = {
+  days: DayModel[]
+  ideas: TripTodo[]
+  outside: Entry[]
+  gaps: Gap[]
+}
+
+function todoEntry(t: TripTodo, tripTz?: string): Entry {
+  const day = t.day as string
+  const startMs = t.start_time ? wallToUtc(day, t.start_time, t.tz || tripTz) : null
+  const endMs = startMs !== null ? startMs + (t.duration_min ?? 0) * 60000 : null
+  return { kind: 'todo', id: t.todo_id, day, startMs, endMs, todo: t }
+}
+
+function bookingEntry(b: Booking, tripTz?: string): Entry | null {
+  if (!b.starts_at) return null
+  const [day, time] = b.starts_at.split('T')
+  const startMs = wallToUtc(day, time || '00:00', b.start_tz || tripTz)
+  let endMs: number | null = null
+  if (b.ends_at) {
+    const [ed, et] = b.ends_at.split('T')
+    endMs = wallToUtc(ed, et || '00:00', b.end_tz || b.start_tz || tripTz)
+  }
+  return { kind: 'booking', id: b.booking_id, day, startMs, endMs, booking: b }
+}
+
+const orderOf = (e: Entry) => (e.kind === 'todo' ? e.todo.order : Number.MAX_SAFE_INTEGER)
+
+/** Absolute time first (untimed last), then order, then id. */
+export function compareEntries(a: Entry, b: Entry): number {
+  if (a.startMs !== null && b.startMs !== null && a.startMs !== b.startMs)
+    return a.startMs - b.startMs
+  if ((a.startMs === null) !== (b.startMs === null)) return a.startMs === null ? 1 : -1
+  return orderOf(a) - orderOf(b) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)
+}
+
+export function compareIdeas(a: TripTodo, b: TripTodo): number {
+  return a.order - b.order || (a.todo_id < b.todo_id ? -1 : 1)
+}
+
+export function suggestLabel(todos: TripTodo[]): string {
+  const counts = new Map<string, number>()
+  for (const t of todos) {
+    const loc = t.place?.locality
+    if (loc) counts.set(loc, (counts.get(loc) ?? 0) + 1)
+  }
+  let best = ''
+  let n = 0
+  for (const [k, v] of counts) {
+    if (v > n) {
+      best = k
+      n = v
+    }
+  }
+  return best
+}
+
+export function overlapping(entries: Entry[]): boolean {
+  const timed = entries.filter((e) => e.startMs !== null).sort(compareEntries)
+  let end = -Infinity
+  let lastStart = -Infinity
+  for (const e of timed) {
+    const s = e.startMs as number
+    if (s < end || s === lastStart) return true
+    lastStart = s
+    end = Math.max(end, e.endMs ?? s)
+  }
+  return false
+}
+
+export function buildSchedule(trip: Trip): Schedule {
+  const dates = eachDay(trip.start_date, trip.end_date)
+  const inRange = new Set(dates)
+  const byDay = new Map<string, Entry[]>()
+  const ideas: TripTodo[] = []
+  const outside: Entry[] = []
+  const place = (e: Entry) => {
+    if (inRange.has(e.day)) {
+      const list = byDay.get(e.day)
+      if (list) list.push(e)
+      else byDay.set(e.day, [e])
+    } else outside.push(e)
+  }
+  for (const t of trip.todos) {
+    if (!t.day) ideas.push(t)
+    else place(todoEntry(t, trip.tz))
+  }
+  for (const b of trip.bookings) {
+    const e = bookingEntry(b, trip.tz)
+    if (e) place(e)
+  }
+  ideas.sort(compareIdeas)
+  outside.sort((a, b) => (a.day < b.day ? -1 : a.day > b.day ? 1 : compareEntries(a, b)))
+
+  const days: DayModel[] = dates.map((date) => {
+    const entries = (byDay.get(date) ?? []).sort(compareEntries)
+    const todos = entries.flatMap((e) => (e.kind === 'todo' ? [e.todo] : []))
+    return {
+      date,
+      label: trip.days?.[date] ?? '',
+      suggested: trip.days?.[date] ? '' : suggestLabel(todos),
+      entries,
+    }
+  })
+
+  const gaps: Gap[] = []
+  const empty = days.filter((d) => d.entries.length === 0)
+  if (empty.length)
+    gaps.push({
+      id: 'empty',
+      text: `${empty.length} ${empty.length === 1 ? 'day' : 'days'} empty`,
+      target: `day-${empty[0].date}`,
+    })
+  for (const d of days)
+    if (overlapping(d.entries))
+      gaps.push({
+        id: `overlap-${d.date}`,
+        text: `${shortDay(d.date)}: two stops overlap`,
+        target: `day-${d.date}`,
+      })
+  const outTodos = outside.filter((e) => e.kind === 'todo').length
+  if (outTodos)
+    gaps.push({
+      id: 'outside',
+      text: `${outTodos} ${outTodos === 1 ? 'todo' : 'todos'} outside trip dates`,
+      target: 'outside-dates',
+    })
+  return { days, ideas, outside, gaps }
+}
+
+/** 0..1: how full a day is, for the date strip bars. */
+export function fullness(day: DayModel): number {
+  return Math.min(1, day.entries.length / 6)
+}
+
+export type Phase = 'draft' | 'before' | 'during' | 'after'
+export function tripPhase(trip: Trip, today: string): Phase {
+  if (!trip.start_date || !trip.end_date) return 'draft'
+  if (today < trip.start_date) return 'before'
+  if (today > trip.end_date) return 'after'
+  return 'during'
+}
+
+export function countdown(trip: Trip, today: string): string {
+  const phase = tripPhase(trip, today)
+  if (phase === 'draft' || !trip.start_date || !trip.end_date) return ''
+  if (phase === 'during') {
+    const total = diffDays(trip.end_date, trip.start_date) + 1
+    return `Day ${diffDays(today, trip.start_date) + 1} of ${total}`
+  }
+  if (phase === 'before') {
+    const n = diffDays(trip.start_date, today)
+    return n === 1 ? 'Tomorrow' : `In ${n} days`
+  }
+  const n = diffDays(today, trip.end_date)
+  return n === 1 ? 'Ended yesterday' : `Ended ${n} days ago`
+}
+
+/** Stay bookings that cover tonight (check-in on or before today, check-out after it). */
+export function tonightsStay(trip: Trip, today: string): Booking | undefined {
+  return trip.bookings.find(
+    (b) =>
+      b.kind === 'stay' &&
+      b.starts_at &&
+      b.ends_at &&
+      b.starts_at.slice(0, 10) <= today &&
+      b.ends_at.slice(0, 10) > today,
+  )
+}
+
+export function routeText(trip: Trip): string {
+  const names = (trip.stops ?? []).map((s) => s.locality || s.name)
+  if (names.length) return names.join(' → ')
+  return trip.destination ? trip.destination.locality || trip.destination.name : ''
+}
+
+// ---- quick add parsing ----------------------------------------------------------------
+/** "14:00 Pena Palace" or "2pm Pena Palace" -> time + title. */
+export function parseQuickAdd(text: string): { title: string; start_time?: string } {
+  const t = text.trim()
+  const m24 = /^([01]?\d|2[0-3])[:.]([0-5]\d)\s+(.+)$/.exec(t)
+  if (m24) return { start_time: `${m24[1].padStart(2, '0')}:${m24[2]}`, title: m24[3].trim() }
+  const m12 = /^(1[0-2]|0?[1-9])(?:[:.]([0-5]\d))?\s*(am|pm)\s+(.+)$/i.exec(t)
+  if (m12) {
+    let h = Number(m12[1]) % 12
+    if (m12[3].toLowerCase() === 'pm') h += 12
+    return { start_time: `${String(h).padStart(2, '0')}:${m12[2] ?? '00'}`, title: m12[4].trim() }
+  }
+  return { title: t }
+}
+
+/** Midpoint order for inserting between two neighbours; end of list when `next` is missing. */
+export function orderBetween(prev?: number, next?: number): number {
+  if (prev === undefined && next === undefined) return 1
+  if (prev === undefined) return (next as number) - 1
+  if (next === undefined) return prev + 1
+  return (prev + next) / 2
+}
+
+export function mapsUrl(lat: number, lng: number, name?: string): string {
+  const q = name ? `${encodeURIComponent(name)}%20` : ''
+  return `https://www.google.com/maps/search/?api=1&query=${q}${lat},${lng}`
+}

@@ -1,11 +1,14 @@
+import 'fake-indexeddb/auto'
 import '@testing-library/jest-dom'
 import { afterEach } from 'vitest'
 import { cleanup } from '@testing-library/react'
-import { server } from './testServer'
+import { server, tripServer } from './testServer'
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }))
 afterEach(() => {
   server.resetHandlers()
+  tripServer.trips.clear()
+  tripServer.degradedPlaces = false
   cleanup()
 })
 afterAll(() => server.close())
