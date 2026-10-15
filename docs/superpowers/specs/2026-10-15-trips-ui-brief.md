@@ -261,6 +261,21 @@ adventure or a scavenger hunt.
 - Trip rows mirror list rows (icon, title, one meta line, yellow chevron). Order: now, then
   upcoming, then drafts. Past trips fold into "3 past trips · Show".
 
+## 6h. Trip icons and a simpler Trip settings (2026-10-15)
+
+- Trips have their own icon set, stored as keys (`icon` on the trip): SUITCASE 🧳 (the default),
+  PLANE ✈️, BEACH 🏖️, MOUNTAIN 🏔️, CITY 🏙️, TRAIN 🚆, ROAD_TRIP 🚗, CAMPING ⛺, MAP 🗺️,
+  LANDMARK 🏛️, WINE 🍷, SKI 🎿.
+- Trip settings is a grouped list on paper with no boxed inputs:
+  - The identity block is the icon (it opens the icon grid) plus an inline-editable title.
+  - **Where**: one ordered list of places. The first place is the destination; destination and
+    route are no longer separate concepts.
+  - **When**: one range calendar sheet.
+  - **Packing list**: opens the linked list, or "Make a packing list".
+  - "Just for you" holds the next-stop switch. "Delete trip" comes last, as quiet red text, and
+    its confirm says the trip can be restored for 30 days.
+  - Back is the TopNav chevron; there is no separate Back button.
+
 ## 7. Constraints and open decisions
 
 Constraints:
