@@ -271,6 +271,7 @@ export function buildSeedTrips(today: string, phase: Phase, now = Date.now()): T
   const ghent: Trip = {
     trip_id: `trip_${hex(2)}`,
     title: 'Weekend in Ghent',
+    icon: 'TRAIN',
     destination: P('Ghent', 51.0543, 3.7174, 'Ghent'),
     start_date: addDays(today, 40),
     end_date: addDays(today, 42),
@@ -282,6 +283,7 @@ export function buildSeedTrips(today: string, phase: Phase, now = Date.now()): T
   const draft: Trip = {
     trip_id: `trip_${hex(3)}`,
     title: 'Somewhere warm in January',
+    icon: 'BEACH',
     todos: [
       {
         todo_id: `ttd_${hex(900)}`,

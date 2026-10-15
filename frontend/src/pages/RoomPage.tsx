@@ -24,6 +24,7 @@ import {
   Dropdown,
   message,
 } from 'antd'
+import type { InputRef } from 'antd'
 import {
   DotsThreeVertical,
   CaretRight,
@@ -87,6 +88,7 @@ export const RoomPage: React.FC<{
   const tripStore = useTripStoreFor(roomId, userId, apiKey)
   const tripState = useTripState(tripStore)
   const [newTripOpen, setNewTripOpen] = useState(false)
+  const newNameRef = useRef<InputRef>(null)
   const today = localDateKey()
   const liveNow = Object.values(tripState.trips).some(
     (t) => !t.deleted && tripPhase(t, today) === 'during',
@@ -368,7 +370,12 @@ export const RoomPage: React.FC<{
               },
               {
                 key: 'trips',
-                label: 'Trips',
+                label: (
+                  <span className="pill-label">
+                    Trips
+                    {liveNow && tab !== 'trips' && <span className="pill-dot" aria-hidden />}
+                  </span>
+                ),
                 ariaLabel: liveNow ? 'Trips, one happening now' : undefined,
                 children: (
                   <TripsPanel trips={tripState.trips} store={tripStore} ready={tripState.ready} />
@@ -412,7 +419,9 @@ export const RoomPage: React.FC<{
       {/* Create List Modal */}
       <Modal
         title="Add list"
+        className="paper-modal"
         open={createOpen}
+        afterOpenChange={(o) => o && newNameRef.current?.focus()}
         onCancel={() => setCreateOpen(false)}
         footer={
           <Space>
@@ -432,6 +441,7 @@ export const RoomPage: React.FC<{
       >
         <Space direction="vertical" style={{ width: '100%' }}>
           <Input
+            ref={newNameRef}
             placeholder="List name"
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
@@ -451,6 +461,7 @@ export const RoomPage: React.FC<{
 
       {/* Edit List Modal */}
       <Modal
+        className="paper-modal"
         title="Edit list"
         open={editOpen}
         onCancel={() => setEditOpen(false)}

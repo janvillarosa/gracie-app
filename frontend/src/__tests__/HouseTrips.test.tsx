@@ -104,7 +104,19 @@ describe('House page: Lists and Trips as a pill switch', () => {
   it('puts a small yellow dot on Trips while a trip is happening now', async () => {
     seed(makeTrip(1, { title: 'Lisbon & Porto', start_date: rel(-1), end_date: rel(5) }))
     renderTrips('/app')
-    expect(await screen.findByRole('tab', { name: 'Trips, one happening now' })).toBeInTheDocument()
+    const tab = await screen.findByRole('tab', { name: 'Trips, one happening now' })
+    // A 6px dot at the label's top-right while Trips is not the selected pill.
+    expect(tab.querySelector('.pill-label .pill-dot')).not.toBeNull()
+    await userEvent.click(tab)
+    await waitFor(() =>
+      expect(screen.getByRole('tab', { name: 'Trips, one happening now' })).toHaveAttribute(
+        'aria-selected',
+        'true',
+      ),
+    )
+    expect(
+      screen.getByRole('tab', { name: 'Trips, one happening now' }).querySelector('.pill-dot'),
+    ).toBeNull()
   })
 
   it('has no dot when nothing is happening', async () => {
@@ -157,7 +169,10 @@ describe('Trips pill', () => {
     renderTrips('/app/trips')
     await userEvent.click(await screen.findByRole('button', { name: /New trip/ }))
     const dialog = await screen.findByRole('dialog', { name: 'Name your trip' })
+    expect(dialog.closest('.paper-modal')).not.toBeNull()
     expect(within(dialog).getAllByRole('textbox')).toHaveLength(1)
+    // The field is focused as the dialog opens, so you can just type.
+    await waitFor(() => expect(within(dialog).getByLabelText('Trip name')).toHaveFocus())
     const create = within(dialog).getByRole('button', { name: 'Create trip' })
     expect(create).toBeDisabled()
     await userEvent.type(within(dialog).getByLabelText('Trip name'), 'Autumn in Vienna{Enter}')
@@ -174,6 +189,9 @@ describe('Trips pill', () => {
     seed(makeTrip(1, { title: 'Lisbon & Porto', start_date: rel(10), end_date: rel(12) }))
     renderTrips('/app/trips')
     await userEvent.click(await screen.findByRole('button', { name: 'Actions for Lisbon & Porto' }))
+    // The row menu is a real menu.
+    expect(await screen.findByRole('menuitem', { name: 'Trip settings' })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: 'Delete' })).toBeInTheDocument()
     await userEvent.click(await screen.findByText('Rename'))
     const dialog = await screen.findByRole('dialog', { name: 'Rename trip' })
     const field = within(dialog).getByLabelText('Trip name')

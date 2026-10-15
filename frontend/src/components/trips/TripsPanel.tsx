@@ -40,7 +40,7 @@ const TripRow = React.memo(function TripRow({
     { key: 'delete', label: 'Delete', danger: true },
   ]
   return (
-    <AntList.Item>
+    <AntList.Item className="trip-list-row">
       <TransitionLink to={`/app/trips/${trip.trip_id}`} className="list-row-link">
         <span className="list-icon" aria-hidden>
           {toTripEmoji(trip.icon)}

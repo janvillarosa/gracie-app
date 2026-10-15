@@ -463,9 +463,25 @@ describe('Days', () => {
     seed(makeTrip(7, { title: 'Draft' }))
     open(makeTrip(7).trip_id)
     expect(await screen.findByRole('heading', { name: 'Where to first?' })).toBeInTheDocument()
+    // The calendar opens in place, on the trip page, not on the settings page.
     await userEvent.click(screen.getByRole('button', { name: 'When are you going?' }))
-    await waitFor(() => expect(screen.getByTestId('where').textContent).toMatch(/\/settings$/))
-    expect(await screen.findByLabelText('Trip name')).toBeInTheDocument()
+    const sheet = await screen.findByRole('dialog')
+    const label = (d: string) =>
+      new Intl.DateTimeFormat('en-GB', {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        timeZone: 'UTC',
+      }).format(new Date(`${d}T00:00:00Z`))
+    await userEvent.click(within(sheet).getByRole('button', { name: label(rel(3)) }))
+    await userEvent.click(within(sheet).getByRole('button', { name: label(rel(5)) }))
+    await waitFor(() => {
+      const f = tripServer.trips.get(makeTrip(7).trip_id)?.fields
+      expect(f?.start_date).toBe(rel(3))
+      expect(f?.end_date).toBe(rel(5))
+    })
+    expect(screen.getByTestId('where').textContent).toBe(`/app/trips/${makeTrip(7).trip_id}`)
   })
 
   it('puts things dated outside the trip in their own section', async () => {

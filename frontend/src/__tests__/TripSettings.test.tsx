@@ -267,6 +267,14 @@ describe('Trip settings: packing list', () => {
     expect(screen.queryByText('Make a packing list')).not.toBeInTheDocument()
   })
 
+  it('says so when the linked list is empty', async () => {
+    meState.lists = [list]
+    meState.items = []
+    seed({ ...TRIP, packing_list_id: 'list_packing' })
+    settings()
+    expect(await screen.findByText('Empty · add items')).toBeInTheDocument()
+  })
+
   it('treats a missing or deleted list as unlinked', async () => {
     meState.lists = [{ ...list, is_deleted: true }]
     seed({ ...TRIP, packing_list_id: 'list_packing' })

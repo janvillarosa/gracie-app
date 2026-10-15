@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Card, Divider, Modal, Typography } from 'antd'
-import { CaretRight } from '@phosphor-icons/react'
+import { CaretRight, PencilSimple } from '@phosphor-icons/react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@auth/AuthProvider'
 import { HouseLoader } from '@components/HouseLoader'
@@ -167,6 +167,7 @@ export const TripSettings: React.FC = () => {
               else if (v !== trip.title) patch({ title: v })
             }}
           />
+          <PencilSimple className="settings-pencil" aria-hidden />
         </div>
 
         <section className="settings-group" aria-label="This trip">
@@ -181,7 +182,11 @@ export const TripSettings: React.FC = () => {
             <SettingRow
               label="Packing list"
               value={
-                count === undefined ? 'Open the list' : `${count} ${count === 1 ? 'item' : 'items'}`
+                count === undefined
+                  ? 'Open the list'
+                  : count === 0
+                    ? 'Empty · add items'
+                    : `${count} ${count === 1 ? 'item' : 'items'}`
               }
               to={`/app/lists/${linked.list_id}`}
             />

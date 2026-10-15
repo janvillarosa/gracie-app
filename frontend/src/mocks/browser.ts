@@ -86,7 +86,22 @@ export async function startMockTrips() {
     ),
     http.get('/api/rooms/:roomId/lists', () => HttpResponse.json(lists)),
     http.get('/api/rooms/:roomId/pantry', () => HttpResponse.json([])),
-    http.get('/api/rooms/:roomId/lists/:listId/items', () => HttpResponse.json([])),
+    http.get('/api/rooms/:roomId/lists/:listId/items', ({ params }) =>
+      HttpResponse.json(
+        params.listId === srv.listId
+          ? ['Passport', 'Charger', 'Sun cream', 'Walking shoes'].map((description, i) => ({
+              item_id: `item_pack_${i}`,
+              list_id: srv.listId,
+              room_id: ROOM,
+              description,
+              completed: false,
+              order: i + 1,
+              created_at: now,
+              updated_at: now,
+            }))
+          : [],
+      ),
+    ),
   ]
   try {
     await setupWorker(...handlers).start({ onUnhandledRequest: 'bypass', quiet: true })

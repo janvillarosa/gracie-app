@@ -39,6 +39,7 @@ import {
   type DayModel,
   type Schedule,
 } from '@lib/trips/schedule'
+import { WhenSheet } from '@components/trips/WhenSheet'
 import { BookingEditor, BookingsPanel, type BookingActions } from '@components/trips/Bookings'
 import { BookingDetail, TodoDetail } from '@components/trips/ItemDetail'
 import { DayList, type DayRow } from '@components/trips/DayList'
@@ -310,6 +311,7 @@ const TripScreen: React.FC<{
   const [override, setOverride] = useState<Record<string, boolean>>({})
   const [showDone, setShowDone] = useState(false)
   const [daysOpen, setDaysOpen] = useState(false)
+  const [whenOpen, setWhenOpen] = useState(false)
   const [celebrating, setCelebrating] = useState<ReadonlySet<string>>(() => new Set())
   const [dismissed, setDismissed] = useState<ReadonlySet<string>>(() => new Set())
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -1176,7 +1178,7 @@ const TripScreen: React.FC<{
           <h3>Where to first?</h3>
           <p>Add a place or a plan below. You can sort it into days later.</p>
           {!trip.start_date && !locked && (
-            <Button shape="round" onClick={goSettings}>
+            <Button shape="round" onClick={() => setWhenOpen(true)}>
               When are you going?
             </Button>
           )}
@@ -1303,6 +1305,14 @@ const TripScreen: React.FC<{
             </aside>
           )}
         </div>
+        {whenOpen && (
+          <WhenSheet
+            start={trip.start_date}
+            end={trip.end_date}
+            onChange={(s, e) => store.updateTrip(trip.trip_id, { start_date: s, end_date: e })}
+            onClose={() => setWhenOpen(false)}
+          />
+        )}
         {phone && sheetOpen && (
           <Sheet
             title={`Map · ${currentModel ? shortDay(currentModel.date) : 'ideas'}`}

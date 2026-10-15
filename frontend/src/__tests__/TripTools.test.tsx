@@ -396,8 +396,8 @@ describe('Map', () => {
     seed(t)
     open()
     await screen.findByRole('region', { name: 'Next stop' })
+    await waitFor(() => expect(document.querySelectorAll('.map-pin')).toHaveLength(2))
     const pins = document.querySelectorAll('.map-pin')
-    expect(pins).toHaveLength(2)
     expect(document.querySelectorAll('.map-pin.is-next')).toHaveLength(1)
     expect(document.querySelector('.map-pin.is-next text')?.textContent).toBe('1')
     // Numbers are sequential among the stops that have a place.
@@ -418,7 +418,7 @@ describe('Map', () => {
     expect(within(drawer).getByText('Ginjinha tasting')).toBeInTheDocument()
     // The days are still there to drop an idea on.
     expect(screen.getByRole('heading', { name: 'Later today' })).toBeInTheDocument()
-    expect(document.querySelectorAll('.map-pin')).toHaveLength(1)
+    await waitFor(() => expect(document.querySelectorAll('.map-pin')).toHaveLength(1))
     expect(document.querySelector('.trip-map [aria-label="Map of the ideas"]')).not.toBeNull()
     expect(screen.queryByRole('region', { name: 'Next stop' })).not.toBeInTheDocument()
     await userEvent.click(within(drawer).getByRole('button', { name: /^Close ideas/ }))

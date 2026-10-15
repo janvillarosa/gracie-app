@@ -1,5 +1,6 @@
-import React, { useState } from 'react'
+import React, { useRef, useState } from 'react'
 import { Button, Input, Modal } from 'antd'
+import type { InputRef } from 'antd'
 
 type Props = {
   title: string
@@ -19,6 +20,7 @@ export const TripNameModal: React.FC<Props> = ({
   onCancel,
 }) => {
   const [name, setName] = useState(initial)
+  const input = useRef<InputRef>(null)
   const submit = () => {
     if (name.trim()) onSubmit(name.trim())
   }
@@ -26,7 +28,10 @@ export const TripNameModal: React.FC<Props> = ({
     <Modal
       open
       title={title}
+      className="paper-modal"
       onCancel={onCancel}
+      // The dialog takes focus as it opens; hand it to the field once it has.
+      afterOpenChange={(o) => o && input.current?.focus()}
       destroyOnClose
       footer={
         <Button type="primary" shape="round" disabled={!name.trim()} onClick={submit}>
@@ -35,6 +40,7 @@ export const TripNameModal: React.FC<Props> = ({
       }
     >
       <Input
+        ref={input}
         aria-label="Trip name"
         placeholder="Autumn in Lisbon"
         value={name}

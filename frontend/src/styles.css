@@ -2954,3 +2954,101 @@ textarea.notes-textarea {
     padding: 0 14px;
   }
 }
+
+/* ---- the app's paper modal: Outfit title, a squircle sheet, a full-width key on phones ----- */
+.paper-modal .ant-modal-content {
+  padding: 24px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-squircle);
+  box-shadow: var(--paper-edge), var(--lift-2);
+}
+.paper-modal .ant-modal-title {
+  font-family: var(--font-headings);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.paper-modal .ant-modal-header {
+  margin-bottom: 12px;
+}
+@media (max-width: 640px) {
+  .paper-modal .ant-modal-footer > .ant-btn-primary,
+  .paper-modal .ant-modal-footer > .ant-space,
+  .paper-modal .ant-modal-footer > .ant-space > .ant-space-item {
+    width: 100%;
+  }
+  .paper-modal .ant-modal-footer .ant-btn-primary {
+    width: 100%;
+  }
+}
+/* The live-trip dot sits at the label's top-right on the Trips pill. */
+.pill-label {
+  position: relative;
+  display: inline-block;
+}
+.pill-label .pill-dot {
+  position: absolute;
+  top: -3px;
+  right: -9px;
+  width: 6px;
+  height: 6px;
+  box-shadow: none;
+}
+/* Trip titles may take two lines on a narrow row. */
+.trip-list-row .list-row-name {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  white-space: normal;
+  overflow: hidden;
+}
+
+/* ---- trip settings: a 28px heading you can type into, yellow chevrons, a yellow switch ---- */
+.settings-identity .trip-sheet-title {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.15;
+  border-radius: 8px;
+  padding: 2px 6px;
+  margin: 0 -6px;
+}
+@media (hover: hover) {
+  .settings-identity .trip-sheet-title:hover {
+    background: var(--panel-subtle);
+  }
+}
+.settings-identity .trip-sheet-title:focus-visible {
+  background: var(--panel);
+}
+.settings-row .list-row-caret,
+.settings-row .list-row-caret.is-inline {
+  color: var(--brand-yellow-deep);
+}
+.ant-switch.ant-switch-checked {
+  background: var(--brand-yellow);
+}
+.ant-switch.ant-switch-checked:hover:not(.ant-switch-disabled) {
+  background: var(--brand-yellow-deep);
+}
+.ant-switch.ant-switch-checked .ant-switch-handle::before {
+  background: var(--ink);
+}
+
+.settings-identity {
+  position: relative;
+}
+.settings-pencil {
+  flex: none;
+  color: var(--muted);
+  opacity: 0;
+  pointer-events: none;
+}
+.settings-identity:hover .settings-pencil,
+.settings-identity:focus-within .settings-pencil {
+  opacity: 0.7;
+}
+@media (hover: none) {
+  .settings-pencil {
+    opacity: 0.45;
+  }
+}
