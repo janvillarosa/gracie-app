@@ -133,6 +133,28 @@ behind `prefers-reduced-motion: no-preference`.
 dates, countdown or "Day 3 of 9"). "New trip" is the yellow key and asks only for a title, an
 optional destination (place search) and optional dates.
 
+## 6a. Revision after the first live review (2026-10-15)
+
+User feedback: the spine was too busy and flat. Where this section conflicts with section 6, this
+section wins. Hierarchy now has three levels:
+
+- **Trip:** a compact header (it collapses on scroll on the phone) with tabs **Plan · Ideas ·
+  Bookings** and a ⋯ menu (Notes, Packing, Trip details). Trip details open in a modal. Gaps
+  become one header pill ("3 to sort") that opens a popover. Ideas leave the spine; on desktop
+  the Ideas tab is a drawer over the map pane, so dragging onto days still works.
+- **Day:** each day is its own paper card with an H2 header, one summary line and a small day
+  dot. Past days collapse to a one-line summary; today is marked with a Today pill and the Now
+  marker; on the phone only today and the day picked in the date strip are expanded. There is no
+  per-day add field (desktop: "+ Add" opens a popover; phone: the bottom add bar only). "Day
+  done" stamps once, then shows as ✓ in the summary.
+- **Item:** rows are two lines at most (checkbox, time, title / place). The category is an icon
+  or dot, not a text chip. The handle, trash, duration and "added by" move off the row. Tapping
+  opens the item detail: a bottom sheet on the phone, a panel over the map on desktop. It has
+  every field, Open in Maps, Move to…, delete and authorship. Bookings stay as one-line stubs in
+  Plan, and their detail shows a large, copyable code.
+- Colour in the spine is limited to the day dot, the yellow key and state. The day-colour cycle
+  lives on the map.
+
 ## 7. Constraints and open decisions
 
 Constraints:
