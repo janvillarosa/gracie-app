@@ -1,0 +1,2507 @@
+/* Trips: the itinerary spine and its map. Tokens (--trip-day-*, --trip-cat-*) live in
+   styles.css; everything else reuses the paper, ink and motion tokens from :root. */
+
+/* ---- index and House section ------------------------------------------------------- */
+.trips-sheet,
+.trips-section {
+  background: var(--panel);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-squircle);
+  box-shadow: var(--paper-edge), var(--lift-0);
+  padding: 20px;
+}
+.trips-section {
+  margin-top: 28px;
+}
+.trips-section .ant-card-body {
+  padding: 0;
+}
+.trips-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.trips-head h1,
+.trips-head h3 {
+  margin: 0;
+  font-family: var(--font-headings);
+  color: var(--ink-heading);
+}
+.trips-head h1 {
+  font-size: 28px;
+}
+.trips-head h3 {
+  font-size: 20px;
+}
+.trip-group {
+  margin-top: 20px;
+}
+.trip-group h2,
+.trip-group h3 {
+  margin: 0 0 4px;
+  font-family: var(--font-headings);
+  font-size: 15px;
+  color: var(--muted);
+  font-weight: 600;
+}
+.trip-cards {
+  display: flex;
+  flex-direction: column;
+}
+.trip-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 10px 4px;
+  border-bottom: 1px solid var(--border);
+  color: var(--ink);
+  text-decoration: none;
+}
+.trip-card:last-child {
+  border-bottom: 0;
+}
+.trip-card-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.trip-card-title {
+  font-weight: 650;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.trip-card-sub {
+  color: var(--muted);
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.trip-card-count {
+  color: var(--brand-blue);
+  font-weight: 600;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.trip-new {
+  margin: 12px 0;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--panel-subtle);
+  display: grid;
+  gap: 12px;
+}
+
+/* ---- form controls ----------------------------------------------------------------- */
+.trip-field {
+  display: block;
+  width: 100%;
+  min-height: var(--control-h);
+  padding: 8px 12px;
+  font: inherit;
+  font-size: 16px; /* 16px keeps iOS from zooming on focus */
+  color: var(--ink);
+  background: var(--panel);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+}
+textarea.trip-field {
+  min-height: 0;
+  resize: vertical;
+}
+.trip-field:focus-visible,
+.trip-add-input:focus-visible,
+.trip-daylabel-input:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.trip-error {
+  color: var(--brand-red);
+  font-size: 13px;
+}
+.trip-help,
+.trip-hint {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 4px 0 0;
+}
+.trip-link,
+.trip-inline-link {
+  color: var(--brand-blue);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* ---- places ------------------------------------------------------------------------ */
+.place-picker {
+  position: relative;
+  display: grid;
+  gap: 6px;
+}
+.place-slips {
+  position: absolute;
+  z-index: 8;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  padding: 4px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: var(--lift-3);
+}
+.place-slips.is-up {
+  top: auto;
+  bottom: calc(100% + 6px);
+  display: flex;
+  flex-direction: column-reverse;
+}
+.place-attrib {
+  padding: 4px 12px 2px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.place-slips.is-up .place-attrib {
+  order: -1;
+}
+.place-help {
+  min-height: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.place-help:empty {
+  display: none;
+}
+.place-chosen {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel-subtle);
+}
+.place-chosen-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.place-chosen-name {
+  color: var(--ink);
+  font-weight: 600;
+}
+.place-chosen-sub {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* ---- page frame -------------------------------------------------------------------- */
+.trip-page {
+  padding: 16px 16px 0;
+  --trip-sticky: 0px;
+}
+.trip-shell {
+  display: block;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+.trip-col {
+  min-width: 0;
+}
+
+/* Type scale: trip title, then day, then row title, then meta. */
+.trip-header {
+  padding: 0 2px 4px;
+}
+.trip-avatars {
+  display: inline-flex;
+  gap: 4px;
+  flex: none;
+}
+.trip-gaps-pop .ant-popover-inner {
+  box-shadow: var(--lift-3);
+  padding: 6px;
+  border-radius: 14px;
+}
+.trip-cap {
+  color: var(--brand-red);
+  font-size: 13px;
+  font-weight: 600;
+}
+.trip-offline {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.trip-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--brand-yellow) 30%, white);
+  color: var(--ink);
+  font-weight: 600;
+}
+.trip-stops {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 4px;
+}
+.trip-stop {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--ink);
+}
+.trip-stop-name {
+  flex: 1;
+  font-weight: 600;
+}
+.trip-missing {
+  max-width: 480px;
+  margin: 40px auto;
+}
+
+/* ---- tabs -------------------------------------------------------------------------- */
+.trip-tabbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 8px 0 14px;
+  border-bottom: 1px solid var(--border-strong);
+}
+
+/* ---- days: each is its own sheet ---------------------------------------------------- */
+.trip-spine {
+  display: grid;
+  gap: 12px;
+}
+.trip-day {
+  position: relative;
+  background: var(--panel);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-squircle);
+  box-shadow: var(--paper-edge), var(--lift-0);
+}
+/* Long trips: days far from the viewport skip layout and paint until they are near. */
+.trip-day.is-lazy {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 360px;
+}
+.trip-day-head {
+  position: sticky;
+  top: var(--trip-sticky);
+  z-index: 3;
+  padding: 14px 14px 8px;
+  background: var(--panel);
+  border-radius: var(--radius-squircle) var(--radius-squircle) 0 0;
+}
+.trip-day-title {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+}
+.trip-day-head h2 {
+  margin: 0;
+  font-family: var(--font-headings);
+  font-size: 22px;
+  line-height: 1.2;
+  color: var(--ink);
+}
+.trip-day-head h2:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: 6px;
+}
+.trip-day-fold {
+  margin-left: auto;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  background: none;
+  border: 0;
+  border-radius: 50%;
+  color: var(--muted);
+  cursor: pointer;
+}
+.trip-day-fold:focus-visible,
+.trip-day-closed:focus-visible,
+.trip-doneline:focus-visible {
+  box-shadow: var(--focus-ring);
+  outline: none;
+}
+
+/* A finished day is a slim muted line, not a card. */
+.trip-done {
+  margin: 0;
+}
+@media (hover: hover) {
+  .trip-doneline:hover {
+    background: color-mix(in srgb, var(--ink) 4%, transparent);
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .trip-done {
+    animation: trip-fold-in var(--dur-base) var(--ease-out) both;
+  }
+  @keyframes trip-fold-in {
+    from {
+      opacity: 0;
+      transform: translateY(-6px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  .trip-stamp {
+    animation: stamp 340ms var(--ease-out) both;
+  }
+}
+/* "Day done" for a moment after the last tick, then the day folds. */
+.trip-stamp {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  padding: 2px 10px;
+  border: 2px solid var(--ok-ink);
+  border-radius: 6px;
+  color: var(--ok-ink);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  rotate: -4deg;
+  pointer-events: none;
+}
+
+.trip-daylabel {
+  min-height: 28px;
+  padding: 0 4px;
+  background: none;
+  border: 0;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+}
+.trip-daylabel.is-suggested {
+  color: var(--muted);
+  font-weight: 500;
+}
+.trip-daylabel.is-empty {
+  color: var(--muted);
+  font-weight: 400;
+  font-size: 13px;
+  opacity: 0;
+}
+.trip-day-head:focus-within .trip-daylabel.is-empty {
+  opacity: 1;
+}
+@media (hover: hover) {
+  .trip-day-head:hover .trip-daylabel.is-empty {
+    opacity: 1;
+  }
+  .trip-daylabel:hover {
+    background: var(--panel-subtle);
+  }
+}
+@media (hover: none) {
+  .trip-daylabel.is-empty {
+    opacity: 1;
+  }
+}
+.trip-daylabel-input {
+  min-height: 32px;
+  padding: 2px 8px;
+  font: inherit;
+  font-size: 16px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  width: 12em;
+  max-width: 100%;
+}
+.trip-empty-row {
+  margin: 4px 0 10px;
+  padding: 14px;
+  border: 1.5px dashed var(--border-strong);
+  border-radius: 12px;
+  color: var(--muted);
+  text-align: center;
+}
+.trip-empty-text {
+  color: var(--muted);
+  margin: 12px 0;
+}
+
+/* ---- rows: quiet, two lines at most ------------------------------------------------- */
+.trip-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.trip-row {
+  position: relative;
+  border-bottom: 1px solid var(--border);
+}
+.trip-list > li:last-child {
+  border-bottom: 0;
+}
+.trip-row-line {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-height: 52px;
+  padding: 4px 0;
+}
+.trip-grip {
+  flex: 0 0 14px;
+}
+.trip-check {
+  flex: 0 0 24px;
+}
+.trip-time {
+  flex: 0 0 44px;
+}
+.trip-main {
+  flex: 1 1 auto;
+}
+.trip-grip {
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  cursor: grab;
+  opacity: 0;
+}
+@media (hover: hover) {
+  .trip-row:hover .trip-grip {
+    opacity: 0.7;
+  }
+}
+.trip-check {
+  display: grid;
+  place-items: center;
+}
+.trip-time {
+  color: var(--muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.trip-main {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  min-height: 44px;
+  justify-content: center;
+  padding: 2px 6px;
+  background: none;
+  border: 0;
+  border-radius: 8px;
+  text-align: left;
+  font: inherit;
+  color: var(--ink);
+  cursor: pointer;
+}
+.trip-title {
+  position: relative;
+  isolation: isolate;
+  font-size: 15.5px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--ink);
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.trip-sub {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.3;
+}
+.trip-row.is-done .trip-title {
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--muted) 70%, transparent);
+  color: var(--muted);
+}
+.trip-row.is-overdue .trip-time {
+  color: var(--brand-red);
+  font-weight: 650;
+}
+.trip-row.is-selected {
+  background: color-mix(in srgb, var(--brand-yellow) 14%, white);
+}
+.trip-catdot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+.trip-catdot-food { background: var(--trip-cat-food-fg); }
+.trip-catdot-sight { background: var(--trip-cat-sight-fg); }
+.trip-catdot-activity { background: var(--trip-cat-activity-fg); }
+.trip-catdot-transport { background: var(--trip-cat-transport-fg); }
+.trip-catdot-stay { background: var(--trip-cat-stay-fg); }
+.trip-catdot-shopping { background: var(--trip-cat-shopping-fg); }
+.trip-catdot-other { background: var(--trip-cat-other-fg); }
+.trip-whodot {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--panel-subtle);
+  border: 1px solid var(--border-strong);
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+.trip-acts {
+  display: none;
+}
+@media (hover: hover) {
+  .trip-acts {
+    display: inline-flex;
+    opacity: 0;
+  }
+  .trip-row:hover .trip-acts,
+  .trip-row:focus-within .trip-acts {
+    opacity: 1;
+  }
+  .trip-main:hover {
+    background: var(--panel-subtle);
+  }
+}
+.trip-row.is-dragging {
+  opacity: 0.4;
+}
+.trip-drag-chip {
+  padding: 8px 14px;
+  background: var(--panel);
+  border-radius: 12px;
+  box-shadow: var(--lift-2);
+  font-weight: 600;
+  color: var(--ink);
+}
+.trip-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 8px 46px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--brand-yellow) 25%, white);
+  color: var(--ink);
+  font-size: 13px;
+}
+.item-swipe {
+  margin-inline: -12px;
+}
+
+/* A row that was just added rises in and gets the highlighter, as on a list. */
+@media (prefers-reduced-motion: no-preference) {
+  .trip-row.is-entering {
+    animation: row-in 380ms var(--ease-out) both;
+  }
+  .trip-row.is-entering .trip-title::after {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    inset: 42% -4px 6% -4px;
+    border-radius: 3px;
+    background: var(--highlighter);
+    transform-origin: left center;
+    animation: highlight 1500ms var(--ease-out) 80ms both;
+  }
+}
+
+/* Move to… */
+.move-menu {
+  position: absolute;
+  z-index: 9;
+  right: 0;
+  top: calc(100% - 4px);
+  min-width: 190px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding: 4px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--lift-3);
+}
+.move-item {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: 6px 12px;
+  background: none;
+  border: 0;
+  border-radius: 10px;
+  text-align: left;
+  font: inherit;
+  color: var(--ink);
+  cursor: pointer;
+}
+.move-item:focus-visible,
+.move-item:active {
+  background: color-mix(in srgb, var(--brand-yellow) 22%, white);
+  outline: none;
+}
+.move-item[aria-current='true'] {
+  color: var(--muted);
+}
+@media (hover: hover) {
+  .move-item:hover {
+    background: var(--panel-subtle);
+  }
+}
+
+/* Now marker */
+.trip-now {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  list-style: none;
+  padding: 4px 0;
+  color: var(--day-colour);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.trip-now::before,
+.trip-now::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: currentColor;
+}
+.trip-now::before {
+  flex: 0 0 12px;
+}
+
+/* Bookings in the plan: one quiet line at their time. */
+.trip-stub {
+  border-bottom: 0;
+}
+.trip-stubline {
+  display: grid;
+  grid-template-columns: 24px 44px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 40px;
+  padding: 0 0 0 14px;
+  background: none;
+  border: 0;
+  border-radius: 8px;
+  font: inherit;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+.trip-stub-icon {
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: 17px;
+}
+.trip-stub-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.trip-stub.is-used .trip-stub-title {
+  color: var(--muted);
+}
+.trip-stub.is-selected {
+  background: color-mix(in srgb, var(--brand-yellow) 14%, white);
+}
+.trip-stubline:focus-visible {
+  box-shadow: var(--focus-ring);
+  outline: none;
+}
+.trip-used {
+  padding: 0 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Sweep: clicking a map pin highlights its row. Plain highlight by default; the sweep
+   (transform only) when motion is welcome. */
+.trip-row.is-sweep {
+  background: var(--highlighter);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .trip-row.is-sweep {
+    background: none;
+  }
+  .trip-row.is-sweep::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background: var(--highlighter);
+    transform-origin: left center;
+    animation: trip-sweep 1100ms var(--ease-out) both;
+    pointer-events: none;
+  }
+  @keyframes trip-sweep {
+    0% {
+      transform: scaleX(0);
+      opacity: 1;
+    }
+    45% {
+      transform: scaleX(1);
+      opacity: 1;
+    }
+    100% {
+      transform: scaleX(1);
+      opacity: 0;
+    }
+  }
+}
+
+/* ---- the one add bar ---------------------------------------------------------------- */
+.trip-addbar {
+  position: sticky;
+  bottom: 12px;
+  z-index: 6;
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-squircle);
+  box-shadow: var(--paper-edge), var(--lift-1);
+}
+.trip-add-status {
+  font-size: 13px;
+  color: var(--muted);
+}
+.trip-add-status:empty {
+  display: none;
+}
+
+/* ---- side pane: the map, with panels docked over it ---------------------------------- */
+.trip-side {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  margin-top: 16px;
+  background: var(--panel);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-squircle);
+  box-shadow: var(--paper-edge), var(--lift-0);
+  overflow: hidden;
+}
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes trip-panel-in {
+    from {
+      opacity: 0;
+      transform: translateX(24px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
+.trip-pane-body {
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+}
+.trip-pane-body h3 {
+  margin: 8px 0 0;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.trip-notes {
+  min-height: 240px;
+}
+.trip-ideas {
+  padding: 12px 16px;
+}
+.trip-ideas.is-over {
+  background: color-mix(in srgb, var(--brand-yellow) 20%, white);
+}
+.trip-search {
+  margin: 8px 0;
+}
+
+/* Item detail */
+.trip-bcard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border);
+}
+.trip-bcard.is-used {
+  opacity: 0.7;
+}
+.trip-bcard-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  background: none;
+  border: 0;
+  text-align: left;
+  font: inherit;
+  color: var(--ink);
+  cursor: pointer;
+}
+.trip-bcard-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* ---- breakpoints ------------------------------------------------------------------- */
+@media (max-width: 767px) {
+  .trip-page {
+    --trip-sticky: 106px;
+    padding-inline: 12px;
+  }
+  .trip-grip {
+    display: none;
+  }
+}
+@media (min-width: 768px) and (max-width: 1023px) {
+  .trip-shell:has(.trip-side) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 40%;
+    gap: 20px;
+    align-items: start;
+  }
+  .trip-side {
+    position: sticky;
+    top: 16px;
+    margin-top: 0;
+    height: calc(100dvh - 32px);
+  }
+}
+@media (min-width: 1024px) {
+  .trip-page {
+    padding-inline: 24px;
+  }
+  .trip-shell {
+    display: grid;
+    grid-template-columns: 460px minmax(0, 1fr);
+    gap: 24px;
+    align-items: start;
+  }
+  .trip-side {
+    position: sticky;
+    top: 16px;
+    margin-top: 0;
+    height: calc(100dvh - 32px);
+  }
+}
+
+/* ---- map --------------------------------------------------------------------------- */
+.trip-map {
+  position: relative;
+  flex: 1;
+  min-height: 380px;
+  display: flex;
+}
+.trip-map-plain,
+.trip-map-gl {
+  position: relative;
+  flex: 1;
+  min-height: 380px;
+  background: var(--trip-map-ground);
+}
+.trip-map-plain svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.map-ground {
+  fill: var(--trip-map-ground);
+}
+.map-route {
+  fill: none;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.map-pin {
+  cursor: pointer;
+}
+.map-pin-disc {
+  stroke: var(--on-pin);
+  stroke-width: 3;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.map-pin text {
+  fill: var(--on-pin);
+  font: 700 13px var(--font-body);
+  pointer-events: none;
+}
+.map-pin.is-hot .map-pin-disc {
+  scale: 1.25;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .map-pin-disc {
+    transition: scale var(--dur-fast) var(--ease-out);
+  }
+    .map-route {
+    animation: trip-route-in var(--dur-slow) var(--ease-out) both;
+  }
+  @keyframes trip-route-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+}
+.map-label-badge {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+}
+.map-attrib {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.85);
+  color: var(--muted);
+  font-size: 11px;
+}
+.trip-map-bar {
+  position: absolute;
+  z-index: 2;
+  left: 12px;
+  right: 12px;
+  top: 12px;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  pointer-events: none;
+}
+.trip-pill {
+  padding: 8px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--panel);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  pointer-events: auto;
+}
+.trip-pill.is-button {
+  cursor: pointer;
+}
+
+/* Tick box: the same yellow tick as on a list. */
+.trip-check .ant-checkbox-inner {
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  border-width: 1.5px;
+  border-color: color-mix(in srgb, var(--border-strong) 70%, var(--muted));
+}
+.trip-check .ant-checkbox-inner::after {
+  width: 7px;
+  height: 12px;
+  border-width: 2.5px;
+  border-color: var(--ink);
+}
+.trip-check .ant-checkbox-checked .ant-checkbox-inner {
+  background: var(--brand-yellow);
+  border-color: var(--brand-yellow-deep);
+}
+.trip-check .ant-checkbox-checked::after {
+  display: none;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .trip-check .ant-checkbox-checked .ant-checkbox-inner {
+    animation: check-pop var(--dur-slow) var(--ease-out);
+  }
+}
+
+/* Ideas have no times: their rows drop the time column. */
+.trip-ideas .trip-time {
+  display: none;
+}
+
+
+/* ---- stacked papers: the trip is a stack like a list ----------------------------------- */
+.trip-col {
+  min-width: 0;
+  padding: 24px;
+  max-width: 640px;
+  margin: 0 auto;
+}
+@media (min-width: 1024px) {
+  .trip-col {
+    margin: 0;
+  }
+}
+.trip-avatars {
+  display: flex;
+  gap: 4px;
+  margin-top: 8px;
+}
+.trip-dayline {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 32px;
+  padding: 0;
+  background: none;
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+}
+.trip-header-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin-top: 12px;
+}
+
+/* Days are sections of the plan sheet, divided like a list's groups. */
+.trip-spine {
+  display: block;
+}
+.trip-day {
+  padding: 4px 0 8px;
+  border-top: 1px solid var(--border);
+}
+.trip-spine > .trip-day:first-child {
+  border-top: 0;
+}
+.trip-day-head {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  padding: 12px 0 4px;
+}
+.trip-day-head h2,
+.trip-day-head h3 {
+  margin: 0;
+  font-family: var(--font-headings);
+  font-size: 20px;
+  line-height: 1.2;
+  color: var(--ink);
+}
+.trip-day-head h2:focus-visible,
+.trip-day-head h3:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: 6px;
+}
+.trip-day.is-over {
+  background: color-mix(in srgb, var(--brand-yellow) 14%, white);
+}
+.trip-day-closed {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 48px;
+  padding: 0;
+  background: none;
+  border: 0;
+  font: inherit;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+.trip-day-closed-text {
+  flex: 1;
+  min-width: 0;
+  color: var(--muted);
+}
+.trip-day-closed-text strong {
+  color: var(--ink);
+}
+.trip-nextup {
+  margin: 0 0 8px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--brand-yellow) 22%, white);
+  color: var(--ink);
+}
+.trip-donetoggle {
+  margin: 0 0 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.trip-empty-sheet {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+  padding: 24px 0 8px;
+}
+.trip-empty-sheet h3 {
+  margin: 0;
+  font-family: var(--font-headings);
+  font-size: 22px;
+  color: var(--ink);
+}
+.trip-empty-sheet p {
+  margin: 0;
+  color: var(--muted);
+}
+
+/* The add bar is the list page's, with the day as a chip inside the field. */
+.trip-add-field {
+  position: relative;
+}
+.trip-add-field.has-target textarea.add-input {
+  padding-left: calc(var(--chip-w, 92px) + 16px) !important;
+}
+.trip-target-chip {
+  position: absolute;
+  z-index: 2;
+  left: 8px;
+  top: 50%;
+  translate: 0 -50%;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  max-width: 104px;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--brand-yellow) 45%, white);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.trip-add-status {
+  font-size: 13px;
+  color: var(--muted);
+}
+.trip-add-status:empty {
+  display: none;
+}
+.trip-category {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+@media (max-width: 767px) {
+  .trip-col {
+    padding: 16px 12px;
+  }
+}
+
+/* Sections, not cards: no sheet of their own inside the plan sheet. */
+.trip-day {
+  background: none;
+  border-width: 1px 0 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.trip-day-head {
+  position: relative;
+  top: auto;
+  z-index: auto;
+  background: none;
+  border-radius: 0;
+}
+.trip-spine > .trip-day:first-child {
+  border-top-width: 0;
+}
+
+/* ---- the next-stop deck: today's remaining stops as a stack of paper cards -------------- */
+.trip-deck-wrap {
+  position: relative;
+  z-index: 3;
+  margin-top: -20px;
+  margin-bottom: 28px;
+}
+.trip-deck-wrap + .paper-list {
+  margin-top: 0;
+}
+/* Sheet edges peek out under the card: one or two more are still to come. */
+.trip-deck-wrap.has-1::after,
+.trip-deck-wrap.has-2::after,
+.trip-deck-wrap.has-2::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  left: 14px;
+  right: 14px;
+  bottom: -8px;
+  height: 36px;
+  background: var(--panel);
+  border: 1px solid var(--border-strong);
+  border-radius: 0 0 var(--radius-squircle) var(--radius-squircle);
+  box-shadow: 0 4px 10px -4px rgba(0, 0, 0, 0.1);
+}
+.trip-deck-wrap.has-2::before {
+  left: 28px;
+  right: 28px;
+  bottom: -16px;
+}
+.trip-deck-card {
+  position: relative;
+  outline: none;
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+}
+.trip-deck-card:focus-visible {
+  box-shadow: var(--focus-ring);
+  border-radius: 8px;
+}
+.trip-kicker {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.trip-deck-title {
+  position: relative;
+  isolation: isolate;
+  margin: 0;
+  font-family: var(--font-headings);
+  font-size: 30px;
+  line-height: 1.15;
+  color: var(--ink);
+  text-wrap: balance;
+}
+.trip-deck-line {
+  margin: 0;
+  color: var(--muted);
+  font-size: 15px;
+}
+.trip-deck-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+.trip-deck-code {
+  margin: 4px 0 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.trip-deck-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 12px;
+  margin-top: 10px;
+}
+.trip-go {
+  height: 44px;
+  padding: 0 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  min-width: 88px;
+  color: var(--ink);
+}
+.trip-deck-end .trip-stamp {
+  top: 0;
+  right: 0;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .trip-deck-card {
+    animation: sheet-settle 420ms var(--ease-out) both;
+  }
+  .trip-deck-card.is-leaving {
+    animation: trip-deal-out 240ms var(--ease-out) both;
+  }
+  @keyframes trip-deal-out {
+    to {
+      opacity: 0;
+      transform: translateX(48px) rotate(3deg);
+    }
+  }
+  .trip-deck-title.is-ticked::after {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    inset: 42% -4px 6% -4px;
+    border-radius: 3px;
+    background: var(--highlighter);
+    transform-origin: left center;
+    animation: highlight 600ms var(--ease-out) both;
+  }
+}
+
+.trip-deck-titlebtn {
+  display: block;
+  padding: 0;
+  background: none;
+  border: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  text-wrap: balance;
+}
+.trip-deck-titlebtn:focus-visible {
+  box-shadow: var(--focus-ring);
+  border-radius: 6px;
+  outline: none;
+}
+
+/* The next-stop card: the place is the hero; the tick sits beside it like a list row's. */
+.trip-kicker {
+  font-size: 12px;
+}
+.trip-deck-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.trip-deck-check {
+  flex: 0 0 24px;
+  margin-top: 6px;
+}
+.trip-deck-title {
+  font-size: 36px;
+  line-height: 1.12;
+}
+.trip-deck-sub {
+  margin: 0 0 0 36px;
+  color: var(--muted);
+  font-size: 15px;
+}
+.trip-deck-note {
+  margin-left: 36px;
+}
+.trip-deck-actions {
+  margin-left: 36px;
+}
+@media (max-width: 480px) {
+  .trip-deck-title {
+    font-size: 30px;
+  }
+}
+
+/* ---- header: the date line, avatars and the pill share one line ------------------------ */
+.trip-metaline {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+}
+.trip-metaline .trip-avatars {
+  margin: 0;
+}
+
+/* ---- the item sheet: one editor, grouped by spacing and hairlines, not boxes ------------- */
+.trip-muted {
+  color: var(--muted);
+}
+.trip-stub-icon.is-big {
+  font-size: 24px;
+  margin-top: 6px;
+}
+
+/* ---- the ticket slip: where a confirmation code lives ----------------------------------- */
+.trip-slip {
+  display: grid;
+  gap: 4px;
+  justify-items: center;
+  min-width: 260px;
+  padding: 16px 20px 8px;
+  text-align: center;
+  background: var(--panel);
+  /* The tear edge is at the top, like the stub of a ticket. */
+  border-top: 2px dashed var(--border-strong);
+}
+.trip-slip-code {
+  margin: 10px 0 6px;
+  font-family: var(--font-headings);
+  font-size: 32px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.12em;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+/* ---- tighter rows, and the add bar above the map handle -------------------------------- */
+.trip-row-line {
+  gap: 6px;
+}
+.trip-time {
+  flex: 0 0 38px;
+  font-size: 12.5px;
+}
+/* ---- trip settings: grouped rows on paper, no boxed inputs ------------------------------ */
+.settings-icon {
+  width: 56px;
+  height: 56px;
+  font-size: 28px;
+  cursor: pointer;
+}
+.list-row-desc.is-now {
+  color: var(--ink);
+  font-weight: 600;
+}
+.trips-pref {
+  display: grid;
+  gap: 6px;
+}
+.trips-pref-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
+}
+.trips-pref-label {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* Where: ordered places, with a handle and a swipe */
+.trip-where {
+  display: grid;
+  gap: 12px;
+}
+.trip-stop-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 52px;
+}
+.trip-stop-grip {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  color: var(--muted);
+  cursor: grab;
+  touch-action: none;
+}
+.trip-stop-keys {
+  display: inline-flex;
+}
+.trip-stops .trip-stop {
+  display: block;
+  border-bottom: 1px solid var(--border);
+}
+
+/* One calendar for a date range */
+.trip-cal {
+  display: grid;
+  gap: 8px;
+  max-width: 360px;
+  margin: 0 auto;
+}
+.trip-cal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.trip-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+.trip-cal-wd {
+  text-align: center;
+  color: var(--muted);
+  font-size: 12px;
+}
+.trip-cal-day {
+  min-height: 44px;
+  background: none;
+  border: 0;
+  border-radius: 999px;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  cursor: pointer;
+}
+.trip-cal-day.is-today {
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.trip-cal-day.is-in {
+  background: color-mix(in srgb, var(--brand-yellow) 28%, white);
+  border-radius: 0;
+}
+.trip-cal-day.is-start,
+.trip-cal-day.is-end {
+  background: var(--brand-yellow);
+  font-weight: 700;
+}
+.trip-cal-day:focus-visible {
+  box-shadow: var(--focus-ring);
+  outline: none;
+}
+
+/* The add bar is the only bottom chrome on the phone. */
+.add-bar .add-input::placeholder,
+.add-launch {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.trip-map-drawer .trip-map {
+  min-height: 0;
+}
+
+/* ---- an overlap: one quiet amber line under the day header, a rule on both rows ---------- */
+.trip-clash {
+  margin: 2px 0 6px;
+  padding-left: calc(var(--lead-col) + var(--tcol));
+}
+.trip-row.is-clash .trip-time,
+.trip-stub.is-clash .trip-time {
+  position: relative;
+  color: var(--warn-ink);
+  font-weight: 700;
+}
+.trip-time-flag {
+  position: absolute;
+  top: 50%;
+  right: 100%;
+  width: 12px;
+  height: 12px;
+  margin-right: 1px;
+  transform: translateY(-50%);
+}
+.trip-outside-note {
+  margin: 0 0 8px;
+  font-size: 13px;
+}
+
+/* ---- the one bottom sheet: handle bar, optional Outfit title, no divider ------------------- */
+@media (max-width: 1023px) {
+}
+.trip-cal-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+}
+.trip-cal-foot .trip-help {
+  flex: 1;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.trip-cal-foot [hidden] {
+  display: inline-flex !important;
+  visibility: hidden;
+}
+
+/* ---- the header: a 28px title (two lines at most), the day line left, avatars right ------- */
+.trip-title-text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  min-width: 0;
+}
+.paper-meta .list-header-grid {
+  align-items: start;
+}
+.trip-metaline {
+  flex-wrap: nowrap;
+  justify-content: space-between;
+}
+@media (max-width: 767px) {
+  .paper-meta h2.ant-typography {
+    font-size: 28px;
+    line-height: 1.15 !important;
+  }
+}
+
+/* ---- the deck lives inside Plan: a flat sheet, no second paper stack ------------------- */
+.trip-deck.ant-card {
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-squircle);
+  background: var(--panel);
+  box-shadow: var(--paper-edge), var(--lift-0);
+}
+.trip-deck-wrap {
+  margin: 0 0 24px;
+  z-index: auto;
+}
+.trip-deck-title:focus-visible {
+  box-shadow: var(--focus-ring);
+  border-radius: 8px;
+  outline: none;
+}
+.trip-deck-card:focus-visible {
+  box-shadow: none;
+}
+.trip-deck-actions {
+  flex-wrap: nowrap;
+}
+.trip-deck-actions .trip-go {
+  flex: none;
+  padding: 0 20px;
+}
+
+/* ---- rows: checkbox and time sit on the title's first line; titles are two lines at most --- */
+.trip-grip,
+.trip-check,
+.trip-pinno,
+.trip-time,
+.trip-catdot,
+.trip-whodot,
+.trip-acts {
+  align-self: flex-start;
+}
+.trip-grip {
+  margin-top: 15px;
+}
+.trip-check {
+  margin-top: 11px;
+}
+.trip-time {
+  margin-top: 13px;
+  line-height: 18px;
+}
+.trip-main {
+  justify-content: flex-start;
+  padding: 12px 6px 10px;
+  min-height: 44px;
+}
+.trip-title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+.trip-catdot,
+.trip-whodot {
+  margin-top: 17px;
+}
+.trip-whodot {
+  margin-top: 13px;
+}
+.trip-acts,
+.trip-addday {
+  margin-top: 8px;
+}
+.trip-idea-dot {
+  display: grid;
+  place-items: center;
+}
+.trip-idea-dot .trip-catdot {
+  margin-top: 0;
+  width: 10px;
+  height: 10px;
+}
+/* One row inset across Plan, Ideas and Bookings. */
+.pill-nav-pane .trip-ideas,
+.pill-nav-pane .trip-pane-body {
+  padding-inline: 0;
+}
+
+/* ---- the plain map: a quiet paper ground, a thin route, 28px pins ----------------------- */
+.map-route {
+  stroke-width: 3;
+}
+.map-pin-disc {
+  stroke-width: 2;
+}
+.map-pin-ring {
+  fill: none;
+  stroke: var(--brand-yellow);
+  stroke-width: 4;
+}
+.map-pin.is-next .map-pin-disc {
+  scale: 1.1;
+}
+
+/* ---- the edit sheet: a 24px heading, real chips on one row, one quiet stamp --------------- */
+.trip-custom-length {
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+}
+.trip-custom-length input {
+  width: 96px;
+}
+/* The stamp the item has is the only loud one; the others wait in the picker. */
+
+/* ---- ONE row grid for every line in the plan sheet ----------------------------------------
+   [lead 24] 12 [time 48] 12 [title 1fr] [trail]. The lead holds a checkbox, a booking icon or
+   the first character of a line; the time column holds "Tonight", times and (while the map is
+   up) the pin number; text always starts in the title column. A day without any times drops
+   the time column for all of its lines, so its titles start at lead + 12px. */
+.pill-nav-pane {
+  --lead: 24px;
+  --gap: 12px;
+  --lead-col: calc(var(--lead) + var(--gap));
+  --time-w: 48px;
+  --time-col: 0px;
+  --tcol: var(--time-col);
+}
+.trip-day.has-time {
+  --time-col: calc(var(--time-w) + var(--gap));
+}
+.trip-row-line,
+.trip-stubline {
+  display: grid;
+  grid-template-columns: var(--lead-col) var(--tcol) minmax(0, 1fr) auto;
+  column-gap: 0;
+  align-items: start;
+  padding: 0;
+}
+.trip-row-line > .trip-check,
+.trip-row-line > .trip-idea-dot {
+  grid-column: 1;
+  grid-row: 1;
+  justify-self: start;
+  width: var(--lead);
+}
+.trip-row-line > .trip-time,
+.trip-stubline > .trip-time {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: start;
+  width: var(--time-w);
+  flex: none;
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+.trip-row-line > .trip-main {
+  grid-column: 3;
+  grid-row: 1;
+  min-width: 0;
+  padding-left: 0;
+}
+.trip-row-line > .trip-trail {
+  grid-column: 4;
+  grid-row: 1;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+.trip-trail .trip-grip {
+  flex: none;
+  margin-top: 15px;
+}
+/* The stub (booking line, "Tonight") */
+.trip-stubline {
+  min-height: 44px;
+  align-items: center;
+}
+.trip-stubline > .trip-stub-icon {
+  grid-column: 1;
+  grid-row: 1;
+  width: var(--lead);
+  justify-self: start;
+}
+.trip-stubline > .trip-time {
+  margin-top: 0;
+  align-self: center;
+}
+.trip-stubline > .trip-time {
+  margin-top: 0;
+}
+.trip-stubline > .trip-stub-title {
+  grid-column: 3;
+  grid-row: 1;
+}
+.trip-stubline > .trip-used {
+  grid-column: 4;
+  grid-row: 1;
+}
+/* The Now marker starts in the time column, then a rule. */
+.trip-now {
+  padding-left: var(--lead-col);
+}
+.trip-now::before {
+  display: none;
+}
+/* Empty day, overlap line: text in the title column. */
+.trip-empty-row {
+  margin: 0;
+  padding: 10px 0 10px calc(var(--lead-col) + var(--tcol));
+  border: 0;
+  border-radius: 0;
+  text-align: left;
+}
+/* Bookings list: icon in the lead, title column for the text. */
+.trip-bcard-main {
+  display: grid;
+  grid-template-columns: var(--lead-col) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0;
+}
+.trip-bcard-main > .trip-stub-icon {
+  width: var(--lead);
+  justify-self: start;
+}
+/* The next-stop card uses the same columns inside its own padding. */
+.trip-deck-head {
+  gap: var(--gap, 12px);
+}
+.trip-deck-sub,
+.trip-deck-note,
+.trip-deck-actions {
+  margin-left: calc(24px + 12px);
+}
+.trip-deck-actions {
+  flex-wrap: wrap;
+  padding-right: 0;
+}
+.trip-deck-card {
+  padding-right: 0;
+}
+
+/* Custom properties resolve where they are defined, so the day's column is defined on the day
+   (where --time-col is set) as well as on the sheet. */
+.trip-day {
+  --tcol: var(--time-col);
+}
+@media (max-width: 480px) {
+  /* The deck takes a little of the sheet's side padding so its two keys fit on one row. */
+  .pill-nav-pane .trip-deck-wrap {
+    margin-inline: -12px;
+  }
+  .trip-deck.ant-card .ant-card-body {
+    padding: 16px;
+  }
+  .trip-deck-actions {
+    gap: 8px;
+  }
+  .trip-deck-actions .trip-go {
+    padding: 0 16px;
+    min-width: 0;
+  }
+}
+
+/* The fold lines start at the lead column edge, like day headers. */
+.completed-toggle.trip-donetoggle {
+  margin-inline: 0;
+  padding-left: 0;
+}
+
+/* Packing, before the trip: one quiet line at the top of Plan, text at the lead edge. */
+.trip-packline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 44px;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: var(--muted);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.trip-packline svg {
+  color: var(--brand-yellow-deep);
+}
+.trip-packline:focus-visible {
+  box-shadow: var(--focus-ring);
+  outline: none;
+  border-radius: 8px;
+}
+
+/* Notes on the stub line and in the header sit in the title column / full width. */
+.trip-stub .trip-note {
+  margin-left: var(--lead-col);
+}
+.trip-note-trip,
+.trip-note-sheet {
+  margin: 8px 0 0;
+}
+
+/* ---- bookings: kind first, then the todo editor anatomy; a chronological list ------------- */
+.trip-bookings {
+  padding-top: 0;
+}
+.trip-sub.is-strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+.trip-booking-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.trip-kinds {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 6px;
+  width: 100%;
+}
+.trip-kind {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  min-height: 56px;
+  padding: 6px 2px;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  color: var(--muted);
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.trip-kind-icon {
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+}
+.trip-kind[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--brand-yellow) 28%, white);
+  border-color: var(--brand-yellow-deep);
+  color: var(--ink);
+}
+.trip-kind:focus-visible {
+  box-shadow: var(--focus-ring);
+  outline: none;
+}
+@media (max-width: 380px) {
+  .trip-kind-label {
+    font-size: 10.5px;
+  }
+}
+.trip-kindchip {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 12px;
+  font-weight: 700;
+}
+.trip-kindchip .trip-kind-icon {
+  font-size: 16px;
+}
+.trip-when {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-top: 1px solid var(--border);
+}
+.trip-when-label {
+  flex: 0 0 76px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.trip-linked {
+  padding: 6px 0;
+  background: none;
+  border: 0;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+.trip-zone-field {
+  display: grid;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.trip-zones {
+  display: grid;
+  gap: 12px;
+}
+
+/* ---- header: title and menu on one row; the date line and the avatar stack below, the stack at
+   the right edge (the menu button's edge) and wrapping onto its own right-aligned line ------- */
+.paper-meta .list-header-grid {
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: 'title actions' 'meta meta';
+  align-items: start;
+}
+.paper-meta .list-header-grid .trip-metaline {
+  grid-area: meta;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 6px 12px;
+}
+.trip-metaline .trip-avatars {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  margin: 0 0 0 auto;
+}
+.trip-avatar {
+  flex: none;
+  margin-left: -6px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--panel);
+}
+.trip-avatars > :first-child {
+  margin-left: 0;
+}
+.trip-avatar-more {
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: 24px;
+  height: 24px;
+  margin-left: -6px;
+  border-radius: 50%;
+  background: var(--panel-subtle);
+  box-shadow: 0 0 0 2px var(--panel);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+/* The menu button ends at the card's content edge, like the avatar stack: its hit area reaches
+   past the glyph with a pseudo-element instead of padding. */
+.paper-meta .list-actions .ant-btn {
+  position: relative;
+  width: 24px;
+  min-width: 24px;
+  padding: 0;
+}
+.paper-meta .list-actions .ant-btn::after {
+  content: '';
+  position: absolute;
+  inset: -10px -8px;
+}
+
+/* ---- the map: pips, labels, a quiet ground; controls in the Bauhouse paper style ---------- */
+.trip-map-gl-wrap {
+  position: relative;
+  flex: 1;
+  display: flex;
+  min-height: 380px;
+}
+.trip-map-gl-wrap .trip-map-gl {
+  flex: 1;
+}
+.map-pin-disc {
+  stroke-width: 2.5;
+}
+.map-pin.is-done .map-pin-disc {
+  opacity: 0.9;
+}
+.map-pin.is-hot .map-pin-disc {
+  scale: 1.35;
+}
+.map-label {
+  fill: var(--ink);
+  font: 600 12.5px var(--font-body);
+  paint-order: stroke;
+  stroke: var(--on-pin);
+  stroke-width: 2px;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+.map-label.is-done {
+  fill: var(--muted);
+  text-decoration: line-through;
+}
+.map-next-pill {
+  fill: var(--on-pin);
+  stroke: var(--brand-yellow);
+  stroke-width: 2px;
+}
+.map-tip {
+  position: absolute;
+  left: 0;
+  top: 0;
+  max-width: 220px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--panel);
+  box-shadow: var(--lift-1);
+  font: 600 12.5px var(--font-body);
+  color: var(--ink);
+  pointer-events: none;
+  white-space: nowrap;
+}
+.map-tip[hidden] {
+  display: none;
+}
+.trip-map-keys {
+  display: inline-flex;
+  gap: 8px;
+}
+.trip-pill.is-key {
+  background: var(--brand-yellow);
+  box-shadow: var(--shadow-key);
+}
+.maplibregl-ctrl-group {
+  border-radius: 14px;
+  background: var(--panel);
+  box-shadow: var(--lift-1);
+  border: 1px solid var(--border-strong);
+  overflow: hidden;
+}
+.maplibregl-ctrl-group button {
+  width: 36px;
+  height: 36px;
+}
+.maplibregl-ctrl-group button + button {
+  border-top: 1px solid var(--border);
+}
+.maplibregl-ctrl-attrib.maplibregl-compact {
+  border-radius: 999px;
+  font-size: 11px;
+}
+
+/* A click on the map: one card on a hollow pin. */
+.map-add {
+  position: absolute;
+  z-index: 4;
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px 12px;
+  background: var(--panel);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-squircle);
+  box-shadow: var(--paper-edge), var(--lift-2);
+  transform: translate(-50%, calc(-100% - 18px));
+  outline: none;
+}
+.map-add.is-below {
+  transform: translate(-50%, 18px);
+}
+.map-add-title {
+  margin: 0;
+  font-family: var(--font-headings);
+  font-size: 18px;
+  color: var(--ink);
+}
+.map-add-line {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.map-add-name {
+  width: 100%;
+  padding: 2px 0;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--border-strong);
+  font-family: var(--font-headings);
+  font-size: 18px;
+  color: var(--ink);
+  outline: none;
+}
+.map-add-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+.map-add-actions .ant-btn {
+  flex: 1;
+}
+.map-add-day {
+  padding: 0 10px;
+}
+.map-add-more {
+  justify-self: start;
+  padding: 2px 0;
+  background: none;
+  border: 0;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* No connection: the map pane goes and the plan widens; one quiet line says why. */
+.trip-map-off {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 13px;
+}
+@media (min-width: 768px) {
+  .trip-shell.is-mapless {
+    display: block;
+    max-width: 960px;
+  }
+}
+
+/* The phone's map: a full screen of its own. Read-only: look around, tap a stop. */
+.map-screen {
+  position: fixed;
+  z-index: 1100;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .map-screen {
+    animation: map-screen-in var(--dur-base) var(--ease-out) both;
+  }
+  @keyframes map-screen-in {
+    from {
+      opacity: 0;
+      transform: translateY(24px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
+.map-screen-bar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-sizing: border-box;
+  height: calc(56px + env(safe-area-inset-top, 0px));
+  padding: env(safe-area-inset-top, 0px) 8px 0;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  touch-action: none;
+}
+.map-screen-close,
+.map-screen-balance {
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+}
+.map-screen-stepper {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+.map-screen-day {
+  min-width: 0;
+  padding: 0 4px;
+  overflow: hidden;
+  font-family: var(--font-headings);
+  font-size: 17px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink);
+}
+.map-screen-map {
+  position: relative;
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+.map-screen-map .trip-map-plain,
+.map-screen-map .trip-map-gl-wrap {
+  min-height: 0;
+}
+.map-screen-card {
+  position: absolute;
+  z-index: 2;
+  left: 12px;
+  right: 12px;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  display: grid;
+  gap: 10px;
+  padding: 16px 20px;
+  background: var(--panel);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-squircle);
+  box-shadow: var(--paper-edge), var(--lift-2);
+}
+.map-screen-text {
+  display: grid;
+  gap: 2px;
+  padding: 0;
+  background: none;
+  border: 0;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+.map-screen-name {
+  font-family: var(--font-headings);
+  font-size: 20px;
+  font-weight: 650;
+  color: var(--ink);
+}
+.map-screen-meta {
+  color: var(--muted);
+  font-size: 14px;
+}
+.map-screen-card .trip-go {
+  justify-self: stretch;
+}
+
+/* ---- what the sheets put in their tiers (all values are tokens) ---------------------------- */
+.trip-when-pick {
+  display: grid;
+  gap: var(--space-2);
+}
+.trip-timegrid {
+  max-height: 220px;
+  overflow-y: auto;
+}
+.trip-timegrid .ui-choice {
+  min-height: var(--control-md);
+  padding: 0;
+  flex-direction: row;
+  font-weight: 500;
+  font-size: var(--size-meta);
+  font-variant-numeric: tabular-nums;
+}
+.trip-custom-length {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.trip-custom-length .ui-field {
+  width: 96px;
+  border: 1px solid var(--border);
+  padding: 0 var(--space-3);
+  min-height: var(--control-md);
+}
+.trip-kindstep {
+  margin-top: var(--tier-identity-actions);
+}
+.trip-kind-tile {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin-top: 3px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--panel-subtle);
+  color: var(--ink);
+  font-size: 16px;
+  cursor: pointer;
+}
+.trip-kind-tile:focus-visible {
+  box-shadow: var(--focus-ring);
+  outline: none;
+}
+.trip-slip {
+  margin-top: var(--tier-identity-actions);
+  padding: var(--space-4);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--warn-bg);
+  text-align: center;
+}
+.trip-slip-code {
+  margin: var(--space-2) 0;
+  font-family: var(--font-headings);
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.trip-slip-actions {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-3);
+}
+.trip-note-line {
+  margin: 0 0 var(--space-2);
+  color: var(--muted);
+  font-size: var(--size-meta);
+}
+.trip-settings-identity {
+  position: relative;
+  margin-bottom: var(--space-6);
+}
+.trip-settings-identity .ui-sheet-title {
+  font-size: var(--title-page);
+}
+.trip-settings .ui-section-label {
+  margin-top: var(--space-6);
+}
+.trips-pref {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--detail-inset);
+}
+.trips-pref-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.trips-pref-label {
+  font-weight: 500;
+  color: var(--ink);
+}
+.trips-pref-help {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--size-meta);
+}

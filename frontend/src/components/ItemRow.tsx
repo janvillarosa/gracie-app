@@ -52,7 +52,7 @@ export const reorderLock = { active: false }
 // Swipe left on a touch screen to delete: the row follows the finger over a red tray, and
 // letting go past the threshold deletes it. Dragging back, or sliding the finger off the
 // row, sends it home instead. Mutates styles directly so a drag never re-renders the list.
-function useSwipeToDelete(onCommit: () => void, disabled: boolean) {
+export function useSwipeToDelete(onCommit: () => void, disabled: boolean) {
   const slideRef = React.useRef<HTMLDivElement>(null)
   const trayRef = React.useRef<HTMLDivElement>(null)
   const gesture = React.useRef<{ x: number; y: number; id: number; active: boolean } | null>(null)

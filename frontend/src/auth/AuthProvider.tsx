@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getMe } from '@api/endpoints'
+import { wipeTripData } from '@lib/trips/store'
 
 type AuthContextType = {
   apiKey: string | null
@@ -19,7 +20,11 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
   const setApiKey = useCallback((key: string | null) => {
     setApiKeyState(key)
     if (key) localStorage.setItem(STORAGE_KEY, key)
-    else localStorage.removeItem(STORAGE_KEY)
+    else {
+      localStorage.removeItem(STORAGE_KEY)
+      // Signing out takes this person's trips (and booking codes) off the device.
+      void wipeTripData()
+    }
   }, [])
 
   // Optional: verify key on mount

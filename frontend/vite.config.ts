@@ -1,10 +1,24 @@
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
+import fs from 'node:fs'
 import react from '@vitejs/plugin-react'
 import path from 'node:path'
 
+// Dev only: serves MSW's worker script for the opt-in mock trips backend (VITE_MOCK_TRIPS=1),
+// so there is nothing to copy into public/ and nothing to ship in a production build.
+const mockWorker = (): Plugin => ({
+  name: 'serve-msw-worker',
+  apply: 'serve',
+  configureServer(server) {
+    server.middlewares.use('/mockServiceWorker.js', (_req, res) => {
+      res.setHeader('Content-Type', 'text/javascript')
+      res.end(fs.readFileSync(path.resolve(__dirname, 'node_modules/msw/lib/mockServiceWorker.js')))
+    })
+  },
+})
+
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), mockWorker()],
   resolve: {
     alias: {
       '@api': path.resolve(__dirname, 'src/api'),
@@ -51,10 +65,12 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'lcov'],
       reportsDirectory: 'coverage',
+      // The dev-only mock worker and its seed data are exercised by hand, not by tests.
+      exclude: ['src/mocks/browser.ts', 'src/mocks/seed.ts', 'src/components/trips/MapCanvas.tsx'],
       // Ratchet floor set just below the current baseline (statements 45.7%,
       // branches 76.8%, functions 75.0%, lines 45.7%). Vitest reads these as
       // percentages (0-100). Raise them as coverage grows; never lower.
-      thresholds: { lines: 64, branches: 78, functions: 77, statements: 64 },
+      thresholds: { lines: 80, branches: 83, functions: 78, statements: 80 },
     },
   },
 })
