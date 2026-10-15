@@ -28,8 +28,8 @@ type Args = {
   ideasNode: React.ReactNode
   selTodo?: TripTodo
   selBooking?: Booking
-  bookingDraft: { title: string; n: number } | null
-  setBookingDraft: (d: { title: string; n: number } | null) => void
+  bookingDraft: { title: string; n: number; start?: string } | null
+  setBookingDraft: (d: { title: string; n: number; start?: string } | null) => void
   extra: 'notes' | null
   setExtra: (e: 'notes' | null) => void
   setSelected: (id: string | null) => void
@@ -152,7 +152,7 @@ export function useItemSheet({
         tripTz={trip.tz}
         bias={bias}
         days={moveTargets}
-        defaultStart={defaultStart}
+        defaultStart={bookingDraft.start ?? defaultStart}
         nowMs={nowMs}
         onSave={(id, patch) => {
           bookingActions.save(id, patch)

@@ -2286,3 +2286,294 @@
   color: var(--muted);
   font-size: var(--size-meta);
 }
+
+/* ---- the planning desk (1024px and wider): Ideas | Days | Map ------------------------------- */
+@media (min-width: 1024px) {
+  .trip-shell.is-desk {
+    display: grid;
+    grid-template-columns: 300px minmax(0, 1fr);
+    gap: 20px;
+    align-items: start;
+    max-width: 1560px;
+  }
+  .trip-shell.is-desk.is-wide:not(.is-mapless) {
+    grid-template-columns: 300px minmax(0, 1fr) 420px;
+  }
+  .trip-shell.is-desk .trip-days-col {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    min-width: 0;
+  }
+  /* Header, readiness and plan are separate sheets in the Days column, not a stack. */
+  .trip-days-col .paper-meta {
+    border-bottom: 1px solid var(--border-strong) !important;
+    border-radius: var(--radius-squircle) !important;
+    margin: 0;
+  }
+  .trip-plan-sheet {
+    margin: 0;
+  }
+  .trip-desk-add {
+    position: sticky;
+    bottom: 16px;
+    z-index: 5;
+  }
+  .trip-desk-add .add-bar {
+    position: static;
+    margin: 0;
+    padding: var(--space-2) var(--space-3);
+    background: var(--panel);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-squircle);
+    box-shadow: var(--paper-edge), var(--lift-1);
+  }
+}
+
+/* The header on a desk: icon tile, then the title on one line (ellipsis, never wrapping), the
+   route, dates and countdown under it, avatars at the right. */
+.paper-meta.is-desk h2.ant-typography {
+  font-size: 32px;
+  line-height: 1.1 !important;
+  min-width: 0;
+}
+.paper-meta.is-desk .trip-title-text {
+  display: block;
+  -webkit-line-clamp: unset;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.paper-meta.is-desk .list-header-grid .trip-metaline {
+  padding-left: calc(var(--control-lg) + var(--space-3));
+}
+
+/* The Ideas column: its own paper sheet; the rows are flat row-grid rows, no cards. */
+.trip-ideas-col {
+  position: sticky;
+  top: 16px;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - 32px);
+  min-height: 160px;
+  overflow: hidden;
+  padding: var(--space-4) var(--space-4) var(--space-3);
+  background: var(--panel);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-squircle);
+  box-shadow: var(--paper-edge), var(--lift-0);
+}
+.trip-ideas-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+.trip-ideas-head .ui-section-label {
+  margin: 0;
+}
+.trip-ideas-hint {
+  color: var(--muted);
+  font-size: var(--size-meta);
+}
+.trip-ideas-col .trip-ideas {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0;
+  border-radius: var(--radius-md);
+}
+.trip-ideas-col .trip-ideas.is-over {
+  background: color-mix(in srgb, var(--brand-yellow) 20%, white);
+}
+
+/* Empty days on a desk are dashed slots; they turn yellow while something is being dragged. */
+.trip-shell.is-desk .trip-empty-row {
+  margin: var(--space-2) 0 var(--space-3);
+  padding: var(--space-3) var(--space-3);
+  border: 1.5px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  color: var(--muted);
+  font-size: var(--size-meta);
+  text-align: center;
+}
+.trip-page.is-dragging .trip-shell.is-desk .trip-day .trip-empty-row {
+  border-color: var(--brand-yellow-deep);
+  background: color-mix(in srgb, var(--brand-yellow) 16%, white);
+  color: var(--ink);
+}
+.trip-page.is-dragging .trip-shell.is-desk .trip-day.is-over .trip-empty-row {
+  background: color-mix(in srgb, var(--brand-yellow) 34%, white);
+}
+
+/* Ready to go?: before the trip, in the Days column where the Next stop card goes later. */
+.trip-ready {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-5);
+  align-items: start;
+  padding: var(--space-4) var(--space-5);
+  background: var(--panel);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-squircle);
+  box-shadow: var(--paper-edge), var(--lift-0);
+}
+.trip-ready.is-done {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-block: var(--space-2);
+}
+.trip-ready-main .ui-section-label,
+.trip-ready-side .ui-section-label {
+  margin: 0 0 var(--space-2);
+}
+.trip-ready-side {
+  padding-left: var(--space-5);
+  border-left: 1px solid var(--border);
+  min-width: 220px;
+}
+.trip-ready-list {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.trip-ready-line,
+.trip-ready-all {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--size-meta);
+  line-height: 1.4;
+}
+.trip-ready-all {
+  font-weight: 600;
+  color: var(--ok-ink);
+}
+.trip-ready .ui-btn.is-text {
+  min-height: 28px;
+  padding-inline: var(--space-1);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.trip-ready-mark {
+  flex: none;
+  width: 14px;
+  height: 14px;
+}
+.trip-ready-line.is-ok .trip-ready-mark {
+  color: var(--ok-ink);
+}
+.trip-ready-line.is-todo .trip-ready-mark {
+  color: var(--warn-ink);
+}
+.trip-ready-line.is-todo .trip-ready-text {
+  color: var(--ink);
+}
+.trip-ready-text {
+  color: var(--muted);
+}
+
+/* The map column: sticky, and quiet until there are places. */
+.trip-map.is-empty {
+  align-items: center;
+  justify-content: center;
+  background: var(--trip-map-ground);
+}
+.trip-map.is-empty p {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--size-meta);
+  text-align: center;
+}
+/* 1024-1199px: the map opens over Ideas and Days from the Map pill. */
+.trip-side.is-over {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  bottom: 16px;
+  z-index: 900;
+  width: min(480px, calc(100vw - 32px));
+  height: auto;
+  margin: 0;
+  box-shadow: var(--paper-edge), 0 12px 40px rgba(0, 0, 0, 0.18);
+}
+.trip-side .trip-side-close {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  z-index: 3;
+  background: var(--panel);
+}
+
+/* Ideas rows (a column of their own): lead and title only; the row's actions float in over the
+   title's right end on hover and focus, so the title gets the whole width. */
+.trip-ideas {
+  --tcol: 0px;
+}
+.trip-ideas-col .trip-row-line {
+  grid-template-columns: var(--lead-col) minmax(0, 1fr);
+}
+.trip-ideas-col .trip-row-line > .trip-trail {
+  position: absolute;
+  top: 0;
+  right: 0;
+  grid-column: auto;
+  padding-left: var(--space-3);
+  background: linear-gradient(to right, transparent, var(--panel) 28%);
+  opacity: 0;
+}
+.trip-ideas-col .trip-row:hover .trip-trail,
+.trip-ideas-col .trip-row:focus-within .trip-trail {
+  opacity: 1;
+}
+@media (hover: none) {
+  .trip-ideas-col .trip-row-line > .trip-trail {
+    opacity: 1;
+  }
+}
+.trip-ideas-col .trip-row-line > .trip-main {
+  grid-column: 2;
+}
+
+/* A narrower Days column (1200-1359px): a slimmer map, and the readiness sheet stacks. */
+@media (min-width: 1200px) and (max-width: 1359px) {
+  .trip-shell.is-desk.is-wide:not(.is-mapless) {
+    grid-template-columns: 300px minmax(0, 1fr) 360px;
+  }
+}
+.trip-days-col {
+  container-type: inline-size;
+}
+@container (max-width: 560px) {
+  .trip-ready {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-3);
+  }
+  .trip-ready-side {
+    min-width: 0;
+    padding: var(--space-3) 0 0;
+    border-left: 0;
+    border-top: 1px solid var(--border);
+  }
+}
+.trip-side.is-over .trip-map-bar {
+  padding-right: calc(var(--control-md) + var(--space-4));
+}
+
+/* A phone's tab row: Plan, Ideas, Bookings and the Map pill must fit one line at 375px. */
+@media (max-width: 767px) {
+  .trip-page .pill-nav-tab {
+    padding-inline: 11px;
+  }
+  .trip-page .pill-nav-extra .ui-btn {
+    padding-inline: var(--space-3);
+  }
+}

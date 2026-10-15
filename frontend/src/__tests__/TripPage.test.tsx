@@ -28,8 +28,13 @@ const open = (id = TRIP.trip_id) => renderTrips(`/app/trips/${id}`)
 const deck = () => screen.findByRole('region', { name: 'Next stop' })
 const serverTodos = () => tripServer.trips.get(TRIP.trip_id)?.todos ?? []
 const order = (t: string) => serverTodos().find((x) => x.title === t)?.order as number
+// The days, not the Ideas column beside them.
 const rowTitles = () =>
-  Array.from(document.querySelectorAll('.trip-row .trip-title')).map((e) => e.textContent)
+  Array.from(
+    document.querySelectorAll(
+      '.trip-days-col .trip-row .trip-title, .trip-col .trip-row .trip-title',
+    ),
+  ).map((e) => e.textContent)
 const store = () =>
   getTripStore(`${ME}:${ROOM}`, () => {
     throw new Error('store should exist')
@@ -45,6 +50,7 @@ afterEach(resetTripsWorld)
 
 describe('The stack', () => {
   it('is a paper stack: the trip sheet, then Plan, Ideas and Bookings as pills', async () => {
+    setViewport('phone')
     seed(TRIP)
     const { container } = open()
     expect(await screen.findByRole('heading', { name: 'Lisbon & Porto' })).toBeInTheDocument()
@@ -70,6 +76,7 @@ describe('The stack', () => {
   })
 
   it('shows the ideas in their own tab', async () => {
+    setViewport('phone')
     seed(TRIP)
     open()
     await userEvent.click(await screen.findByRole('tab', { name: 'Ideas' }))
@@ -382,8 +389,8 @@ describe('Page order', () => {
     expect(heading.compareDocumentPosition(tablist) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(tablist.compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(panel).toContainElement(card)
-    // Ideas and Bookings do not show the deck.
-    await userEvent.click(screen.getByRole('tab', { name: 'Ideas' }))
+    // Bookings does not show the deck.
+    await userEvent.click(screen.getByRole('tab', { name: 'Bookings' }))
     expect(screen.queryByRole('region', { name: 'Next stop' })).not.toBeInTheDocument()
   })
 
@@ -462,6 +469,7 @@ describe('Days', () => {
   })
 
   it('with no dates, keeps the first-step prompts after an idea is added, and links to Ideas', async () => {
+    setViewport('phone')
     seed(makeTrip(7, { title: 'Draft' }))
     open(makeTrip(7).trip_id)
     const field = await screen.findByRole('combobox', { name: /^Add (to|an)/ })
@@ -621,7 +629,6 @@ describe('Rows', () => {
   it('treats ideas as ideas: a category dot, no checkbox, and a key to add to a day', async () => {
     seed(TRIP)
     open()
-    await userEvent.click(await screen.findByRole('tab', { name: 'Ideas' }))
     const row = (await screen.findByText('Ginjinha tasting')).closest('li') as HTMLElement
     expect(within(row).queryByRole('checkbox')).not.toBeInTheDocument()
     expect(within(row).getByRole('img', { name: 'Sight' })).toBeInTheDocument()
@@ -888,6 +895,7 @@ describe('The add bar', () => {
   })
 
   it('targets Ideas while the Ideas tab is open', async () => {
+    setViewport('phone')
     seed(TRIP)
     open()
     await userEvent.click(await screen.findByRole('tab', { name: 'Ideas' }))

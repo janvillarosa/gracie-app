@@ -141,17 +141,19 @@ export async function resetTripsWorld() {
 export const seed = (t: Trip) => tripServer.seed(ROOM, t, MIA)
 
 export function setViewport(
-  kind: 'desktop' | 'phone' | 'tablet',
+  kind: 'desktop' | 'mid' | 'phone' | 'tablet',
   opts: { reduceMotion?: boolean } = {},
 ) {
   window.matchMedia = ((query: string) => ({
     matches: query.includes('prefers-reduced-motion: reduce')
       ? !!opts.reduceMotion
       : kind === 'desktop'
-        ? query.includes('min-width: 1024px')
-        : kind === 'phone'
-          ? query.includes('max-width: 1023px')
-          : false,
+        ? query.includes('min-width: 1024px') || query.includes('min-width: 1200px')
+        : kind === 'mid'
+          ? query.includes('min-width: 1024px')
+          : kind === 'phone'
+            ? query.includes('max-width: 1023px')
+            : false,
     media: query,
     onchange: null,
     addListener: () => {},

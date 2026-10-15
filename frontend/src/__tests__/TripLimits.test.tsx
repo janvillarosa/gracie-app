@@ -82,6 +82,7 @@ describe('limits in the editors', () => {
       ),
     })
     seed(full)
+    setViewport('phone')
     renderTrips(`/app/trips/${full.trip_id}`)
     const field = await screen.findByRole('combobox', { name: /^Add (to|an)/ })
     await userEvent.click(await screen.findByRole('tab', { name: 'Ideas' }))

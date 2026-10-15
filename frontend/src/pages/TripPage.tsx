@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Button } from '@components/ui'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   DndContext,
@@ -12,7 +11,7 @@ import {
   type DragStartEvent,
 } from '@dnd-kit/core'
 import { Card, message } from 'antd'
-import { CaretRight, Check, MapTrifold } from '@phosphor-icons/react'
+import { CaretRight, Check, MapTrifold, X } from '@phosphor-icons/react'
 import { useAuth } from '@auth/AuthProvider'
 import { TopNav } from '@components/TopNav'
 import { reorderLock } from '@components/ItemRow'
@@ -52,7 +51,7 @@ import { IdeasPanel } from '@components/trips/IdeasPanel'
 import type { TabId } from '@components/trips/tabs'
 import { NotePick } from '@components/trips/pickers'
 import { LIMITS as TRIP_LIMITS } from '@lib/trips/limits'
-import { DetailGroup, NavRow, Sheet, SheetIdentity } from '@components/ui'
+import { Button, DetailGroup, NavRow, SectionLabel, Sheet, SheetIdentity } from '@components/ui'
 import { NextStopDeck, type Stop, type Tomorrow } from '@components/trips/NextStop'
 import { useMedia } from '@components/trips/Phone'
 import { AddBar, type QuickAddItem } from '@components/trips/QuickAdd'
@@ -73,6 +72,8 @@ import { buildScene, hasMapPlaces, type MapPreview } from '@lib/trips/mapScene'
 import type { RowActions } from '@components/trips/TodoRow'
 import { DAY_COLOURS } from '@components/trips/tripUi'
 import { PillNav } from '@components/PillNav'
+import { ReadyToGo } from '@components/trips/ReadyToGo'
+import { readiness, type CheckLine } from '@lib/trips/readiness'
 import { reduced, scrollToEl } from './trip/scroll'
 import { listFor, useScreenActions, type Ctx } from './trip/useScreenActions'
 import { useDayFolding } from './trip/useDayFolding'
@@ -101,7 +102,7 @@ const TripScreen: React.FC<{
 }> = ({ trip: rawTrip, store, state, userId, members, roomName, showNextStop }) => {
   const { apiKey } = useAuth()
   const [search] = useSearchParams()
-  const [tab, setTab] = useState<TabId>('plan')
+  const [rawTab, setTab] = useState<TabId>('plan')
   const [extra, setExtra] = useState<Extra>(null)
   const navigate = useNavigate()
   const goSettings = () => navigate(`/app/trips/${rawTrip.trip_id}/settings`)
@@ -146,6 +147,11 @@ const TripScreen: React.FC<{
   const desktop = useMedia('(min-width: 1024px)')
   // Tablets use the phone layout: one column, the map in a sheet.
   const phone = useMedia('(max-width: 1023px)')
+  // 1200px and wider: Ideas, Days and the Map side by side. 1024-1199: Ideas and Days, and the
+  // map opens over them from the Map pill. Either way Ideas is a column, not a tab.
+  const wide = useMedia('(min-width: 1200px)')
+  const [mapOver, setMapOver] = useState(false)
+  const tab: TabId = desktop && rawTab === 'ideas' ? 'plan' : rawTab
 
   // Rows waiting behind an Undo are hidden before the delete is sent.
   const trip = useMemo(
@@ -225,7 +231,11 @@ const TripScreen: React.FC<{
   })
 
   const draftCount = useRef(0)
-  const [bookingDraft, setBookingDraft] = useState<{ title: string; n: number } | null>(null)
+  const [bookingDraft, setBookingDraft] = useState<{
+    title: string
+    n: number
+    start?: string
+  } | null>(null)
 
   const bias = useMemo(() => {
     const p = trip.destination ?? trip.stops?.[0]
@@ -319,7 +329,7 @@ const TripScreen: React.FC<{
   const hasPlaces = hasMapPlaces(trip)
   // Wide and online: the map is a pane beside the plan; item panels dock over it. Otherwise
   // (phone, or no connection) panels are bottom sheets.
-  const docked = desktop && mapOk
+  const docked = desktop && mapOk && (wide || mapOver)
   const moveTargets = useMemo(
     () => [
       ...schedule.days.map((d) => ({ value: d.date as string | null, label: fullDay(d.date) })),
@@ -722,6 +732,29 @@ const TripScreen: React.FC<{
   )
 
   const emptyPlan = trip.todos.length === 0 && trip.bookings.length === 0
+  // Before the trip, on a desk: what is still missing, instead of the Next stop card.
+  const readyLines = useMemo(
+    () => (phase === 'before' && desktop ? readiness(trip, schedule.days, packing) : []),
+    [phase, desktop, trip, schedule.days, packing],
+  )
+  const fixReady = (line: CheckLine) => {
+    switch (line.fix?.action) {
+      case 'add-travel':
+        return setBookingDraft({ title: '', n: ++draftCount.current })
+      case 'add-stay':
+        return setBookingDraft({
+          title: 'Stay',
+          n: ++draftCount.current,
+          start: line.date ? `${line.date}T15:00` : undefined,
+        })
+      case 'show-empty-day':
+        return line.date ? goToDay(line.date) : undefined
+      case 'open-list':
+        return packing.listId ? toList(packing.listId) : undefined
+      case 'make-list':
+        return void onPacking()
+    }
+  }
   // No dates yet: ideas live under Ideas, and Plan keeps its first-step prompts.
   const noDays = schedule.days.length === 0 && schedule.outside.length === 0
   const dayTargets = schedule.days.map((d) => ({
@@ -764,7 +797,7 @@ const TripScreen: React.FC<{
   )
   const planNode = (
     <>
-      {toPack && packing.listId && (
+      {toPack && packing.listId && !desktop && (
         <button
           type="button"
           className="trip-packline"
@@ -808,7 +841,7 @@ const TripScreen: React.FC<{
           )}
         </button>
       )}
-      {emptyPlan || noDays ? (
+      {noDays || (emptyPlan && !desktop) ? (
         <div className="trip-empty-sheet">
           <h3>Where to first?</h3>
           <p>Add a place or a plan below. You can sort it into days later.</p>
@@ -817,7 +850,7 @@ const TripScreen: React.FC<{
               When are you going?
             </Button>
           )}
-          {schedule.ideas.length > 0 && (
+          {schedule.ideas.length > 0 && !desktop && (
             <DetailGroup label="Ideas">
               <NavRow
                 label={`${schedule.ideas.length} ${schedule.ideas.length === 1 ? 'idea' : 'ideas'}`}
@@ -859,101 +892,171 @@ const TripScreen: React.FC<{
         ? 'Add an idea'
         : `Add to ${targetLabel}`
 
+  const headerNode = (
+    <TripHeader
+      trip={trip}
+      today={today}
+      desk={desktop}
+      offline={state.offline}
+      pending={state.pending}
+      persistFailed={state.persistFailed}
+      deletedBy={deletedBy}
+      readOnlyOver={phase === 'after' && !unlocked && !trip.deleted}
+      members={members}
+      notes={tripNoteList(state.notes, trip.trip_id)}
+      onDismissNote={(k) => store.dismissNote(k)}
+      onUnlock={() => setUnlocked(true)}
+      onRestore={() => store.restoreTrip(trip.trip_id)}
+      onMenu={(k) => (k === 'details' ? goSettings() : k === 'packing' ? onPacking() : setExtra(k))}
+      packing={packingMenu}
+      daysOpen={daysOpen}
+      onDaysOpen={setDaysOpen}
+      dayList={dayListNode}
+    />
+  )
+  const mapPillNode =
+    (phone || (desktop && !wide)) && hasPlaces && mapOk ? (
+      <Button
+        kind="quiet"
+        ref={mapPill}
+        icon={<MapTrifold />}
+        aria-label={`Show map for ${currentModel ? shortDay(currentModel.date) : 'the trip'}`}
+        aria-pressed={desktop ? mapOver : undefined}
+        onClick={() => (desktop ? setMapOver((o) => !o) : setScreenOpen(true))}
+      >
+        Map
+      </Button>
+    ) : undefined
+  const pillNode = (
+    <PillNav
+      value={tab}
+      onChange={(k) => setTab(k as TabId)}
+      extra={mapPillNode}
+      items={[
+        { key: 'plan', label: 'Plan', children: planNode },
+        // Ideas is a column on desktops; it is a tab on phones and tablets.
+        ...(desktop ? [] : [{ key: 'ideas', label: 'Ideas', children: ideasNode }]),
+        { key: 'bookings', label: 'Bookings', children: bookingsNode },
+      ]}
+    />
+  )
+  const addBarNode = showAdd ? (
+    <AddBar
+      inputId="trip-add-input"
+      mode={tab === 'bookings' ? 'booking' : 'todo'}
+      label={addLabel}
+      placeholder={addPlaceholder}
+      bias={bias}
+      targets={targetOptions}
+      target={target}
+      onTarget={setAddTarget}
+      onAdd={(item) => add(target === 'ideas' ? null : target, item)}
+      onLaunch={(typed) => setBookingDraft({ title: typed, n: ++draftCount.current })}
+      onPreview={
+        docked
+          ? (pl) => setBarPreview(pl ? { lat: pl.lat, lng: pl.lng, label: pl.name } : null)
+          : undefined
+      }
+      onExpand={(item) => {
+        // One editor for add and edit: create the item, then open it.
+        const id = add(target === 'ideas' ? null : target, item)
+        if (id) {
+          setFreshId(id)
+          ctx.current.openItem(id)
+        }
+      }}
+    />
+  ) : null
+  // The map column: the map once there are places; until then a quiet note on the map ground,
+  // with no controls and no map code loaded.
+  const sideNode = (
+    <aside
+      className={wide ? 'trip-side' : 'trip-side is-over'}
+      aria-label="Map"
+      data-testid="trip-map-pane"
+    >
+      {!wide && (
+        <Button
+          kind="text"
+          iconOnly
+          className="trip-side-close"
+          aria-label="Close map"
+          icon={<X aria-hidden />}
+          onClick={() => setMapOver(false)}
+        />
+      )}
+      {hasPlaces ? (
+        mapNode
+      ) : (
+        <div className="trip-map is-empty">
+          <p>Places you add show up here</p>
+        </div>
+      )}
+      {docked && shownSheet}
+    </aside>
+  )
+  const ideasColumn = (
+    <aside className="trip-ideas-col" aria-label="Ideas">
+      <header className="trip-ideas-head">
+        <SectionLabel>Ideas · {schedule.ideas.length}</SectionLabel>
+        <span className="trip-ideas-hint">Drag onto a day</span>
+      </header>
+      <IdeasPanel
+        hint={false}
+        ideas={schedule.ideas}
+        shared={shared}
+        moveOpenId={moveOpenId}
+        selectedId={selected}
+        enteringId={enteringId}
+      />
+    </aside>
+  )
+  const readyNode =
+    readyLines.length > 0 && tab === 'plan' ? (
+      <ReadyToGo lines={readyLines} locked={locked} onFix={fixReady} />
+    ) : null
+
   return (
     <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
-      <div className="trip-page">
-        <div className={desktop && !mapOk ? 'trip-shell is-mapless' : 'trip-shell'}>
-          <div className="trip-col">
+      <div className={dragging ? 'trip-page is-dragging' : 'trip-page'}>
+        {desktop ? (
+          <>
             <TopNav back={{ to: '/app/trips', label: roomName }} />
-            {desktop && !mapOk && (
-              <p className="trip-map-off">The map comes back when you’re online.</p>
-            )}
-            <div className="paper-stack">
-              <TripHeader
-                trip={trip}
-                today={today}
-                offline={state.offline}
-                pending={state.pending}
-                persistFailed={state.persistFailed}
-                deletedBy={deletedBy}
-                readOnlyOver={phase === 'after' && !unlocked && !trip.deleted}
-                members={members}
-                notes={tripNoteList(state.notes, trip.trip_id)}
-                onDismissNote={(k) => store.dismissNote(k)}
-                onUnlock={() => setUnlocked(true)}
-                onRestore={() => store.restoreTrip(trip.trip_id)}
-                onMenu={(k) =>
-                  k === 'details' ? goSettings() : k === 'packing' ? onPacking() : setExtra(k)
-                }
-                packing={packingMenu}
-                daysOpen={daysOpen}
-                onDaysOpen={setDaysOpen}
-                dayList={dayListNode}
-              />
-              <Card className="paper-card paper-list">
-                <div>
-                  <PillNav
-                    value={tab}
-                    onChange={(k) => setTab(k as TabId)}
-                    extra={
-                      phone && hasPlaces && mapOk ? (
-                        <Button
-                          kind="quiet"
-                          ref={mapPill}
-                          icon={<MapTrifold />}
-                          aria-label={`Show map for ${currentModel ? shortDay(currentModel.date) : 'the trip'}`}
-                          onClick={() => setScreenOpen(true)}
-                        >
-                          Map
-                        </Button>
-                      ) : undefined
-                    }
-                    items={[
-                      { key: 'plan', label: 'Plan', children: planNode },
-                      // Wide screens: the spine stays; the ideas open over the map instead.
-                      { key: 'ideas', label: 'Ideas', children: docked ? planNode : ideasNode },
-                      { key: 'bookings', label: 'Bookings', children: bookingsNode },
-                    ]}
-                  />
-                </div>
-                {showAdd && (
-                  <AddBar
-                    inputId="trip-add-input"
-                    mode={tab === 'bookings' ? 'booking' : 'todo'}
-                    label={addLabel}
-                    placeholder={addPlaceholder}
-                    bias={bias}
-                    targets={targetOptions}
-                    target={target}
-                    onTarget={setAddTarget}
-                    onAdd={(item) => add(target === 'ideas' ? null : target, item)}
-                    onLaunch={(typed) => setBookingDraft({ title: typed, n: ++draftCount.current })}
-                    onPreview={
-                      docked
-                        ? (pl) =>
-                            setBarPreview(pl ? { lat: pl.lat, lng: pl.lng, label: pl.name } : null)
-                        : undefined
-                    }
-                    onExpand={(item) => {
-                      // One editor for add and edit: create the item, then open it.
-                      const id = add(target === 'ideas' ? null : target, item)
-                      if (id) {
-                        setFreshId(id)
-                        ctx.current.openItem(id)
-                      }
-                    }}
-                  />
-                )}
-              </Card>
+            <div
+              className={[
+                'trip-shell',
+                'is-desk',
+                wide ? 'is-wide' : '',
+                wide && !mapOk ? 'is-mapless' : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+            >
+              {ideasColumn}
+              <div className="trip-col trip-days-col">
+                {!mapOk && <p className="trip-map-off">The map comes back when you’re online.</p>}
+                {headerNode}
+                {readyNode}
+                <Card className="paper-card trip-plan-sheet">{pillNode}</Card>
+                {addBarNode && <div className="trip-desk-add">{addBarNode}</div>}
+              </div>
+              {mapOk && (wide || mapOver) && sideNode}
+            </div>
+          </>
+        ) : (
+          <div className="trip-shell">
+            <div className="trip-col">
+              <TopNav back={{ to: '/app/trips', label: roomName }} />
+              <div className="paper-stack">
+                {headerNode}
+                <Card className="paper-card paper-list">
+                  <div>{pillNode}</div>
+                  {addBarNode}
+                </Card>
+              </div>
             </div>
           </div>
-          {showSide && (
-            <aside className="trip-side" aria-label="Map">
-              {mapNode}
-              {docked && shownSheet}
-            </aside>
-          )}
-        </div>
+        )}
         <WhenSheet
           open={whenOpen}
           start={trip.start_date}
