@@ -65,10 +65,9 @@ import {
 } from '@components/trips/Spine'
 import { TripHeader } from '@components/trips/TripHeader'
 import { TripMap, type TripMapHandle } from '@components/trips/TripMap'
-import { MapAddPopover } from '@components/trips/MapAddPopover'
 import { MapScreen } from '@components/trips/MapScreen'
-import { pinPlace, useClickAdd, useMapFollow, useMapOk } from '@components/trips/useTripMap'
-import { findExisting, hasPin } from '@lib/trips/places'
+import { useMapFollow, useMapOk } from '@components/trips/useTripMap'
+import { hasPin } from '@lib/trips/places'
 import { buildScene, hasMapPlaces, type MapPreview } from '@lib/trips/mapScene'
 import type { RowActions } from '@components/trips/TodoRow'
 import { DAY_COLOURS } from '@components/trips/tripUi'
@@ -120,7 +119,6 @@ const TripScreen: React.FC<{
   const [screenOpen, setScreenOpen] = useState(false)
   const mapPill = useRef<HTMLButtonElement>(null)
   const mapFollow = useMapFollow()
-  const [clickTarget, setClickTarget] = useState<string | null>(null)
   const [barPreview, setBarPreview] = useState<MapPreview | null>(null)
   const mapPane = useRef<HTMLDivElement>(null)
   const [allDays, setAllDays] = useState(false)
@@ -551,14 +549,28 @@ const TripScreen: React.FC<{
   const focusPlace = (selTodo?.place ?? selBooking?.place) || null
   const focusPoint = hasPin(focusPlace) ? { lat: focusPlace.lat, lng: focusPlace.lng } : null
 
-  const onPinClick = useCallback((id: string) => {
+  // A row lights with the highlighter sweep, scrolled to only when it is off screen (the map's
+  // camera never moves for this).
+  const showRow = useCallback((id: string) => {
     const row = document.getElementById(`row-${id}`)
     if (!row) return
-    row.scrollIntoView?.({ block: 'center', behavior: reduced() ? 'auto' : 'smooth' })
+    row.scrollIntoView?.({ block: 'nearest', behavior: reduced() ? 'auto' : 'smooth' })
     row.classList.add('is-sweep')
-    row.querySelector<HTMLElement>('.trip-main, .trip-stubline')?.focus({ preventScroll: true })
     if (sweepTimer.current) clearTimeout(sweepTimer.current)
     sweepTimer.current = setTimeout(() => row.classList.remove('is-sweep'), 1400)
+  }, [])
+  // A pill was clicked: select that item as clicking its row does (the inspector opens on desks).
+  const onPinClick = useCallback(
+    (id: string) => {
+      showRow(id)
+      ctx.current.openItem(id)
+    },
+    [showRow],
+  )
+  // The pointer is on a pill: its row lights (purely visual).
+  const onPinHover = useCallback((id: string | null) => {
+    document.querySelector('.is-pin-linked')?.classList.remove('is-pin-linked')
+    if (id) document.getElementById(`row-${id}`)?.classList.add('is-pin-linked')
   }, [])
 
   const onSpineOver = (e: React.SyntheticEvent) => {
@@ -566,63 +578,8 @@ const TripScreen: React.FC<{
     mapRef.current?.setHot(li?.dataset.entryId ?? null)
   }
 
-  const clickAdd = useClickAdd(apiKey, trip.tz)
-  // Click to add a stop (wide screens only): the card's day defaults to the one on the map.
-  const clickDefault = ideasOpen ? 'ideas' : (currentDay ?? 'ideas')
-  const clickDay = clickTarget ?? clickDefault
-  const clickLabel = clickDay === 'ideas' ? 'Ideas' : shortDay(clickDay)
-  // The card's split key adds to its day; the caret's list adds to the day picked. The row enters
-  // with the highlighter and a toast offers Undo; editing happens from the row.
-  const addFromPin = (to: string = clickDay) => {
-    const pin = clickAdd.pin
-    const place = pin ? pinPlace(pin) : null
-    if (!pin || !place) return
-    const id = add(to === 'ideas' ? null : to, {
-      title: place.source === 'google' ? '' : (place.name ?? ''),
-      place,
-    })
-    clickAdd.dismiss()
-    setClickTarget(null)
-    if (!id) return
-    const where = to === 'ideas' ? 'Ideas' : shortDay(to)
-    message.open({
-      key: 'map-added',
-      duration: 5,
-      content: (
-        <span>
-          Added to {where} ·{' '}
-          <button
-            type="button"
-            className="ui-btn is-text"
-            onClick={() => {
-              store.deleteTodo(trip.trip_id, id)
-              message.destroy('map-added')
-            }}
-          >
-            Undo
-          </button>
-        </span>
-      ),
-    })
-  }
-  // Already in the trip: the same place id, or the same pin within 30 m.
-  const existing = useMemo(() => {
-    const pin = clickAdd.pin
-    if (!pin) return null
-    const f = findExisting(trip, { place_id: pin.pos.place_id, lat: pin.pos.lat, lng: pin.pos.lng })
-    if (!f) return null
-    return {
-      label: f.day ? `On ${shortDay(f.day)}` : 'In Ideas',
-      onShow: () => {
-        clickAdd.dismiss()
-        ctx.current.openItem(f.id)
-        onPinClick(f.id)
-      },
-    }
-  }, [clickAdd, trip, onPinClick])
-  const preview: MapPreview | null = clickAdd.pin
-    ? { lat: clickAdd.pin.pos.lat, lng: clickAdd.pin.pos.lng }
-    : barPreview
+  // A place suggestion highlighted in the add bar shows as a hollow pin (adding is by search only).
+  const preview: MapPreview | null = barPreview
 
   const mapNode = (
     <div className="trip-map" ref={mapPane}>
@@ -667,36 +624,9 @@ const TripScreen: React.FC<{
         focusPoint={focusPoint}
         focusInset={0}
         onPinClick={onPinClick}
-        onMapClick={clickAdd.onMapClick}
-        onUserMove={() => {
-          mapFollow.pause()
-          clickAdd.dismiss()
-        }}
+        onPinHover={onPinHover}
+        onUserMove={mapFollow.pause}
       />
-      {clickAdd.pin && (
-        <MapAddPopover
-          at={{ x: clickAdd.pin.pos.x, y: clickAdd.pin.pos.y }}
-          bounds={{
-            w: mapPane.current?.clientWidth ?? 600,
-            h: mapPane.current?.clientHeight ?? 400,
-          }}
-          place={clickAdd.pin.place}
-          degraded={clickAdd.pin.degraded}
-          name={clickAdd.pin.name}
-          onName={clickAdd.setName}
-          targetLabel={clickLabel}
-          targets={targetOptions.map((t) => ({
-            value: t.value,
-            label: t.value === 'ideas' ? 'Ideas' : t.label,
-          }))}
-          target={clickDay}
-          typeName={clickAdd.pin.pos.typeName}
-          existing={existing}
-          onAdd={() => addFromPin()}
-          onAddTo={(v) => addFromPin(v)}
-          onDismiss={clickAdd.dismiss}
-        />
-      )}
     </div>
   )
 
@@ -1271,6 +1201,7 @@ const TripScreen: React.FC<{
             }
             scene={(date, sel) => sceneFor('day', date, sel)}
             onOpenItem={(id) => ctx.current.openItem(id)}
+            onShowRow={showRow}
             onClose={() => setScreenOpen(false)}
             opener={mapPill}
           />

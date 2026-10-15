@@ -34,18 +34,12 @@ export function loadGoogle(config: MapsConfig): Promise<Google> {
   return pending
 }
 
-/** The click-to-add libraries load on the first click, not with the map. */
+/** The places library loads on the first place tap or search, not with the map. */
 export function loadPlaces(config: MapsConfig = mapsConfig()) {
   if (!isOnline()) return Promise.reject(new Error('offline'))
   configure(config)
   return importLibrary('places')
 }
-export function loadGeocoding(config: MapsConfig = mapsConfig()) {
-  if (!isOnline()) return Promise.reject(new Error('offline'))
-  configure(config)
-  return importLibrary('geocoding')
-}
-
 /** Test hook: forget a loaded API. */
 export function resetGoogleLoader() {
   pending = null

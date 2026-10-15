@@ -16,6 +16,8 @@ type Props = {
   scene: (date: string, selectedId: string | null) => MapScene
   // Tapping the card's text opens that item's detail.
   onOpenItem: (id: string) => void
+  // A pill was tapped: the map closes and the list scrolls to that row and lights it.
+  onShowRow?: (id: string) => void
   onClose: () => void
   // Focus returns here when the map closes.
   opener?: React.RefObject<HTMLElement | null>
@@ -30,6 +32,7 @@ export const MapScreen: React.FC<Props> = ({
   defaultSelected,
   scene,
   onOpenItem,
+  onShowRow,
   onClose,
   opener,
 }) => {
@@ -173,11 +176,14 @@ export const MapScreen: React.FC<Props> = ({
           interactive={false}
           labelLimit={14}
           nextPrefix={false}
+          onPinClick={(id) => {
+            close()
+            requestAnimationFrame(() => onShowRow?.(id))
+          }}
           following
           fitToken={index}
           fitPadding={{ top: 56, bottom: 48, left: 40, right: 40 }}
           title={`Map of ${day.long}, ${shown.stops.length} ${shown.stops.length === 1 ? 'stop' : 'stops'}`}
-          onPinClick={setSelected}
         />
       </div>
       {stop ? (

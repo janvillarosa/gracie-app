@@ -15,7 +15,7 @@ import type { Place } from '@api/tripTypes'
 import { parseQuickAdd } from '@lib/trips/schedule'
 import { titleProblem } from '@lib/trips/limits'
 import { DayPick } from './pickers'
-import { usePlaceSuggest } from '@lib/trips/usePlaces'
+import { usePlaceSuggest, useSuggestionPreview } from '@lib/trips/usePlaces'
 import type { Suggestion } from '@lib/trips/placesSource'
 
 export type QuickAddItem = { title: string; start_time?: string; place?: Place }
@@ -36,7 +36,8 @@ type Props = {
   // 'booking': what is typed becomes the title of a new booking, which opens in its own sheet.
   mode?: 'todo' | 'booking'
   onLaunch?: (typed: string) => void
-  // Kept for the page: autocomplete suggestions carry no coordinates, so nothing previews.
+  // A place suggestion is highlighted (or not): the map shows a hollow pin for it. Suggestions
+  // carry no coordinates, so after a short dwell one `location` lookup finds them (cached).
   onPreview?: (place: Place | null) => void
 }
 
@@ -57,6 +58,7 @@ export const AddBar: React.FC<Props> = ({
   onExpand,
   mode = 'todo',
   onLaunch,
+  onPreview,
 }) => {
   const [value, setValue] = useState('')
   const [adds, setAdds] = useState(0)
@@ -69,6 +71,8 @@ export const AddBar: React.FC<Props> = ({
   const problem = titleProblem(parsed.title)
   const armed = parsed.title.length > 0 && !problem
   const current = targets.find((t) => t.value === target)
+
+  const highlight = useSuggestionPreview(onPreview)
 
   const reset = () => {
     setValue('')
@@ -127,6 +131,7 @@ export const AddBar: React.FC<Props> = ({
         onSubmitText={mode === 'booking' ? launch : submit}
         query={value}
         onKeyDown={onKeyDown}
+        onHighlight={onPreview ? highlight : undefined}
         footer={<PoweredBy source={search.attribution} />}
         listLabel="Places"
       >

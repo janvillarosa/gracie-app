@@ -194,35 +194,56 @@ export class FakeClusterer {
 }
 
 export class FakePlace {
-  static fetches: Array<{ id: string; fields: string[] }> = []
+  static fetches: Array<{ id: string; fields: string[]; token?: unknown }> = []
   static next: { displayName?: string; lat: number; lng: number } | 'fail' = {
     displayName: 'Livraria Bertrand',
     lat: 38.711,
     lng: -9.142,
   }
   displayName: string | null = null
+  formattedAddress: string | null = null
+  addressComponents: Array<{ longText: string; types: string[] }> | null = null
   location: { lat: () => number; lng: () => number } | null = null
-  constructor(public o: { id: string }) {}
+  constructor(public o: { id: string; sessionToken?: unknown }) {}
   async fetchFields(f: { fields: string[] }) {
-    FakePlace.fetches.push({ id: this.o.id, fields: f.fields })
+    FakePlace.fetches.push({ id: this.o.id, fields: f.fields, token: this.o.sessionToken })
     const n = FakePlace.next
     if (n === 'fail') throw new Error('nope')
     this.displayName = n.displayName ?? null
+    this.formattedAddress = 'Rua Augusta 10, Lisboa'
+    this.addressComponents = [{ longText: 'Lisboa', types: ['locality'] }]
     this.location = { lat: () => n.lat, lng: () => n.lng }
   }
 }
 
-export class FakeGeocoder {
-  static calls: Array<{ location: { lat: number; lng: number } }> = []
-  static result: { formatted_address: string; place_id: string }[] | 'fail' | 'hang' = [
-    { formatted_address: 'Rua Augusta 10, Lisboa', place_id: 'ChIJstreet' },
+export class FakeToken {
+  static made = 0
+  id = ++FakeToken.made
+}
+
+type Result = { id: string; main: string; secondary: string }
+export class FakeAutocomplete {
+  static requests: Array<Record<string, unknown>> = []
+  static results: Result[] = [
+    { id: 'ChIJpena', main: 'Pena Palace', secondary: 'Sintra, Portugal' },
+    { id: 'ChIJse', main: 'Sé de Lisboa', secondary: 'Lisboa, Portugal' },
   ]
-  async geocode(r: { location: { lat: number; lng: number } }) {
-    FakeGeocoder.calls.push(r)
-    const res = FakeGeocoder.result
-    if (res === 'fail') throw new Error('nope')
-    if (res === 'hang') return new Promise<never>(() => {})
-    return { results: res }
+  static fail = false
+  static async fetchAutocompleteSuggestions(req: Record<string, unknown>) {
+    FakeAutocomplete.requests.push(req)
+    if (FakeAutocomplete.fail) throw new Error('quota')
+    return {
+      suggestions: FakeAutocomplete.results.map((r) => ({
+        placePrediction: {
+          placeId: r.id,
+          mainText: { text: r.main },
+          secondaryText: { text: r.secondary },
+          text: { text: `${r.main}, ${r.secondary}` },
+          // A place made from a prediction carries its session token.
+          toPlace: () => new FakePlace({ id: r.id, sessionToken: req.sessionToken }),
+        },
+      })),
+    }
   }
 }
 
@@ -238,8 +259,11 @@ export const libs = () => ({
       clearInstanceListeners: () => {},
     },
   },
-  places: { Place: FakePlace },
-  geocoding: { Geocoder: FakeGeocoder },
+  places: {
+    Place: FakePlace,
+    AutocompleteSuggestion: FakeAutocomplete,
+    AutocompleteSessionToken: FakeToken,
+  },
 })
 
 export const importLibrary = vi.fn(async (name: string) => (libs() as any)[name])
@@ -258,8 +282,9 @@ export function resetGoogleFake() {
   FakePolyline.reset()
   FakeClusterer.last = null
   FakePlace.fetches = []
-  FakeGeocoder.calls = []
-  FakeGeocoder.result = [{ formatted_address: 'Rua Augusta 10, Lisboa', place_id: 'ChIJstreet' }]
+  FakeAutocomplete.requests = []
+  FakeAutocomplete.fail = false
+  FakeToken.made = 0
   FakePlace.next = { displayName: 'Livraria Bertrand', lat: 38.711, lng: -9.142 }
   importLibrary.mockClear()
   setOptions.mockClear()

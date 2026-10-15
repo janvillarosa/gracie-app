@@ -44,19 +44,6 @@ export type MapScene = {
 
 export type MapPreview = LatLng & { label?: string }
 
-/** A click on the map, with where it landed in the pane. A click on a Google place carries its
- *  `place_id`; `displayName` (also as `name`) is Google content for display only and is never
- *  stored. */
-export type MapClick = LatLng & {
-  place_id?: string
-  displayName?: string
-  // The Google place type in plain words ("Palace"), display only.
-  typeName?: string
-  name?: string
-  x: number
-  y: number
-}
-
 export const EMPTY_SCENE: MapScene = {
   mode: 'day',
   stops: [],

@@ -6,12 +6,12 @@
 // an emphasis change; it fits when the set of stops changes while `following`, on `fitToken`, and
 // pans only when an opened item or a previewed place is off screen.
 import { MarkerClusterer, SuperClusterAlgorithm } from '@googlemaps/markerclusterer'
-import type { MapClick, MapStop } from '@lib/trips/mapScene'
+import type { MapStop } from '@lib/trips/mapScene'
 import type { MapViewProps } from '../mapView'
 import type { MapsConfig } from './config'
 import { centreFor, isVisible, projector, type Bounds } from './geometry'
 import { eligibleIds, labelText, resolveLabels, type Anchor } from './labels'
-import { loadGeocoding, loadPlaces, type Google } from './loader'
+import type { Google } from './loader'
 import {
   clusterElement,
   createPin,
@@ -24,7 +24,6 @@ import {
 
 const MAX_FIT_ZOOM = 15
 const CLUSTER_RADIUS = 28
-const GEOCODE_WAIT_MS = 1500
 
 type Pin = {
   stop: MapStop
@@ -61,7 +60,6 @@ export class MapController {
   private programmatic = true
   private programmaticTimer = 0
   private raf = 0
-  private clickSeq = 0
   private disposed = false
   private ready = false
   private onReady?: () => void
@@ -78,7 +76,8 @@ export class MapController {
       // Our own +/− and Fit buttons; only the Google logo and terms stay.
       disableDefaultUI: true,
       gestureHandling: 'greedy',
-      clickableIcons: interactive,
+      // The map is for looking: Google's place icons do nothing.
+      clickableIcons: false,
       keyboardShortcuts: interactive,
       backgroundColor: cssVar('--trip-map-ground', '#E9EEE6'),
       headingInteractionEnabled: false,
@@ -115,9 +114,6 @@ export class MapController {
         this.ready = true
         this.onReady?.()
       }
-    })
-    this.map.addListener('click', (e: google.maps.MapMouseEvent | google.maps.IconMouseEvent) => {
-      void this.handleClick(e)
     })
     this.clusterer.addListener('clusteringend', () => this.scheduleLabels())
     this.sync(props, true)
@@ -246,7 +242,11 @@ export class MapController {
           content: el,
           gmpClickable: true,
         })
+        // A pill selects its row; the pointer on it lights the row.
         marker.addEventListener('gmp-click', () => this.props.onPinClick(s.id))
+        // Purely visual: hovering a pill lights its row; nothing is clickable.
+        el.addEventListener('pointerenter', () => this.props.onPinHover?.(s.id))
+        el.addEventListener('pointerleave', () => this.props.onPinHover?.(null))
         pin = { stop: s, marker, el, text: '', anchor: 'right', hidden: false }
         this.pins.set(s.id, pin)
       } else {
@@ -396,73 +396,6 @@ export class MapController {
       if (anchor) pin.anchor = anchor
       updatePin(pin.el, this.spec(pin))
     }
-  }
-
-  // ---- click to add ---------------------------------------------------------------------------
-
-  private pixel(lat: number, lng: number) {
-    const b = this.bounds()
-    return b ? projector(b, this.map.getZoom() ?? 2)(lat, lng) : { x: 0, y: 0 }
-  }
-
-  /** A click on a Google place gives its place_id (Place Details, Essentials fields); an empty
-   *  spot is reverse-geocoded. The display name is Google content: shown, never stored. */
-  private async handleClick(e: google.maps.MapMouseEvent | google.maps.IconMouseEvent) {
-    const p = this.props
-    if (!p.interactive || !p.onMapClick || !e.latLng) return
-    // No Google info window on top of our own card.
-    e.stop()
-    const my = ++this.clickSeq
-    let lat = e.latLng.lat()
-    let lng = e.latLng.lng()
-    const placeId = (e as google.maps.IconMouseEvent).placeId ?? undefined
-    let displayName: string | undefined
-    let typeName: string | undefined
-    let place_id: string | undefined
-    try {
-      if (placeId) {
-        const { Place } = await loadPlaces()
-        const place = new Place({ id: placeId })
-        await place.fetchFields({
-          fields: [
-            'id',
-            'displayName',
-            'formattedAddress',
-            'location',
-            'primaryTypeDisplayName',
-          ],
-        })
-        place_id = placeId
-        displayName = place.displayName ?? undefined
-        typeName = place.primaryTypeDisplayName ?? undefined
-        if (place.location) {
-          lat = place.location.lat()
-          lng = place.location.lng()
-        }
-      } else {
-        const { Geocoder } = await loadGeocoding()
-        const found = await Promise.race([
-          new Geocoder().geocode({ location: { lat, lng } }),
-          new Promise<null>((r) => window.setTimeout(() => r(null), GEOCODE_WAIT_MS)),
-        ])
-        displayName = found?.results?.[0]?.formatted_address || undefined
-      }
-    } catch {
-      // The card still opens, as a dropped pin the person can name.
-      if (placeId) place_id = placeId
-    }
-    if (my !== this.clickSeq || this.disposed) return
-    const at = this.pixel(lat, lng)
-    const click: MapClick = {
-      lat,
-      lng,
-      x: at.x,
-      y: at.y,
-      ...(place_id ? { place_id } : {}),
-      ...(displayName ? { displayName, name: displayName } : {}),
-      ...(typeName ? { typeName } : {}),
-    }
-    this.props.onMapClick?.(click)
   }
 
   // ---- lifetime --------------------------------------------------------------------------------

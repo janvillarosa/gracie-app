@@ -36,7 +36,7 @@ export const MapsLink: React.FC<Props> = ({
     rel="noreferrer noopener"
     aria-label={iconOnly ? label : undefined}
     title={iconOnly ? label : undefined}
-    icon={iconOnly ? <ArrowSquareOut aria-hidden /> : undefined}
+    icon={<ArrowSquareOut aria-hidden />}
   >
     {iconOnly ? undefined : label}
   </Button>

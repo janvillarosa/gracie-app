@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import type { Place, Trip } from '@api/tripTypes'
 import {
+  asked,
   enrichTrip,
   isGoogle,
+  located,
   placeInfo,
   placeInfoVersion,
   refreshPatch,
@@ -114,7 +116,6 @@ export function usePlaceSuggest(query: string, bias?: LatLng | null): Suggest {
 
 const SPACING_MS = 200 // about 5 calls a second
 let queueTail: Promise<void> = Promise.resolve()
-const asked = new Set<string>()
 
 /** Run a task after the previous one, spaced out. */
 function paced<T>(fn: () => Promise<T>): Promise<T | undefined> {
@@ -128,7 +129,6 @@ function paced<T>(fn: () => Promise<T>): Promise<T | undefined> {
 
 /** Test hook. */
 export function resetPlaceMaintenance() {
-  asked.clear()
   queueTail = Promise.resolve()
 }
 
@@ -234,3 +234,38 @@ export function useEnrichedTrips(trips: Record<string, Trip>): Record<string, Tr
 }
 
 const sameTrip = (a: Trip, b: Trip) => a === b
+
+// ---- previewing a highlighted suggestion ---------------------------------------------------------
+
+const PREVIEW_DWELL_MS = 350
+
+/** A highlighted suggestion (arrowed to and left for a moment) is looked up for its location and
+ *  handed to `onPreview` as a place the map can draw; nothing highlighted clears it. One
+ *  `location` lookup per place, cached for the session. */
+export function useSuggestionPreview(onPreview?: (p: Place | null) => void) {
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const seq = useRef(0)
+  const cb = useRef(onPreview)
+  cb.current = onPreview
+  useEffect(() => () => clearTimeout(timer.current), [])
+  return useCallback((s: Suggestion | null) => {
+    clearTimeout(timer.current)
+    const my = ++seq.current
+    if (!s) {
+      cb.current?.(null)
+      return
+    }
+    timer.current = setTimeout(async () => {
+      let at = located.get(s.id)
+      if (at === undefined) {
+        try {
+          at = (await getPlacesSource().details(s.id, ['location'])).at
+        } catch {
+          at = null
+        }
+        located.set(s.id, at)
+      }
+      if (my === seq.current && at) cb.current?.({ source: 'google', place_id: s.id, ...at })
+    }, PREVIEW_DWELL_MS)
+  }, [])
+}

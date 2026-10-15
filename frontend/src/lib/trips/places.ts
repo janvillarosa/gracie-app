@@ -54,8 +54,15 @@ export const subscribePlaceInfo = (cb: () => void) => {
   }
 }
 export const placeInfoVersion = () => version
+/** What the maintenance pass has already asked Google, and where previews were found. Held with
+ *  the cache so a test reset (which must not load Google) clears all of it. */
+export const asked = new Set<string>()
+export const located = new Map<string, LatLng | null>()
+
 /** Test hook: the cache is per session, so tests start empty. */
 export function resetPlaceInfo() {
+  asked.clear()
+  located.clear()
   info.clear()
   version++
   for (const l of listeners) l()
@@ -195,7 +202,8 @@ export function selectRefresh(trip: Trip, nowMs: number): RefreshTarget[] {
     if (needsRefresh(p, nowMs)) out.push({ slot, place: p })
   }
   see({ kind: 'trip', field: 'destination' }, trip.destination)
-  trip.stops?.forEach((s, index) => see({ kind: 'trip', field: 'stops', index }, s))
+  for (const [index, s] of (trip.stops ?? []).entries())
+    see({ kind: 'trip', field: 'stops', index }, s)
   for (const t of trip.todos) see({ kind: 'todo', id: t.todo_id, field: 'place' }, t.place)
   for (const b of trip.bookings) {
     see({ kind: 'booking', id: b.booking_id, field: 'place' }, b.place)
@@ -229,33 +237,3 @@ export function refreshPatch(
 }
 
 export type { Booking }
-
-// ---- is this place already in the trip? (the map popover) -----------------------------------------
-
-export type Existing = { kind: 'todo' | 'booking'; id: string; day: string | null }
-
-const rad = (d: number) => (d * Math.PI) / 180
-/** Metres between two points (haversine). */
-export function metres(a: LatLng, b: LatLng): number {
-  const dLat = rad(b.lat - a.lat)
-  const dLng = rad(b.lng - a.lng)
-  const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng / 2) ** 2
-  return 2 * 6371000 * Math.asin(Math.sqrt(h))
-}
-
-/** The todo or booking that already has this place: the same Google `place_id`, or the same pin
- *  within 30 m. Todos come first; a booking's day is its start date. */
-export function findExisting(
-  trip: Pick<Trip, 'todos' | 'bookings'>,
-  at: { place_id?: string; lat: number; lng: number },
-): Existing | null {
-  const same = (p?: Place | null) => {
-    if (!p) return false
-    if (at.place_id) return p.place_id === at.place_id
-    return hasPin(p) && !p.place_id && metres(p, at) <= 30
-  }
-  const t = trip.todos.find((x) => same(x.place))
-  if (t) return { kind: 'todo', id: t.todo_id, day: t.day ?? null }
-  const b = trip.bookings.find((x) => same(x.place) || same(x.end_place))
-  return b ? { kind: 'booking', id: b.booking_id, day: b.starts_at?.slice(0, 10) ?? null } : null
-}

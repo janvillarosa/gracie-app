@@ -7,6 +7,7 @@
 import { mapsConfig, type MapsConfig } from '@components/trips/gmap/config'
 import { loadPlaces } from '@components/trips/gmap/loader'
 import type { Place } from '@api/tripTypes'
+import { placesOverride } from './placesOverride'
 import { googlePlace, type LatLng, type PlaceInfo } from './places'
 
 export type Bounds = { west: number; south: number; east: number; north: number }
@@ -264,19 +265,17 @@ export const demoSource: PlacesSource = {
   },
 }
 
-let override: PlacesSource | null = null
 let cached: { key: string; source: PlacesSource } | null = null
-/** Test hook. */
-export const setPlacesSource = (s: PlacesSource | null) => {
-  override = s
-}
+export { setPlacesSource } from './placesOverride'
 
 /** Google when there is a key, else the demo list. */
 export function getPlacesSource(): PlacesSource {
-  if (override) return override
+  const forced = placesOverride()
+  if (forced) return forced
   const config = mapsConfig()
   if (!config.key) return demoSource
   // One source per key, so hooks that depend on it do not re-run every render.
-  if (!cached || cached.key !== config.key) cached = { key: config.key, source: googleSource(config) }
+  if (!cached || cached.key !== config.key)
+    cached = { key: config.key, source: googleSource(config) }
   return cached.source
 }
