@@ -44,21 +44,32 @@ afterEach(async () => {
 describe('CR-3: a refused key on a trips request signs the user out', () => {
   it('goes to /login, clears the key and keeps the queued changes on the device', async () => {
     localStorage.setItem('gracie_api_key', 'stale')
+    // The server refuses the key only once the op is queued and stored. Otherwise the first
+    // sync (the store starts on mount) can be refused before the op exists, and the sign-out
+    // then finds nothing to keep: a race that only showed under load.
+    let open: () => void = () => {}
+    const queued = new Promise<void>((resolve) => {
+      open = resolve
+    })
     server.use(
       http.get('/api/me', () => HttpResponse.json({ user_id: USER, room_id: ROOM })),
-      http.post('/api/rooms/:roomId/trips/sync', () =>
-        HttpResponse.json({ error: 'unauthorized' }, { status: 401 }),
-      ),
-      http.post('/api/rooms/:roomId/trips/ops', () =>
-        HttpResponse.json({ error: 'unauthorized' }, { status: 401 }),
-      ),
+      http.post('/api/rooms/:roomId/trips/sync', async () => {
+        await queued
+        return HttpResponse.json({ error: 'unauthorized' }, { status: 401 })
+      }),
+      http.post('/api/rooms/:roomId/trips/ops', async () => {
+        await queued
+        return HttpResponse.json({ error: 'unauthorized' }, { status: 401 })
+      }),
     )
     mount()
     await waitFor(() => expect(store).not.toBeNull())
     const s = store as unknown as TripStore
     await s.hydrate()
     s.createTrip({ title: 'Typed offline' })
-    await screen.findByText('login page')
+    await s.settle()
+    open()
+    await screen.findByText('login page', {}, { timeout: 5000 })
     expect(localStorage.getItem('gracie_api_key')).toBeNull()
     // Same rule as an ordinary sign-out: unsent changes are kept, not wiped.
     await waitFor(() => expect(getPendingOnLogout()).toBe(1))
