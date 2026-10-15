@@ -805,6 +805,7 @@ const TripScreen: React.FC<{
         title={mapTitle}
         focusId={selected}
         focusPoint={focusPoint}
+        focusInset={desktop && selected ? 420 : 0}
         onPinClick={onPinClick}
       />
     </div>
@@ -824,7 +825,9 @@ const TripScreen: React.FC<{
           break
         }
     }
-    const label = new Date(nowMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    // 24-hour, like every other time on the page.
+    const nd = new Date(nowMs)
+    const label = `${String(nd.getHours()).padStart(2, '0')}:${String(nd.getMinutes()).padStart(2, '0')}`
     return { index: idx, label }
   }, [schedule.days, today, phase, nowMs])
 
@@ -957,6 +960,7 @@ const TripScreen: React.FC<{
     <BookingDetail
       key={selBooking.booking_id}
       booking={selBooking}
+      days={moveTargets}
       focusTime={focusTime === selBooking.booking_id}
       tripTz={trip.tz}
       bias={bias}

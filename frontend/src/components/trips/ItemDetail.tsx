@@ -7,7 +7,8 @@ import { type BookingActions } from './Bookings'
 import { CodeReveal } from './CodeReveal'
 import type { MoveTarget } from './MoveMenu'
 import { PlacePicker } from './PlacePicker'
-import { BOOKING_KINDS, CATEGORIES, KIND_ICON, categoryLabel } from './tripUi'
+import { DayChip, LengthChip, StampChip, TimeChip } from './Chips'
+import { BOOKING_KINDS, KIND_ICON } from './tripUi'
 
 type Bias = { lat: number; lng: number } | null
 
@@ -68,13 +69,6 @@ const BackBar: React.FC<{ onBack: () => void; title: string }> = ({ onBack, titl
   </div>
 )
 
-const DURATIONS: Array<{ value: number; label: string }> = [
-  { value: 30, label: '30 min' },
-  { value: 60, label: '1 h' },
-  { value: 120, label: '2 h' },
-  { value: 240, label: 'Half day' },
-]
-
 type TodoDetailProps = {
   todo: TripTodo
   bookings: Booking[]
@@ -109,15 +103,17 @@ export const TodoDetail: React.FC<TodoDetailProps> = ({
   onCopy,
 }) => {
   const [view, setView] = useState<'main' | 'place' | 'booking'>('main')
-  const [timing, setTiming] = useState(!!focusTime)
-  const [custom, setCustom] = useState(false)
   const pin = todo.place && todo.place.source !== 'manual' ? todo.place : null
   const linked = bookings.find((b) => b.booking_id === todo.booking_id)
-  const preset = DURATIONS.some((d) => d.value === todo.duration_min)
+  // A place named like the item says only where it is: "Sintra", not the name twice.
+  const sameName =
+    !!todo.place && todo.place.name.trim().toLowerCase() === todo.title.trim().toLowerCase()
   const placeText = todo.place
-    ? [todo.place.name, todo.place.locality]
-        .filter((x, i, a) => x && a.indexOf(x) === i)
-        .join(' · ')
+    ? sameName
+      ? (todo.place.locality ?? todo.place.name)
+      : [todo.place.name, todo.place.locality]
+          .filter((x, i, a) => x && a.indexOf(x) === i)
+          .join(' · ')
     : ''
 
   if (view === 'place') {
@@ -200,105 +196,32 @@ export const TodoDetail: React.FC<TodoDetailProps> = ({
       </Row>
 
       <div className="trip-sheet-chips">
-        <select
-          className="trip-chip"
-          aria-label="Day"
-          value={todo.day ?? ''}
+        <DayChip
+          value={todo.day ?? null}
+          days={days}
+          allowIdeas
           disabled={locked}
-          onChange={(e) => onMove(e.target.value || null)}
-        >
-          <option value="">Ideas (no day)</option>
-          {days
-            .filter((d) => d.value !== null)
-            .map((d) => (
-              <option key={d.value} value={d.value as string}>
-                {d.label}
-              </option>
-            ))}
-          {todo.day && !days.some((d) => d.value === todo.day) && (
-            <option value={todo.day}>{todo.day}</option>
-          )}
-        </select>
-        {todo.start_time || timing ? (
-          <input
-            key={todo.start_time ?? 'new'}
-            className="trip-chip"
-            type="time"
-            aria-label="Time"
-            defaultValue={todo.start_time ?? ''}
+          onPick={onMove}
+        />
+        <TimeChip
+          value={todo.start_time ?? null}
+          clearable
+          disabled={locked}
+          autoFocus={focusTime}
+          onPick={(t) => onPatch({ start_time: t })}
+        />
+        {todo.start_time && (
+          <LengthChip
+            value={todo.duration_min}
             disabled={locked}
-            // biome-ignore lint/a11y/noAutofocus: the time field opens because "+ Time" was pressed
-            autoFocus={focusTime || (timing && !todo.start_time)}
-            onBlur={(e) => {
-              const v = e.target.value || null
-              setTiming(false)
-              if (v !== (todo.start_time ?? null)) onPatch({ start_time: v })
-            }}
+            onPick={(n) => onPatch({ duration_min: n })}
           />
-        ) : (
-          <button
-            type="button"
-            className="trip-chip is-add"
-            disabled={locked}
-            onClick={() => setTiming(true)}
-          >
-            + Time
-          </button>
         )}
-        {todo.start_time &&
-          (custom || (todo.duration_min && !preset) ? (
-            <input
-              className="trip-chip"
-              type="number"
-              min={1}
-              max={1440}
-              inputMode="numeric"
-              aria-label="Duration in minutes"
-              key={String(todo.duration_min ?? '')}
-              defaultValue={todo.duration_min ?? ''}
-              disabled={locked}
-              onBlur={(e) => {
-                const n = e.target.value ? Number(e.target.value) : null
-                if ((n === null || (n >= 1 && n <= 1440)) && n !== (todo.duration_min ?? null))
-                  onPatch({ duration_min: n })
-              }}
-            />
-          ) : (
-            <select
-              className="trip-chip"
-              aria-label="Duration"
-              value={todo.duration_min ?? ''}
-              disabled={locked}
-              onChange={(e) => {
-                if (e.target.value === 'custom') return setCustom(true)
-                onPatch({ duration_min: e.target.value ? Number(e.target.value) : null })
-              }}
-            >
-              <option value="">+ Length</option>
-              {DURATIONS.map((d) => (
-                <option key={d.value} value={d.value}>
-                  {d.label}
-                </option>
-              ))}
-              <option value="custom">Custom</option>
-            </select>
-          ))}
-      </div>
-
-      <div className="trip-sheet-stamps" role="group" aria-label="Category">
-        {CATEGORIES.map((c) => (
-          <button
-            key={c.value}
-            type="button"
-            disabled={locked}
-            aria-pressed={todo.category === c.value}
-            aria-label={`Category: ${categoryLabel(c.value)}`}
-            className={`category-tag trip-cat trip-cat-${c.value} trip-stamp-btn${todo.category === c.value ? ' is-on' : ''}`}
-            onClick={() => onPatch({ category: c.value as TripCategory })}
-          >
-            {c.label}
-          </button>
-        ))}
+        <StampChip
+          value={todo.category}
+          disabled={locked}
+          onPick={(c: TripCategory) => onPatch({ category: c })}
+        />
       </div>
 
       {(bookings.length > 0 || linked) && (
@@ -366,7 +289,13 @@ type BookingDetailProps = {
   byline: string
   locked: boolean
   focusTime?: boolean
+  days: MoveTarget[]
   actions: BookingActions
+}
+
+const split = (dt?: string | null) => {
+  const [d = '', t = ''] = (dt ?? '').split('T')
+  return { d, t }
 }
 
 const validZone = (z: string) => {
@@ -386,6 +315,7 @@ export const BookingDetail: React.FC<BookingDetailProps> = ({
   byline,
   locked,
   focusTime,
+  days,
   actions,
 }) => {
   const [view, setView] = useState<'main' | 'place'>('main')
@@ -450,18 +380,21 @@ export const BookingDetail: React.FC<BookingDetailProps> = ({
       <div className="trip-fromto">
         <div className="trip-fromto-row">
           <span className="trip-fromto-label">From</span>
-          <input
-            className="trip-chip"
-            type="datetime-local"
-            aria-label="Starts"
-            // biome-ignore lint/a11y/noAutofocus: opened from an overlap line to change the time
-            autoFocus={focusTime}
-            key={b.starts_at ?? 's'}
-            defaultValue={b.starts_at ?? ''}
+          <DayChip
+            value={split(b.starts_at).d || null}
+            days={days}
+            placeholder="Add a day"
             disabled={locked}
-            onBlur={(e) => {
-              if ((e.target.value || null) !== (b.starts_at ?? null))
-                save({ starts_at: e.target.value || null })
+            onPick={(d) => d && save({ starts_at: `${d}T${split(b.starts_at).t || '09:00'}` })}
+          />
+          <TimeChip
+            label="Starts"
+            value={split(b.starts_at).t || null}
+            disabled={locked}
+            autoFocus={focusTime}
+            onPick={(t) => {
+              const d = split(b.starts_at).d || (days.find((x) => x.value)?.value as string)
+              if (t && d) save({ starts_at: `${d}T${t}` })
             }}
           />
           <input
@@ -476,16 +409,22 @@ export const BookingDetail: React.FC<BookingDetailProps> = ({
         </div>
         <div className="trip-fromto-row">
           <span className="trip-fromto-label">To</span>
-          <input
-            className="trip-chip"
-            type="datetime-local"
-            aria-label="Ends"
-            key={b.ends_at ?? 'e'}
-            defaultValue={b.ends_at ?? ''}
+          <DayChip
+            value={split(b.ends_at).d || null}
+            days={days}
+            placeholder="Add a day"
             disabled={locked}
-            onBlur={(e) => {
-              if ((e.target.value || null) !== (b.ends_at ?? null))
-                save({ ends_at: e.target.value || null })
+            onPick={(d) => d && save({ ends_at: `${d}T${split(b.ends_at).t || '12:00'}` })}
+          />
+          <TimeChip
+            label="Ends"
+            value={split(b.ends_at).t || null}
+            clearable
+            disabled={locked}
+            onPick={(t) => {
+              const d = split(b.ends_at).d || split(b.starts_at).d
+              if (!t) save({ ends_at: null })
+              else if (d) save({ ends_at: `${d}T${t}` })
             }}
           />
           <input

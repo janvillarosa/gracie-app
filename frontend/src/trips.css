@@ -2395,3 +2395,76 @@ textarea.trip-field {
   scale: 1.2;
   box-shadow: 0 0 0 4px var(--brand-yellow), 0 2px 6px rgba(0, 0, 0, 0.25);
 }
+
+/* ---- the edit sheet: a 24px heading, real chips on one row, one quiet stamp --------------- */
+.trip-sheet-title {
+  font-weight: 700;
+}
+.trip-sheet-headline {
+  align-items: center;
+}
+.trip-sheet-headline .trip-check {
+  margin-top: 0;
+}
+.trip-sheet-chips {
+  align-items: center;
+}
+.trip-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.trip-chip svg {
+  color: var(--muted);
+  font-size: 12px;
+}
+.trip-chip:disabled {
+  cursor: default;
+}
+.trip-chip .category-tag {
+  margin: 0;
+}
+.trip-chip-pop .ant-popover-inner {
+  padding: 4px;
+  min-width: 200px;
+}
+.trip-pick-scroll {
+  max-height: 260px;
+  overflow-y: auto;
+}
+.trip-chip-pop .trip-pick-row,
+.trip-sheet-pad .trip-pick-row {
+  padding: 0 12px;
+  border-top: 0;
+  border-radius: 10px;
+}
+.trip-pick-row[aria-selected='true'] {
+  font-weight: 650;
+  background: color-mix(in srgb, var(--brand-yellow) 22%, white);
+}
+.trip-custom-length {
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+}
+.trip-custom-length input {
+  width: 96px;
+}
+/* The stamp the item has is the only loud one; the others wait in the picker. */
+.trip-sheet-stamps {
+  padding: 8px;
+  border-top: 0;
+}
+.trip-stamp-btn {
+  opacity: 0.7;
+}
+.trip-stamp-btn.is-on {
+  opacity: 1;
+  outline: 0;
+}
+.trip-chip .trip-stamp-btn {
+  min-height: 0;
+  cursor: inherit;
+}

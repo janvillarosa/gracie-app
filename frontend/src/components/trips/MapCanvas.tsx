@@ -42,6 +42,7 @@ const MapCanvas: React.FC<Props> = ({
   title,
   onPinClick,
   focusPoint,
+  focusInset = 0,
   nextId,
   hot,
   tilesUrl,
@@ -169,9 +170,10 @@ const MapCanvas: React.FC<Props> = ({
     if (focusPoint)
       mapRef.current?.easeTo({
         center: [focusPoint.lng, focusPoint.lat],
+        padding: { top: 0, bottom: 0, left: 0, right: focusInset },
         duration: reduced() ? 0 : 500,
       })
-  }, [focusPoint])
+  }, [focusPoint, focusInset])
 
   useEffect(() => {
     for (const [id, { el }] of markers.current) el.classList.toggle('is-hot', id === hot)

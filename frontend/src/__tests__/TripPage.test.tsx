@@ -119,10 +119,10 @@ describe('Overlaps', () => {
       await screen.findByRole('button', { name: /Jerónimos Monastery and Pastéis/ }),
     )
     const sheet = await screen.findByRole('dialog', { name: 'Pastéis de Belém' })
-    const time = within(sheet).getByLabelText('Time')
+    const time = within(sheet).getByRole('button', { name: /^Time, / })
     expect(time).toHaveFocus()
-    fireEvent.change(time, { target: { value: '12:30' } })
-    fireEvent.blur(time)
+    await userEvent.click(time)
+    await userEvent.click(await screen.findByRole('option', { name: '12:30' }))
     await waitFor(() =>
       expect(screen.queryByRole('button', { name: /overlap/ })).not.toBeInTheDocument(),
     )
@@ -543,8 +543,12 @@ describe('Rows', () => {
     const title = within(panel).getByLabelText('Title')
     expect(title).toHaveValue('Lunch at Tascantiga')
     expect(within(panel).getByRole('button', { name: /Add a place/ })).toBeInTheDocument()
-    expect(within(panel).getByLabelText('Day')).toHaveValue(rel(0))
-    expect(within(panel).getByRole('group', { name: 'Category' })).toBeInTheDocument()
+    expect(
+      within(panel).getByRole('button', { name: `Day, ${shortDay(rel(0))}` }),
+    ).toBeInTheDocument()
+    // Only the chosen stamp shows; the seven wait behind it.
+    expect(within(panel).getByRole('button', { name: 'Category, Sight' })).toBeInTheDocument()
+    expect(within(panel).queryByRole('button', { name: 'Category: Food' })).not.toBeInTheDocument()
     expect(within(panel).getByPlaceholderText('Add a note')).toBeInTheDocument()
     // No Save button, and a quiet Delete at the bottom.
     expect(within(panel).queryByRole('button', { name: /^Save/ })).not.toBeInTheDocument()
@@ -663,9 +667,8 @@ describe('Rows', () => {
     open()
     await userEvent.click(await screen.findByRole('button', { name: 'Buy souvenirs' }))
     const panel = await screen.findByRole('dialog', { name: 'Buy souvenirs' })
-    await userEvent.click(within(panel).getByRole('button', { name: '+ Time' }))
-    await userEvent.type(within(panel).getByLabelText('Time'), '11:00')
-    await userEvent.tab()
+    await userEvent.click(within(panel).getByRole('button', { name: 'Time, not set' }))
+    await userEvent.click(await screen.findByRole('option', { name: '11:00' }))
     // Between Pena Palace (10:15, the deck) and Lunch (12:30).
     await waitFor(() =>
       expect(rowTitles().slice(0, 3)).toEqual([
@@ -780,7 +783,7 @@ describe('The add bar', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Add with details' }))
     const panel = await screen.findByRole('dialog', { name: 'Ginjinha stop' })
     expect(within(panel).getByLabelText('Title')).toHaveValue('Ginjinha stop')
-    expect(within(panel).getByLabelText('Time')).toHaveValue('16:00')
+    expect(within(panel).getByRole('button', { name: 'Time, 16:00' })).toBeInTheDocument()
     await waitFor(() => expect(serverTodos().some((x) => x.title === 'Ginjinha stop')).toBe(true))
   })
 

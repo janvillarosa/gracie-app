@@ -45,7 +45,7 @@ export const Panel: React.FC<PanelProps> = ({ title, onClose, desktop, bare, chi
   }, [desktop])
   if (!desktop) {
     return (
-      <Sheet title={title} bare={bare} onClose={onClose} height={bare ? '88%' : undefined}>
+      <Sheet title={title} bare={bare} onClose={onClose}>
         {children}
       </Sheet>
     )

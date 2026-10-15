@@ -24,6 +24,8 @@ export type MapProps = {
   // The item open in the detail panel: its pin is lifted and the map centres on it.
   focusId?: string | null
   focusPoint?: { lat: number; lng: number } | null
+  // Pixels on the right covered by a docked panel: the focused pin centres in what is left.
+  focusInset?: number
   // The next stop (during the trip): its pin is larger, with a yellow ring.
   nextId?: string | null
   onPinClick: (id: string) => void
