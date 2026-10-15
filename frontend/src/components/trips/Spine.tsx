@@ -51,16 +51,57 @@ export function recentOther(
   return name === 'a housemate' ? 'A housemate' : name
 }
 
-function noteFor(
-  todo: TripTodo,
+// Notes are cached per row so a row's memoised props stay equal while nothing changed.
+const noteCache = new Map<string, { text: string }>()
+const stable = (key: string, text: string) => {
+  const have = noteCache.get(key)
+  if (have && have.text === text) return have
+  const next = { text }
+  noteCache.set(key, next)
+  return next
+}
+
+/** A row's own note: "Mia changed this after your offline edit" (todos and bookings). */
+function entityNote(
+  key: string,
+  updatedBy: string | undefined,
   notes: Record<string, ConflictNote>,
   me: string | undefined,
   members: Member[],
 ) {
-  if (!notes[todo.todo_id]) return undefined
-  const who = memberName(todo.updated_by, me, members)
+  if (!notes[key]) return undefined
+  const who = memberName(updatedBy, me, members)
   const name = !who || who === 'you' ? 'Someone' : who === 'a housemate' ? 'A housemate' : who
-  return { text: `${name} changed this after your offline edit` }
+  return stable(key, `${name} changed this after your offline edit`)
+}
+
+const FIELD_WORDS: Record<string, string> = {
+  title: 'the name',
+  notes: 'the notes',
+  start_date: 'the dates',
+  end_date: 'the dates',
+  stops: 'the route',
+  destination: 'the route',
+  icon: 'the icon',
+  tz: 'the time zone',
+}
+/** "the name", "the day label for Tue 20": a trip field in words. */
+export function fieldPhrase(f: string): string {
+  if (f.startsWith('days.')) return `the day label for ${shortDay(f.slice(5))}`
+  return FIELD_WORDS[f] ?? f.replace(/_/g, ' ')
+}
+
+/** Notes about the trip itself (not a row): shown in the header. */
+export function tripNoteList(notes: Record<string, ConflictNote>, tripId: string) {
+  return Object.values(notes)
+    .filter((n) => n.tripId === tripId && n.kind === 'trip')
+    .map((n) => {
+      const what = [...new Set(n.fields.map(fieldPhrase))]
+      return {
+        key: n.key,
+        text: `A housemate changed ${what.length ? what.join(' and ') : 'this'} after your offline edit`,
+      }
+    })
 }
 
 type RowsProps = {
@@ -112,7 +153,7 @@ export const EntryRows: React.FC<RowsProps> = ({
           key={td.todo_id}
           todo={td}
           changedBy={recentOther(td, shared.me, shared.members, t)}
-          note={noteFor(td, shared.notes, shared.me, shared.members)}
+          note={entityNote(td.todo_id, td.updated_by, shared.notes, shared.me, shared.members)}
           moveOpen={moveOpenId === td.todo_id}
           selected={selectedId === td.todo_id}
           overdue={!!today && e.day === today && !td.done && e.endMs !== null && e.endMs < nowMs}
@@ -134,6 +175,8 @@ export const EntryRows: React.FC<RowsProps> = ({
           past={(e.endMs ?? e.startMs ?? Number.POSITIVE_INFINITY) < nowMs}
           selected={selectedId === b.booking_id}
           clash={!!clashIds?.includes(b.booking_id)}
+          note={entityNote(b.booking_id, b.updated_by, shared.notes, shared.me, shared.members)}
+          onSeeTheirs={shared.actions.seeTheirs}
           onOpen={shared.actions.open}
         />,
       )

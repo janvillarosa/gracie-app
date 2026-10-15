@@ -106,7 +106,12 @@ export const TripSettings: React.FC = () => {
     : trip.destination
       ? [trip.destination]
       : []
-  const setStops = (next: Place[]) => patch({ stops: next, destination: next[0] ?? null })
+  const setStops = (next: Place[]) => {
+    // Changing where the trip starts also moves its zone (an explicit edit), when the place has one.
+    const first = next[0]
+    const moved = first && first.name !== stops[0]?.name && first.tz
+    patch({ stops: next, destination: first ?? null, ...(moved ? { tz: first.tz } : {}) })
+  }
   const days = trip.start_date && trip.end_date ? diffDays(trip.end_date, trip.start_date) + 1 : 0
   const when = trip.start_date
     ? `${shortRange(trip.start_date, trip.end_date)} · ${days} ${days === 1 ? 'day' : 'days'}`

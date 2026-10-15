@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import React from 'react'
+import { Navigate, useLocation } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@auth/AuthProvider'
 import { getLists, getMe, getMyRoom, isNotFound } from '@api/endpoints'
@@ -12,13 +12,7 @@ import { HouseLoader } from '@components/HouseLoader'
 
 export const Dashboard: React.FC<{ tab?: 'lists' | 'trips' }> = ({ tab = 'lists' }) => {
   const { apiKey, setApiKey } = useAuth()
-  const navigate = useNavigate()
   const loc = useLocation()
-  // Coming back to the House lands on the pill you last used.
-  useEffect(() => {
-    if (tab === 'lists' && loc.pathname === '/app' && lastHousePill() === 'trips')
-      navigate('/app/trips', { replace: true })
-  }, [tab, loc.pathname, navigate])
   const key = apiKey!
   const meQuery = useQuery({
     queryKey: ['me'],
@@ -37,6 +31,11 @@ export const Dashboard: React.FC<{ tab?: 'lists' | 'trips' }> = ({ tab = 'lists'
     queryFn: () => getLists(key, roomId!),
     enabled: !!roomId,
   })
+
+  // Coming back to the House lands on the pill you last used (decided while rendering, so
+  // there is no frame of the wrong pill and no effect racing the data).
+  if (tab === 'lists' && loc.pathname === '/app' && lastHousePill() === 'trips')
+    return <Navigate to="/app/trips" replace />
 
   if (meQuery.isLoading || roomQuery.isLoading) {
     return (

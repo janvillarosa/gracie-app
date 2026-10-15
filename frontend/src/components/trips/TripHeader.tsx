@@ -19,6 +19,9 @@ type HeaderProps = {
   deletedBy: string
   readOnlyOver: boolean
   members: Member[]
+  // Notes about the trip itself: "A housemate changed the name after your offline edit".
+  notes: Array<{ key: string; text: string }>
+  onDismissNote: (key: string) => void
   onUnlock: () => void
   onRestore: () => void
   onMenu: (key: 'notes' | 'packing' | 'details') => void
@@ -42,6 +45,8 @@ export const TripHeader: React.FC<HeaderProps> = ({
   deletedBy,
   readOnlyOver,
   members,
+  notes,
+  onDismissNote,
   onUnlock,
   onRestore,
   onMenu,
@@ -144,6 +149,14 @@ export const TripHeader: React.FC<HeaderProps> = ({
           </Dropdown>
         </div>
       </div>
+      {notes.map((n) => (
+        <div key={n.key} className="trip-note trip-note-trip" role="status">
+          <span>{n.text}</span>
+          <Button size="small" type="link" onClick={() => onDismissNote(n.key)}>
+            Got it
+          </Button>
+        </div>
+      ))}
       {(offline || pending > 0 || readOnlyOver || persistFailed) && (
         <div className="trip-header-row">
           {(offline || pending > 0) && (

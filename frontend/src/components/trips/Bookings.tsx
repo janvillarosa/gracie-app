@@ -244,6 +244,9 @@ type LineProps = {
   tonight?: boolean
   selected: boolean
   clash?: boolean
+  // "Mia changed this after your offline edit", with a way to see theirs.
+  note?: { text: string }
+  onSeeTheirs?: (id: string) => void
   onOpen: (id: string) => void
 }
 
@@ -255,6 +258,8 @@ export const BookingLine = React.memo<LineProps>(function BookingLine({
   tonight,
   selected,
   clash,
+  note,
+  onSeeTheirs,
   onOpen,
 }) {
   const open = tonight ? `tonight-${b.booking_id}` : b.booking_id
@@ -285,6 +290,14 @@ export const BookingLine = React.memo<LineProps>(function BookingLine({
         <span className="trip-stub-title">{b.title}</span>
         {past && <span className="trip-used">Used</span>}
       </button>
+      {note && (
+        <div className="trip-note" role="status">
+          <span>{note.text}</span>
+          <Button size="small" type="link" onClick={() => onSeeTheirs?.(b.booking_id)}>
+            See theirs
+          </Button>
+        </div>
+      )}
     </li>
   )
 })

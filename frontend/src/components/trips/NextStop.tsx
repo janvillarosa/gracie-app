@@ -60,6 +60,13 @@ export const NextStopDeck: React.FC<Props> = ({
   const [stamp, setStamp] = useState(false)
   const cardRef = useRef<HTMLElement>(null)
   const headRef = useRef<HTMLHeadingElement>(null)
+  const leaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(
+    () => () => {
+      if (leaveTimer.current) clearTimeout(leaveTimer.current)
+    },
+    [],
+  )
   const dealt = useRef(false)
   const wasOpen = useRef(open.length)
 
@@ -96,7 +103,8 @@ export const NextStopDeck: React.FC<Props> = ({
     dealt.current = true
     if (reduced()) return onDone(id)
     setLeaving(true)
-    setTimeout(() => {
+    if (leaveTimer.current) clearTimeout(leaveTimer.current)
+    leaveTimer.current = setTimeout(() => {
       setLeaving(false)
       onDone(id)
     }, LEAVE_MS)

@@ -18,6 +18,7 @@ import { reorderLock } from '@components/ItemRow'
 import { HouseLoader } from '@components/HouseLoader'
 import { createPackingList } from '@api/tripEndpoints'
 import { usePacking } from '@lib/trips/usePacking'
+import { LIMITS } from '@lib/trips/limits'
 import type { Booking, Trip } from '@api/tripTypes'
 import { errorMessage } from '@lib/errors'
 import { useDocumentTitle } from '@lib/useDocumentTitle'
@@ -49,7 +50,14 @@ import { NextStopDeck, type Stop, type Tomorrow } from '@components/trips/NextSt
 import { useMedia } from '@components/trips/Phone'
 import { IdeasPanel, NotesPane, Panel, type TabId } from '@components/trips/Panels'
 import { AddBar, type QuickAddItem } from '@components/trips/QuickAdd'
-import { DaySection, EntryRows, bylineFor, dayDone, type Shared } from '@components/trips/Spine'
+import {
+  DaySection,
+  EntryRows,
+  bylineFor,
+  dayDone,
+  tripNoteList,
+  type Shared,
+} from '@components/trips/Spine'
 import { TripHeader } from '@components/trips/TripHeader'
 import { TripMap, type MapPoint, type TripMapHandle } from '@components/trips/TripMap'
 import type { RowActions } from '@components/trips/TodoRow'
@@ -61,7 +69,6 @@ import '../trips.css'
 type Extra = 'notes' | null
 const UNDO_MS = 5000
 const CELEBRATE_MS = 1100
-const MAX_TODOS = 150
 
 const reduced = () => !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
@@ -126,10 +133,13 @@ function useScreenActions(ctx: React.MutableRefObject<Ctx>) {
     const c = () => ctx.current
     const add = (day: string | null, item: QuickAddItem): string | undefined => {
       const { trip, store, announce, entered, showDay } = c()
-      if (trip.todos.length >= MAX_TODOS) {
+      if (trip.todos.length >= LIMITS.todos) {
         message.error('This trip is full (150 todos). Remove something before adding more.')
         return undefined
       }
+      // A gentle word before the wall.
+      if (trip.todos.length + 1 >= LIMITS.todosWarnAt && trip.todos.length + 1 < LIMITS.todos)
+        message.warning(`${LIMITS.todos - trip.todos.length - 1} left before this trip is full.`)
       const order =
         day && item.start_time
           ? slotOrder(trip, day, item.start_time, item.place?.tz)
@@ -240,6 +250,10 @@ function useScreenActions(ctx: React.MutableRefObject<Ctx>) {
     const bookingActions: BookingActions = {
       save: (id, patch) => {
         const { trip, store, announce } = c()
+        if (!id && trip.bookings.length >= LIMITS.bookings) {
+          message.error('This trip has all the bookings it can hold (50). Remove one to add more.')
+          return
+        }
         if (id) store.updateBooking(trip.trip_id, id, patch)
         else store.createBooking(trip.trip_id, patch)
         announce('Booking saved')
@@ -327,6 +341,15 @@ const TripScreen: React.FC<{
   // The item whose time field opens ready (from an overlap line).
   const [focusTime, setFocusTime] = useState<string | null>(null)
   const mapRef = useRef<TripMapHandle>(null)
+  const enterTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const sweepTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(
+    () => () => {
+      if (enterTimer.current) clearTimeout(enterTimer.current)
+      if (sweepTimer.current) clearTimeout(sweepTimer.current)
+    },
+    [],
+  )
 
   const desktop = useMedia('(min-width: 1024px)')
   // Tablets use the phone layout: one column, the map in a sheet.
@@ -391,7 +414,8 @@ const TripScreen: React.FC<{
       }),
     entered: (id) => {
       setEnteringId(id)
-      setTimeout(() => setEnteringId((e) => (e === id ? null : e)), 1800)
+      if (enterTimer.current) clearTimeout(enterTimer.current)
+      enterTimer.current = setTimeout(() => setEnteringId((e) => (e === id ? null : e)), 1800)
     },
     showDay: (date) => setOverride((o) => (o[date] === true ? o : { ...o, [date]: true })),
   }
@@ -760,7 +784,8 @@ const TripScreen: React.FC<{
     row.scrollIntoView?.({ block: 'center', behavior: reduced() ? 'auto' : 'smooth' })
     row.classList.add('is-sweep')
     row.querySelector<HTMLElement>('.trip-main, .trip-stubline')?.focus({ preventScroll: true })
-    setTimeout(() => row.classList.remove('is-sweep'), 1400)
+    if (sweepTimer.current) clearTimeout(sweepTimer.current)
+    sweepTimer.current = setTimeout(() => row.classList.remove('is-sweep'), 1400)
   }, [])
 
   const onSpineOver = (e: React.SyntheticEvent) => {
@@ -974,6 +999,12 @@ const TripScreen: React.FC<{
     <BookingDetail
       key={selBooking.booking_id}
       booking={selBooking}
+      note={
+        state.notes[selBooking.booking_id]
+          ? 'A housemate changed this after your offline edit'
+          : undefined
+      }
+      onDismissNote={() => store.dismissNote(selBooking.booking_id)}
       days={moveTargets}
       focusTime={focusTime === selBooking.booking_id}
       tripTz={trip.tz}
@@ -1248,6 +1279,8 @@ const TripScreen: React.FC<{
                 deletedBy={deletedBy}
                 readOnlyOver={phase === 'after' && !unlocked && !trip.deleted}
                 members={members}
+                notes={tripNoteList(state.notes, trip.trip_id)}
+                onDismissNote={(k) => store.dismissNote(k)}
                 onUnlock={() => setUnlocked(true)}
                 onRestore={() => store.restoreTrip(trip.trip_id)}
                 onMenu={(k) =>

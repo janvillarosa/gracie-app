@@ -697,6 +697,69 @@ describe('Rows', () => {
     })
   })
 
+  it('shows a trip-level conflict, including a day label, in the header', async () => {
+    seed(TRIP)
+    open()
+    await screen.findByText('Lunch at Tascantiga')
+    act(() => {
+      const s = store()
+      s['notes'] = {
+        [TRIP.trip_id]: {
+          key: TRIP.trip_id,
+          tripId: TRIP.trip_id,
+          kind: 'trip',
+          fields: ['title', `days.${rel(0)}`],
+          at: Date.now(),
+        },
+      }
+      s['emit']()
+    })
+    expect(
+      await screen.findByText(
+        `A housemate changed the name and the day label for ${shortDay(rel(0))} after your offline edit`,
+      ),
+    ).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Got it' }))
+    await waitFor(() =>
+      expect(screen.queryByText(/after your offline edit/)).not.toBeInTheDocument(),
+    )
+  })
+
+  it('shows a booking-level conflict on its stub and in its sheet', async () => {
+    const t = lisbonTrip()
+    const id = `tbk_${'6'.padStart(32, '0')}`
+    t.bookings.push({
+      booking_id: id,
+      kind: 'ticket',
+      title: 'Timed entry',
+      starts_at: `${rel(0)}T23:00`,
+      created_by: MIA,
+    })
+    seed(t)
+    open()
+    await screen.findByText('Lunch at Tascantiga')
+    act(() => {
+      const s = store()
+      s['notes'] = {
+        [id]: { key: id, tripId: TRIP.trip_id, kind: 'booking', fields: ['title'], at: Date.now() },
+      }
+      s['emit']()
+    })
+    expect(
+      await screen.findByText('Someone changed this after your offline edit'),
+    ).toBeInTheDocument()
+    // Opening it from the stub shows the same note in the sheet; "See theirs" opens it and clears it.
+    await userEvent.click(screen.getByRole('button', { name: /Timed entry/ }))
+    const sheet = await screen.findByRole('dialog', { name: 'Timed entry' })
+    expect(within(sheet).getByText(/changed this after your offline edit/)).toBeInTheDocument()
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Got it' }))
+    await waitFor(() =>
+      expect(
+        within(sheet).queryByText(/changed this after your offline edit/),
+      ).not.toBeInTheDocument(),
+    )
+  })
+
   it('says plainly when the device is not keeping our changes', async () => {
     seed(TRIP)
     open()

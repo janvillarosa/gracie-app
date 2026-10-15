@@ -36,8 +36,8 @@ export const TripsPreference: React.FC = () => {
       u ? { ...u, preferences: { ...u.preferences, trips_show_next_stop: next } } : u,
     )
     try {
-      const saved = await setMyPreferences(apiKey as string, { trips_show_next_stop: next })
-      if (saved && typeof saved === 'object' && 'user_id' in saved) qc.setQueryData(['me'], saved)
+      await setMyPreferences(apiKey as string, { trips_show_next_stop: next })
+      await qc.invalidateQueries({ queryKey: ['me'] })
     } catch (e) {
       qc.setQueryData(['me'], before)
       message.error(errorMessage(e, 'Couldn’t save that. Try again.'))

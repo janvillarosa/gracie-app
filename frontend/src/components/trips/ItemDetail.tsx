@@ -3,6 +3,7 @@ import { Button, Checkbox } from 'antd'
 import { CaretLeft, CaretRight, MapPin, Ticket } from '@phosphor-icons/react'
 import type { Booking, BookingKind, TripCategory, TripTodo } from '@api/tripTypes'
 import { mapsUrl } from '@lib/trips/schedule'
+import { LIMITS, notesProblem, titleProblem } from '@lib/trips/limits'
 import { type BookingActions } from './Bookings'
 import { CodeReveal } from './CodeReveal'
 import type { MoveTarget } from './MoveMenu'
@@ -18,27 +19,76 @@ const SheetTitle: React.FC<{
   onCommit: (v: string) => void
   autoFocus?: boolean
   disabled?: boolean
-}> = ({ value, onCommit, autoFocus, disabled }) => (
-  <input
-    key={value}
-    className="trip-sheet-title"
-    aria-label="Title"
-    defaultValue={value}
-    maxLength={200}
-    disabled={disabled}
-    // biome-ignore lint/a11y/noAutofocus: a new item opens with its title ready to type
-    autoFocus={autoFocus}
-    onFocus={(e) => autoFocus && e.target.select()}
-    onKeyDown={(e) => {
-      if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
-    }}
-    onBlur={(e) => {
-      const v = e.target.value.trim()
-      if (!v) e.target.value = value
-      else if (v !== value) onCommit(v)
-    }}
-  />
-)
+}> = ({ value, onCommit, autoFocus, disabled }) => {
+  const [problem, setProblem] = useState('')
+  return (
+    <div className="trip-sheet-titlewrap">
+      <input
+        key={value}
+        className="trip-sheet-title"
+        aria-label="Title"
+        defaultValue={value}
+        disabled={disabled}
+        aria-invalid={!!problem}
+        // biome-ignore lint/a11y/noAutofocus: a new item opens with its title ready to type
+        autoFocus={autoFocus}
+        onFocus={(e) => autoFocus && e.target.select()}
+        onChange={(e) => setProblem(titleProblem(e.target.value))}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+        }}
+        onBlur={(e) => {
+          const v = e.target.value.trim()
+          if (!v) {
+            e.target.value = value
+            setProblem('')
+          } else if (titleProblem(v)) setProblem(titleProblem(v))
+          else if (v !== value) onCommit(v)
+        }}
+      />
+      {problem && (
+        <p role="alert" className="trip-error">
+          {problem}
+        </p>
+      )}
+    </div>
+  )
+}
+
+/** Notes: saved on blur unless they are over the server's byte limit, which is said inline. */
+export const NotesField: React.FC<{
+  value: string
+  max: number
+  disabled?: boolean
+  onCommit: (v: string) => void
+}> = ({ value, max, disabled, onCommit }) => {
+  const [problem, setProblem] = useState('')
+  return (
+    <>
+      <textarea
+        key={value}
+        className="trip-sheet-notes"
+        aria-label="Notes"
+        placeholder="Add a note"
+        rows={2}
+        defaultValue={value}
+        disabled={disabled}
+        aria-invalid={!!problem}
+        onChange={(e) => setProblem(notesProblem(e.target.value, max))}
+        onBlur={(e) => {
+          const p = notesProblem(e.target.value, max)
+          setProblem(p)
+          if (!p && e.target.value !== value) onCommit(e.target.value)
+        }}
+      />
+      {problem && (
+        <p role="alert" className="trip-error">
+          {problem}
+        </p>
+      )}
+    </>
+  )
+}
 
 const Row: React.FC<{
   icon: React.ReactNode
@@ -246,18 +296,11 @@ export const TodoDetail: React.FC<TodoDetailProps> = ({
         </>
       )}
 
-      <textarea
-        key={String(todo.notes ?? '')}
-        className="trip-sheet-notes"
-        aria-label="Notes"
-        placeholder="Add a note"
-        rows={2}
-        maxLength={2000}
-        defaultValue={todo.notes ?? ''}
+      <NotesField
+        value={todo.notes ?? ''}
+        max={LIMITS.itemNotesBytes}
         disabled={locked}
-        onBlur={(e) => {
-          if (e.target.value !== (todo.notes ?? '')) onPatch({ notes: e.target.value })
-        }}
+        onCommit={(v) => onPatch({ notes: v })}
       />
 
       <div className="trip-sheet-foot">
@@ -290,6 +333,9 @@ type BookingDetailProps = {
   locked: boolean
   focusTime?: boolean
   days: MoveTarget[]
+  // Set when someone changed this after our offline edit.
+  note?: string
+  onDismissNote?: () => void
   actions: BookingActions
 }
 
@@ -316,6 +362,8 @@ export const BookingDetail: React.FC<BookingDetailProps> = ({
   locked,
   focusTime,
   days,
+  note,
+  onDismissNote,
   actions,
 }) => {
   const [view, setView] = useState<'main' | 'place'>('main')
@@ -348,6 +396,14 @@ export const BookingDetail: React.FC<BookingDetailProps> = ({
 
   return (
     <div className="trip-sheet">
+      {note && (
+        <div className="trip-note trip-note-sheet" role="status">
+          <span>{note}</span>
+          <Button size="small" type="link" onClick={onDismissNote}>
+            Got it
+          </Button>
+        </div>
+      )}
       <div className="trip-sheet-headline">
         <span className="trip-stub-icon is-big">{KIND_ICON[b.kind]}</span>
         <SheetTitle value={b.title} onCommit={(v) => save({ title: v })} disabled={locked} />
@@ -473,18 +529,11 @@ export const BookingDetail: React.FC<BookingDetailProps> = ({
         />
       </label>
 
-      <textarea
-        key={String(b.notes ?? '')}
-        className="trip-sheet-notes"
-        aria-label="Notes"
-        placeholder="Add a note"
-        rows={2}
-        maxLength={2000}
-        defaultValue={b.notes ?? ''}
+      <NotesField
+        value={b.notes ?? ''}
+        max={LIMITS.itemNotesBytes}
         disabled={locked}
-        onBlur={(e) => {
-          if (e.target.value !== (b.notes ?? '')) save({ notes: e.target.value })
-        }}
+        onCommit={(v) => save({ notes: v })}
       />
 
       <div className="trip-sheet-foot">

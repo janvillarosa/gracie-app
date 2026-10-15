@@ -3,6 +3,7 @@ import { Button, Input, Popover } from 'antd'
 import { ArrowsOutSimple, CaretDown, Plus } from '@phosphor-icons/react'
 import type { Place } from '@api/tripTypes'
 import { parseQuickAdd } from '@lib/trips/schedule'
+import { titleProblem } from '@lib/trips/limits'
 import { DayList } from './DayList'
 import { DEGRADED_TEXT, OSM_ATTRIBUTION, PlaceSlip, usePlaceSearch } from './places'
 
@@ -55,7 +56,8 @@ export const AddBar: React.FC<Props> = ({
   const fresh = search.forQuery === parsed.title.trim()
   const slips = fresh && !dismissed ? search.results.slice(0, MAX_SLIPS) : []
   const open = slips.length > 0
-  const armed = parsed.title.length > 0
+  const problem = titleProblem(parsed.title)
+  const armed = parsed.title.length > 0 && !problem
   const current = targets.find((t) => t.value === target)
 
   const reset = () => {
@@ -66,7 +68,7 @@ export const AddBar: React.FC<Props> = ({
     requestAnimationFrame(() => ref.current?.focus())
   }
   const submit = () => {
-    if (!parsed.title) return
+    if (!parsed.title || problem) return
     navigator.vibrate?.(8)
     onAdd({ title: parsed.title, start_time: parsed.start_time })
     reset()
@@ -209,7 +211,7 @@ export const AddBar: React.FC<Props> = ({
         />
       </div>
       <div className="trip-add-status" role="status">
-        {fresh && search.degraded ? DEGRADED_TEXT : ''}
+        {problem || (fresh && search.degraded ? DEGRADED_TEXT : '')}
       </div>
     </div>
   )

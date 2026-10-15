@@ -23,6 +23,11 @@ const Slip: React.FC<Pick<Props, 'code' | 'title' | 'kind' | 'line' | 'onCopy'>>
   onCopy,
 }) => {
   const [copied, setCopied] = useState(false)
+  useEffect(() => {
+    if (!copied) return
+    const t = setTimeout(() => setCopied(false), 2000)
+    return () => clearTimeout(t)
+  }, [copied])
   return (
     <div className="trip-slip">
       <p className="trip-slip-title">
@@ -40,7 +45,6 @@ const Slip: React.FC<Pick<Props, 'code' | 'title' | 'kind' | 'line' | 'onCopy'>>
         onClick={() => {
           onCopy(code)
           setCopied(true)
-          setTimeout(() => setCopied(false), 2000)
         }}
         aria-label={copied ? 'Copied' : `Copy code for ${title}`}
       >

@@ -2631,3 +2631,12 @@ textarea.trip-field {
   outline: none;
   border-radius: 8px;
 }
+
+/* Notes on the stub line and in the header sit in the title column / full width. */
+.trip-stub .trip-note {
+  margin-left: var(--lead-col);
+}
+.trip-note-trip,
+.trip-note-sheet {
+  margin: 8px 0 0;
+}

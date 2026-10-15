@@ -259,6 +259,7 @@ export async function reorderListItem(
 export async function setMyPreferences(
   apiKey: string,
   preferences: { trips_show_next_stop?: boolean },
-): Promise<User> {
-  return apiFetch<User>('/me', { method: 'PUT', apiKey, body: JSON.stringify({ preferences }) })
+): Promise<void> {
+  // 204: the caller re-reads /me.
+  await apiFetch<void>('/me', { method: 'PUT', apiKey, body: JSON.stringify({ preferences }) })
 }

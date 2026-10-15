@@ -4,6 +4,7 @@ import { X } from '@phosphor-icons/react'
 import { useDroppable } from '@dnd-kit/core'
 import type { TripTodo } from '@api/tripTypes'
 import type { Entry } from '@lib/trips/schedule'
+import { LIMITS, notesProblem } from '@lib/trips/limits'
 import { Sheet } from './Sheet'
 import { EntryRows, type Shared } from './Spine'
 
@@ -139,19 +140,30 @@ export const NotesPane: React.FC<{
   notes: string
   locked: boolean
   onSave: (v: string) => void
-}> = ({ notes, locked, onSave }) => (
-  <section className="trip-pane-body" aria-label="Notes">
-    <textarea
-      className="trip-field trip-notes"
-      aria-label="Trip notes"
-      rows={10}
-      maxLength={16000}
-      readOnly={locked}
-      placeholder="Anything the House should know: visa rules, meeting points, the plan B."
-      defaultValue={notes}
-      onBlur={(e) => {
-        if (e.target.value !== notes) onSave(e.target.value)
-      }}
-    />
-  </section>
-)
+}> = ({ notes, locked, onSave }) => {
+  const [problem, setProblem] = useState('')
+  return (
+    <section className="trip-pane-body" aria-label="Notes">
+      <textarea
+        className="trip-field trip-notes"
+        aria-label="Trip notes"
+        rows={10}
+        readOnly={locked}
+        aria-invalid={!!problem}
+        placeholder="Anything the House should know: visa rules, meeting points, the plan B."
+        defaultValue={notes}
+        onChange={(e) => setProblem(notesProblem(e.target.value, LIMITS.tripNotesBytes))}
+        onBlur={(e) => {
+          const p = notesProblem(e.target.value, LIMITS.tripNotesBytes)
+          setProblem(p)
+          if (!p && e.target.value !== notes) onSave(e.target.value)
+        }}
+      />
+      {problem && (
+        <p role="alert" className="trip-error">
+          {problem}
+        </p>
+      )}
+    </section>
+  )
+}

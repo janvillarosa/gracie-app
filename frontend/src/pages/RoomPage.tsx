@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { errorMessage } from '@lib/errors'
+import { deviceZone } from '@lib/trips/limits'
 import type { RoomView, List } from '@api/types'
 import { useAuth } from '@auth/AuthProvider'
 import { useTransitionNavigate } from '@lib/viewTransition'
@@ -396,7 +397,8 @@ export const RoomPage: React.FC<{
           onSubmit={(title) => {
             const id = tripStore.createTrip({
               title,
-              tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
+              // The canonical zone name, or nothing when the browser cannot say.
+              ...(deviceZone() ? { tz: deviceZone() } : {}),
             })
             setNewTripOpen(false)
             navigate(`/app/trips/${id}`)

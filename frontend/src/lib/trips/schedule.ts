@@ -2,7 +2,7 @@
 import type { Booking, Trip, TripTodo } from '../../api/tripTypes'
 
 const DAY_MS = 86400000
-export const MAX_DAYS = 120
+export const MAX_DAYS = 400
 
 // ---- dates ----------------------------------------------------------------------------
 export function localDateKey(d: Date = new Date()): string {
