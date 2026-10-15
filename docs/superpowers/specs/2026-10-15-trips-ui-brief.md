@@ -494,8 +494,9 @@ Reference: `.impeccable/mocks/map-pills.html`.
 
 ## 6v. The map is for viewing only (revised 2026-10-15)
 
-The map has **no click actions**: no adding, no place popover, Google place icons aren't clickable,
-and clicking our pills does nothing. It keeps viewing aids:
+The map has **one click action**: clicking a pill selects its item in the list (scrolling there only if
+it's off-screen, highlighting it, and opening the inspector on desktop). There's no adding and no
+place popover, and Google place icons aren't clickable. It keeps viewing aids:
 - pan and zoom, with +/−, Fit day and Show all days;
 - the "off the map · Show" chip;
 - emphasis on scroll;
