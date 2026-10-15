@@ -283,7 +283,6 @@ type PanelProps = {
   actions: BookingActions
   startMs: (b: Booking) => number
   onOpen: (id: string) => void
-  onAdd: () => void
   locked: boolean
 }
 
@@ -294,8 +293,6 @@ export const BookingsPanel: React.FC<PanelProps> = ({
   actions,
   startMs,
   onOpen,
-  onAdd,
-  locked,
 }) => {
   const groups = BOOKING_KINDS.map((k) => ({
     ...k,
@@ -303,11 +300,6 @@ export const BookingsPanel: React.FC<PanelProps> = ({
   })).filter((g) => g.items.length)
   return (
     <section className="trip-pane-body" aria-label="Bookings">
-      {!locked && (
-        <Button type="primary" shape="round" onClick={onAdd}>
-          Add booking
-        </Button>
-      )}
       {!bookings.length && (
         <p className="trip-empty-text">
           No bookings yet. Add flights, stays and tickets with their confirmation codes.

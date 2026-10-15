@@ -21,8 +21,9 @@ type Props = {
   inputId: string
   // Opens the item editor, prefilled with what is typed. Offered once something is typed.
   onExpand?: (item: QuickAddItem) => void
-  // 'booking': the bar only starts the booking form (a booking needs kind, zones and a code).
+  // 'booking': the bar is a launcher for the booking sheet (a booking needs kind, zones and a code).
   mode?: 'todo' | 'booking'
+  onLaunch?: () => void
 }
 
 const MAX_SLIPS = 5
@@ -41,6 +42,7 @@ export const AddBar: React.FC<Props> = ({
   inputId,
   onExpand,
   mode = 'todo',
+  onLaunch,
 }) => {
   const [value, setValue] = useState('')
   const [active, setActive] = useState(-1)
@@ -120,8 +122,12 @@ export const AddBar: React.FC<Props> = ({
         </div>
       )}
       <div className="add-row">
-        <div className={mode === 'todo' ? 'add-field trip-add-field has-target' : 'add-field'}>
-          {mode === 'todo' && (
+        {mode === 'booking' ? (
+          <button type="button" className="add-field add-launch" onClick={onLaunch}>
+            {placeholder}
+          </button>
+        ) : (
+          <div className="add-field trip-add-field has-target">
             <Popover
               trigger="click"
               placement="topLeft"
@@ -152,35 +158,35 @@ export const AddBar: React.FC<Props> = ({
                 <CaretDown aria-hidden />
               </button>
             </Popover>
-          )}
-          <Input.TextArea
-            id={inputId}
-            ref={ref as never}
-            className="add-input"
-            value={value}
-            onChange={(e) => {
-              setValue(e.target.value)
-              setActive(-1)
-              setDismissed(false)
-            }}
-            placeholder={placeholder}
-            autoSize={{ minRows: 1, maxRows: 3 }}
-            enterKeyHint="enter"
-            onKeyDown={onKeyDown}
-            onBlur={() => setActive(-1)}
-            aria-label={label}
-            role="combobox"
-            aria-expanded={open}
-            aria-controls={open ? `${uid}-slips` : undefined}
-            aria-autocomplete="list"
-            aria-activedescendant={open && active >= 0 ? `${uid}-slip-${active}` : undefined}
-          />
-          {parsed.start_time && (
-            <span className="add-qty-chip" aria-hidden>
-              {parsed.start_time}
-            </span>
-          )}
-        </div>
+            <Input.TextArea
+              id={inputId}
+              ref={ref as never}
+              className="add-input"
+              value={value}
+              onChange={(e) => {
+                setValue(e.target.value)
+                setActive(-1)
+                setDismissed(false)
+              }}
+              placeholder={placeholder}
+              autoSize={{ minRows: 1, maxRows: 3 }}
+              enterKeyHint="enter"
+              onKeyDown={onKeyDown}
+              onBlur={() => setActive(-1)}
+              aria-label={label}
+              role="combobox"
+              aria-expanded={open}
+              aria-controls={open ? `${uid}-slips` : undefined}
+              aria-autocomplete="list"
+              aria-activedescendant={open && active >= 0 ? `${uid}-slip-${active}` : undefined}
+            />
+            {parsed.start_time && (
+              <span className="add-qty-chip" aria-hidden>
+                {parsed.start_time}
+              </span>
+            )}
+          </div>
+        )}
         {mode === 'todo' && onExpand && armed && (
           <Button
             type="text"
@@ -192,13 +198,13 @@ export const AddBar: React.FC<Props> = ({
           />
         )}
         <Button
-          className={armed ? 'add-btn is-armed' : 'add-btn'}
+          className={armed || mode === 'booking' ? 'add-btn is-armed' : 'add-btn'}
           type="primary"
           shape="circle"
           size="large"
           aria-label={`${label}, add`}
-          disabled={!armed}
-          onClick={submit}
+          disabled={mode === 'todo' && !armed}
+          onClick={mode === 'booking' ? onLaunch : submit}
           icon={<Plus key={adds} className={adds ? 'add-plus is-turning' : 'add-plus'} />}
         />
       </div>

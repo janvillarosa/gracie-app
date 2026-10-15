@@ -312,6 +312,23 @@ describe('Next-stop deck', () => {
   })
 })
 
+describe('Opening a trip', () => {
+  it('opens at the top, with no ?day= written to the address bar', async () => {
+    seed(TRIP)
+    open()
+    await deck()
+    expect(scrollIntoView).not.toHaveBeenCalled()
+    expect(window.location.search).not.toContain('day=')
+  })
+
+  it('scrolls to a day only when the link carried one', async () => {
+    seed(TRIP)
+    renderTrips(`/app/trips/${TRIP.trip_id}?day=${rel(2)}`)
+    await waitFor(() => expect(scrollIntoView).toHaveBeenCalled())
+    expect(([...scrollIntoView.mock.contexts].pop() as HTMLElement).id).toBe(`day-${rel(2)}`)
+  })
+})
+
 describe('Days', () => {
   it('folds finished days into one line at the top of the plan, and shows them on tap', async () => {
     seed(TRIP)
@@ -344,7 +361,7 @@ describe('Days', () => {
     open()
     await screen.findByRole('heading', { name: shortDay(rel(2)) })
     expect(screen.getByText('Nothing planned yet')).toBeInTheDocument()
-    expect(screen.getAllByPlaceholderText(/^Add (a|an) /)).toHaveLength(1)
+    expect(screen.getAllByPlaceholderText(/^Add (a|an|to) /)).toHaveLength(1)
   })
 
   it('draws one friendly sheet when nothing is planned yet', async () => {
@@ -580,7 +597,7 @@ describe('The add bar', () => {
     seed(TRIP)
     open()
     const field = await screen.findByRole('combobox', { name: 'Add to today' })
-    expect(screen.getAllByPlaceholderText(/^Add (a|an) /)).toHaveLength(1)
+    expect(screen.getAllByPlaceholderText(/^Add (a|an|to) /)).toHaveLength(1)
     expect(screen.getByRole('button', { name: /Adding to Today/ })).toBeInTheDocument()
     await userEvent.type(field, '14:00 Quinta da Regaleira{Enter}')
     const row = (await screen.findByRole('button', { name: 'Quinta da Regaleira' })).closest(
@@ -653,10 +670,11 @@ describe('The add bar', () => {
     seed(TRIP)
     open()
     await userEvent.click(await screen.findByRole('tab', { name: 'Bookings' }))
-    const field = await screen.findByRole('combobox', { name: 'Add a booking' })
-    await userEvent.type(field, 'Hotel Ribeira{Enter}')
+    // One add bar, and on Bookings it opens the booking sheet at once.
+    expect(screen.queryByRole('button', { name: 'Add booking' })).not.toBeInTheDocument()
+    await userEvent.click(await screen.findByRole('button', { name: 'Add a booking' }))
     const panel = await screen.findByRole('dialog', { name: 'New booking' })
-    expect(within(panel).getByLabelText('Title')).toHaveValue('Hotel Ribeira')
+    expect(within(panel).getByLabelText('Title')).toHaveValue('')
   })
 
   it('focuses on n or /, but not while typing elsewhere', async () => {
@@ -784,19 +802,33 @@ describe('Phone', () => {
   it('keeps a single add bar and no keyboard shortcut', async () => {
     seed(TRIP)
     open()
-    expect(await screen.findAllByPlaceholderText(/^Add (a|an) /)).toHaveLength(1)
+    expect(await screen.findAllByPlaceholderText(/^Add (a|an|to) /)).toHaveLength(1)
     await userEvent.keyboard('n')
     expect(screen.getByRole('combobox', { name: 'Add to today' })).not.toHaveFocus()
   })
 
-  it('loads the map only after the sheet is pulled up', async () => {
+  it('loads the map only after its key is pressed, and has no bottom bar', async () => {
+    const t = lisbonTrip()
+    t.todos[4] = {
+      ...t.todos[4],
+      place: { name: 'Tascantiga', lat: 38.8, lng: -9.38, source: 'photon' },
+    }
+    seed(t)
+    open()
+    // A round key in the pill row, labelled with the day. No full-width bar.
+    const key = await screen.findByRole('button', { name: /^Show map for / })
+    expect(screen.queryByText(/^Map · /)).not.toBeInTheDocument()
+    expect(document.querySelector('.trip-bottom')).toBeNull()
+    expect(screen.queryByText('Offline map')).not.toBeInTheDocument()
+    await userEvent.click(key)
+    expect(await screen.findByText(/Map preview|Offline map/)).toBeInTheDocument()
+  })
+
+  it('hides the map key until the trip has a place', async () => {
     seed(TRIP)
     open()
-    const handle = await screen.findByRole('button', { name: /^Map ·/ })
-    expect(handle).toHaveAttribute('aria-expanded', 'false')
-    expect(screen.queryByText('Offline map')).not.toBeInTheDocument()
-    await userEvent.click(handle)
-    expect(await screen.findByText('Offline map')).toBeInTheDocument()
+    await deck()
+    expect(screen.queryByRole('button', { name: /^Show map for / })).not.toBeInTheDocument()
   })
 
   it('opens an item as a bottom sheet', async () => {

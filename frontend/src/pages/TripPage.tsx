@@ -10,8 +10,8 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from '@dnd-kit/core'
-import { Button, Card, message } from 'antd'
-import { Check } from '@phosphor-icons/react'
+import { Button, Card, Drawer, message } from 'antd'
+import { Check, MapTrifold } from '@phosphor-icons/react'
 import { useAuth } from '@auth/AuthProvider'
 import { TopNav } from '@components/TopNav'
 import { reorderLock } from '@components/ItemRow'
@@ -42,7 +42,7 @@ import { BookingEditor, BookingsPanel, type BookingActions } from '@components/t
 import { BookingDetail, TodoDetail } from '@components/trips/ItemDetail'
 import { DayList, type DayRow } from '@components/trips/DayList'
 import { NextStopDeck, type Stop, type Tomorrow } from '@components/trips/NextStop'
-import { MapSheet, useMedia } from '@components/trips/Phone'
+import { useMedia } from '@components/trips/Phone'
 import { IdeasPanel, NotesPane, PackingPane, Panel, type TabId } from '@components/trips/Panels'
 import { AddBar, type QuickAddItem } from '@components/trips/QuickAdd'
 import { DaySection, EntryRows, bylineFor, dayDone, type Shared } from '@components/trips/Spine'
@@ -619,6 +619,8 @@ const TripScreen: React.FC<{
 
   const mapVisible = desktop || (phone && sheetOpen)
   const pins = useMemo(() => pinsFor(schedule), [schedule])
+  // The map control appears once there is something to show on it.
+  const hasPlaces = pins.numbers.size > 0 || pins.ideaDots.length > 0
   const moveTargets = useMemo(
     () => [
       ...schedule.days.map((d) => ({ value: d.date as string | null, label: fullDay(d.date) })),
@@ -681,31 +683,15 @@ const TripScreen: React.FC<{
     // biome-ignore lint/correctness/useExhaustiveDependencies: only the first value matters
   }, [schedule.days])
 
-  // Keep the address bar's ?day= in step with what is being read, without touching history.
-  useEffect(() => {
-    if (!currentDay) return
-    const url = new URL(window.location.href)
-    if (url.searchParams.get('day') === currentDay) return
-    url.searchParams.set('day', currentDay)
-    window.history.replaceState(window.history.state, '', url)
-  }, [currentDay])
-
-  // First paint: the deep-linked day, else today at the Now marker, else the top.
+  // First paint: the top of the page, unless the URL carried a day (a deep link).
   const placed = useRef(false)
   // biome-ignore lint/correctness/useExhaustiveDependencies: runs once when the days first exist
   useEffect(() => {
     if (placed.current || !schedule.days.length) return
     placed.current = true
     const want = search.get('day')
-    requestAnimationFrame(() => {
-      if (want && schedule.days.some((d) => d.date === want)) {
-        scrollToEl(document.getElementById(`day-${want}`), false)
-      } else if (phase === 'during') {
-        const now = document.querySelector('.trip-now')
-        if (now) (now as HTMLElement).scrollIntoView?.({ block: 'center' })
-        else scrollToEl(document.getElementById(`day-${today}`), false)
-      }
-    })
+    if (!want || !schedule.days.some((d) => d.date === want)) return
+    requestAnimationFrame(() => scrollToEl(document.getElementById(`day-${want}`), false))
   }, [schedule.days.length])
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: isOpenDay reads exactly these
@@ -977,7 +963,6 @@ const TripScreen: React.FC<{
     <BookingsPanel
       bookings={trip.bookings}
       nowMs={nowMs}
-      onAdd={() => setBookingDraft({ title: '' })}
       actions={bookingActions}
       startMs={bookingStart}
       onOpen={rowActions.open}
@@ -1174,7 +1159,7 @@ const TripScreen: React.FC<{
       ? 'Add a booking'
       : target === 'ideas'
         ? 'Add an idea'
-        : 'Add a place or plan'
+        : `Add to ${targetLabel}`
 
   return (
     <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
@@ -1222,6 +1207,17 @@ const TripScreen: React.FC<{
                   <PillNav
                     value={tab}
                     onChange={(k) => setTab(k as TabId)}
+                    extra={
+                      phone && hasPlaces ? (
+                        <Button
+                          shape="circle"
+                          icon={<MapTrifold />}
+                          title="Map"
+                          aria-label={`Show map for ${currentModel ? shortDay(currentModel.date) : 'the ideas'}`}
+                          onClick={() => setSheetOpen(true)}
+                        />
+                      ) : undefined
+                    }
                     items={[
                       { key: 'plan', label: 'Plan', children: planNode },
                       { key: 'ideas', label: 'Ideas', children: ideasNode },
@@ -1239,11 +1235,8 @@ const TripScreen: React.FC<{
                     targets={targetOptions}
                     target={target}
                     onTarget={setAddTarget}
-                    onAdd={(item) =>
-                      tab === 'bookings'
-                        ? setBookingDraft({ title: item.title })
-                        : add(target === 'ideas' ? null : target, item)
-                    }
+                    onAdd={(item) => add(target === 'ideas' ? null : target, item)}
+                    onLaunch={() => setBookingDraft({ title: '' })}
                     onExpand={(item) => {
                       // One editor for add and edit: create the item, then open it.
                       const id = add(target === 'ideas' ? null : target, item)
@@ -1256,7 +1249,6 @@ const TripScreen: React.FC<{
                 )}
               </Card>
             </div>
-            {phone && <div className="trip-footer-space" aria-hidden />}
           </div>
           {showSide && (
             <aside className="trip-side" aria-label="Map">
@@ -1275,16 +1267,19 @@ const TripScreen: React.FC<{
             </aside>
           )}
         </div>
-        {phone && (
-          <div className="trip-bottom">
-            <MapSheet
-              title={`Map · ${currentModel ? shortDay(currentModel.date) : 'ideas'}`}
-              open={sheetOpen}
-              onToggle={() => setSheetOpen((o) => !o)}
-            >
-              {mapNode}
-            </MapSheet>
-          </div>
+        {phone && sheetOpen && (
+          <Drawer
+            open
+            placement="bottom"
+            height="62%"
+            title={`Map · ${currentModel ? shortDay(currentModel.date) : 'ideas'}`}
+            onClose={() => setSheetOpen(false)}
+            destroyOnClose
+            className="trip-sheet-drawer trip-map-drawer"
+            styles={{ body: { padding: 0, display: 'flex' } }}
+          >
+            {mapNode}
+          </Drawer>
         )}
         {!desktop && daysOpen && (
           <Panel desktop={false} title="Days" onClose={() => setDaysOpen(false)}>

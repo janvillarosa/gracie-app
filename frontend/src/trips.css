@@ -1103,46 +1103,6 @@ textarea.trip-field {
   min-width: 0;
 }
 
-/* ---- phone ------------------------------------------------------------------------- */
-.trip-bottom {
-  position: fixed;
-  z-index: 20;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: var(--panel);
-  border-top: 1px solid var(--border);
-  box-shadow: var(--lift-2);
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-}
-.trip-sheet-handle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  width: 100%;
-  min-height: 44px;
-  background: none;
-  border: 0;
-  font: inherit;
-  font-weight: 650;
-  color: var(--ink);
-  cursor: pointer;
-}
-.trip-sheet.is-open .trip-sheet-handle svg {
-  rotate: 180deg;
-}
-.trip-sheet-body {
-  height: 52dvh;
-  display: flex;
-}
-.trip-sheet-body[hidden] {
-  display: none;
-}
-.trip-footer-space {
-  height: 120px;
-}
-
 /* ---- breakpoints ------------------------------------------------------------------- */
 @media (max-width: 767px) {
   .trip-page {
@@ -1185,9 +1145,6 @@ textarea.trip-field {
     top: 16px;
     margin-top: 0;
     height: calc(100dvh - 32px);
-  }
-  .trip-footer-space {
-    display: none;
   }
 }
 
@@ -2044,19 +2001,6 @@ textarea.trip-field {
 .trip-pinno {
   margin-left: 2px;
 }
-.trip-sheet-handle {
-  min-height: 48px;
-}
-@media (max-width: 1023px) {
-  .trip-addbar,
-  .trip-col .add-bar {
-    bottom: calc(48px + env(safe-area-inset-bottom, 0px));
-  }
-  .trip-footer-space {
-    height: 140px;
-  }
-}
-
 /* ---- trip settings: grouped rows on paper, no boxed inputs ------------------------------ */
 .settings-identity {
   display: flex;
@@ -2217,4 +2161,32 @@ textarea.trip-field {
 .trip-cal-day:focus-visible {
   box-shadow: var(--focus-ring);
   outline: none;
+}
+
+/* The add bar is the only bottom chrome on the phone. */
+.add-bar .add-input::placeholder,
+.add-launch {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.add-launch {
+  display: block;
+  box-sizing: border-box;
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 1px solid var(--border-strong);
+  border-radius: 22px;
+  background: var(--panel-subtle);
+  color: var(--muted);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.add-launch:focus-visible {
+  box-shadow: var(--focus-ring);
+  outline: none;
+}
+.trip-map-drawer .trip-map {
+  min-height: 0;
 }
