@@ -255,6 +255,12 @@ screenshot at each step, and write a one-line look-and-flow judgement for each.
    - Fit day resets; a manual pan pauses follow-scroll.
    - Click to add a stop.
    - Labels and pips don't collide; clusters split when you zoom.
+10. **Place autocomplete** (the dev mock serves a synthetic gazetteer; `!offline` in the query forces the degraded state):
+    - The add bar suggests places, and arrow plus Enter picks one, with the map preview pip showing.
+    - Typing a time first still parses.
+    - Search, pick and clear work in the desktop inspector, the phone picker and the booking From/To fields.
+    - The degraded message shows when search is unavailable.
+    - Map click-to-add uses reverse geocoding.
 8. **Before → during:** switch `?mockPhase=during`. The Next stop card replaces Ready to go, and
    nothing else jumps.
 
