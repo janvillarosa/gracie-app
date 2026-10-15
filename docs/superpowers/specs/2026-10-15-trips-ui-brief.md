@@ -229,6 +229,22 @@ adventure or a scavenger hunt.
   default on), also shown under a Trips section in UserSettings. When it's off, the trip opens on
   today's plan without the deck. Changing it needs a connection; offline, the cached value is used.
 
+## 6f. Code reveal, delete and the edit sheet (2026-10-15)
+
+- **Show code** opens a ticket slip: a bottom sheet on the phone, a popover on desktop. It shows the
+  title, a time · place line, the code large in the app's own type on a dashed-edge slip, and
+  Copy. The card never reflows. It is one component wherever a code appears.
+- A todo with a linked booking absorbs it in the deck ("10:00 entry · Booked"). Only unlinked
+  bookings get their own deck card.
+- **Delete:** swipe left on rows with Undo, reusing the List implementation (hover trash on
+  desktop). The deck card has no delete. Delete is also a quiet red text button at the bottom of
+  the edit sheet.
+- **Edit sheet** (add and edit; a sheet on the phone, a panel on desktop): checkbox plus a large
+  borderless title, a place row, then "when" chips (day, time, preset durations; duration hidden
+  until there's a time), category stamps, a "Link a booking" row, and borderless notes. Open in
+  Maps, an authorship line and Delete sit at the bottom. There are no field labels, no boxed
+  inputs and no Save button; everything autosaves.
+
 ## 7. Constraints and open decisions
 
 Constraints:
