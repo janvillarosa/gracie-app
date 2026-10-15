@@ -393,6 +393,18 @@ empty map), and planning before the trip happens on desktop. The user chose opti
 
 ## 6o. Details on the desk (2026-10-15)
 
+**Drag behaviour:**
+- The Days area auto-scrolls while you hold a dragged item near its top or bottom edge, faster the
+  deeper you go into the edge.
+- Holding over a folded day for about 600ms unfolds it.
+- While dragging, the map previews the target day and the idea's place.
+- A timed idea drops at its time; an untimed idea drops where the line shows.
+- After a drop, the page stays still, the row gets a highlight sweep, and a toast offers Undo
+  ("Added to Wed 25").
+- Esc, or dropping outside a target, cancels.
+- On trips longer than 5 days, a quiet date rail appears only while dragging.
+- The same rules apply when dragging rows between days, and "Move to…" gives keyboard parity.
+
 - **Pips and leading glyphs** are centred on the title's first line (within 1px), everywhere.
 - **Ideas look draggable:**
   - On desktop, the grip shows at rest, with grab and grabbing cursors and a lift on hover.
