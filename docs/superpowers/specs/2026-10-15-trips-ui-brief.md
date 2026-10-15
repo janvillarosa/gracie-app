@@ -297,7 +297,9 @@ flagged done days, and it didn't say which items clashed. Gaps now show where th
   with a day chip (another day or Ideas), and "More details". Nothing is created until you confirm.
   Esc, an outside click or a pan dismisses it.
 - Highlighting a place slip in the add bar previews its pin on the map.
-- **Phone map sheet:** pinch-zoom and pan; a long-press (not a tap) drops the temporary pin.
+- **Phone map sheet: read-only.** Route and pins; pinch and pan only to look around. Tapping a pin
+  opens its row's detail. No adding from the map, and no map controls. All map interactions are
+  desktop only.
 - **Tiles (decided 2026-10-15): the Protomaps hosted API** (TileJSON, key in `VITE_PROTOMAPS_API_KEY`,
   restricted by domain). This supersedes self-hosted PMTiles in 7.1. There is no offline tile
   prefetch (the API terms forbid it); offline, the map shows pins on a plain ground.
