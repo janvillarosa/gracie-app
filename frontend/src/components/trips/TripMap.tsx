@@ -8,12 +8,12 @@ import React, {
   useMemo,
   useRef,
   useState,
-  useSyncExternalStore,
 } from 'react'
 import { placeLabels, type LabelItem } from '@lib/trips/mapLabels'
 import { shorten, type MapScene } from '@lib/trips/mapScene'
 import type { MapViewProps } from './mapView'
 import { mapsConfig, mapsEnabled } from './gmap/config'
+import { useBrowserOnline } from './useTripMap'
 
 export type { MapViewProps } from './mapView'
 
@@ -177,23 +177,13 @@ const PlainMap: React.FC<MapViewProps & { reason: string }> = ({
   )
 }
 
-const subscribeOnline = (cb: () => void) => {
-  window.addEventListener('online', cb)
-  window.addEventListener('offline', cb)
-  return () => {
-    window.removeEventListener('online', cb)
-    window.removeEventListener('offline', cb)
-  }
-}
-const onlineNow = () => navigator.onLine !== false
-
 export type TripMapHandle = { setHot: (id: string | null) => void }
 
 /** The map pane: the Google map when there is a key and Map ID and we are online, otherwise the
  *  preview. Nothing from Google is requested until the real map is rendered. */
 export const TripMap = forwardRef<TripMapHandle, MapViewProps>(function TripMap(props, ref) {
   const config = useMemo(() => mapsConfig(), [])
-  const online = useSyncExternalStore(subscribeOnline, onlineNow, () => true)
+  const online = useBrowserOnline()
   const [failed, setFailed] = useState(false)
   // The list's hover lights a stop here without re-rendering the page.
   const [hot, setHot] = useState<string | null>(null)

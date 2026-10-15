@@ -20,6 +20,7 @@ import {
   todoTitle,
   worthRefreshing,
 } from '../lib/trips/places'
+import { TodoSheet } from '../components/trips/TodoSheet'
 import { DEMO_PLACES, demoSource, localityOf, setPlacesSource } from '../lib/trips/placesSource'
 import { DEBOUNCE_MS, MIN_QUERY, usePlaceSuggest, type Suggest } from '../lib/trips/usePlaces'
 import { FakeAutocomplete, FakePlace, FakeToken, fakeLayout, resetGoogleFake } from './googleFake'
@@ -387,5 +388,31 @@ describe('the row after a pick', () => {
     render(<Row />)
     expect(await screen.findByText('Pena Palace')).toBeInTheDocument()
     await waitFor(() => expect(placeInfo('ChIJpena')?.name).toBe('Pena Palace'))
+  })
+})
+
+describe('the inspector after a pick', () => {
+  it('shows the Google name where the blank title would be, as the row does', () => {
+    const t = todo('t', google('ChIJpena', { name: 'Pena Palace' }))
+    const noop = () => {}
+    render(
+      <TodoSheet
+        variant="panel"
+        open
+        onClose={noop}
+        todo={t}
+        bookings={[]}
+        days={[]}
+        bias={null}
+        byline="Added by you"
+        locked={false}
+        onPatch={noop}
+        onMove={noop}
+        onDelete={noop}
+        onCopy={noop}
+      />,
+    )
+    expect(screen.getByPlaceholderText('Pena Palace')).toBeInTheDocument()
+    expect(screen.queryByPlaceholderText('Name this')).not.toBeInTheDocument()
   })
 })

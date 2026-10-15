@@ -66,7 +66,7 @@ import {
 import { TripHeader } from '@components/trips/TripHeader'
 import { TripMap, type TripMapHandle } from '@components/trips/TripMap'
 import { MapScreen } from '@components/trips/MapScreen'
-import { useMapFollow, useMapOk } from '@components/trips/useTripMap'
+import { useBrowserOnline, useMapFollow, useMapOk } from '@components/trips/useTripMap'
 import { hasPin } from '@lib/trips/places'
 import { buildScene, hasMapPlaces, type MapPreview } from '@lib/trips/mapScene'
 import type { RowActions } from '@components/trips/TodoRow'
@@ -183,7 +183,8 @@ const TripScreen: React.FC<{
   )
   const schedule = useMemo(() => buildSchedule(trip, nowMs), [trip, nowMs])
   const today = localDateKey(new Date(nowMs))
-  const online = !state.offline && (typeof navigator === 'undefined' || navigator.onLine !== false)
+  const browserOnline = useBrowserOnline()
+  const online = !state.offline && browserOnline
   // The map is shown only while online (it needs tiles), hiding a few seconds after a drop.
   const mapOk = useMapOk(online)
   const phase = tripPhase(trip, today)

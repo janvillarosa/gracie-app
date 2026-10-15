@@ -2617,6 +2617,8 @@
 }
 /* The fix is the system's text button, set to the line. */
 .trip-ready .ui-btn.is-text {
+  flex: none;
+  white-space: nowrap;
   min-height: 0;
   padding: 0 var(--space-1);
   font-size: inherit;

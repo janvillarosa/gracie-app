@@ -1,5 +1,5 @@
 import { demoSource, setPlacesSource } from '../lib/trips/placesSource'
-import { fireEvent, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { tripServer } from '../testServer'
@@ -413,6 +413,30 @@ describe('Map', () => {
     expect(screen.queryByText('Map preview')).not.toBeInTheDocument()
     expect(document.querySelector('.trip-map')).toBeNull()
     expect(screen.getByText('The map comes back when you’re online.')).toBeInTheDocument()
+  })
+
+  it('takes the map away a few seconds after the connection drops, with nothing to send', {
+    timeout: 15000,
+  }, async () => {
+    const onLine = vi.spyOn(window.navigator, 'onLine', 'get').mockReturnValue(true)
+    seed(TRIP)
+    open()
+    await screen.findByRole('heading', { name: 'Lisbon & Porto' })
+    await waitFor(() => expect(document.querySelector('.trip-map')).not.toBeNull())
+    onLine.mockReturnValue(false)
+    act(() => {
+      window.dispatchEvent(new Event('offline'))
+    })
+    // The pane waits out a short drop (5 s) before it goes.
+    expect(
+      await screen.findByText('The map comes back when you’re online.', {}, { timeout: 7000 }),
+    ).toBeInTheDocument()
+    expect(document.querySelector('.trip-map')).toBeNull()
+    // Back online for whoever runs next: the store listens for the event, not the flag.
+    onLine.mockReturnValue(true)
+    act(() => {
+      window.dispatchEvent(new Event('online'))
+    })
   })
 
   it('lifts the next stop on the map with a ring', async () => {

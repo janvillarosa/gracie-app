@@ -1,6 +1,21 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
 
 const OFFLINE_HIDE_MS = 5000
+
+const subscribeOnline = (cb: () => void) => {
+  window.addEventListener('online', cb)
+  window.addEventListener('offline', cb)
+  return () => {
+    window.removeEventListener('online', cb)
+    window.removeEventListener('offline', cb)
+  }
+}
+const onlineNow = () => navigator.onLine !== false
+
+/** The browser's online flag, re-rendering when it changes. */
+export function useBrowserOnline(): boolean {
+  return useSyncExternalStore(subscribeOnline, onlineNow, () => true)
+}
 
 /** Whether the map may show: yes while online; going offline hides it only after a few
  *  seconds, so a flaky connection does not flicker it; coming back shows it at once. */

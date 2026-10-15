@@ -120,7 +120,8 @@ export const TodoSheet: React.FC<Props> = ({
           onTitle={(v) => onPatch({ title: v })}
           autoFocus={fresh}
           disabled={locked}
-          placeholder="Name this"
+          // A blank title on a Google place reads as the place's name, as the row does.
+          placeholder={todo.place?.name || 'Name this'}
           context={when}
         >
           <Stamp category={todo.category}>{categoryLabel(todo.category)}</Stamp>
