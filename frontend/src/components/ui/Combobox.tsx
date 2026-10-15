@@ -215,7 +215,7 @@ export function Combobox<T>({
           {footer}
         </div>
       )}
-      <span className="ui-combobox-count sr-only" role="status" aria-live="polite">
+      <span className="ui-combobox-count" role="status" aria-live="polite">
         {open ? `${options.length} suggestion${options.length === 1 ? '' : 's'}` : ''}
       </span>
       {children({ input, ghost: effectiveGhost })}
