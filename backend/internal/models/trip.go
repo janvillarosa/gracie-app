@@ -107,7 +107,8 @@ type Trip struct {
 	Version    int64            `bson:"version" json:"version"` // +1 per write that changed data
 	V          int64            `bson:"v" json:"v"`             // version when TripFields last changed
 	FieldAt    map[string]int64 `bson:"field_at" json:"-"`
-	Acked      map[string]int64 `bson:"acked" json:"-"` // highest applied op seq per client_id
+	Acked      map[string]int64 `bson:"acked" json:"-"`              // highest applied op seq per client_id
+	AckedAt    map[string]int64 `bson:"acked_at,omitempty" json:"-"` // ms since epoch each client_id was last seen
 	Tombstones []Tombstone      `bson:"tombstones,omitempty" json:"-"`
 	TombFloor  int64            `bson:"tomb_floor" json:"-"`
 
@@ -139,6 +140,7 @@ func (t *Trip) Clone() *Trip {
 	}
 	c.FieldAt = cloneClock(t.FieldAt)
 	c.Acked = cloneClock(t.Acked)
+	c.AckedAt = cloneClock(t.AckedAt)
 	c.Tombstones = append([]Tombstone(nil), t.Tombstones...)
 	c.Todos = make([]TripTodo, len(t.Todos))
 	for i, td := range t.Todos {

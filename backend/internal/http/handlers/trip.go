@@ -123,6 +123,10 @@ func (h *TripHandler) PackingList(w http.ResponseWriter, r *http.Request) {
 		api.WriteJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
 		return
 	}
+	if !h.rl.Allow("trips:" + u.UserID) {
+		writeTripErr(w, derr.ErrRateLimited)
+		return
+	}
 	l, err := h.Trips.EnsurePackingList(r.Context(), u, chi.URLParam(r, "room_id"), chi.URLParam(r, "trip_id"))
 	if err != nil {
 		writeTripErr(w, err)

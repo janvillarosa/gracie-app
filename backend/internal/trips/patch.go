@@ -21,7 +21,9 @@ func (o *Opt[T]) UnmarshalJSON(b []byte) error {
 		return nil
 	}
 	var v T
-	if err := json.Unmarshal(b, &v); err != nil {
+	dec := json.NewDecoder(bytes.NewReader(b))
+	dec.DisallowUnknownFields() // unknown nested fields (a newer client) surface as "unsupported"
+	if err := dec.Decode(&v); err != nil {
 		return err
 	}
 	o.Val = &v
