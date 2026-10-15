@@ -29,7 +29,7 @@ export const bookingStartMs = (b: Booking, tripTz?: string): number | null => {
 export const bookingEndMs = (b: Booking, tripTz?: string): number | null => {
   if (!b.ends_at) return null
   const { d, t } = splitDt(b.ends_at)
-  return wallToUtc(d, t || '00:00', b.end_tz || b.start_tz || tripTz)
+  return wallToUtc(d, t || '00:00', b.end_tz || b.end_place?.tz || b.start_tz || tripTz)
 }
 
 export type BookingGroups = {
@@ -67,6 +67,14 @@ export function nowMeta(b: Booking): string {
 export function nextMeta(b: Booking): string {
   const { d, t } = splitDt(b.starts_at)
   return d ? `Next · ${shortDay(d)}${t ? ` ${t}` : ''}` : 'Next'
+}
+
+const placeShort = (p?: { name: string; locality?: string } | null) =>
+  p ? p.locality || p.name : ''
+
+/** "Lisbon → Porto" for a booking that has both a start and an end place, else "". */
+export function bookingRoute(b: Booking): string {
+  return b.place && b.end_place ? `${placeShort(b.place)} → ${placeShort(b.end_place)}` : ''
 }
 
 /** "Tue 13 · 07:05 → 09:40" (a stay across days: "Tue 13 → Fri 16"). */
