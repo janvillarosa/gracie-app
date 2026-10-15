@@ -16,6 +16,15 @@ describe('BrandLogo', () => {
     expect(link).toHaveAttribute('href', '/login')
   })
 
+  it('can name its link for where it goes', () => {
+    render(
+      <MemoryRouter>
+        <BrandLogo to="/" linkLabel="Bauhouse home" />
+      </MemoryRouter>,
+    )
+    expect(screen.getByRole('link', { name: 'Bauhouse home' })).toHaveAttribute('href', '/')
+  })
+
   it('plays the welcome only for a logo that mounts just after logging in', () => {
     let now = 1000
     const clock = vi.spyOn(performance, 'now').mockImplementation(() => now)

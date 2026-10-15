@@ -21,6 +21,15 @@ vi.mock('react-router-dom', async () => {
 })
 
 describe('Login page', () => {
+  it('links the logo back to the landing page', () => {
+    render(
+      <MemoryRouter>
+        <Login />
+      </MemoryRouter>,
+    )
+    expect(screen.getByRole('link', { name: 'Bauhouse home' })).toHaveAttribute('href', '/')
+  })
+
   it('logs in and stores api key', async () => {
     server.use(
       http.post('/api/auth/login', async ({ request }) => {

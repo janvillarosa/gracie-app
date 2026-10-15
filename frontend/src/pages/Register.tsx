@@ -40,7 +40,6 @@ export const Register: React.FC = () => {
   return (
     <AuthShell
       title="Create account"
-      logoTo="/register"
       footer={
         <Typography.Text type="secondary">
           Already have an account?{' '}

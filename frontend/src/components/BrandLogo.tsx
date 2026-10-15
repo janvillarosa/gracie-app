@@ -3,7 +3,11 @@ import { HouseMark } from '@components/HouseMark'
 import { TransitionLink } from '@components/TransitionLink'
 import { welcomeElapsed } from '@lib/welcome'
 
-export const BrandLogo: React.FC<{ size?: number; to?: string }> = ({ size = 56, to = '/app' }) => {
+export const BrandLogo: React.FC<{ size?: number; to?: string; linkLabel?: string }> = ({
+  size = 56,
+  to = '/app',
+  linkLabel = 'Go to app home',
+}) => {
   // Read once on mount: a logo mounted during the post-login welcome joins it in progress.
   const [welcomeAt] = useState(welcomeElapsed)
   const mark = (
@@ -21,7 +25,7 @@ export const BrandLogo: React.FC<{ size?: number; to?: string }> = ({ size = 56,
   return (
     <div className="brand-logo" aria-label="Bauhouse logo">
       {to ? (
-        <TransitionLink to={to} aria-label="Go to app home">
+        <TransitionLink to={to} aria-label={linkLabel}>
           {mark}
         </TransitionLink>
       ) : (

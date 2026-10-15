@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Bauhouse — Write on it</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F7F7F7;--panel:#fff;--ink:#1A1A1A;--text:#3B3B3B;--muted:#656C78;--y:#FFD417;--yd:#E6BE00;--red:#BE1E2D;--blue:#2348A6;--border:#E6E6E6;--hl:color-mix(in srgb,#FFD417 70%,transparent)}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1440px;height:900px;overflow:hidden}
+body{background:var(--bg);font-family:Figtree,system-ui,sans-serif;color:var(--text)}
+nav{height:76px;padding:0 56px;display:flex;align-items:center;justify-content:space-between}
+.brand{display:flex;gap:12px;align-items:center;font:700 22px Outfit;color:var(--ink)}
+.mark{width:34px;height:34px}
+.navr{display:flex;gap:28px;align-items:center;font-weight:600;font-size:16px;color:var(--ink)}
+.key{background:var(--y);color:var(--ink);font:700 16px Figtree;padding:12px 20px;border-radius:12px;box-shadow:inset 0 1px 0 rgba(255,255,255,.55),0 1px 0 var(--yd),0 2px 6px -1px rgba(150,115,0,.28)}
+.head{text-align:center;padding-top:28px}
+h1{font:800 84px/0.98 Outfit;letter-spacing:-0.035em;color:var(--ink)}
+h1 em{font-style:normal;background:linear-gradient(transparent 58%,var(--hl) 58%,var(--hl) 92%,transparent 92%)}
+.sub{margin-top:18px;font-size:20px;color:var(--muted)}
+.stackwrap{position:relative;width:820px;margin:44px auto 0}
+.edge{position:absolute;left:18px;right:18px;top:-10px;height:40px;background:#fff;border:1px solid var(--border);border-radius:20px;opacity:.8}
+.sheet{position:relative;background:var(--panel);border:1px solid var(--border);border-radius:20px;box-shadow:0 1px 2px rgba(20,20,20,.05),0 24px 60px -30px rgba(20,20,20,.25);padding:26px 34px 0;height:560px}
+.meta{display:flex;justify-content:space-between;align-items:baseline;padding-bottom:16px;border-bottom:1px solid var(--border)}
+.meta h2{font:700 30px Outfit;color:var(--ink)}
+.faces{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--muted)}
+.av{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font:700 13px Figtree;color:#fff;margin-left:-8px;border:2px solid #fff}
+.row{display:grid;grid-template-columns:28px 1fr auto;gap:16px;align-items:center;min-height:64px;border-bottom:1px solid var(--border)}
+.box{width:24px;height:24px;border-radius:7px;border:2px solid #C9CCD1}
+.box.on{background:var(--ink);border-color:var(--ink);position:relative}
+.box.on::after{content:"";position:absolute;left:7px;top:3px;width:6px;height:11px;border:solid var(--y);border-width:0 3px 3px 0;transform:rotate(45deg)}
+.t{font:600 19px Figtree;color:var(--ink)}
+.t small{display:block;font:500 14px Figtree;color:var(--muted);margin-top:2px}
+.done .t{color:#9AA0A6;text-decoration:line-through;text-decoration-color:#C9CCD1}
+.hl{background:var(--hl);border-radius:4px;padding:0 4px}
+.stamp{font:700 12px Figtree;letter-spacing:.06em;text-transform:uppercase;padding:4px 9px;border-radius:6px;border:1.5px solid}
+.s1{color:#1E7B3C;border-color:#1E7B3C;background:#EAF6EE}
+.s2{color:var(--blue);border-color:var(--blue);background:#ECF0FA}
+.s3{color:#946D00;border-color:#946D00;background:#FFF6CC;transform:rotate(-3deg)}
+.s4{color:var(--red);border-color:var(--red);background:#FBECEE}
+.add{display:flex;gap:12px;align-items:center;margin-top:22px}
+.bar{flex:1;height:56px;border-radius:14px;border:1.5px solid var(--ink);background:#fff;display:flex;align-items:center;padding:0 18px;font-size:18px;color:var(--muted)}
+.bar b{display:inline-block;width:2px;height:24px;background:var(--ink);margin-right:10px}
+.add .key{height:56px;display:flex;align-items:center;font-size:17px;padding:0 24px}
+.note{text-align:center;margin-top:12px;font-size:13px;color:var(--muted)}
+.margin{position:absolute;right:-210px;top:150px;width:180px;font:600 15px Figtree;color:var(--muted);line-height:1.35}
+.margin::before{content:"";display:block;width:56px;height:2px;background:var(--ink);margin-bottom:10px}
+</style></head><body>
+<nav>
+  <div class="brand"><svg class="mark" viewBox="0 0 40 40"><path d="M5 19 20 6l15 13v16H5z" fill="none" stroke="#1A1A1A" stroke-width="3.5" stroke-linejoin="round"/><rect x="10" y="20" width="11" height="11" fill="none" stroke="#1A1A1A" stroke-width="3"/><rect x="13.5" y="23.5" width="4" height="4" fill="#FFD417"/><rect x="25" y="22" width="5" height="11" fill="#BE1E2D"/></svg>Bauhouse</div>
+  <div class="navr"><span>Lists</span><span>Trips</span><span>Log in</span><span class="key">Start your House</span></div>
+</nav>
+<div class="head">
+  <h1>Plan the house <em>together.</em></h1>
+  <p class="sub">Groceries, chores and the next trip, shared by everyone you live with.</p>
+</div>
+<div class="stackwrap">
+  <div class="edge"></div>
+  <div class="sheet">
+    <div class="meta"><h2>Why Bauhouse</h2>
+      <div class="faces"><span class="av" style="background:#2348A6;margin-left:0">M</span><span class="av" style="background:#BE1E2D">S</span><span class="av" style="background:#1A1A1A">J</span>&nbsp; Mia, Sam and Jo</div></div>
+    <div class="row done"><span class="box on"></span><span class="t">Dead simple. One bar adds anything.<small>Ticked by Mia</small></span><span class="stamp s1">Simple</span></div>
+    <div class="row done"><span class="box on"></span><span class="t">Everyone in the house sees the same list.<small>Ticked by Sam, just now</small></span><span class="stamp s2">Shared</span></div>
+    <div class="row"><span class="box"></span><span class="t"><span class="hl">Works with no signal.</span><small>At the shop, on the train, abroad</small></span><span class="stamp s3">Offline</span></div>
+    <div class="row"><span class="box"></span><span class="t">Free. No plan to pick, no card to enter.<small>Added by Jo</small></span><span class="stamp s4">Free</span></div>
+    <div class="add"><div class="bar"><b></b>Add something. Try “oat milk”</div><span class="key">Start your House, free</span></div>
+    <p class="note">Demo list with made-up housemates. Type to try it.</p>
+  </div>
+  <div class="margin">Tick one off. It ticks off for the whole house.</div>
+</div>
+</body></html>
