@@ -16,7 +16,7 @@ type Props = {
 }
 
 export const TopNav: React.FC<Props> = ({ back }) => {
-  const { apiKey, setApiKey } = useAuth()
+  const { apiKey, signOut } = useAuth()
   const navigate = useTransitionNavigate()
   const meQuery = useQuery({ queryKey: ['me'], queryFn: () => getMe(apiKey!) })
   const me = meQuery.data
@@ -31,7 +31,7 @@ export const TopNav: React.FC<Props> = ({ back }) => {
   ]
   const onMenuClick: MenuProps['onClick'] = ({ key }) => {
     if (key === 'account') navigate('/app/account')
-    if (key === 'logout') withViewTransition(() => setApiKey(null))
+    if (key === 'logout') void signOut('user', withViewTransition)
   }
 
   const seed = me?.avatar_key || me?.name || me?.user_id || 'me'

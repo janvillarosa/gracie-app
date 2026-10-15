@@ -12,9 +12,14 @@ import type {
 } from '../../api/tripTypes'
 import {
   bySeq,
+  clearCurrentTripUser,
   createDefaultDB,
+  currentTripUser,
+  hasTripDatabase,
+  IdbTripDB,
+  markCurrentTripUser,
   newDeviceId,
-  wipeTripDatabases,
+  wipeTripDatabase,
   type DraftOp,
   type StoredTrip,
   type TripDB,
@@ -90,7 +95,6 @@ export class TripStore {
   private onUnauthorized?: () => void
   // The device's client id (one per browser profile, kept in the database). Until the database
   // can stamp an op the op has none; if it cannot at all, ops go out under a volatile id.
-  private deviceId = ''
   private volatileId = ''
   private volatileSeq = 0
   private persistFailed = false
@@ -133,6 +137,7 @@ export class TripStore {
     this.onForbidden = deps.onForbidden
     this.onUnauthorized = deps.onUnauthorized
     this.db.onInvalidated?.(() => void this.dispose())
+    markCurrentTripUser(this.userId)
     this.state = this.makeState()
   }
 
@@ -188,7 +193,6 @@ export class TripStore {
       this.outbox = loaded.outbox
       await this.persist(() => this.db.retagOps(this.roomId))
       if (this.disposed) return
-      this.deviceId = loaded.meta?.client_id ?? ''
       this.recomputeAll()
       this.ready = true
       this.emit()
@@ -252,7 +256,7 @@ export class TripStore {
 
   /** Ends this store for good: timers and listeners go, results that arrive late are ignored,
    *  and the database connection closes. */
-  async dispose(): Promise<void> {
+  async dispose(fast = false): Promise<void> {
     this.disposed = true
     this.started = 0
     if (typeof window !== 'undefined') {
@@ -264,9 +268,45 @@ export class TripStore {
     this.poll = this.timer = null
     this.listeners.clear()
     this.early = []
-    await this.inflight?.catch(() => {})
+    // `fast`: do not wait for a request that may never answer; its result is ignored anyway.
+    if (!fast) await this.inflight?.catch(() => {})
     await this.settle()
     this.db.close()
+  }
+
+  /** Tries to send everything queued (for at most `timeoutMs`), then disposes. Resolves with how
+   *  many ops are still unsent, counted in the database so other tabs' ops are included. */
+  async flushAndDispose(timeoutMs: number): Promise<number> {
+    if (timeoutMs > 0 && !this.disposed) {
+      let timer: ReturnType<typeof setTimeout> | undefined
+      const timeout = new Promise<void>((resolve) => {
+        timer = setTimeout(resolve, timeoutMs)
+      })
+      await Promise.race([this.flush().catch(() => {}), timeout])
+      if (timer !== undefined) clearTimeout(timer)
+    }
+    await this.settle()
+    const left = await this.unsentCount()
+    await this.dispose(true)
+    return left
+  }
+
+  private async unsentCount(): Promise<number> {
+    try {
+      const { outbox } = await this.db.load()
+      const inDb = new Set(outbox.map((o) => o.op_id))
+      return (
+        outbox.length +
+        this.outbox.filter((o) => !inDb.has(o.op_id) && this.unpersisted.has(o.op_id)).length
+      )
+    } catch {
+      return this.outbox.length
+    }
+  }
+
+  /** Deletes this store's database (after dispose). */
+  async destroyDb(): Promise<void> {
+    await this.db.destroy()
   }
 
   /** Deletes this user's local trips data (sign-out). */
@@ -364,7 +404,6 @@ export class TripStore {
     const w: Promise<void> = this.db
       .appendOp(draft, this.roomId)
       .then((stamped) => {
-        this.deviceId = stamped.client_id
         op.client_id = stamped.client_id
         op.seq = stamped.seq
       })
@@ -745,10 +784,69 @@ export async function resetTripStores(): Promise<void> {
   await Promise.all(all.map((s) => s.dispose()))
 }
 
-/** Sign-out: the stores go and the signed-out user's local trips data is deleted. */
-export async function wipeTripData(): Promise<void> {
+// How many changes could not be sent at the last sign-out (their database was kept for the next
+// sign-in). The sign-in screen can say so.
+let pendingOnLogout = 0
+const pendingListeners = new Set<() => void>()
+export const getPendingOnLogout = () => pendingOnLogout
+export function subscribePendingOnLogout(fn: () => void) {
+  pendingListeners.add(fn)
+  return () => {
+    pendingListeners.delete(fn)
+  }
+}
+const setPendingOnLogout = (n: number) => {
+  if (n === pendingOnLogout) return
+  pendingOnLogout = n
+  for (const l of pendingListeners) l()
+}
+
+/** Sends what is queued in every live store (waiting at most `timeoutMs` in all), then disposes
+ *  them. Resolves with the number of changes still unsent. */
+export async function flushAndDispose(timeoutMs = 4000): Promise<number> {
   const all = [...registry.values()]
   registry.clear()
-  await Promise.all(all.map((s) => s.destroy()))
-  await wipeTripDatabases()
+  const left = await Promise.all(all.map((s) => s.flushAndDispose(timeoutMs)))
+  return left.reduce((a, b) => a + b, 0)
+}
+
+/** Sign-out. The signed-out user's stores send what they can (unless `flush` is false, e.g. the
+ *  key is already refused), then their local trips data is deleted - but only if nothing is left
+ *  unsent: otherwise the database is kept for their next sign-in and the count is exposed through
+ *  getPendingOnLogout(). Only this user's database is touched, never another user's. */
+export async function wipeTripData(
+  opts: { flush?: boolean; timeoutMs?: number } = {},
+): Promise<number> {
+  const stores = [...registry.values()]
+  const users = new Set(stores.map((s) => s.userId))
+  const marked = currentTripUser()
+  if (marked) users.add(marked)
+  registry.clear()
+  const timeout = opts.flush === false ? 0 : (opts.timeoutMs ?? 4000)
+  let left = (await Promise.all(stores.map((s) => s.flushAndDispose(timeout)))).reduce(
+    (a, b) => a + b,
+    0,
+  )
+  // A user with no live store (signed out before opening a trips screen) may still have queued
+  // changes from an earlier visit.
+  const live = new Set(stores.map((s) => s.userId))
+  if (typeof indexedDB !== 'undefined') {
+    for (const u of users) {
+      if (live.has(u) || !hasTripDatabase(u)) continue
+      const db = new IdbTripDB(u)
+      try {
+        left += (await db.load()).outbox.length
+      } catch {
+      } finally {
+        db.close()
+      }
+    }
+  }
+  setPendingOnLogout(left)
+  // Whoever signs in next is not this user: a kept database is never wiped by someone else's sign-out.
+  clearCurrentTripUser()
+  if (left > 0) return left
+  await Promise.all(stores.map((s) => s.destroyDb()))
+  await Promise.all([...users].map((u) => wipeTripDatabase(u)))
+  return 0
 }

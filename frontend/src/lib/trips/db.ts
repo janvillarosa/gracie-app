@@ -149,6 +149,31 @@ async function removeLegacyOnce(): Promise<void> {
   } catch {}
 }
 
+const USER_KEY = 'bauhouse_trips_user'
+/** Remembers who last opened a trips database on this browser, so sign-out knows whose to wipe
+ *  even when no store is alive. */
+export function markCurrentTripUser(userId: string) {
+  try {
+    localStorage.setItem(USER_KEY, userId)
+  } catch {}
+}
+export function currentTripUser(): string | null {
+  try {
+    return localStorage.getItem(USER_KEY)
+  } catch {
+    return null
+  }
+}
+export function clearCurrentTripUser() {
+  try {
+    localStorage.removeItem(USER_KEY)
+  } catch {}
+}
+/** True when this browser has a trips database for the user (so counting never creates one). */
+export function hasTripDatabase(userId: string): boolean {
+  return registered().includes(`${DB_PREFIX}${userId}`)
+}
+
 /** Deletes one user's trips database (sign-out of that user; never anyone else's). */
 export async function wipeTripDatabase(userId: string): Promise<void> {
   if (typeof indexedDB === 'undefined') return

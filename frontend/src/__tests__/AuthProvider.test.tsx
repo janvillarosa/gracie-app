@@ -67,4 +67,44 @@ describe('AuthProvider', () => {
     await waitFor(() => expect(localStorage.getItem('gracie_api_key')).toBeNull())
     expect(navigateMock).toHaveBeenCalledWith('/login', { replace: true })
   })
+
+  it('logging out signs out at once but keeps changes that could not be sent', async () => {
+    const getMe = endpoints.getMe as unknown as ReturnType<typeof vi.fn>
+    getMe.mockResolvedValue({ user_id: 'u_out' })
+    localStorage.setItem('gracie_api_key', 'good')
+    const { getTripStore, TripStore, getPendingOnLogout, resetTripStores } = await import(
+      '@lib/trips/store'
+    )
+    const { wipeTripDatabases } = await import('@lib/trips/db')
+    const offline = {
+      sync: () => Promise.reject(new Error('offline')),
+      ops: () => Promise.reject(new Error('offline')),
+    }
+    const store = getTripStore(
+      'u_out:r',
+      () => new TripStore({ roomId: 'r', userId: 'u_out', api: offline }),
+    )
+    await store.hydrate()
+    store.createTrip({ title: 'Unsent' })
+    await store.settle()
+    const { AuthProvider: Provider, useAuth } = await import('@auth/AuthProvider')
+    const { MemoryRouter } = await import('react-router-dom')
+    const Out: React.FC = () => {
+      const { setApiKey } = useAuth()
+      return <button onClick={() => setApiKey(null)}>out</button>
+    }
+    const { getByText } = render(
+      <MemoryRouter>
+        <Provider>
+          <Out />
+        </Provider>
+      </MemoryRouter>,
+    )
+    getByText('out').click()
+    await waitFor(() => expect(localStorage.getItem('gracie_api_key')).toBeNull())
+    await waitFor(() => expect(getPendingOnLogout()).toBe(1))
+    expect((await indexedDB.databases()).map((d) => d.name)).toContain('bauhouse-trips-u_out')
+    await resetTripStores()
+    await wipeTripDatabases()
+  })
 })
