@@ -665,6 +665,18 @@ input.ui-sheet-title {
   overscroll-behavior: contain;
 }
 
+/* One input for both add bars: exactly --control-h, text centred. The List bar's antd textarea has a
+   1px border; the Field textarea of the trip bar gets the same border (transparent) and the same
+   quiet focus halo, so heights, text position and the focus box are identical. */
+.add-bar textarea.ui-field.add-input {
+  box-sizing: border-box;
+  min-height: var(--control-h) !important;
+  border: 1px solid transparent;
+}
+.add-bar textarea.ui-field.add-input:focus-visible {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--border) 60%, transparent);
+}
+
 /* The polite "3 suggestions" count: read by screen readers, never drawn. */
 .ui-combobox-count {
   position: absolute;
