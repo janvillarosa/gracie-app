@@ -1,0 +1,105 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Sheet template</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F7F7F7;--panel:#fff;--ink:#1A1A1A;--text:#3B3B3B;--muted:#5C626B;--line:#ECECEC;--yellow:#FFD417;--yellow-deep:#E6BE00;--red:#BE1E2D;--blue:#2348A6;--sub:#FAFAFA;
+--shadow-key:inset 0 1px 0 rgba(255,255,255,.55),0 1px 0 var(--yellow-deep),0 2px 6px -1px rgba(150,115,0,.28)}
+*{box-sizing:border-box;margin:0}
+body{background:#DADADA;font:15px/1.45 Figtree,sans-serif;color:var(--text);padding:24px}
+h1.page{font:700 22px Outfit;color:var(--ink);margin-bottom:6px}
+p.lede{color:#3F444C;max-width:820px;margin-bottom:20px}
+.row-of{display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start}
+.phone{width:375px;background:rgba(0,0,0,.35);border-radius:28px;padding-top:120px;overflow:hidden}
+.cap{width:375px;color:#3F444C;font-size:13px;margin-top:10px}
+.sheet{background:var(--panel);border-radius:20px 20px 0 0;padding:8px 20px 28px}
+.handle{width:36px;height:4px;border-radius:2px;background:#D6D6D6;margin:0 auto 6px}
+.hdr{display:flex;justify-content:flex-end;height:36px;align-items:center}
+.x{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;color:var(--muted);font-size:18px}
+/* Tier 1: hero */
+.hero{display:grid;grid-template-columns:28px 1fr;gap:12px;align-items:start}
+.cb{width:24px;height:24px;border:2px solid #BDBDBD;border-radius:7px;margin-top:5px}
+.kicon{width:28px;height:28px;border-radius:8px;background:#F2F2F2;display:grid;place-items:center;font-size:16px;margin-top:3px}
+.title{font:700 26px/1.15 Outfit;color:var(--ink)}
+.context{color:var(--muted);margin-top:6px;font-size:15px}
+.stamp{display:inline-block;font:700 11px Figtree;letter-spacing:.08em;padding:3px 7px;border-radius:5px;background:#DCE5FA;color:var(--blue);vertical-align:2px;margin-left:6px}
+/* Tier 2: actions */
+.actions{display:flex;gap:10px;margin:18px 0 0 40px}
+.key{background:var(--yellow);box-shadow:var(--shadow-key);border-radius:999px;padding:10px 18px;font-weight:700;color:var(--ink)}
+.quiet{background:#fff;border:1px solid #DADADA;border-radius:999px;padding:9px 16px;font-weight:600;color:var(--ink)}
+/* Tier 3: grouped properties */
+.group{margin-top:26px;background:var(--sub);border-radius:16px;padding:2px 0}
+.prow{display:grid;grid-template-columns:96px 1fr 18px;gap:12px;align-items:center;min-height:52px;padding:0 16px;position:relative}
+.prow+.prow:before{content:"";position:absolute;left:16px;right:0;top:0;height:1px;background:var(--line)}
+.plabel{color:var(--muted);font-size:14px}
+.pval{color:var(--ink);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pval.empty{color:#5C626B;font-weight:400}
+.chev{color:var(--yellow-deep);font-weight:700}
+/* Tier 4: footer meta */
+.meta{margin-top:22px;display:flex;justify-content:space-between;align-items:center;padding:0 4px}
+.who{color:var(--muted);font-size:13px}
+.del{color:var(--red);font-weight:600;font-size:14px}
+.bad{width:375px;background:#fff;border-radius:20px;padding:16px 20px;font-size:13px;color:#3F444C}
+.bad b{color:var(--ink)}
+.code{font:700 30px Outfit;letter-spacing:.12em;color:var(--ink);text-align:center;margin:16px 0 4px}
+.slip{border:1px dashed #CFCFCF;border-radius:14px;padding:14px;margin-top:18px;background:#FFFDF2}
+</style></head><body>
+<h1 class="page">Sheet template: four tiers</h1>
+<p class="lede">Every sheet uses the same order. <b>1 · Identity:</b> what this is, big. <b>2 · Do:</b> the one or two actions, right under it. <b>3 · Details:</b> editable properties in one grouped list with short left labels. <b>4 · Footer:</b> who and when, with Delete on the same quiet line. One yellow key per sheet, always in tier 2. Synthetic data.</p>
+<div class="row-of">
+
+<div>
+<div class="phone"><div class="sheet">
+ <div class="handle"></div><div class="hdr"><span class="x">✕</span></div>
+ <div class="hero"><span class="cb"></span><div>
+  <div class="title">Quinta da Regaleira</div>
+  <div class="context">Thu 15 · 14:00–16:00 · Sintra <span class="stamp">SIGHT</span></div>
+ </div></div>
+ <div class="actions"><span class="key">Open Maps</span></div>
+ <div class="group">
+  <div class="prow"><span class="plabel">When</span><span class="pval">Thu 15, 14:00 · 2 h</span><span class="chev">›</span></div>
+  <div class="prow"><span class="plabel">Place</span><span class="pval">Quinta da Regaleira, Sintra</span><span class="chev">›</span></div>
+  <div class="prow"><span class="plabel">Category</span><span class="pval">Sight</span><span class="chev">›</span></div>
+  <div class="prow"><span class="plabel">Booking</span><span class="pval empty">None</span><span class="chev">›</span></div>
+  <div class="prow"><span class="plabel">Note</span><span class="pval empty">Add a note</span><span class="chev">›</span></div>
+ </div>
+ <div class="meta"><span class="who">Added by Mia · Tue</span><span class="del">Delete</span></div>
+</div></div>
+<p class="cap"><b>Todo.</b> The title is the hero. The context line repeats the key facts in one glance. The details sit in one tinted group. Each row's value opens one picker, so "When" opens day, time and length together.</p>
+</div>
+
+<div>
+<div class="phone"><div class="sheet">
+ <div class="handle"></div><div class="hdr"><span class="x">✕</span></div>
+ <div class="hero"><span class="kicon">🛏</span><div>
+  <div class="title">Alfama flat</div>
+  <div class="context">Now · until Sun 18, 11:00</div>
+ </div></div>
+ <div class="actions"><span class="key">Open Maps</span><span class="quiet">Show code</span></div>
+ <div class="group">
+  <div class="prow"><span class="plabel">Check-in</span><span class="pval">Tue 13, 15:00</span><span class="chev">›</span></div>
+  <div class="prow"><span class="plabel">Check-out</span><span class="pval">Sun 18, 11:00</span><span class="chev">›</span></div>
+  <div class="prow"><span class="plabel">Place</span><span class="pval">Rua da Regueira 12, Lisbon</span><span class="chev">›</span></div>
+  <div class="prow"><span class="plabel">Code</span><span class="pval">•••• 211</span><span class="chev">›</span></div>
+  <div class="prow"><span class="plabel">Note</span><span class="pval empty">Add a note</span><span class="chev">›</span></div>
+ </div>
+ <div class="meta"><span class="who">Added by Mia · Mon</span><span class="del">Delete</span></div>
+</div></div>
+<p class="cap"><b>Booking.</b> The same template. The context line says the state that matters now. The code is masked in its row, and Show code opens the slip.</p>
+</div>
+
+<div>
+<div class="phone"><div class="sheet">
+ <div class="handle"></div><div class="hdr"><span class="x">✕</span></div>
+ <div class="hero"><span class="kicon">🎟</span><div>
+  <div class="title">Timed entry</div>
+  <div class="context">Pena Palace · Thu 15, 10:00</div>
+ </div></div>
+ <div class="slip"><div class="code">PENA-5521</div><div style="display:flex;justify-content:center;gap:10px;margin-top:10px"><span class="quiet">Copy</span><span class="quiet">Edit</span></div></div>
+ <div class="meta"><span class="who">Show this at the entrance</span><span></span></div>
+</div></div>
+<p class="cap"><b>Ticket slip.</b> The same identity tier, with the code as the body. No yellow key here, because the code is the point.</p>
+</div>
+
+<div class="bad"><b>What this replaces:</b> a 16px title with the same weight as everything else; six sections split by full-width lines; chips wrapping onto a second line; and a yellow button floating mid-sheet with tiny "Added by" and a red Delete stacked under it. The order is now identity, then action, then details, then footer.</div>
+</div>
+</body></html>

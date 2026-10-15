@@ -349,6 +349,18 @@ The rules:
 - A dev-only `/dev/ui` gallery shows every primitive and state.
 - DESIGN.md is generated from the finished build.
 
+## 6m. Four-tier sheet template (adopted 2026-10-15)
+
+Every sheet fills the same four tiers, in order (reference: `.impeccable/mocks/sheet-template.html`):
+1. **Identity:** a checkbox or kind icon, the title in Outfit 26, and one context line.
+2. **Do:** one yellow key (at most one per sheet, only in this tier) plus at most one quiet button.
+3. **Details:** one tinted group of rows, each with a short muted label, a value and a yellow
+   chevron. Each value opens one picker; "When" covers day, time and duration together.
+4. **Footer:** "Added by … · day" on the left and a red Delete on the right.
+
+This supersedes the no-labels anatomy in 6f and the booking edit layout in 6l. Booking creation
+still starts with the kind chips.
+
 ## 7. Constraints and open decisions
 
 Constraints:
