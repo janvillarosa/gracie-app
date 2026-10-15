@@ -287,6 +287,20 @@ flagged done days, and it didn't say which items clashed. Gaps now show where th
 - Todos **outside trip dates** sit in their own end section, with one explanatory line.
 - The day list marks days that have an overlap with a small amber dot.
 
+## 6j. Interactive map (2026-10-15)
+
+- **Desktop map:** a real MapLibre map with zoom and pan, a +/− control, **Fit day** and Show all
+  days. Following the scroll pauses after any manual zoom or pan, until Fit day or a day pick.
+  The basemap is a quiet light style so day colours and pins stand out.
+- **Click to add a stop:** clicking the map or a place label drops a temporary pin and opens a paper
+  popover with the place name (POI name or reverse geocode, else "Dropped pin"), "Add to Thu 15"
+  with a day chip (another day or Ideas), and "More details". Nothing is created until you confirm.
+  Esc, an outside click or a pan dismisses it.
+- Highlighting a place slip in the add bar previews its pin on the map.
+- **Phone map sheet:** pinch-zoom and pan; a long-press (not a tap) drops the temporary pin.
+- **Tiles:** development uses Protomaps' public demo PMTiles. The production host is still an open
+  decision.
+
 ## 7. Constraints and open decisions
 
 Constraints:
