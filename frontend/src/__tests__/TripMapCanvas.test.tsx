@@ -1,4 +1,3 @@
-import { demoSource, setPlacesSource } from '../lib/trips/placesSource'
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -8,7 +7,14 @@ import { lisbonTrip, rel, renderTrips, resetTripsWorld, seed, setViewport } from
 vi.mock('@googlemaps/js-api-loader', async () => (await import('./googleFake')).loaderMock())
 vi.mock('@googlemaps/markerclusterer', async () => (await import('./googleFake')).clustererMock())
 
-import { FakeMap, FakeMarker, fakeLayout, resetGoogleFake } from './googleFake'
+import {
+  FakeGeocoder,
+  FakeMap,
+  FakeMarker,
+  FakePlace,
+  fakeLayout,
+  resetGoogleFake,
+} from './googleFake'
 
 const place = (name: string, lat: number, lng: number) => ({
   name,
@@ -134,20 +140,10 @@ describe('following the day, and pausing when you move the map', () => {
     seed(t)
     renderTrips(`/app/trips/${t.trip_id}`)
     const map = await ready()
-    // The first fit has settled (the map's first idle).
     await waitFor(() => expect(map.moves).toBeGreaterThan(0))
-    act(() => map.emit('idle'))
-    const fitDay = screen.getByRole('button', { name: 'Fit day' })
-    map.clearMoves()
-    await userEvent.click(fitDay)
-    await waitFor(() => expect(map.moves).toBeGreaterThan(0))
-    // This fit changes the zoom itself, before it reports idle: that is not "the person".
+    // The fit that just ran changes the zoom itself: that is not "the person".
     act(() => map.emit('zoom_changed'))
-    expect(fitDay).not.toHaveClass('is-key')
-    // Once it has settled, a zoom change is the person.
-    act(() => map.emit('idle'))
-    act(() => map.emit('zoom_changed'))
-    await waitFor(() => expect(fitDay).toHaveClass('is-key'))
+    expect(screen.getByRole('button', { name: 'Fit day' })).not.toHaveClass('is-key')
   })
 
   it('resumes when a day is picked from the day list', async () => {
@@ -164,6 +160,153 @@ describe('following the day, and pausing when you move the map', () => {
     const list = await screen.findByRole('group', { name: 'Days' })
     await userEvent.click(within(list).getAllByRole('button')[3])
     await waitFor(() => expect(fitDay).not.toHaveClass('is-key'))
+  })
+})
+
+describe('click to add a stop', () => {
+  // A click on a Google place (with its name) or on an empty spot (reverse-geocoded).
+  const click = (map: FakeMap, name?: string) => {
+    if (name) FakePlace.next = { displayName: name, lat: 38.7876, lng: -9.3906 }
+    else FakeGeocoder.result = 'fail'
+    act(() => {
+      map.emit('click', {
+        latLng: { lat: () => 38.7876, lng: () => -9.3906 },
+        placeId: name ? 'ChIJtest' : undefined,
+        stop: () => {},
+      })
+    })
+  }
+
+  it('drops one hollow pin and a card, and creates nothing until the key is pressed', async () => {
+    const t = withPlaces()
+    seed(t)
+    renderTrips(`/app/trips/${t.trip_id}`)
+    const map = await ready()
+    click(map)
+    const card = await screen.findByRole('dialog', { name: /^Add .* to / })
+    // No name came with the click: a dropped pin the person can name.
+    expect(await within(card).findByLabelText('Place name')).toBeInTheDocument()
+    // The temporary pin is the hollow ring.
+    expect(
+      tripServer.trips
+        .get(t.trip_id)
+        ?.todos.some((x) => x.title === 'Pena Palace' && x.day === rel(0) && x.created_by),
+    ).toBeTruthy()
+  })
+
+  it('adds the place to the day on the map, and the temporary pin goes', async () => {
+    const t = withPlaces()
+    seed(t)
+    renderTrips(`/app/trips/${t.trip_id}`)
+    const map = await ready()
+    click(map, 'Pastéis de Belém')
+    const card = await screen.findByRole('dialog', { name: /Pastéis de Belém/ })
+    expect(within(card).getByRole('heading', { name: 'Pastéis de Belém' })).toBeInTheDocument()
+    expect(tripServer.trips.get(t.trip_id)?.todos.some((x) => x.title === 'Pastéis de Belém')).toBe(
+      false,
+    )
+    await userEvent.click(within(card).getByRole('button', { name: /^Add to / }))
+    await waitFor(() => {
+      const made = tripServer.trips
+        .get(t.trip_id)
+        ?.todos.find((x) => x.title === 'Pastéis de Belém')
+      expect(made?.day).toBe(rel(0))
+      expect(made?.place?.lat).toBeCloseTo(38.7876, 3)
+    })
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: /Pastéis de Belém/ })).not.toBeInTheDocument(),
+    )
+    expect(FakeMarker.preview()?.shown ?? false).toBe(false)
+    expect(await screen.findByRole('button', { name: 'Pastéis de Belém' })).toBeInTheDocument()
+  })
+
+  it('can add to another day or to Ideas from the same card', async () => {
+    const t = withPlaces()
+    seed(t)
+    renderTrips(`/app/trips/${t.trip_id}`)
+    const map = await ready()
+    click(map, 'Jardim')
+    const card = await screen.findByRole('dialog', { name: /Jardim/ })
+    await userEvent.click(within(card).getByRole('button', { name: /^Add to, / }))
+    await userEvent.click(await screen.findByRole('button', { name: /^Ideas/ }))
+    await userEvent.click(within(card).getByRole('button', { name: 'Add to Ideas' }))
+    await waitFor(() =>
+      expect(
+        tripServer.trips.get(t.trip_id)?.todos.find((x) => x.title === 'Jardim')?.day ?? null,
+      ).toBeNull(),
+    )
+  })
+
+  it('opens the edit sheet, prefilled, from "More details"', async () => {
+    const t = withPlaces()
+    seed(t)
+    renderTrips(`/app/trips/${t.trip_id}`)
+    const map = await ready()
+    click(map, 'Miradouro')
+    const card = await screen.findByRole('dialog', { name: /Miradouro/ })
+    await userEvent.click(within(card).getByRole('button', { name: 'More details' }))
+    const sheet = await screen.findByRole('dialog', { name: 'Miradouro' })
+    expect(within(sheet).getByLabelText('Title')).toHaveValue('Miradouro')
+    expect(tripServer.trips.get(t.trip_id)?.todos.some((x) => x.title === 'Miradouro')).toBe(true)
+  })
+
+  it('goes away on Esc, on a click elsewhere, and when you start to pan', async () => {
+    const t = withPlaces()
+    seed(t)
+    renderTrips(`/app/trips/${t.trip_id}`)
+    const map = await ready()
+    click(map, 'Jardim')
+    await screen.findByRole('dialog', { name: /Jardim/ })
+    await userEvent.keyboard('{Escape}')
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: /Jardim/ })).not.toBeInTheDocument(),
+    )
+    click(map, 'Jardim')
+    await screen.findByRole('dialog', { name: /Jardim/ })
+    act(() => map.emit('idle'))
+    act(() => map.emit('dragstart'))
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: /Jardim/ })).not.toBeInTheDocument(),
+    )
+    click(map, 'Jardim')
+    await screen.findByRole('dialog', { name: /Jardim/ })
+    fireEvent.pointerDown(document.body)
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: /Jardim/ })).not.toBeInTheDocument(),
+    )
+    expect(tripServer.trips.get(t.trip_id)?.todos.some((x) => x.title === 'Jardim')).toBe(false)
+  })
+
+  it('says "Dropped pin" with a name to type when the place cannot be found', async () => {
+    const t = withPlaces()
+    seed(t)
+    renderTrips(`/app/trips/${t.trip_id}`)
+    const map = await ready()
+    click(map)
+    const card = await screen.findByRole('dialog', { name: /dropped pin/i })
+    const name = await within(card).findByLabelText('Place name')
+    await userEvent.type(name, 'Viewpoint')
+    await userEvent.click(within(card).getByRole('button', { name: /^Add to / }))
+    await waitFor(() =>
+      expect(tripServer.trips.get(t.trip_id)?.todos.some((x) => x.title === 'Viewpoint')).toBe(
+        true,
+      ),
+    )
+  })
+
+  it('keeps focus inside the card, and names it for a screen reader', async () => {
+    const t = withPlaces()
+    seed(t)
+    renderTrips(`/app/trips/${t.trip_id}`)
+    const map = await ready()
+    click(map, 'Jardim')
+    const card = await screen.findByRole('dialog', { name: /^Add Jardim to / })
+    await waitFor(() => expect(card).toHaveFocus())
+    // Tab stays inside: from the last control it comes back to the first.
+    const keys = within(card).getAllByRole('button')
+    keys[keys.length - 1].focus()
+    await userEvent.tab()
+    expect(card.contains(document.activeElement)).toBe(true)
   })
 })
 

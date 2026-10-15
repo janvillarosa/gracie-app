@@ -713,7 +713,7 @@ describe('Google places (backend models.Place rules)', () => {
     expect(stateRec(todo(3, { title: 'x', place: google({ osm_ref: 'n1' }) }))).toBe(
       'rejected/unsupported',
     )
-    expect(stateRec(todo(4, { title: 'x', place: google({ source: 'photon' }) }))).toBe(
+    expect(stateRec(todo(4, { title: 'x', place: google({ source: 'pin' }) }))).toBe(
       'rejected/invalid',
     )
   })

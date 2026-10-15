@@ -81,7 +81,8 @@ export const TodoSheet: React.FC<Props> = ({
     .join(' · ')
   // A place named like the item says only where it is: "Sintra", not the name twice.
   const sameName =
-    !!todo.place && (todo.place.name ?? '').trim().toLowerCase() === todo.title.trim().toLowerCase()
+    !!todo.place &&
+    (todo.place.name ?? '').trim().toLowerCase() === (todo.title ?? '').trim().toLowerCase()
   const placeText = todo.place
     ? sameName
       ? (todo.place.locality ?? todo.place.name)

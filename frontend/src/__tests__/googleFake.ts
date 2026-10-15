@@ -216,12 +216,27 @@ export class FakePlace {
   }
 }
 
+export class FakeGeocoder {
+  static calls: Array<{ location: { lat: number; lng: number } }> = []
+  static result: { formatted_address: string; place_id: string }[] | 'fail' | 'hang' = [
+    { formatted_address: 'Rua Augusta 10, Lisboa', place_id: 'ChIJstreet' },
+  ]
+  async geocode(r: { location: { lat: number; lng: number } }) {
+    FakeGeocoder.calls.push(r)
+    const res = FakeGeocoder.result
+    if (res === 'fail') throw new Error('nope')
+    if (res === 'hang') return new Promise<never>(() => {})
+    return { results: res }
+  }
+}
+
 export class FakeToken {
   static made = 0
   id = ++FakeToken.made
 }
 
 type Result = { id: string; main: string; secondary: string }
+/** google.maps.places.AutocompleteSuggestion: fetchAutocompleteSuggestions with a session token. */
 export class FakeAutocomplete {
   static requests: Array<Record<string, unknown>> = []
   static results: Result[] = [
@@ -264,6 +279,7 @@ export const libs = () => ({
     AutocompleteSuggestion: FakeAutocomplete,
     AutocompleteSessionToken: FakeToken,
   },
+  geocoding: { Geocoder: FakeGeocoder },
 })
 
 export const importLibrary = vi.fn(async (name: string) => (libs() as any)[name])
@@ -285,6 +301,8 @@ export function resetGoogleFake() {
   FakeAutocomplete.requests = []
   FakeAutocomplete.fail = false
   FakeToken.made = 0
+  FakeGeocoder.calls = []
+  FakeGeocoder.result = [{ formatted_address: 'Rua Augusta 10, Lisboa', place_id: 'ChIJstreet' }]
   FakePlace.next = { displayName: 'Livraria Bertrand', lat: 38.711, lng: -9.142 }
   importLibrary.mockClear()
   setOptions.mockClear()

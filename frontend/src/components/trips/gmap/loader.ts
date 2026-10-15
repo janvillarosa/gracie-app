@@ -34,12 +34,15 @@ export function loadGoogle(config: MapsConfig): Promise<Google> {
   return pending
 }
 
-/** The places library loads on the first place tap or search, not with the map. */
+/** The places library (search suggestions, place details) loads on the first search or click, not
+ *  with the map. It needs the same key, so it configures the loader too. Never offline. */
 export function loadPlaces(config: MapsConfig = mapsConfig()) {
   if (!isOnline()) return Promise.reject(new Error('offline'))
   configure(config)
   return importLibrary('places')
 }
+export const loadGeocoding = () => importLibrary('geocoding')
+
 /** Test hook: forget a loaded API. */
 export function resetGoogleLoader() {
   pending = null

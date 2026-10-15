@@ -870,7 +870,9 @@ export class MockTripServer {
         ch.push({
           name: k,
           apply: () => {
-            if (p[k] === null || p[k] === '') delete o[k]
+            // The title is always sent (a Google place may stand in for it: "").
+            if (k === 'title') o[k] = p[k] ?? ''
+            else if (p[k] === null || p[k] === '') delete o[k]
             else o[k] = p[k]
           },
         })

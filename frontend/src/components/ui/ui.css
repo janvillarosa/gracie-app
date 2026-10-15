@@ -819,6 +819,8 @@ input.ui-sheet-title:focus-visible {
   padding: 6px 12px 2px;
   color: var(--muted);
   font-size: var(--size-meta);
+}
+
 /* ---- The inline inspector: rows that need no picker (desktop) ---------------------------------- */
 .ui-inline-row {
   position: relative;

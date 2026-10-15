@@ -1,5 +1,4 @@
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { TripMap } from '@components/trips/TripMap'
 import { MapController } from '@components/trips/gmap/controller'
@@ -9,15 +8,10 @@ import { loadGoogle, resetGoogleLoader, type Google } from '@components/trips/gm
 import { mapsConfig, mapsEnabled } from '@components/trips/gmap/config'
 import { pinState, pipColours } from '@components/trips/gmap/pin'
 import type { MapViewProps } from '@components/trips/mapView'
-import {
-  buildScene,
-  EMPTY_SCENE,
-  type MapPoi,
-  type MapScene,
-  type MapStop,
-} from '@lib/trips/mapScene'
+import { buildScene, EMPTY_SCENE, type MapScene, type MapStop } from '@lib/trips/mapScene'
 import {
   FakeClusterer,
+  FakeGeocoder,
   FakeMap,
   FakeMarker,
   FakePlace,
@@ -63,7 +57,7 @@ const props = (s: MapScene, over: Partial<MapViewProps> = {}): MapViewProps => (
 })
 
 const google = () => libs() as unknown as Google
-const make = (p: MapViewProps, onPoi?: (poi: MapPoi | null) => void) => {
+const make = (p: MapViewProps) => {
   const container = document.createElement('div')
   document.body.append(container)
   const ctl = new MapController({
@@ -71,7 +65,6 @@ const make = (p: MapViewProps, onPoi?: (poi: MapPoi | null) => void) => {
     container,
     config: { key: 'k', mapId: 'DEMO_MAP_ID' },
     props: p,
-    onPoi,
   })
   return { ctl, container, map: FakeMap.last as FakeMap }
 }
@@ -93,7 +86,7 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
-describe('the adapter contract on the Google map (setDay / setPins / setPreview / fit)', () => {
+describe('the adapter contract on the Google map (setDay / setPins / setPreview / fit / onMapClick)', () => {
   it('draws one marker per stop with our own HTML, and fits the whole trip on load', () => {
     const { map } = make(props(scene([A, B, C])))
     expect(FakeMarker.pins()).toHaveLength(3)
@@ -456,123 +449,90 @@ describe('the camera does not move for emphasis (brief 6q)', () => {
   })
 })
 
-describe('a tap on a Google place icon', () => {
+describe('click to add', () => {
   const click = (map: FakeMap, extra: Record<string, unknown> = {}) => {
     const stopFn = vi.fn()
     const e = { latLng: { lat: () => 38.7, lng: () => -9.2 }, stop: stopFn, ...extra }
     return { e, stopFn, run: () => act(async () => map.emit('click', e)) }
   }
 
-  it('reports the place id and its name, asking Google for the name and location only', async () => {
-    const onPoi = vi.fn()
-    const { map } = make(props(scene([A, B])), onPoi)
+  it('turns a click on a place into its place_id, with the Essentials fields only', async () => {
+    const p = props(scene([A, B]), { onMapClick: vi.fn() })
+    const { map } = make(p)
     const { stopFn, run } = click(map, { placeId: 'ChIJpoi' })
     await run()
-    // Google's own info window is suppressed: our card replaces it.
     expect(stopFn).toHaveBeenCalled()
-    expect(FakePlace.fetches).toEqual([{ id: 'ChIJpoi', fields: ['displayName', 'location'] }])
-    expect(onPoi).toHaveBeenCalledWith(
+    expect(FakePlace.fetches).toEqual([
+      { id: 'ChIJpoi', fields: ['id', 'displayName', 'formattedAddress', 'location'] },
+    ])
+    expect(p.onMapClick).toHaveBeenCalledTimes(1)
+    expect(p.onMapClick).toHaveBeenCalledWith(
       expect.objectContaining({
         place_id: 'ChIJpoi',
         lat: 38.711,
         lng: -9.142,
-        name: 'Livraria Bertrand',
+        displayName: 'Livraria Bertrand',
         x: expect.any(Number),
         y: expect.any(Number),
       }),
     )
+    expect(FakeGeocoder.calls).toHaveLength(0)
   })
 
-  it('still opens the card, without a name, when Google cannot answer', async () => {
-    const onPoi = vi.fn()
-    const { map } = make(props(scene([A, B])), onPoi)
+  it('reverse-geocodes an empty spot, with no place_id', async () => {
+    const p = props(scene([A, B]), { onMapClick: vi.fn() })
+    const { map } = make(p)
+    await click(map).run()
+    expect(FakeGeocoder.calls).toEqual([{ location: { lat: 38.7, lng: -9.2 } }])
+    const got = (p.onMapClick as ReturnType<typeof vi.fn>).mock.calls[0][0]
+    expect(got).toMatchObject({ lat: 38.7, lng: -9.2, displayName: 'Rua Augusta 10, Lisboa' })
+    expect(got).not.toHaveProperty('place_id')
+  })
+
+  it('still opens the card, as a dropped pin, when Google cannot answer', async () => {
+    const p = props(scene([A, B]), { onMapClick: vi.fn() })
+    const { map } = make(p)
+    FakeGeocoder.result = 'fail'
+    await click(map).run()
     FakePlace.next = 'fail'
     await click(map, { placeId: 'ChIJgone' }).run()
-    const got = onPoi.mock.calls[0][0]
-    expect(got).toMatchObject({ place_id: 'ChIJgone', lat: 38.7, lng: -9.2 })
-    expect(got).not.toHaveProperty('name')
+    const calls = (p.onMapClick as ReturnType<typeof vi.fn>).mock.calls
+    expect(calls[0][0]).toMatchObject({ lat: 38.7, lng: -9.2 })
+    expect(calls[0][0]).not.toHaveProperty('displayName')
+    expect(calls[1][0]).toMatchObject({ place_id: 'ChIJgone', lat: 38.7 })
   })
 
-  it('does nothing for an empty spot except closing the card: no lookup, nothing to add', async () => {
-    const onPoi = vi.fn()
-    const { map } = make(props(scene([A, B])), onPoi)
-    await click(map).run()
-    expect(onPoi).toHaveBeenCalledWith(null)
-    expect(FakePlace.fetches).toHaveLength(0)
+  it('does not wait on a slow geocoder', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    const p = props(scene([A, B]), { onMapClick: vi.fn() })
+    const { map } = make(p)
+    FakeGeocoder.result = 'hang'
+    const { e } = click(map)
+    map.emit('click', e)
+    await vi.advanceTimersByTimeAsync(2000)
+    expect(p.onMapClick).toHaveBeenCalledWith(expect.objectContaining({ lat: 38.7 }))
   })
 
-  it('only the last of two quick taps reports', async () => {
-    const onPoi = vi.fn()
-    const { map } = make(props(scene([A, B])), onPoi)
+  it('only the last of two quick clicks reports', async () => {
+    const p = props(scene([A, B]), { onMapClick: vi.fn() })
+    const { map } = make(p)
+    const one = click(map)
+    const two = click(map, { placeId: 'ChIJtwo' })
     await act(async () => {
-      map.emit('click', click(map, { placeId: 'ChIJone' }).e)
-      map.emit('click', click(map, { placeId: 'ChIJtwo' }).e)
+      map.emit('click', one.e)
+      map.emit('click', two.e)
     })
-    expect(onPoi).toHaveBeenCalledTimes(1)
-    expect(onPoi).toHaveBeenCalledWith(expect.objectContaining({ place_id: 'ChIJtwo' }))
+    expect(p.onMapClick).toHaveBeenCalledTimes(1)
+    expect(p.onMapClick).toHaveBeenCalledWith(expect.objectContaining({ place_id: 'ChIJtwo' }))
   })
 
-  it('works on the phone map too, which is otherwise read-only', async () => {
-    const onPoi = vi.fn()
-    const { map } = make(props(scene([A, B]), { interactive: false }), onPoi)
-    expect(map.options).toMatchObject({ clickableIcons: true, keyboardShortcuts: false })
+  it('is desktop only: the phone map is read-only', async () => {
+    const p = props(scene([A, B]), { interactive: false, onMapClick: vi.fn() })
+    const { map } = make(p)
+    expect(map.options).toMatchObject({ clickableIcons: false, keyboardShortcuts: false })
     await click(map, { placeId: 'ChIJpoi' }).run()
-    expect(onPoi).toHaveBeenCalledWith(expect.objectContaining({ place_id: 'ChIJpoi' }))
-  })
-
-  it('closes the card when the person pans', () => {
-    const onPoi = vi.fn()
-    const { map } = make(props(scene([A, B])), onPoi)
-    map.emit('dragstart')
-    expect(onPoi).toHaveBeenCalledWith(null)
-  })
-})
-
-describe('the place card', () => {
-  const key = 'k'
-  beforeEach(() => {
-    vi.stubEnv('VITE_GOOGLE_MAPS_API_KEY', key)
-    vi.stubEnv('VITE_GOOGLE_MAP_ID', 'MAP123')
-  })
-  const open = async () => {
-    render(<TripMap {...props(scene([A, B]))} />)
-    await waitFor(() => expect(FakeMap.last).not.toBeNull())
-    await act(async () => {
-      FakeMap.last?.emit('click', {
-        latLng: { lat: () => 38.7, lng: () => -9.2 },
-        placeId: 'ChIJpoi',
-        stop: () => {},
-      })
-    })
-    return screen.findByRole('dialog', { name: 'Livraria Bertrand' })
-  }
-
-  it('is just the name and "Open in Google Maps": exact by place id, in a new tab', async () => {
-    const card = await open()
-    expect(within(card).getByRole('heading', { name: 'Livraria Bertrand' })).toBeInTheDocument()
-    const link = within(card).getByRole('link', { name: /Open in Google Maps/ })
-    expect(link).toHaveAttribute('target', '_blank')
-    expect(link).toHaveAttribute('rel', expect.stringContaining('noopener'))
-    expect(link.getAttribute('href')).toContain('https://www.google.com/maps/search/?api=1')
-    expect(link.getAttribute('href')).toContain('query_place_id=ChIJpoi')
-    // Nothing to add from the map.
-    expect(within(card).queryByRole('button', { name: /^Add/ })).not.toBeInTheDocument()
-    expect(within(card).queryByText('More details')).not.toBeInTheDocument()
-  })
-
-  it('closes with the close key, Esc, a press outside, and a pan', async () => {
-    let card = await open()
-    await userEvent.click(within(card).getByRole('button', { name: 'Close' }))
-    expect(screen.queryByRole('dialog', { name: 'Livraria Bertrand' })).not.toBeInTheDocument()
-    card = await open()
-    await userEvent.keyboard('{Escape}')
-    expect(screen.queryByRole('dialog', { name: 'Livraria Bertrand' })).not.toBeInTheDocument()
-    card = await open()
-    fireEvent.pointerDown(document.body)
-    expect(screen.queryByRole('dialog', { name: 'Livraria Bertrand' })).not.toBeInTheDocument()
-    card = await open()
-    act(() => FakeMap.last?.emit('dragstart'))
-    expect(card).not.toBeInTheDocument()
+    expect(p.onMapClick).not.toHaveBeenCalled()
+    expect(FakePlace.fetches).toHaveLength(0)
   })
 })
 

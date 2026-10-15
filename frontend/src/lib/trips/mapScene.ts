@@ -19,8 +19,6 @@ export type MapStop = {
   priority: number
   // Which of the day colours (all-days mode colours pips by day).
   dayIndex: number
-  // The Google place id, for "Open Maps" by query_place_id.
-  placeId?: string
   // One muted line for a card: "12:30 · Sintra".
   meta: string
 }
@@ -43,6 +41,17 @@ export type MapScene = {
 }
 
 export type MapPreview = LatLng & { label?: string }
+
+/** A click on the map, with where it landed in the pane. A click on a Google place carries its
+ *  `place_id`; `displayName` (also as `name`) is Google content for display only and is never
+ *  stored. */
+export type MapClick = LatLng & {
+  place_id?: string
+  displayName?: string
+  name?: string
+  x: number
+  y: number
+}
 
 export const EMPTY_SCENE: MapScene = {
   mode: 'day',
@@ -70,7 +79,6 @@ const todoStop = (t: TripTodo, order: number, dayIndex: number): MapStop | null 
         id: t.todo_id,
         lat: t.place.lat,
         lng: t.place.lng,
-        ...(t.place.place_id ? { placeId: t.place.place_id } : {}),
         label: t.place.name || t.title || SAVED_PLACE,
         category: t.category,
         done: t.done,
@@ -86,7 +94,6 @@ const bookingStop = (b: Booking, order: number, dayIndex: number): MapStop | nul
         id: b.booking_id,
         lat: b.place.lat,
         lng: b.place.lng,
-        ...(b.place.place_id ? { placeId: b.place.place_id } : {}),
         label: b.place.name || b.title || SAVED_PLACE,
         category: KIND_CATEGORY[b.kind],
         done: false,

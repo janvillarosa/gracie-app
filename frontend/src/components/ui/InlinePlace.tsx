@@ -63,7 +63,9 @@ export const InlinePlace: React.FC<Props> = ({
   const inputRef = useRef<HTMLInputElement>(null)
   // Names arrive from the session cache after the row first draws.
   useSyncExternalStore(subscribePlaceInfo, placeInfoVersion, placeInfoVersion)
-  const search = usePlaceSuggest(editing ? text : '', bias)
+  // With no place set the field is the search; with one, it searches only while being changed.
+  const searching = editing || !value
+  const search = usePlaceSuggest(searching ? text : '', bias)
   const fresh = search.forQuery === text.trim()
   const slips = fresh && !search.degraded ? search.suggestions.slice(0, 5) : []
   const ran = fresh && text.trim().length >= MIN_QUERY

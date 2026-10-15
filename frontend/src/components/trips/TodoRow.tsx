@@ -153,7 +153,9 @@ export const TodoRow = React.memo<Props>(function TodoRow({
 
   const shown = todoTitle(todo)
   const sub =
-    todo.title.trim() && todo.place?.name && todo.place.name !== todo.title ? todo.place.name : ''
+    (todo.title ?? '').trim() && todo.place?.name && todo.place.name !== todo.title
+      ? todo.place.name
+      : ''
   const second = [sub, dayLabel].filter(Boolean).join(' · ')
 
   return (

@@ -181,9 +181,12 @@ describe('Item sheet fields and places', () => {
     await userEvent.click(within(panel).getByRole('button', { name: /^Place Add a place/ }))
     await userEvent.type(await screen.findByRole('combobox', { name: 'Place' }), 'Pena')
     const slip = await screen.findByRole('option', { name: /Pena Palace/ })
-    expect(screen.getByText(/OpenStreetMap contributors \(ODbL\)/)).toBeInTheDocument()
+    expect(screen.getByText('Demo places (no Google key)')).toBeInTheDocument()
+    expect(screen.queryByText(/OpenStreetMap/)).not.toBeInTheDocument()
     await userEvent.click(slip)
-    await waitFor(() => expect(todo('Pack the daypack')?.place?.name).toBe('Pena Palace'))
+    // Stored as a Google place: its id, no name.
+    await waitFor(() => expect(todo('Pack the daypack')?.place?.place_id).toBe('demo:pena'))
+    expect(todo('Pack the daypack')?.place?.name).toBeUndefined()
     // Back on the sheet: the place shows as a row, and Open Maps appears.
     expect(await within(panel).findByRole('link', { name: 'Open Maps' })).toHaveAttribute(
       'href',

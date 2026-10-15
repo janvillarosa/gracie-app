@@ -85,7 +85,7 @@ export function resolvePlace<P extends Place | null | undefined>(p: P): P {
 
 /** A todo's title for display: what the user typed, else the Google name, else "Saved place". */
 export function todoTitle(t: Pick<TripTodo, 'title' | 'place'>): string {
-  if (t.title.trim()) return t.title
+  if ((t.title ?? '').trim()) return t.title
   const p = resolvePlace(t.place)
   return p?.name?.trim() || (p ? SAVED_PLACE : '')
 }

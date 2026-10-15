@@ -134,11 +134,41 @@ export function googleSource(config: MapsConfig): PlacesSource {
 
 // ---- demo (no key) -----------------------------------------------------------------------------
 
-type DemoPlace = { id: string; name: string; locality: string; address: string; tz?: string } & LatLng
+type DemoPlace = {
+  id: string
+  name: string
+  locality: string
+  address: string
+  tz?: string
+} & LatLng
 export const DEMO_PLACES: DemoPlace[] = [
-  { id: 'demo:lisbon', name: 'Lisbon', locality: 'Lisbon', address: 'Lisbon, Portugal', lat: 38.7223, lng: -9.1393, tz: 'Europe/Lisbon' },
-  { id: 'demo:porto', name: 'Porto', locality: 'Porto', address: 'Porto, Portugal', lat: 41.1579, lng: -8.6291, tz: 'Europe/Lisbon' },
-  { id: 'demo:heathrow', name: 'Heathrow Airport', locality: 'London', address: 'Longford, London', lat: 51.47, lng: -0.4543, tz: 'Europe/London' },
+  {
+    id: 'demo:lisbon',
+    name: 'Lisbon',
+    locality: 'Lisbon',
+    address: 'Lisbon, Portugal',
+    lat: 38.7223,
+    lng: -9.1393,
+    tz: 'Europe/Lisbon',
+  },
+  {
+    id: 'demo:porto',
+    name: 'Porto',
+    locality: 'Porto',
+    address: 'Porto, Portugal',
+    lat: 41.1579,
+    lng: -8.6291,
+    tz: 'Europe/Lisbon',
+  },
+  {
+    id: 'demo:heathrow',
+    name: 'Heathrow Airport',
+    locality: 'London',
+    address: 'Longford, London',
+    lat: 51.47,
+    lng: -0.4543,
+    tz: 'Europe/London',
+  },
   {
     id: 'demo:se',
     name: 'Sé de Lisboa',

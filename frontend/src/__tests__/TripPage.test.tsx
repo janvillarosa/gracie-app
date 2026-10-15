@@ -957,7 +957,7 @@ describe('The add bar', () => {
       expect(added[0].place?.coords_fetched_at).toBeTruthy()
     })
     // The row shows the place's name from the session cache.
-    expect(await screen.findByRole('button', { name: 'Pena Palace' })).toBeInTheDocument()
+    expect(await screen.findByText('Pena Palace', { selector: '.trip-title' })).toBeInTheDocument()
   })
 
   it('shows Powered by Google under the suggestions (the demo list says it is a demo)', async () => {
