@@ -242,7 +242,7 @@ screenshot at each step, and write a one-line look-and-flow judgement for each.
    each onto a different day. Watch the auto-scroll, the drop slot, the toast and Undo.
 3. **Long trip:** drag an idea from the bottom of Ideas to the last day. Hold near the edge and let
    auto-scroll carry Days. Then try the jump rail.
-4. **Edit in place:** open the inspector on one row and change the day, time, place and category.
+4. **Edit in place** (the Days pane's scroll position must not change when the inspector opens, switches or closes): open the inspector on one row and change the day, time, place and category.
    Count the clicks (target ≤5). Press J/K through 5 items without closing.
 5. **Delete fast:** delete an idea with the hover trash, with Delete, and with a swipe (touch), then
    Undo each one.
