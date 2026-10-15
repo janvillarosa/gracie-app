@@ -125,7 +125,7 @@ describe('the Bookings list', () => {
         (e) => e.textContent,
       )
     await waitFor(() =>
-      expect(titles()).toEqual(['Alfama flat', 'Rossio → Sintra', 'Porto → London']),
+      expect(titles()).toEqual(['Alfama flat', 'Rossio to Sintra', 'Porto to London']),
     )
     const rows = [...document.querySelectorAll('.trip-bookings .trip-bcard')]
     expect(within(rows[0] as HTMLElement).getByText(/^Now · until /)).toBeInTheDocument()
@@ -136,7 +136,7 @@ describe('the Bookings list', () => {
     expect(screen.queryByText('Trains')).not.toBeInTheDocument()
     // Used: folded, with the stamp when shown.
     await userEvent.click(screen.getByRole('button', { name: '1 used · Show' }))
-    const used = (await screen.findByText('London → Lisbon')).closest('li') as HTMLElement
+    const used = (await screen.findByText('London to Lisbon')).closest('li') as HTMLElement
     expect(within(used).getByText('Used')).toBeInTheDocument()
   })
 
@@ -222,7 +222,19 @@ describe('adding a booking', () => {
     await waitFor(() =>
       expect(screen.queryByRole('dialog', { name: 'New booking' })).not.toBeInTheDocument(),
     )
-    expect(await screen.findByText('Lisbon → Porto')).toBeInTheDocument()
+    expect(await screen.findByText('Lisbon to Porto')).toBeInTheDocument()
+  })
+
+  it('falls back to the trip zone when there is no place, so times are in a defined zone', async () => {
+    seed(TRIP)
+    open()
+    const sheet = await newSheet('Hotel Extra')
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Add booking' }))
+    await waitFor(() => {
+      const made = serverTrip()?.bookings.find((x) => x.title === 'Hotel Extra')
+      expect(made?.start_tz).toBe(TRIP.tz)
+      expect(made?.end_tz).toBe(TRIP.tz)
+    })
   })
 
   it('never asks for a time zone: it comes from the place, and shows only when it differs', async () => {

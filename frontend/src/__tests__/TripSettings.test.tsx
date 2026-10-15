@@ -76,6 +76,21 @@ describe('Trip settings: structure', () => {
 })
 
 describe('Trip settings: identity', () => {
+  it('lays the identity out as a tile, the title beside it, and a pencil that is only a hint', async () => {
+    seed(TRIP)
+    settings()
+    const title = await screen.findByLabelText('Trip name')
+    const identity = title.closest('.ui-sheet-identity') as HTMLElement
+    expect(identity).toHaveClass('has-lead', 'has-tile')
+    // Icon tile first, then the title on the same row, then the pencil after the title.
+    const kids = [...identity.querySelectorAll('.ui-sheet-lead, .ui-sheet-titlerow')]
+    expect(kids.map((k) => k.className)).toEqual(['ui-sheet-lead', 'ui-sheet-titlerow'])
+    const row = title.closest('.ui-sheet-titlerow') as HTMLElement
+    expect([...row.children].map((c) => c.tagName.toLowerCase())).toEqual(['input', 'svg'])
+    expect(row.querySelector('.ui-sheet-pencil')).toHaveAttribute('aria-hidden', 'true')
+    expect(document.querySelector('.settings-pencil')).toBeNull()
+  })
+
   it('renames the trip inline', async () => {
     seed(TRIP)
     settings()

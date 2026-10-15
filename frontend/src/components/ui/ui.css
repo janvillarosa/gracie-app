@@ -535,10 +535,61 @@ button.ui-note:focus-visible {
   color: var(--ink);
 }
 input.ui-sheet-title {
-  width: 100%;
+  /* The global "no iOS zoom" rule forces inputs to 16px with !important; a 26px title is
+     bigger than that, so it can say so too. */
+  font-size: var(--title-sheet) !important;
+  box-sizing: border-box;
+  /* A little room inside, taken back from the left, so the focus ring is inset and the text
+     keeps its column and the 20px right inset. */
+  width: calc(100% + var(--space-1));
+  margin-left: calc(-1 * var(--space-1));
+  padding: 0 var(--space-1);
   background: none;
   border: 0;
   border-radius: var(--radius-sm);
+}
+input.ui-sheet-title:focus-visible {
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--brand-blue) 70%, transparent);
+  outline: none;
+}
+.ui-sheet-titlerow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.ui-sheet-titlerow input.ui-sheet-title {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.ui-sheet-pencil {
+  flex: none;
+  color: var(--muted);
+  opacity: 0;
+  pointer-events: none;
+}
+.ui-sheet-titlerow:hover .ui-sheet-pencil,
+.ui-sheet-titlerow:focus-within .ui-sheet-pencil {
+  opacity: 0.7;
+}
+@media (hover: none) {
+  .ui-sheet-pencil {
+    opacity: 0.45;
+  }
+}
+.ui-sheet-identity.has-tile {
+  grid-template-columns: var(--control-lg) minmax(0, 1fr);
+  align-items: center;
+}
+.ui-sheet-identity.has-tile .ui-sheet-lead {
+  min-height: 0;
+}
+.ui-sheet-identity.has-tile .list-icon {
+  width: var(--control-lg);
+  height: var(--control-lg);
+  font-size: 22px;
+}
+.ui-sheet-identity.has-tile input.ui-sheet-title {
+  font-size: var(--title-page) !important;
 }
 .ui-sheet-context {
   margin: var(--space-2) 0 0;
@@ -656,36 +707,17 @@ input.ui-sheet-title {
   }
 }
 
-/* ---- Combobox: the slips that rise above an add bar ------------------------------------- */
-/* The slips themselves (.pantry-slips) are drawn in styles.css. While a phone keyboard is up,
-   Combobox sets their bottom (lifted by however much of the bar the keyboard hides) and
-   max-height (the room left above the bar) inline from visualViewport. */
-.add-bar .pantry-slips {
-  overflow-y: auto;
-  overscroll-behavior: contain;
+/* ---- the plan's day lines, in the row grid (kept here: components/trips owns the rest) ------- */
+/* "Nothing planned yet" starts in the title column, like the rows of a day that has times. */
+.trip-day .trip-empty-row {
+  padding-left: calc(var(--lead-col) + var(--time-w) + var(--gap));
 }
-
-/* One input for both add bars: exactly --control-h, text centred. The List bar's antd textarea has a
-   1px border; the Field textarea of the trip bar gets the same border (transparent) and the same
-   quiet focus halo, so heights, text position and the focus box are identical. */
-.add-bar textarea.ui-field.add-input {
-  box-sizing: border-box;
-  min-height: var(--control-h) !important;
-  border: 1px solid transparent;
-}
-.add-bar textarea.ui-field.add-input:focus-visible {
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--border) 60%, transparent);
-}
-
-/* The polite "3 suggestions" count: read by screen readers, never drawn. */
-.ui-combobox-count {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  padding: 0;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
+/* "Add a label" is noise on every header: hover/focus on desktop, today's header on a phone. */
+@media (hover: none) {
+  .trip-day-head .trip-daylabel.is-empty {
+    opacity: 0;
+  }
+  .trip-day-head .trip-daylabel.is-empty.is-today {
+    opacity: 1;
+  }
 }

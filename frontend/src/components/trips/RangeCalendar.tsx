@@ -106,11 +106,8 @@ export const RangeCalendar: React.FC<Props> = ({ start, end, onChange, onDone })
       </div>
       <div className="trip-cal-foot">
         <p className="trip-help" role="status">
-          {!start
-            ? 'Pick the first day.'
-            : choosingEnd
-              ? 'Pick the last day, or keep it to one day.'
-              : `${diffDays(end as string, start) + 1} days`}
+          {/* The range and its length are the sheet's context line; this says only what to do next. */}
+          {start && choosingEnd ? 'Pick the last day, or keep it to one day.' : ''}
         </p>
         <Button
           kind="text"

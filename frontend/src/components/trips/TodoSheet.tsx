@@ -98,12 +98,14 @@ export const TodoSheet: React.FC<Props> = ({
       identity={
         <SheetIdentity
           leading={
-            <Checkbox
-              checked={todo.done}
-              disabled={locked}
-              onChange={(e) => onPatch({ done: e.target.checked })}
-              aria-label={`${todo.title}, done`}
-            />
+            <span className="trip-check">
+              <Checkbox
+                checked={todo.done}
+                disabled={locked}
+                onChange={(e) => onPatch({ done: e.target.checked })}
+                aria-label={`${todo.title}, done`}
+              />
+            </span>
           }
           title={todo.title}
           onTitle={(v) => onPatch({ title: v })}

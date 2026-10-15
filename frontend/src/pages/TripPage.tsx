@@ -52,7 +52,7 @@ import { IdeasPanel } from '@components/trips/IdeasPanel'
 import type { TabId } from '@components/trips/tabs'
 import { NotePick } from '@components/trips/pickers'
 import { LIMITS as TRIP_LIMITS } from '@lib/trips/limits'
-import { Sheet, SheetIdentity } from '@components/ui'
+import { DetailGroup, NavRow, Sheet, SheetIdentity } from '@components/ui'
 import { NextStopDeck, type Stop, type Tomorrow } from '@components/trips/NextStop'
 import { useMedia } from '@components/trips/Phone'
 import { AddBar, type QuickAddItem } from '@components/trips/QuickAdd'
@@ -722,6 +722,8 @@ const TripScreen: React.FC<{
   )
 
   const emptyPlan = trip.todos.length === 0 && trip.bookings.length === 0
+  // No dates yet: ideas live under Ideas, and Plan keeps its first-step prompts.
+  const noDays = schedule.days.length === 0 && schedule.outside.length === 0
   const dayTargets = schedule.days.map((d) => ({
     value: d.date as string | null,
     label: fullDay(d.date),
@@ -806,7 +808,7 @@ const TripScreen: React.FC<{
           )}
         </button>
       )}
-      {emptyPlan ? (
+      {emptyPlan || noDays ? (
         <div className="trip-empty-sheet">
           <h3>Where to first?</h3>
           <p>Add a place or a plan below. You can sort it into days later.</p>
@@ -814,6 +816,14 @@ const TripScreen: React.FC<{
             <Button kind="quiet" onClick={() => setWhenOpen(true)}>
               When are you going?
             </Button>
+          )}
+          {schedule.ideas.length > 0 && (
+            <DetailGroup label="Ideas">
+              <NavRow
+                label={`${schedule.ideas.length} ${schedule.ideas.length === 1 ? 'idea' : 'ideas'}`}
+                onClick={() => setTab('ideas')}
+              />
+            </DetailGroup>
           )}
         </div>
       ) : (
