@@ -3,8 +3,10 @@ import React, {
   lazy,
   useCallback,
   Suspense,
+  useEffect,
   useImperativeHandle,
   useMemo,
+  useRef,
   useState,
 } from 'react'
 
@@ -22,11 +24,11 @@ export type MapProps = {
   // The item open in the detail panel: its pin is lifted and the map centres on it.
   focusId?: string | null
   focusPoint?: { lat: number; lng: number } | null
+  // The next stop (during the trip): its pin is larger, with a yellow ring.
+  nextId?: string | null
   onPinClick: (id: string) => void
 }
 
-const W = 600
-const H = 420
 const PAD = 48
 
 // Lazy: MapLibre only loads when a tile source exists and the map is actually on screen.
@@ -34,7 +36,7 @@ const MapCanvas = lazy(() => import('./MapCanvas'))
 
 export const OSM_MAP_ATTRIBUTION = '© OpenStreetMap contributors'
 
-function project(points: MapPoint[], fit: MapPoint[]) {
+function project(points: MapPoint[], fit: MapPoint[], W: number, H: number) {
   const base = fit.length ? fit : points
   if (!base.length) return () => ({ x: W / 2, y: H / 2 })
   let minLat = Infinity
@@ -61,37 +63,46 @@ function project(points: MapPoint[], fit: MapPoint[]) {
   })
 }
 
-/** Pins and route on a plain ground. Always works: no tiles, no network, no WebGL. */
+/** Pins and route on a plain paper-coloured ground. Always works: no tiles, no network, no
+ *  WebGL. Drawn 1:1 with the pane, so a pin is 28px whatever the pane's size. */
 const PlainMap: React.FC<MapProps & { hot: string | null; reason: string }> = ({
   pins,
   others,
   colourVar,
   title,
+  nextId,
   onPinClick,
   hot,
   reason,
 }) => {
-  const proj = useMemo(() => project([...pins, ...others], pins), [pins, others])
+  const box = useRef<HTMLDivElement>(null)
+  const [size, setSize] = useState({ w: 600, h: 420 })
+  useEffect(() => {
+    const el = box.current
+    if (!el) return
+    const measure = () => {
+      const r = el.getBoundingClientRect()
+      if (r.width > 0 && r.height > 0)
+        setSize((p) =>
+          p.w === Math.round(r.width) && p.h === Math.round(r.height)
+            ? p
+            : { w: Math.round(r.width), h: Math.round(r.height) },
+        )
+    }
+    measure()
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null
+    ro?.observe(el)
+    return () => ro?.disconnect()
+  }, [])
+  const { w: W, h: H } = size
+  const proj = useMemo(() => project([...pins, ...others], pins, W, H), [pins, others, W, H])
   const pts = pins.map((p) => ({ ...p, ...proj(p) }))
   const dots = others.map((p) => ({ ...p, ...proj(p) }))
   const colour = `var(${colourVar})`
   return (
-    <div className="trip-map-plain">
-      <svg
-        viewBox={`0 0 ${W} ${H}`}
-        role="img"
-        aria-label={title}
-        preserveAspectRatio="xMidYMid slice"
-      >
+    <div ref={box} className="trip-map-plain">
+      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={title} preserveAspectRatio="none">
         <rect width={W} height={H} className="map-ground" />
-        <g className="map-grid" aria-hidden>
-          {[1, 2, 3, 4, 5].map((i) => (
-            <line key={`v${i}`} x1={(W / 6) * i} x2={(W / 6) * i} y1={0} y2={H} />
-          ))}
-          {[1, 2, 3, 4].map((i) => (
-            <line key={`h${i}`} y1={(H / 5) * i} y2={(H / 5) * i} x1={0} x2={W} />
-          ))}
-        </g>
         {dots.map((d) => (
           <circle key={d.id} cx={d.x} cy={d.y} r={5} className="map-dot" aria-hidden />
         ))}
@@ -107,12 +118,15 @@ const PlainMap: React.FC<MapProps & { hot: string | null; reason: string }> = ({
           // biome-ignore lint/a11y/noStaticElementInteractions: pins are supplementary; the spine is the accessible source
           <g
             key={p.id}
-            className={hot === p.id ? 'map-pin is-hot' : 'map-pin'}
+            className={['map-pin', hot === p.id ? 'is-hot' : '', nextId === p.id ? 'is-next' : '']
+              .filter(Boolean)
+              .join(' ')}
             transform={`translate(${p.x} ${p.y})`}
             onClick={() => onPinClick(p.id)}
             aria-hidden
           >
-            <circle r={15} fill={colour} className="map-pin-disc" />
+            {nextId === p.id && <circle r={20} className="map-pin-ring" />}
+            <circle r={14} fill={colour} className="map-pin-disc" />
             <text textAnchor="middle" dy="0.35em">
               {p.n}
             </text>
@@ -141,7 +155,10 @@ export const TripMap = forwardRef<TripMapHandle, MapProps>(function TripMap(prop
   const onFail = useCallback(() => setFailed(true), [])
   const tiles = (import.meta.env.VITE_PMTILES_URL as string | undefined) || ''
   const gl = !!tiles && !failed && webglOk()
-  const reason = tiles && !failed ? 'Loading map' : 'Offline map'
+  // "Offline map" only when it really is offline; with no tiles configured it is a preview.
+  const offline = typeof navigator !== 'undefined' && navigator.onLine === false
+  const reason =
+    tiles && !failed ? 'Loading map' : offline || failed ? 'Offline map' : 'Map preview'
   const lit = props.focusId ?? hot
   const plain = <PlainMap {...props} hot={lit} reason={reason} />
   if (!gl) return plain

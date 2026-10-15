@@ -42,6 +42,7 @@ const MapCanvas: React.FC<Props> = ({
   title,
   onPinClick,
   focusPoint,
+  nextId,
   hot,
   tilesUrl,
   onFail,
@@ -83,7 +84,7 @@ const MapCanvas: React.FC<Props> = ({
         type: 'line',
         source: 'route',
         layout: { 'line-cap': 'round', 'line-join': 'round' },
-        paint: { 'line-width': 4, 'line-color': '#2348a6' },
+        paint: { 'line-width': 3, 'line-color': '#2348a6' },
       })
       readyRef.current = true
       applyRef.current?.()
@@ -150,6 +151,7 @@ const MapCanvas: React.FC<Props> = ({
         entry.m.setLngLat([p.lng, p.lat])
         entry.el.textContent = String(p.n ?? '')
         entry.el.style.background = colour
+        entry.el.classList.toggle('is-next', p.id === nextId)
       }
       const pts = pins.length ? pins : others
       if (pts.length) {
@@ -160,7 +162,7 @@ const MapCanvas: React.FC<Props> = ({
     }
     applyRef.current = apply
     if (readyRef.current) apply()
-  }, [pins, others, colourVar])
+  }, [pins, others, colourVar, nextId])
 
   // An open item centres the map on its pin.
   useEffect(() => {

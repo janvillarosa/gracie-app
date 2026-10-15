@@ -264,6 +264,7 @@ function pinsFor(schedule: Schedule) {
   const numbers = new Map<string, number>()
   const byDay = new Map<string, MapPoint[]>()
   const ideaDots: MapPoint[] = []
+  const ideaPins: MapPoint[] = []
   for (const d of schedule.days) {
     const list: MapPoint[] = []
     for (const e of d.entries) {
@@ -278,7 +279,8 @@ function pinsFor(schedule: Schedule) {
   for (const t of schedule.ideas)
     if (t.place && t.place.source !== 'manual')
       ideaDots.push({ id: t.todo_id, lat: t.place.lat, lng: t.place.lng })
-  return { numbers, byDay, ideaDots }
+  for (const d of ideaDots) ideaPins.push(d)
+  return { numbers, byDay, ideaDots, ideaPins }
 }
 
 type Segment =
@@ -734,8 +736,10 @@ const TripScreen: React.FC<{
     schedule.days.findIndex((d) => d.date === currentDay),
   )
   const dayPins = currentDay ? (pins.byDay.get(currentDay) ?? []) : []
-  const mapPins = allDays ? [] : dayPins
+  const ideasOpen = desktop && tab === 'ideas'
+  const mapPins = ideasOpen ? pins.ideaPins : allDays ? [] : dayPins
   const mapOthers = useMemo(() => {
+    if (ideasOpen) return []
     const out: MapPoint[] = [...pins.ideaDots]
     for (const [date, list] of pins.byDay) {
       // Finished days stay off the map unless you opened them or are reading them.
@@ -743,11 +747,13 @@ const TripScreen: React.FC<{
       if (allDays || date !== currentDay) out.push(...list.map((p) => ({ ...p, n: undefined })))
     }
     return out
-  }, [pins, currentDay, allDays, doneDays, override])
+  }, [pins, currentDay, allDays, doneDays, override, ideasOpen])
   const currentModel: DayModel | undefined = schedule.days[dayIndex]
-  const mapTitle = currentModel
-    ? `Map of ${shortDay(currentModel.date)}, ${dayPins.length} ${dayPins.length === 1 ? 'stop' : 'stops'}`
-    : 'Map of the ideas'
+  const mapTitle = ideasOpen
+    ? 'Map of the ideas'
+    : currentModel
+      ? `Map of ${shortDay(currentModel.date)}, ${dayPins.length} ${dayPins.length === 1 ? 'stop' : 'stops'}`
+      : 'Map of the ideas'
 
   const selTodo = selected ? trip.todos.find((t) => t.todo_id === selected) : undefined
   const selBooking = selected ? trip.bookings.find((b) => b.booking_id === selected) : undefined
@@ -774,8 +780,10 @@ const TripScreen: React.FC<{
   const mapNode = (
     <div className="trip-map">
       <div className="trip-map-bar">
-        <span className="trip-pill">{currentModel ? shortDay(currentModel.date) : 'Ideas'}</span>
-        {schedule.days.length > 1 && (
+        <span className="trip-pill">
+          {ideasOpen || !currentModel ? 'Ideas' : shortDay(currentModel.date)}
+        </span>
+        {schedule.days.length > 1 && !ideasOpen && (
           <button
             type="button"
             className="trip-pill is-button"
@@ -790,7 +798,10 @@ const TripScreen: React.FC<{
         ref={mapRef}
         pins={mapPins}
         others={mapOthers}
-        colourVar={`--trip-day-${dayIndex % DAY_COLOURS}`}
+        colourVar={ideasOpen ? '--muted' : `--trip-day-${dayIndex % DAY_COLOURS}`}
+        nextId={
+          !ideasOpen && phase === 'during' && currentDay === today ? (deckTopId ?? null) : null
+        }
         title={mapTitle}
         focusId={selected}
         focusPoint={focusPoint}
@@ -1028,6 +1039,8 @@ const TripScreen: React.FC<{
       node: extraNode,
       close: () => setExtra(null),
     }
+  } else if (ideasOpen) {
+    panel = { key: 'ideas', title: 'Ideas', node: ideasNode, close: () => setTab('plan') }
   }
 
   const showSide = desktop
@@ -1115,7 +1128,7 @@ const TripScreen: React.FC<{
   )
   const planNode = (
     <>
-      {phase === 'during' && deckStops.length > 0 && (
+      {phase === 'during' && tab === 'plan' && deckStops.length > 0 && (
         <NextStopDeck
           stops={deckStops}
           tomorrow={tomorrow}
@@ -1231,7 +1244,8 @@ const TripScreen: React.FC<{
                     }
                     items={[
                       { key: 'plan', label: 'Plan', children: planNode },
-                      { key: 'ideas', label: 'Ideas', children: ideasNode },
+                      // Wide screens: the spine stays; the ideas open over the map instead.
+                      { key: 'ideas', label: 'Ideas', children: desktop ? planNode : ideasNode },
                       { key: 'bookings', label: 'Bookings', children: bookingsNode },
                     ]}
                   />

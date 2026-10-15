@@ -270,7 +270,62 @@ describe('Map', () => {
       'aria-pressed',
       'true',
     )
-    expect(screen.getByText('Offline map')).toBeInTheDocument()
+    expect(screen.getByText('Map preview')).toBeInTheDocument()
     expect(screen.getByText('© OpenStreetMap contributors')).toBeInTheDocument()
+  })
+
+  it('says "Offline map" only when it really is offline', async () => {
+    vi.spyOn(window.navigator, 'onLine', 'get').mockReturnValue(false)
+    seed(TRIP)
+    open()
+    await screen.findByRole('heading', { name: 'Lisbon & Porto' })
+    expect(screen.getByText('Offline map')).toBeInTheDocument()
+    expect(screen.queryByText('Map preview')).not.toBeInTheDocument()
+  })
+
+  it('lifts the next stop on the map with a ring', async () => {
+    const t = lisbonTrip()
+    // Pena (10:15) leads the deck; give it and the lunch a place.
+    t.todos[3] = {
+      ...t.todos[3],
+      place: { name: 'Pena', lat: 38.78, lng: -9.39, source: 'photon' },
+    }
+    t.todos[4] = {
+      ...t.todos[4],
+      place: { name: 'Tasca', lat: 38.8, lng: -9.38, source: 'photon' },
+    }
+    seed(t)
+    open()
+    await screen.findByRole('region', { name: 'Next stop' })
+    const pins = document.querySelectorAll('.map-pin')
+    expect(pins).toHaveLength(2)
+    expect(document.querySelectorAll('.map-pin.is-next')).toHaveLength(1)
+    expect(document.querySelector('.map-pin.is-next text')?.textContent).toBe('1')
+    // Numbers are sequential among the stops that have a place.
+    expect([...pins].map((p) => p.querySelector('text')?.textContent)).toEqual(['1', '2'])
+  })
+
+  it('opens Ideas over the map on wide screens, keeping the days, with grey idea pins', async () => {
+    const t = lisbonTrip()
+    t.todos[8] = {
+      ...t.todos[8],
+      place: { name: 'Ginjinha', lat: 38.71, lng: -9.14, source: 'photon' },
+    }
+    seed(t)
+    open()
+    await screen.findByRole('heading', { name: 'Later today' })
+    await userEvent.click(screen.getByRole('tab', { name: 'Ideas' }))
+    const drawer = await screen.findByRole('dialog', { name: 'Ideas' })
+    expect(within(drawer).getByText('Ginjinha tasting')).toBeInTheDocument()
+    // The days are still there to drop an idea on.
+    expect(screen.getByRole('heading', { name: 'Later today' })).toBeInTheDocument()
+    expect(document.querySelectorAll('.map-pin')).toHaveLength(1)
+    expect(document.querySelector('.trip-map [aria-label="Map of the ideas"]')).not.toBeNull()
+    expect(screen.queryByRole('region', { name: 'Next stop' })).not.toBeInTheDocument()
+    await userEvent.click(within(drawer).getByRole('button', { name: /^Close ideas/ }))
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: 'Ideas' })).not.toBeInTheDocument(),
+    )
+    expect(screen.getByRole('tab', { name: 'Plan' })).toHaveAttribute('aria-selected', 'true')
   })
 })
