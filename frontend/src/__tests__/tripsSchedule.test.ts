@@ -228,14 +228,14 @@ describe('IdbTripDB', () => {
       { v: 1, op_id: 'o2', client_id: 'c', seq: 8, at: 1, type: 'trip.update', trip_id: 'trip_a' },
       { client_id: 'c', seq: 8 },
     )
-    let loaded = await db.load()
+    let loaded = await db.load('c')
     expect(loaded.trips[0].title).toBe('Lisbon')
     expect(loaded.outbox.map((o) => o.seq)).toEqual([7, 8])
     expect(loaded.meta).toEqual({ client_id: 'c', seq: 8 })
-    await db.deleteOps([7])
+    await db.deleteOps(['o1'])
     await db.deleteTrip('trip_a')
     await db.putMeta({ client_id: 'c', seq: 9 })
-    loaded = await db.load()
+    loaded = await db.load('c')
     expect(loaded.trips).toHaveLength(0)
     expect(loaded.outbox.map((o) => o.seq)).toEqual([8])
     expect(loaded.meta?.seq).toBe(9)

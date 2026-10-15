@@ -4,27 +4,28 @@
 import type { Trip, TripOp } from '../../api/tripTypes'
 
 export type StoredTrip = Trip & { room_id: string }
+export const bySeq = (a: TripOp, b: TripOp) => a.seq - b.seq || a.at - b.at
 export type Meta = { client_id: string; seq: number }
 
 export interface TripDB {
-  load(): Promise<{ trips: StoredTrip[]; outbox: TripOp[]; meta: Meta | null }>
+  load(clientId: string): Promise<{ trips: StoredTrip[]; outbox: TripOp[]; meta: Meta | null }>
   putTrip(t: StoredTrip): Promise<void>
   deleteTrip(tripId: string): Promise<void>
   /** Appends an op and persists the seq counter in the same transaction. */
   appendOp(op: TripOp, meta: Meta): Promise<void>
-  deleteOps(seqs: number[]): Promise<void>
+  deleteOps(opIds: string[]): Promise<void>
   putMeta(meta: Meta): Promise<void>
 }
 
 export class MemoryTripDB implements TripDB {
   private trips = new Map<string, StoredTrip>()
-  private ops = new Map<number, TripOp>()
-  private meta: Meta | null = null
-  async load() {
+  private ops = new Map<string, TripOp>()
+  private metas = new Map<string, Meta>()
+  async load(clientId: string) {
     return {
       trips: [...this.trips.values()],
-      outbox: [...this.ops.values()].sort((a, b) => a.seq - b.seq),
-      meta: this.meta,
+      outbox: [...this.ops.values()].sort(bySeq),
+      meta: this.metas.get(clientId) ?? null,
     }
   }
   async putTrip(t: StoredTrip) {
@@ -34,14 +35,14 @@ export class MemoryTripDB implements TripDB {
     this.trips.delete(id)
   }
   async appendOp(op: TripOp, meta: Meta) {
-    this.ops.set(op.seq, op)
-    this.meta = meta
+    this.ops.set(op.op_id, op)
+    this.metas.set(meta.client_id, meta)
   }
-  async deleteOps(seqs: number[]) {
-    for (const s of seqs) this.ops.delete(s)
+  async deleteOps(opIds: string[]) {
+    for (const s of opIds) this.ops.delete(s)
   }
   async putMeta(meta: Meta) {
-    this.meta = meta
+    this.metas.set(meta.client_id, meta)
   }
 }
 
@@ -69,24 +70,32 @@ export class IdbTripDB implements TripDB {
       r.onupgradeneeded = () => {
         const db = r.result
         db.createObjectStore('trips', { keyPath: 'trip_id' })
-        db.createObjectStore('outbox', { keyPath: 'seq' })
+        db.createObjectStore('outbox', { keyPath: 'op_id' })
         db.createObjectStore('meta')
       }
-      r.onsuccess = () => resolve(r.result)
+      r.onsuccess = () => {
+        const db = r.result
+        // Let another tab (or a test) upgrade or delete the database.
+        db.onversionchange = () => {
+          db.close()
+          this.opening = null
+        }
+        resolve(db)
+      }
       r.onerror = () => reject(r.error)
     })
     return this.opening
   }
 
-  async load() {
+  async load(clientId: string) {
     const db = await this.open()
     const tx = db.transaction(['trips', 'outbox', 'meta'], 'readonly')
     const [trips, outbox, meta] = await Promise.all([
       req(tx.objectStore('trips').getAll()),
       req(tx.objectStore('outbox').getAll()),
-      req(tx.objectStore('meta').get('device')),
+      req(tx.objectStore('meta').get(clientId)),
     ])
-    outbox.sort((a: TripOp, b: TripOp) => a.seq - b.seq)
+    outbox.sort(bySeq)
     return {
       trips: trips as StoredTrip[],
       outbox: outbox as TripOp[],
@@ -109,20 +118,20 @@ export class IdbTripDB implements TripDB {
     const db = await this.open()
     const tx = db.transaction(['outbox', 'meta'], 'readwrite')
     tx.objectStore('outbox').put(op)
-    tx.objectStore('meta').put(meta, 'device')
+    tx.objectStore('meta').put(meta, meta.client_id)
     await done(tx)
   }
-  async deleteOps(seqs: number[]) {
-    if (!seqs.length) return
+  async deleteOps(opIds: string[]) {
+    if (!opIds.length) return
     const db = await this.open()
     const tx = db.transaction('outbox', 'readwrite')
-    for (const s of seqs) tx.objectStore('outbox').delete(s)
+    for (const s of opIds) tx.objectStore('outbox').delete(s)
     await done(tx)
   }
   async putMeta(meta: Meta) {
     const db = await this.open()
     const tx = db.transaction('meta', 'readwrite')
-    tx.objectStore('meta').put(meta, 'device')
+    tx.objectStore('meta').put(meta, meta.client_id)
     await done(tx)
   }
 }

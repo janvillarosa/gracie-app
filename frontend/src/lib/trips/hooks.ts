@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useSyncExternalStore } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getMe, getMyRoom } from '@api/endpoints'
 import { postTripOps, syncTrips } from '@api/tripEndpoints'
 import { useAuth } from '@auth/AuthProvider'
@@ -11,6 +11,7 @@ export function useTripStoreFor(
   userId: string | undefined,
   apiKey: string | null,
 ) {
+  const qc = useQueryClient()
   const store = useMemo(() => {
     if (!roomId || !userId || !apiKey) return null
     return getTripStore(
@@ -20,12 +21,18 @@ export function useTripStoreFor(
           roomId,
           userId,
           api: {
-            sync: (known) => syncTrips(apiKey, roomId, known),
-            ops: (ops) => postTripOps(apiKey, roomId, ops),
+            sync: (room, known) => syncTrips(apiKey, room, known),
+            ops: (room, ops) => postTripOps(apiKey, room, ops),
+          },
+          // After joining another house the old room answers 403: re-read who we are, and
+          // the store for the new house picks the saved outbox up.
+          onForbidden: () => {
+            void qc.invalidateQueries({ queryKey: ['me'] })
+            void qc.invalidateQueries({ queryKey: ['my-room'] })
           },
         }),
     )
-  }, [roomId, userId, apiKey])
+  }, [roomId, userId, apiKey, qc])
   useEffect(() => {
     if (!store) return
     store.start()
@@ -36,6 +43,7 @@ export function useTripStoreFor(
 
 const EMPTY: StoreState = {
   ready: false,
+  synced: false,
   trips: {},
   pending: 0,
   offline: false,
@@ -52,7 +60,7 @@ export function useTripState(store: TripStore | null): StoreState {
   )
 }
 
-export type Member = { user_id?: string; name: string }
+export type Member = { user_id?: string; name: string; avatar_key?: string }
 
 /** Everything a trips screen needs: the store, its state, who I am and the house members. */
 export function useTrips() {
@@ -71,7 +79,12 @@ export function useTrips() {
   const store = useTripStoreFor(me.data?.room_id ?? undefined, me.data?.user_id, apiKey)
   const state = useTripState(store)
   const members: Member[] = useMemo(
-    () => room.data?.members_meta?.map((m) => ({ user_id: m.user_id, name: m.name })) ?? [],
+    () =>
+      room.data?.members_meta?.map((m) => ({
+        user_id: m.user_id,
+        name: m.name,
+        avatar_key: m.avatar_key,
+      })) ?? [],
     [room.data],
   )
   return {

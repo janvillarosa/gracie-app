@@ -152,24 +152,39 @@ function upsertBy<T>(list: T[], items: T[] | undefined, key: (x: T) => string): 
   return out
 }
 
-/** Folds a server delta into the stored snapshot. */
+/** Folds a server delta into the stored snapshot. Entities and trip fields arrive whole:
+ *  a missing optional key means null or empty, never "unchanged". */
 export function mergeDelta(existing: Trip | undefined, d: TripDelta): Trip {
-  const base: Trip =
-    d.full || !existing
-      ? { title: '', trip_id: d.trip_id, todos: [], bookings: [], version: 0 }
-      : existing
-  let t: Trip = { ...base, ...(d.trip ?? {}), trip_id: d.trip_id }
-  t = {
-    ...t,
-    todos: upsertBy(d.full ? [] : base.todos, d.todos, (x) => x.todo_id),
-    bookings: upsertBy(d.full ? [] : base.bookings, d.bookings, (x) => x.booking_id),
+  const keep = d.full || !existing ? undefined : existing
+  let t: Trip = {
+    ...(d.trip ?? (keep ? tripFieldsOf(keep) : { title: '' })),
+    trip_id: d.trip_id,
+    todos: upsertBy(keep?.todos ?? [], d.todos, (x) => x.todo_id),
+    bookings: upsertBy(keep?.bookings ?? [], d.bookings, (x) => x.booking_id),
     version: d.version,
+    created_by: keep?.created_by,
   }
   if (d.removed_ids?.length) {
     const gone = new Set(d.removed_ids)
-    t.todos = t.todos.filter((x) => !gone.has(x.todo_id))
-    t.bookings = t.bookings.filter((x) => !gone.has(x.booking_id))
+    t = {
+      ...t,
+      todos: t.todos.filter((x) => !gone.has(x.todo_id)),
+      bookings: t.bookings.filter((x) => !gone.has(x.booking_id)),
+    }
   }
   t.deleted = d.deleted ? { by: d.deleted_by } : null
   return t
+}
+
+function tripFieldsOf(t: Trip) {
+  const {
+    trip_id: _a,
+    todos: _b,
+    bookings: _c,
+    version: _d,
+    deleted: _e,
+    created_by: _f,
+    ...fields
+  } = t
+  return fields
 }

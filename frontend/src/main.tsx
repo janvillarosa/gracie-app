@@ -72,22 +72,36 @@ const queryClient = new QueryClient()
 // Inject icons/manifest before app mounts
 setupPWAAssets()
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <AuthProvider>
-          {/* A provider value replaces Phosphor's defaults rather than merging with them, so
+// Opt-in dev backend for trips (VITE_MOCK_TRIPS=1): an in-browser implementation of the API.
+// The constant condition lets the bundler drop it, and the mocks, from production builds.
+async function boot() {
+  if (import.meta.env.DEV && import.meta.env.VITE_MOCK_TRIPS === '1') {
+    const { startMockTrips } = await import('./mocks/browser')
+    await startMockTrips()
+  }
+  mount()
+}
+
+function mount() {
+  ReactDOM.createRoot(document.getElementById('root')!).render(
+    <React.StrictMode>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <AuthProvider>
+            {/* A provider value replaces Phosphor's defaults rather than merging with them, so
               restate size/color/mirrored; without size, unsized icons stretch to their box. */}
-          <IconContext.Provider
-            value={{ weight: 'bold', size: '1em', color: 'currentColor', mirrored: false }}
-          >
-            <ConfigProvider theme={antdThemeConfig}>
-              <AppRoutes />
-            </ConfigProvider>
-          </IconContext.Provider>
-        </AuthProvider>
-      </BrowserRouter>
-    </QueryClientProvider>
-  </React.StrictMode>,
-)
+            <IconContext.Provider
+              value={{ weight: 'bold', size: '1em', color: 'currentColor', mirrored: false }}
+            >
+              <ConfigProvider theme={antdThemeConfig}>
+                <AppRoutes />
+              </ConfigProvider>
+            </IconContext.Provider>
+          </AuthProvider>
+        </BrowserRouter>
+      </QueryClientProvider>
+    </React.StrictMode>,
+  )
+}
+
+void boot()

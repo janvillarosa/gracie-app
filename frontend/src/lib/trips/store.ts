@@ -14,8 +14,8 @@ import { createDefaultDB, type Meta, type StoredTrip, type TripDB } from './db'
 import { mergeDelta, newId, newOpId, renderTrip } from './replay'
 
 export type TripApi = {
-  sync(known: Record<string, number>): Promise<SyncResponse>
-  ops(ops: TripOp[]): Promise<OpsResponse>
+  sync(roomId: string, known: Record<string, number>): Promise<SyncResponse>
+  ops(roomId: string, ops: TripOp[]): Promise<OpsResponse>
 }
 
 export type ConflictNote = { key: string; tripId: string; fields: string[] }
@@ -23,6 +23,8 @@ export type Toast = { id: number; text: string }
 
 export type StoreState = {
   ready: boolean
+  // True once the first sync has answered (or failed), so "not found" isn't shown too early.
+  synced: boolean
   trips: Record<string, Trip>
   pending: number
   offline: boolean
@@ -36,6 +38,23 @@ type Deps = {
   api: TripApi
   db?: TripDB
   now?: () => number
+  // This tab's id. Each tab is its own sender, so two tabs never collide on seq.
+  clientId?: string
+  // Called when the server says this house is not ours any more (e.g. after joining another).
+  onForbidden?: () => void
+}
+
+function defaultClientId(): string {
+  const make = () => newId('trip').replace('trip_', 'dev_')
+  try {
+    const have = sessionStorage.getItem('bauhouse_trips_client')
+    if (have) return have
+    const id = make()
+    sessionStorage.setItem('bauhouse_trips_client', id)
+    return id
+  } catch {
+    return make()
+  }
 }
 
 const BATCH = 200
@@ -60,6 +79,9 @@ export class TripStore {
   private api: TripApi
   private db: TripDB
   private now: () => number
+  private clientId: string
+  private onForbidden?: () => void
+  private writes = 0
 
   private snapshots = new Map<string, Trip>()
   private outbox: TripOp[] = []
@@ -70,6 +92,7 @@ export class TripStore {
   private toasts: Toast[] = []
   private toastSeq = 0
   private ready = false
+  private synced = false
   private offline = false
   private failures = 0
   private batchSize = BATCH
@@ -88,6 +111,9 @@ export class TripStore {
     this.api = deps.api
     this.db = deps.db ?? createDefaultDB()
     this.now = deps.now ?? Date.now
+    this.clientId = deps.clientId ?? defaultClientId()
+    this.onForbidden = deps.onForbidden
+    this.meta = { client_id: this.clientId, seq: 0 }
     this.state = this.makeState()
   }
 
@@ -103,6 +129,7 @@ export class TripStore {
   private makeState(): StoreState {
     return {
       ready: this.ready,
+      synced: this.synced,
       trips: this.rendered,
       pending: this.outbox.length,
       offline: this.offline,
@@ -120,7 +147,7 @@ export class TripStore {
     this.hydrating ??= (async () => {
       let loaded: Awaited<ReturnType<TripDB['load']>>
       try {
-        loaded = await this.db.load()
+        loaded = await this.db.load(this.clientId)
       } catch {
         loaded = { trips: [], outbox: [], meta: null }
       }
@@ -131,8 +158,10 @@ export class TripStore {
       }
       for (const id of stale) void this.db.deleteTrip(id).catch(() => {})
       this.outbox = loaded.outbox
-      const maxSeq = loaded.outbox.reduce((m, o) => Math.max(m, o.seq), 0)
-      this.meta = loaded.meta ?? { client_id: newId('trip').replace('trip_', 'dev_'), seq: 0 }
+      const maxSeq = loaded.outbox
+        .filter((o) => o.client_id === this.clientId)
+        .reduce((m, o) => Math.max(m, o.seq), 0)
+      this.meta = loaded.meta ?? { client_id: this.clientId, seq: 0 }
       this.meta.seq = Math.max(this.meta.seq, maxSeq)
       if (!loaded.meta) void this.db.putMeta(this.meta).catch(() => {})
       this.recomputeAll()
@@ -243,7 +272,11 @@ export class TripStore {
     if (applied) next[tripId] = applied
     this.rendered = next
     this.emit()
-    void this.db.appendOp(op, this.meta).catch(() => {})
+    this.writes++
+    void this.db
+      .appendOp(op, this.meta)
+      .catch(() => {})
+      .finally(() => this.writes--)
     void this.flush()
     return op
   }
@@ -319,11 +352,38 @@ export class TripStore {
 
   private async run(): Promise<void> {
     if (!this.ready) await this.hydrate()
+    // One flusher per house across tabs, so ops go out once and in order. Without the Web
+    // Locks API the in-tab guard above is all there is.
+    const locks = (navigator as unknown as { locks?: LockManager }).locks
+    if (!locks) return this.runLocked()
+    await locks.request(
+      `bauhouse-trips-flush-${this.roomId}`,
+      { ifAvailable: true },
+      async (lock) => {
+        if (lock) await this.runLocked()
+      },
+    )
+  }
+
+  private async runLocked(): Promise<void> {
+    await this.reloadOutbox()
     do {
       this.again = false
       const ok = (await this.pushOps()) && (await this.pull())
       if (!ok) break
     } while (this.again)
+  }
+
+  /** Picks up ops other tabs queued (and forgets ones they already sent). */
+  private async reloadOutbox() {
+    if (this.writes > 0) return
+    try {
+      const { outbox } = await this.db.load(this.clientId)
+      if (this.writes > 0) return
+      this.outbox = outbox
+      this.recomputeAll()
+      this.emit()
+    } catch {}
   }
 
   private scheduleRetry() {
@@ -336,6 +396,7 @@ export class TripStore {
   }
 
   private fail() {
+    this.synced = true
     this.failures++
     this.offline = true
     this.emit()
@@ -355,16 +416,23 @@ export class TripStore {
       const batch = this.outbox.slice(0, this.batchSize)
       let resp: OpsResponse
       try {
-        resp = await this.api.ops(batch)
+        resp = await this.api.ops(this.roomId, batch)
       } catch (e) {
         const status = (e as { status?: number }).status
+        if (status === 403) {
+          // The house changed under us (a join moved our trips). The outbox is kept; the
+          // owner of this store refreshes who we are and starts a store for the new house.
+          this.onForbidden?.()
+          this.fail()
+          return false
+        }
         if ((status === 400 || status === 413) && batch.length > 1) {
           this.batchSize = Math.max(1, Math.floor(batch.length / 2))
           continue
         }
         if (status === 400 || status === 413) {
           this.toast('That change couldn’t be saved, so it was undone.')
-          await this.drop(batch.map((o) => o.seq))
+          await this.drop(batch.map((o) => o.op_id))
           continue
         }
         this.fail()
@@ -388,7 +456,7 @@ export class TripStore {
   private async handleResults(batch: TripOp[], resp: OpsResponse): Promise<number> {
     if (typeof resp.server_time === 'number') this.offsetMs = resp.server_time - this.now()
     const byId = new Map(resp.results.map((r) => [r.op_id, r]))
-    const drop: number[] = []
+    const drop: string[] = []
     let retried = 0
     for (const op of batch) {
       const r: OpResult | undefined = byId.get(op.op_id)
@@ -396,7 +464,7 @@ export class TripStore {
         retried++
         continue
       }
-      drop.push(op.seq)
+      drop.push(op.op_id)
       if (r.status === 'conflicted') {
         const key = op.entity_id ?? op.trip_id
         this.notes = {
@@ -410,39 +478,50 @@ export class TripStore {
     }
     // Remove acked ops first, then fold in the server's copy, so nothing replays twice.
     await this.drop(drop, false)
-    await this.applyDeltas(resp.trips ?? [])
+    // A delta that doesn't start where our copy ends means someone else wrote in between:
+    // fetch those trips whole instead of guessing.
+    const stale = await this.applyDeltas(resp.trips ?? [], true)
+    if (stale.length) await this.pull(new Set(stale))
     this.emit()
     return retried
   }
 
-  private async drop(seqs: number[], emit = true) {
-    const gone = new Set(seqs)
-    this.outbox = this.outbox.filter((o) => !gone.has(o.seq))
-    await this.db.deleteOps(seqs).catch(() => {})
+  private async drop(opIds: string[], emit = true) {
+    const gone = new Set(opIds)
+    this.outbox = this.outbox.filter((o) => !gone.has(o.op_id))
+    await this.db.deleteOps(opIds).catch(() => {})
     this.recomputeAll()
     if (emit) this.emit()
   }
 
-  private async applyDeltas(deltas: TripDelta[]) {
+  private async applyDeltas(deltas: TripDelta[], checkBase = false): Promise<string[]> {
+    const stale: string[] = []
     for (const d of deltas) {
+      const cur = this.snapshots.get(d.trip_id)
+      if (checkBase && !d.full && (!cur || cur.version !== d.base_version)) {
+        stale.push(d.trip_id)
+        continue
+      }
       const next = mergeDelta(this.snapshots.get(d.trip_id), d)
       this.snapshots.set(d.trip_id, next)
       await this.db.putTrip({ ...next, room_id: this.roomId }).catch(() => {})
     }
     this.recomputeAll()
+    return stale
   }
 
-  private async pull(): Promise<boolean> {
+  private async pull(refetch?: Set<string>): Promise<boolean> {
     const known: Record<string, number> = {}
-    for (const [id, t] of this.snapshots) known[id] = t.version
+    for (const [id, t] of this.snapshots) if (!refetch?.has(id)) known[id] = t.version
     let resp: SyncResponse
     try {
-      resp = await this.api.sync(known)
+      resp = await this.api.sync(this.roomId, known)
     } catch {
       this.fail()
       return false
     }
     this.succeed()
+    this.synced = true
     if (typeof resp.server_time === 'number') this.offsetMs = resp.server_time - this.now()
     await this.applyDeltas(resp.trips ?? [])
     for (const r of resp.removed ?? []) {
@@ -450,7 +529,7 @@ export class TripStore {
       if (rm.purged) {
         this.snapshots.delete(rm.trip_id)
         await this.db.deleteTrip(rm.trip_id).catch(() => {})
-        const gone = this.outbox.filter((o) => o.trip_id === rm.trip_id).map((o) => o.seq)
+        const gone = this.outbox.filter((o) => o.trip_id === rm.trip_id).map((o) => o.op_id)
         if (gone.length) await this.drop(gone, false)
       } else {
         const cur = this.snapshots.get(rm.trip_id)

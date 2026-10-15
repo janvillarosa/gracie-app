@@ -9,18 +9,18 @@ const ROOM = 'room_1'
 const ME = 'user_me'
 
 const direct = (srv: MockTripServer): TripApi => ({
-  sync: async (known) => srv.sync(ROOM, known),
-  ops: async (ops) => srv.ops(ROOM, ops),
+  sync: async (_r, known) => srv.sync(ROOM, known),
+  ops: async (_r, ops) => srv.ops(ROOM, ops),
 })
 
 // An api that fails until switched on, so tests can queue several ops before they flush.
 const gated = (srv: MockTripServer, inner: Partial<TripApi> = {}) => {
   const g = { online: false }
   const api: TripApi = {
-    sync: async (k) =>
-      g.online ? (inner.sync ?? direct(srv).sync)(k) : Promise.reject(new Error('offline')),
-    ops: async (o) =>
-      g.online ? (inner.ops ?? direct(srv).ops)(o) : Promise.reject(new Error('offline')),
+    sync: async (r, k) =>
+      g.online ? (inner.sync ?? direct(srv).sync)(r, k) : Promise.reject(new Error('offline')),
+    ops: async (r, o) =>
+      g.online ? (inner.ops ?? direct(srv).ops)(r, o) : Promise.reject(new Error('offline')),
   }
   return { g, api }
 }
@@ -126,8 +126,8 @@ describe('TripStore', () => {
     const srv = new MockTripServer()
     let online = false
     const api: TripApi = {
-      sync: async (k) => (online ? srv.sync(ROOM, k) : Promise.reject(new Error('offline'))),
-      ops: async (o) => (online ? srv.ops(ROOM, o) : Promise.reject(new Error('offline'))),
+      sync: async (_r, k) => (online ? srv.sync(ROOM, k) : Promise.reject(new Error('offline'))),
+      ops: async (_r, o) => (online ? srv.ops(ROOM, o) : Promise.reject(new Error('offline'))),
     }
     const { store } = make(srv, api)
     await store.hydrate()
@@ -246,12 +246,12 @@ describe('TripStore', () => {
     expect(store.getState().notes[todo]).toBeUndefined()
   })
 
-  it('keeps retry ops in the outbox and does not let later ops overtake them', async () => {
+  it('keeps retry ops in the outbox, drops the applied ones and resends only the retry', async () => {
     const srv = new MockTripServer()
     const calls: number[][] = []
     const api: TripApi = {
-      sync: async (k) => srv.sync(ROOM, k),
-      ops: async (ops) => {
+      sync: async (_r, k) => srv.sync(ROOM, k),
+      ops: async (_r, ops) => {
         calls.push(ops.map((o) => o.seq))
         if (calls.length === 1)
           return {
@@ -267,10 +267,10 @@ describe('TripStore', () => {
     const id = store.createTrip({ title: 'T' })
     store.updateTrip(id, { notes: 'x' })
     await store.flush()
-    expect(store.getState().pending).toBe(2)
+    expect(store.getState().pending).toBe(1)
     await store.flush()
     expect(store.getState().pending).toBe(0)
-    expect(calls[1]).toEqual([1, 2])
+    expect(calls[1]).toEqual([1])
   })
 
   it('treats a duplicate result as done and corrects the clock from server_time', async () => {
@@ -293,8 +293,8 @@ describe('TripStore', () => {
     const srv = new MockTripServer()
     const sizes: number[] = []
     const api: TripApi = {
-      sync: async (k) => srv.sync(ROOM, k),
-      ops: async (ops) => {
+      sync: async (_r, k) => srv.sync(ROOM, k),
+      ops: async (_r, ops) => {
         sizes.push(ops.length)
         if (ops.length > 1 || ops[0].patch?.title === 'poison') {
           throw Object.assign(new Error('bad'), { status: 400 })
@@ -352,5 +352,51 @@ describe('TripStore', () => {
     expect(sync.removed).toEqual([{ trip_id: id, purged: true }])
     await store.flush()
     expect(store.getState().trips[id]).toBeUndefined()
+  })
+
+  it('keeps the outbox and tells its owner when the house answers 403', async () => {
+    const srv = new MockTripServer()
+    let forbidden = 0
+    const api: TripApi = {
+      sync: async (_r, k) => srv.sync(ROOM, k),
+      ops: async () => {
+        throw Object.assign(new Error('forbidden'), { status: 403 })
+      },
+    }
+    const store = new TripStore({
+      roomId: ROOM,
+      userId: ME,
+      api,
+      db: new MemoryTripDB(),
+      onForbidden: () => forbidden++,
+    })
+    await store.hydrate()
+    store.createTrip({ title: 'Kept' })
+    await store.flush()
+    expect(forbidden).toBeGreaterThan(0)
+    expect(store.getState().pending).toBe(1)
+  })
+
+  it('refetches a trip whole when a delta does not start at our version', async () => {
+    const srv = new MockTripServer()
+    const knownSeen: Array<Record<string, number>> = []
+    const api: TripApi = {
+      sync: async (_r, k) => {
+        knownSeen.push({ ...k })
+        return srv.sync(ROOM, k)
+      },
+      ops: async (_r, ops) => {
+        const r = srv.ops(ROOM, ops)
+        // Pretend a housemate wrote in between: the delta starts at a different version.
+        return { ...r, trips: r.trips.map((d) => ({ ...d, full: false, base_version: 99 })) }
+      },
+    }
+    const { store } = make(srv, api)
+    await store.hydrate()
+    const id = store.createTrip({ title: 'Whole' })
+    await store.flush()
+    expect(knownSeen.some((k) => !(id in k))).toBe(true)
+    expect(store.getState().trips[id].title).toBe('Whole')
+    expect(store.getState().trips[id].version).toBe(1)
   })
 })

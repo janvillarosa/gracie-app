@@ -36,6 +36,12 @@ export function shortDay(key: string): string {
   const d = new Date(toUtc(key))
   return `${WEEKDAY.format(d)} ${d.getUTCDate()}`
 }
+const WEEKDAY_LONG = new Intl.DateTimeFormat('en-GB', { weekday: 'long', timeZone: 'UTC' })
+/** "Tuesday 13" */
+export function longDay(key: string): string {
+  const d = new Date(toUtc(key))
+  return `${WEEKDAY_LONG.format(d)} ${d.getUTCDate()}`
+}
 /** "Thu 22 Oct" */
 export function fullDay(key: string): string {
   const d = new Date(toUtc(key))
@@ -334,7 +340,27 @@ export function orderBetween(prev?: number, next?: number): number {
   return (prev + next) / 2
 }
 
-export function mapsUrl(lat: number, lng: number, name?: string): string {
-  const q = name ? `${encodeURIComponent(name)}%20` : ''
-  return `https://www.google.com/maps/search/?api=1&query=${q}${lat},${lng}`
+export function mapsUrl(lat: number, lng: number): string {
+  return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
+}
+
+export type TripGroups = { now: Trip[]; upcoming: Trip[]; drafts: Trip[]; past: Trip[] }
+
+/** Index groups. Deleted trips are left out. */
+export function groupTrips(trips: Trip[], today: string): TripGroups {
+  const g: TripGroups = { now: [], upcoming: [], drafts: [], past: [] }
+  for (const t of trips) {
+    if (t.deleted) continue
+    const p = tripPhase(t, today)
+    if (p === 'during') g.now.push(t)
+    else if (p === 'before') g.upcoming.push(t)
+    else if (p === 'after') g.past.push(t)
+    else g.drafts.push(t)
+  }
+  const start = (t: Trip) => t.start_date ?? ''
+  g.upcoming.sort((a, b) => (start(a) < start(b) ? -1 : 1))
+  g.now.sort((a, b) => (start(a) < start(b) ? -1 : 1))
+  g.past.sort((a, b) => (start(a) < start(b) ? 1 : -1))
+  g.drafts.sort((a, b) => a.title.localeCompare(b.title))
+  return g
 }
