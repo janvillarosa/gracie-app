@@ -65,13 +65,14 @@ describe('the real map (Google Maps, drawn as markers)', () => {
     expect(map.options).toMatchObject({ mapId: 'TEST_MAP_ID', disableDefaultUI: true })
   })
 
-  it('draws pips and names as our own markers: the next stop in a pill, long names cut at 22', async () => {
+  it('draws stops as our own pills: the next stop in the yellow pill, long names cut at 22', async () => {
     const t = withPlaces()
     seed(t)
     renderTrips(`/app/trips/${t.trip_id}`)
     await ready()
-    expect(pinFor('Pena Palace').label).toBe('Next · Pena Palace')
-    expect(pinFor('Pena Palace').content).toHaveClass('is-next')
+    expect(pinFor('Pena Palace').label).toBe('Pena Palace')
+    expect(pinFor('Pena Palace').content).toHaveClass('is-next', 'has-kicker')
+    expect(pinFor('Pena Palace').content.querySelector('.gm-kicker')?.textContent).toBe('Next')
     const lunch = pinFor('Quinta')
     expect(lunch.label).toBe('Quinta da Regaleira d…')
     expect(lunch.label).toHaveLength(22)
@@ -84,7 +85,7 @@ describe('the real map (Google Maps, drawn as markers)', () => {
     for (const m of FakeMarker.pins()) expect(m.label).not.toMatch(/^\d+$/)
   })
 
-  it('marks the selected stop with the same ring', async () => {
+  it('marks the selected stop with the ink outline', async () => {
     const t = withPlaces()
     seed(t)
     renderTrips(`/app/trips/${t.trip_id}`)
@@ -106,13 +107,30 @@ describe('the real map (Google Maps, drawn as markers)', () => {
     expect(screen.getByRole('button', { name: 'Fit day' })).toBeInTheDocument()
   })
 
-  it('scrolls the list to the item when its pin is tapped', async () => {
+  it('selects the item when its pill is clicked: the row scrolls only if needed, the inspector opens, the camera stays', async () => {
     const t = withPlaces()
     seed(t)
     renderTrips(`/app/trips/${t.trip_id}`)
-    await ready()
+    const map = await ready()
+    await waitFor(() => expect(map.moves).toBeGreaterThan(0))
+    map.clearMoves()
     act(() => pinFor('Quinta').click())
-    expect(Element.prototype.scrollIntoView).toHaveBeenCalled()
+    expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith(
+      expect.objectContaining({ block: 'nearest' }),
+    )
+    await waitFor(() => expect(pinFor('Quinta').content).toHaveClass('is-selected'))
+    expect(await screen.findByRole('dialog')).toBeInTheDocument()
+    expect(map.moves).toBe(0)
+  })
+
+  it('is view only: no place icons to click and no click handling on the map', async () => {
+    const t = withPlaces()
+    seed(t)
+    renderTrips(`/app/trips/${t.trip_id}`)
+    const map = await ready()
+    expect(map.options).toMatchObject({ clickableIcons: false })
+    expect(map.listeners.has('click')).toBe(false)
+    for (const m of FakeMarker.pins()) expect(m.content).toHaveAttribute('aria-hidden', 'true')
   })
 })
 
@@ -160,153 +178,6 @@ describe('following the day, and pausing when you move the map', () => {
     const list = await screen.findByRole('group', { name: 'Days' })
     await userEvent.click(within(list).getAllByRole('button')[3])
     await waitFor(() => expect(fitDay).not.toHaveClass('is-key'))
-  })
-})
-
-describe('click to add a stop', () => {
-  // A click on a Google place (with its name) or on an empty spot (reverse-geocoded).
-  const click = (map: FakeMap, name?: string) => {
-    if (name) FakePlace.next = { displayName: name, lat: 38.7876, lng: -9.3906 }
-    else FakeGeocoder.result = 'fail'
-    act(() => {
-      map.emit('click', {
-        latLng: { lat: () => 38.7876, lng: () => -9.3906 },
-        placeId: name ? 'ChIJtest' : undefined,
-        stop: () => {},
-      })
-    })
-  }
-
-  it('drops one hollow pin and a card, and creates nothing until the key is pressed', async () => {
-    const t = withPlaces()
-    seed(t)
-    renderTrips(`/app/trips/${t.trip_id}`)
-    const map = await ready()
-    click(map)
-    const card = await screen.findByRole('dialog', { name: /^Add .* to / })
-    // No name came with the click: a dropped pin the person can name.
-    expect(await within(card).findByLabelText('Place name')).toBeInTheDocument()
-    // The temporary pin is the hollow ring.
-    expect(
-      tripServer.trips
-        .get(t.trip_id)
-        ?.todos.some((x) => x.title === 'Pena Palace' && x.day === rel(0) && x.created_by),
-    ).toBeTruthy()
-  })
-
-  it('adds the place to the day on the map, and the temporary pin goes', async () => {
-    const t = withPlaces()
-    seed(t)
-    renderTrips(`/app/trips/${t.trip_id}`)
-    const map = await ready()
-    click(map, 'Pastéis de Belém')
-    const card = await screen.findByRole('dialog', { name: /Pastéis de Belém/ })
-    expect(within(card).getByRole('heading', { name: 'Pastéis de Belém' })).toBeInTheDocument()
-    expect(tripServer.trips.get(t.trip_id)?.todos.some((x) => x.title === 'Pastéis de Belém')).toBe(
-      false,
-    )
-    await userEvent.click(within(card).getByRole('button', { name: /^Add to / }))
-    await waitFor(() => {
-      const made = tripServer.trips
-        .get(t.trip_id)
-        ?.todos.find((x) => x.title === 'Pastéis de Belém')
-      expect(made?.day).toBe(rel(0))
-      expect(made?.place?.lat).toBeCloseTo(38.7876, 3)
-    })
-    await waitFor(() =>
-      expect(screen.queryByRole('dialog', { name: /Pastéis de Belém/ })).not.toBeInTheDocument(),
-    )
-    expect(FakeMarker.preview()?.shown ?? false).toBe(false)
-    expect(await screen.findByRole('button', { name: 'Pastéis de Belém' })).toBeInTheDocument()
-  })
-
-  it('can add to another day or to Ideas from the same card', async () => {
-    const t = withPlaces()
-    seed(t)
-    renderTrips(`/app/trips/${t.trip_id}`)
-    const map = await ready()
-    click(map, 'Jardim')
-    const card = await screen.findByRole('dialog', { name: /Jardim/ })
-    await userEvent.click(within(card).getByRole('button', { name: /^Add to, / }))
-    await userEvent.click(await screen.findByRole('button', { name: /^Ideas/ }))
-    await userEvent.click(within(card).getByRole('button', { name: 'Add to Ideas' }))
-    await waitFor(() =>
-      expect(
-        tripServer.trips.get(t.trip_id)?.todos.find((x) => x.title === 'Jardim')?.day ?? null,
-      ).toBeNull(),
-    )
-  })
-
-  it('opens the edit sheet, prefilled, from "More details"', async () => {
-    const t = withPlaces()
-    seed(t)
-    renderTrips(`/app/trips/${t.trip_id}`)
-    const map = await ready()
-    click(map, 'Miradouro')
-    const card = await screen.findByRole('dialog', { name: /Miradouro/ })
-    await userEvent.click(within(card).getByRole('button', { name: 'More details' }))
-    const sheet = await screen.findByRole('dialog', { name: 'Miradouro' })
-    expect(within(sheet).getByLabelText('Title')).toHaveValue('Miradouro')
-    expect(tripServer.trips.get(t.trip_id)?.todos.some((x) => x.title === 'Miradouro')).toBe(true)
-  })
-
-  it('goes away on Esc, on a click elsewhere, and when you start to pan', async () => {
-    const t = withPlaces()
-    seed(t)
-    renderTrips(`/app/trips/${t.trip_id}`)
-    const map = await ready()
-    click(map, 'Jardim')
-    await screen.findByRole('dialog', { name: /Jardim/ })
-    await userEvent.keyboard('{Escape}')
-    await waitFor(() =>
-      expect(screen.queryByRole('dialog', { name: /Jardim/ })).not.toBeInTheDocument(),
-    )
-    click(map, 'Jardim')
-    await screen.findByRole('dialog', { name: /Jardim/ })
-    act(() => map.emit('idle'))
-    act(() => map.emit('dragstart'))
-    await waitFor(() =>
-      expect(screen.queryByRole('dialog', { name: /Jardim/ })).not.toBeInTheDocument(),
-    )
-    click(map, 'Jardim')
-    await screen.findByRole('dialog', { name: /Jardim/ })
-    fireEvent.pointerDown(document.body)
-    await waitFor(() =>
-      expect(screen.queryByRole('dialog', { name: /Jardim/ })).not.toBeInTheDocument(),
-    )
-    expect(tripServer.trips.get(t.trip_id)?.todos.some((x) => x.title === 'Jardim')).toBe(false)
-  })
-
-  it('says "Dropped pin" with a name to type when the place cannot be found', async () => {
-    const t = withPlaces()
-    seed(t)
-    renderTrips(`/app/trips/${t.trip_id}`)
-    const map = await ready()
-    click(map)
-    const card = await screen.findByRole('dialog', { name: /dropped pin/i })
-    const name = await within(card).findByLabelText('Place name')
-    await userEvent.type(name, 'Viewpoint')
-    await userEvent.click(within(card).getByRole('button', { name: /^Add to / }))
-    await waitFor(() =>
-      expect(tripServer.trips.get(t.trip_id)?.todos.some((x) => x.title === 'Viewpoint')).toBe(
-        true,
-      ),
-    )
-  })
-
-  it('keeps focus inside the card, and names it for a screen reader', async () => {
-    const t = withPlaces()
-    seed(t)
-    renderTrips(`/app/trips/${t.trip_id}`)
-    const map = await ready()
-    click(map, 'Jardim')
-    const card = await screen.findByRole('dialog', { name: /^Add Jardim to / })
-    await waitFor(() => expect(card).toHaveFocus())
-    // Tab stays inside: from the last control it comes back to the first.
-    const keys = within(card).getAllByRole('button')
-    keys[keys.length - 1].focus()
-    await userEvent.tab()
-    expect(card.contains(document.activeElement)).toBe(true)
   })
 })
 

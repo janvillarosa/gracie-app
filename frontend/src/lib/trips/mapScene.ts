@@ -21,6 +21,8 @@ export type MapStop = {
   dayIndex: number
   // One muted line for a card: "12:30 · Sintra".
   meta: string
+  // The start time ("10:15") when it is set; a pill shows it (desktop only).
+  time?: string
 }
 
 export type MapMode = 'day' | 'all' | 'ideas'
@@ -38,20 +40,11 @@ export type MapScene = {
   // Emphasis only, never the camera: the day in view keeps its colour, the other days dim.
   // Absent or null: nothing is dimmed.
   emphasisDay?: number | null
+  // The emphasised day as the chip says it: "Wed 28".
+  emphasisLabel?: string
 }
 
 export type MapPreview = LatLng & { label?: string }
-
-/** A click on the map, with where it landed in the pane. A click on a Google place carries its
- *  `place_id`; `displayName` (also as `name`) is Google content for display only and is never
- *  stored. */
-export type MapClick = LatLng & {
-  place_id?: string
-  displayName?: string
-  name?: string
-  x: number
-  y: number
-}
 
 export const EMPTY_SCENE: MapScene = {
   mode: 'day',
@@ -85,6 +78,7 @@ const todoStop = (t: TripTodo, order: number, dayIndex: number): MapStop | null 
         priority: order + 2,
         dayIndex,
         meta: [t.start_time, t.place.locality].filter(Boolean).join(' · '),
+        ...(t.start_time ? { time: t.start_time } : {}),
       }
     : null
 
@@ -100,6 +94,7 @@ const bookingStop = (b: Booking, order: number, dayIndex: number): MapStop | nul
         priority: order + 2,
         dayIndex,
         meta: [b.starts_at?.split('T')[1], b.place.locality].filter(Boolean).join(' · '),
+        ...(b.starts_at?.split('T')[1] ? { time: b.starts_at.split('T')[1] } : {}),
       }
     : null
 
@@ -141,6 +136,7 @@ type Opts = {
   colourIndex?: number
   // The day in view (an index into the schedule): see MapScene.emphasisDay.
   emphasisDay?: number | null
+  emphasisLabel?: string
 }
 
 /** The stops and flags for one view of the map: a day, every day, or the ideas. */
@@ -153,6 +149,7 @@ export function buildScene({
   selectedId = null,
   colourIndex = 0,
   emphasisDay,
+  emphasisLabel,
 }: Opts): MapScene {
   let stops: MapStop[] = []
   const linked = new Set<string>(
@@ -191,6 +188,7 @@ export function buildScene({
     colourVar: `--trip-day-${colourIndex % 6}`,
     route: mode === 'day',
     ...(emphasisDay === undefined ? {} : { emphasisDay }),
+    ...(emphasisLabel === undefined ? {} : { emphasisLabel }),
   }
 }
 

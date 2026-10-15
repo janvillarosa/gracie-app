@@ -41,8 +41,6 @@ export function loadPlaces(config: MapsConfig = mapsConfig()) {
   configure(config)
   return importLibrary('places')
 }
-export const loadGeocoding = () => importLibrary('geocoding')
-
 /** Test hook: forget a loaded API. */
 export function resetGoogleLoader() {
   pending = null

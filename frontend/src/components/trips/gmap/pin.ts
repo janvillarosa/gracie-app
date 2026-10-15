@@ -1,14 +1,16 @@
 // The DOM for one marker, built from plain data so each state can be tested without a map.
 //
-//   <div class="gm-pin ...">            a 0x0 box: its bottom-centre (where Google anchors a marker)
-//     <span class="gm-pip">             is the stop's exact point; everything is drawn around it
-//     <span class="gm-label">Name</span>
+//   <div class="gm-pin ...">            a 0x0 box: its top-left is the stop's exact point
+//     <span class="gm-anchor">          the 10px ring on the point
+//     <span class="gm-pill">            the pill, standing above the anchor with a pointer tail
+//       <span class="gm-kicker">Next</span>  <i class="gm-dot"> <span class="gm-name"> <span class="gm-time">
 //
-// The pip is a category colour (`--pip-*`); all-days mode colours it by day, done is muted, ideas
-// are hollow. The next and selected stops get a yellow ring. The name is Figtree SemiBold with a
-// white halo, all in CSS (gmap.css).
+// A stop is a white paper pill (brief 6u). The next stop is the yellow key pill with a NEXT
+// kicker, a done stop is grey, the selected one has a 2px ink outline, ideas are outlined. A
+// pill that collides, or belongs to another day, collapses to its anchor and dot and expands on
+// hover. All of it is CSS (gmap.css).
 import type { MapScene, MapStop } from '@lib/trips/mapScene'
-import { isLabelled, type Anchor } from './labels'
+import { isFull } from './labels'
 
 export type PinState = {
   next: boolean
@@ -17,19 +19,21 @@ export type PinState = {
   hollow: boolean
   dim: boolean
   hot: boolean
-  // The name shows without hovering (a day); otherwise only on hover or when lit from the list.
+  // The pill shows in full without hovering (a day, the emphasised day, the next and selected).
   labelled: boolean
-  // The collision pass hid the name (the pip stays).
+  // The collision pass collapsed the pill (the anchor and dot stay).
   hidden: boolean
-  anchor: Anchor
+  // The NEXT kicker shows (desktop only).
+  kicker: boolean
 }
 
 export type PinSpec = {
-  text: string
+  name: string
+  // "10:15"; empty when none, or on the phone.
+  time: string
   title: string
-  // CSS custom property names (without `var()`), so colours stay tokens.
+  // The CSS custom property name (without `var()`) of the stop's colour, so colours stay tokens.
   fill: string
-  stroke: string
   state: PinState
 }
 
@@ -42,28 +46,24 @@ const BOOLEAN_CLASSES: Array<[keyof PinState, string]> = [
   ['hot', 'is-hot'],
   ['labelled', 'is-labelled'],
   ['hidden', 'label-hidden'],
+  ['kicker', 'has-kicker'],
 ]
 
-/** Which tokens colour a stop's pip. */
-export function pipColours(
-  stop: MapStop,
-  scene: Pick<MapScene, 'mode'>,
-): { fill: string; stroke: string } {
-  const hollow = scene.mode === 'ideas'
-  const fill = hollow
-    ? '--panel'
-    : stop.done
+/** Which token colours a stop's dot and anchor. */
+export function pipColours(stop: MapStop, scene: Pick<MapScene, 'mode'>): { fill: string } {
+  return {
+    fill: stop.done
       ? '--pip-done'
       : scene.mode === 'all'
         ? `--trip-day-${stop.dayIndex % 6}`
-        : `--pip-${stop.category}`
-  return { fill, stroke: hollow ? `--pip-${stop.category}` : '--on-pin' }
+        : `--pip-${stop.category}`,
+  }
 }
 
 export function pinState(
   stop: MapStop,
   scene: MapScene,
-  opts: { hot: boolean; hidden: boolean; anchor: Anchor },
+  opts: { hot: boolean; hidden: boolean; kicker: boolean },
 ): PinState {
   return {
     next: stop.id === scene.nextId,
@@ -75,45 +75,55 @@ export function pinState(
       scene.emphasisDay !== null &&
       stop.dayIndex !== scene.emphasisDay,
     hot: opts.hot,
-    labelled: isLabelled(scene, stop),
+    labelled: isFull(scene, stop),
     hidden: opts.hidden,
-    anchor: opts.anchor,
+    kicker: opts.kicker && stop.id === scene.nextId,
   }
 }
 
 export function classesFor(state: PinState): string {
-  const out = ['gm-pin', `a-${state.anchor}`]
+  const out = ['gm-pin']
   for (const [key, cls] of BOOLEAN_CLASSES) if (state[key]) out.push(cls)
   return out.join(' ')
 }
 
-/** Create the marker's content once, then `updatePin` it as the scene changes. */
+const span = (cls: string, tag: 'span' | 'i' = 'span') => {
+  const el = document.createElement(tag)
+  el.className = cls
+  return el
+}
+
+/** Create the marker's content once, then `updatePin` it as the scene changes. The pill is
+ *  decoration for the map; the list is the accessible source, so it is hidden from readers. */
 export function createPin(): HTMLDivElement {
   const root = document.createElement('div')
-  const pip = document.createElement('span')
-  pip.className = 'gm-pip'
-  const label = document.createElement('span')
-  label.className = 'gm-label'
-  root.append(pip, label)
+  root.setAttribute('aria-hidden', 'true')
+  const pill = span('gm-pill')
+  const kicker = span('gm-kicker')
+  kicker.textContent = 'Next'
+  pill.append(kicker, span('gm-dot', 'i'), span('gm-name'), span('gm-time'))
+  root.append(span('gm-anchor'), pill)
   return root
 }
 
 export function updatePin(root: HTMLElement, spec: PinSpec) {
   root.className = classesFor(spec.state)
   root.style.setProperty('--gm-fill', `var(${spec.fill})`)
-  root.style.setProperty('--gm-stroke', `var(${spec.stroke})`)
-  const label = root.querySelector('.gm-label')
-  if (label && label.textContent !== spec.text) label.textContent = spec.text
+  const name = root.querySelector('.gm-name')
+  if (name && name.textContent !== spec.name) name.textContent = spec.name
+  const time = root.querySelector('.gm-time')
+  if (time && time.textContent !== spec.time) time.textContent = spec.time
 }
 
-/** A merged group of stops: a white disc with "+N" and an ink border. */
+/** A merged group of stops: an ink pill with "+N". */
 export function clusterElement(count: number): HTMLDivElement {
   const root = document.createElement('div')
   root.className = 'gm-cluster'
-  const disc = document.createElement('span')
-  disc.className = 'gm-cluster-disc'
-  disc.textContent = `+${count}`
-  root.append(disc)
+  root.setAttribute('aria-hidden', 'true')
+  const pill = document.createElement('span')
+  pill.className = 'gm-cluster-pill'
+  pill.textContent = `+${count}`
+  root.append(pill)
   return root
 }
 

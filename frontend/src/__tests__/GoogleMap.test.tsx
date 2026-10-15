@@ -1,9 +1,10 @@
 import { act, render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { TripMap } from '@components/trips/TripMap'
 import { MapController } from '@components/trips/gmap/controller'
 import { centreFor, isVisible, projector, worldPoint } from '@components/trips/gmap/geometry'
-import { labelText, resolveLabels } from '@components/trips/gmap/labels'
+import { pillSize, pillText, resolvePills } from '@components/trips/gmap/labels'
 import { loadGoogle, resetGoogleLoader, type Google } from '@components/trips/gmap/loader'
 import { mapsConfig, mapsEnabled } from '@components/trips/gmap/config'
 import { pinState, pipColours } from '@components/trips/gmap/pin'
@@ -11,10 +12,8 @@ import type { MapViewProps } from '@components/trips/mapView'
 import { buildScene, EMPTY_SCENE, type MapScene, type MapStop } from '@lib/trips/mapScene'
 import {
   FakeClusterer,
-  FakeGeocoder,
   FakeMap,
   FakeMarker,
-  FakePlace,
   FakePolyline,
   fakeLayout,
   importLibrary,
@@ -66,7 +65,10 @@ const make = (p: MapViewProps) => {
     config: { key: 'k', mapId: 'DEMO_MAP_ID' },
     props: p,
   })
-  return { ctl, container, map: FakeMap.last as FakeMap }
+  const map = FakeMap.last as FakeMap
+  // The map's first idle: it is up, and the first fit runs.
+  map.emit('idle')
+  return { ctl, container, map }
 }
 const pin = (id: string) => FakeMarker.pins().find((m) => m.title === id) as FakeMarker
 
@@ -86,7 +88,7 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
-describe('the adapter contract on the Google map (setDay / setPins / setPreview / fit / onMapClick)', () => {
+describe('the adapter contract on the Google map (scene / preview / fit / pill clicks)', () => {
   it('draws one marker per stop with our own HTML, and fits the whole trip on load', () => {
     const { map } = make(props(scene([A, B, C])))
     expect(FakeMarker.pins()).toHaveLength(3)
@@ -95,25 +97,40 @@ describe('the adapter contract on the Google map (setDay / setPins / setPreview 
       mapId: 'DEMO_MAP_ID',
       disableDefaultUI: true,
       gestureHandling: 'greedy',
-      clickableIcons: true,
+      clickableIcons: false,
     })
+    expect(map.listeners.has('click')).toBe(false)
     expect(map.fitBounds).toHaveBeenCalledTimes(1)
     const [bounds, padding] = map.fitBounds.mock.calls[0]
     expect(bounds.points).toHaveLength(3)
-    expect(padding).toEqual({ top: 56, bottom: 56, left: 56, right: 56 })
+    expect(padding).toEqual({ top: 84, bottom: 56, left: 112, right: 112 })
   })
 
-  it('joins the day with a thin, translucent line with arrows, and nothing for one stop', () => {
+  it('joins the day with a 5px line on a 10px white casing and chevrons, and nothing for one stop', () => {
     make(props(scene([A, B, C], { colourVar: '--trip-day-2' })))
-    expect(FakePolyline.all).toHaveLength(1)
-    const line = FakePolyline.all[0].options
-    expect(line.path).toHaveLength(3)
-    expect(line.strokeWeight).toBe(3)
-    expect(line.strokeOpacity).toBe(0.55)
-    expect(line.icons[0].icon.path).toBe(1)
-    expect(line.icons[0].repeat).toMatch(/px$/)
+    const [casing, line] = FakePolyline.all.map((l) => l.options)
+    expect(FakePolyline.all).toHaveLength(2)
+    expect(casing).toMatchObject({ strokeWeight: 10, strokeColor: '#ffffff' })
+    expect(casing.path).toHaveLength(3)
+    expect(line.strokeWeight).toBe(5)
+    expect(line.strokeOpacity).toBe(1)
+    expect(line.icons[0].icon.fillColor).toBe('#ffffff')
+    expect(line.icons[0].repeat).toBe('100px')
     make(props(scene([A])))
-    expect(FakePolyline.all.filter((l) => l.live)).toHaveLength(1)
+    expect(FakePolyline.all.filter((l) => l.live)).toHaveLength(2)
+  })
+
+  it('dots a transport leg in --trip-transport, and keeps the rest solid', () => {
+    const train = stop('t', 38.9, -9.1, { category: 'transport' })
+    make(props(scene([A, B, train, C])))
+    const lines = FakePolyline.all.map((l) => l.options)
+    // Solid A-B, dotted B-train, solid train-C: a casing under each.
+    expect(lines.filter((l) => l.strokeWeight === 5)).toHaveLength(2)
+    const dots = lines.filter((l) => l.strokeOpacity === 0)
+    expect(dots).toHaveLength(1)
+    expect(dots[0].path).toHaveLength(2)
+    expect(dots[0].icons[0].repeat).toBe('10px')
+    expect(lines.filter((l) => l.strokeWeight === 9)).toHaveLength(1)
   })
 
   it('swaps the pins when the scene changes, reusing markers and removing the gone ones', () => {
@@ -203,6 +220,36 @@ describe('the adapter contract on the Google map (setDay / setPins / setPreview 
     expect(p.onUserMove).toHaveBeenCalledTimes(3)
   })
 
+  it('waits for the map to be up, so its start-up idle is not taken for the fit that follows', () => {
+    const p = props(scene([A, B]), { onUserMove: vi.fn() })
+    const container = document.createElement('div')
+    document.body.append(container)
+    new MapController({ google: google(), container, config: { key: 'k', mapId: 'M' }, props: p })
+    const map = FakeMap.last as FakeMap
+    expect(map.fitBounds).not.toHaveBeenCalled()
+    // The first idle: the map is up, and the first fit runs and is still running.
+    map.emit('idle')
+    expect(map.fitBounds).toHaveBeenCalledTimes(1)
+    map.emit('zoom_changed')
+    expect(p.onUserMove).not.toHaveBeenCalled()
+    // Its own idle ends the move; after that a zoom is the person.
+    map.emit('idle')
+    map.emit('zoom_changed')
+    expect(p.onUserMove).toHaveBeenCalledTimes(1)
+  })
+
+  it('a later move keeps its own claim when an earlier move times out', () => {
+    vi.useFakeTimers()
+    const p = props(scene([A, B]), { onUserMove: vi.fn() })
+    const { ctl, map } = make(p)
+    vi.advanceTimersByTime(1000)
+    ctl.sync(props(scene([A, B]), { fitToken: 1, onUserMove: p.onUserMove }))
+    vi.advanceTimersByTime(600)
+    // The first move's 1.5s fallback has passed; the second is still running.
+    map.emit('zoom_changed')
+    expect(p.onUserMove).not.toHaveBeenCalled()
+  })
+
   it('clears everything on destroy', () => {
     const { ctl, container } = make(props(scene([A, B])))
     ctl.destroy()
@@ -212,40 +259,52 @@ describe('the adapter contract on the Google map (setDay / setPins / setPreview 
   })
 })
 
-describe('what each marker looks like', () => {
+describe('what each pill looks like', () => {
   const base = scene([A, B, C], { nextId: 'a', selectedId: 'b' })
-  it('puts the category colour in the pip and a yellow ring on the next and selected stops', () => {
+  it('puts the category colour in the dot and anchor, the next stop in the key pill and the selected one outlined', () => {
     make(props(base))
-    expect(pin('a').content).toHaveClass('gm-pin', 'is-next')
+    expect(pin('a').content).toHaveClass('gm-pin', 'is-next', 'has-kicker')
     expect(pin('b').content).toHaveClass('is-selected')
     expect(pin('c').content).not.toHaveClass('is-next', 'is-selected')
     expect(pin('c').content.style.getPropertyValue('--gm-fill')).toBe('var(--pip-food)')
-    expect(pin('c').content.style.getPropertyValue('--gm-stroke')).toBe('var(--on-pin)')
-    expect(pin('c').content.querySelector('.gm-pip')).not.toBeNull()
+    expect(pin('c').content.querySelector('.gm-anchor')).not.toBeNull()
+    expect(pin('c').content.querySelector('.gm-dot')).not.toBeNull()
   })
 
-  it('says "Next · " only for the next stop and only when asked, and cuts long names', () => {
-    const long = stop('l', 38.9, -9.1, { label: 'Quinta da Regaleira do Convento de Sintra' })
+  it('shows the NEXT kicker only for the next stop and only when asked, the time on the desk only, and cuts long names', () => {
+    const long = stop('l', 38.9, -9.1, {
+      label: 'Quinta da Regaleira do Convento de Sintra',
+      time: '14:00',
+    })
     const { ctl } = make(props(scene([A, long], { nextId: 'a' })))
-    expect(pin('a').label).toBe('Next · a')
+    expect(pin('a').content).toHaveClass('has-kicker')
+    expect(pin('a').label).toBe('a')
     const lm = () => FakeMarker.pins().find((m) => m.title.startsWith('Quinta')) as FakeMarker
     expect(lm().label).toHaveLength(22)
     expect(lm().label.endsWith('…')).toBe(true)
-    ctl.sync(props(scene([A, long], { nextId: 'a' }), { nextPrefix: false, labelLimit: 14 }))
-    expect(pin('a').label).toBe('a')
-    expect(lm().label).toBe('Quinta da Reg…')
-    expect(labelText(long, { nextId: null }, 14, false)).toHaveLength(14)
+    expect(lm().time).toBe('14:00')
+    ctl.sync(
+      props(scene([A, long], { nextId: 'a' }), {
+        nextPrefix: false,
+        labelLimit: 16,
+        interactive: false,
+      }),
+    )
+    expect(pin('a').content).not.toHaveClass('has-kicker')
+    expect(lm().label).toBe('Quinta da Regal…')
+    expect(lm().label).toHaveLength(16)
+    expect(lm().time).toBe('')
+    expect(pillText(long, 14)).toHaveLength(14)
   })
 
-  it('mutes a done stop, and draws ideas hollow with the category on the rim', () => {
+  it('greys a done stop, and outlines ideas in the category colour', () => {
     const done = stop('d', 38.9, -9.1, { done: true })
     const { ctl } = make(props(scene([A, done])))
     expect(pin('d').content).toHaveClass('is-done')
     expect(pin('d').content.style.getPropertyValue('--gm-fill')).toBe('var(--pip-done)')
     ctl.sync(props(scene([A, done], { mode: 'ideas' })))
     expect(pin('a').content).toHaveClass('is-hollow')
-    expect(pin('a').content.style.getPropertyValue('--gm-fill')).toBe('var(--panel)')
-    expect(pin('a').content.style.getPropertyValue('--gm-stroke')).toBe('var(--pip-food)')
+    expect(pin('a').content.style.getPropertyValue('--gm-fill')).toBe('var(--pip-food)')
   })
 
   it('colours by day in all-days mode, with names on hover only, and dims the other days', () => {
@@ -270,34 +329,49 @@ describe('what each marker looks like', () => {
     expect(map.moves).toBe(0)
   })
 
-  it('fits only the day in emphasis on an explicit fit, and the whole trip on load', () => {
+  it('fits the day in emphasis on load and on an explicit fit; no emphasis (Show all days) fits the whole trip', () => {
     const d1 = stop('x', 38.9, -9.1, { dayIndex: 1 })
     const far = stop('y', 41.1, -8.6, { dayIndex: 2 })
     const { ctl, map } = make(
-      props(scene([A, d1, far], { mode: 'all', route: false, emphasisDay: 0 })),
+      props(scene([A, B, d1, far], { mode: 'all', route: false, emphasisDay: 0 })),
     )
-    // On load: everything.
-    expect(map.fitBounds.mock.calls[0][0].points).toHaveLength(3)
+    // On load: the day in emphasis (day 0 has two stops).
+    expect(map.fitBounds.mock.calls[0][0].points).toHaveLength(2)
     map.clearMoves()
-    ctl.sync(props(scene([A, d1, far], { mode: 'all', route: false, emphasisDay: 1 })))
+    ctl.sync(props(scene([A, B, d1, far], { mode: 'all', route: false, emphasisDay: 1 })))
     expect(map.moves).toBe(0)
     ctl.sync(
-      props(scene([A, d1, far], { mode: 'all', route: false, emphasisDay: 1 }), { fitToken: 1 }),
+      props(scene([A, B, d1, far], { mode: 'all', route: false, emphasisDay: 1 }), { fitToken: 1 }),
     )
     expect(map.moves).toBe(1)
     // Day 1 has one stop: centred, not the whole trip.
     expect(map.setCenter).toHaveBeenCalled()
+    map.clearMoves()
+    ctl.sync(
+      props(scene([A, B, d1, far], { mode: 'all', route: false, emphasisDay: null }), {
+        fitToken: 2,
+      }),
+    )
+    expect(map.fitBounds.mock.calls[0][0].points).toHaveLength(4)
+  })
+
+  it('fits the first day with places when the emphasised day has none', () => {
+    const d1 = stop('x', 38.9, -9.1, { dayIndex: 1 })
+    const far = stop('y', 41.1, -8.6, { dayIndex: 2 })
+    const { map } = make(props(scene([d1, far], { mode: 'all', route: false, emphasisDay: 0 })))
+    expect(map.setCenter).toHaveBeenCalledWith({ lat: 38.9, lng: -9.1 })
   })
 
   it('has the same states as pure functions', () => {
     const s = scene([A], { mode: 'all' })
-    expect(pipColours(A, s)).toEqual({ fill: '--trip-day-0', stroke: '--on-pin' })
+    expect(pipColours(A, s)).toEqual({ fill: '--trip-day-0' })
     const st = pinState(
       A,
       { ...s, nextId: 'a', emphasisDay: 3 },
-      { hot: true, hidden: false, anchor: 'left' },
+      { hot: true, hidden: false, kicker: true },
     )
-    expect(st).toMatchObject({ next: true, dim: true, hot: true, labelled: false, anchor: 'left' })
+    // The next stop is always in full, even on another day.
+    expect(st).toMatchObject({ next: true, dim: true, hot: true, labelled: true, kicker: true })
   })
 
   it('lifts a hovered stop and shows its name even in all-days mode', () => {
@@ -318,7 +392,16 @@ describe('clustering', () => {
     expect(pin('a').shown && pin('b').shown).toBe(true)
   })
 
-  it('renders a cluster as a white disc with +N, and zooms in when it is clicked', () => {
+  it('never clusters the pins of the emphasised day; only the other days cluster', () => {
+    const x = stop('x', 38.9, -9.1, { dayIndex: 1 })
+    const y = stop('y', 38.91, -9.1, { dayIndex: 1 })
+    make(props(scene([A, B, x, y], { mode: 'all', route: false, emphasisDay: 1 })))
+    const cl = FakeClusterer.last as FakeClusterer
+    expect(cl.markers.map((m) => m.title).sort()).toEqual(['a', 'b'])
+    expect(pin('x').shown && pin('y').shown).toBe(true)
+  })
+
+  it('renders a cluster as an ink pill with +N, and zooms in when it is clicked', () => {
     const p = props(scene([A, B, C]), { onUserMove: vi.fn() })
     const { map } = make(p)
     const cl = FakeClusterer.last as FakeClusterer
@@ -331,86 +414,82 @@ describe('clustering', () => {
   })
 })
 
-describe('the label collision pass (after idle)', () => {
-  // Four labels fit around a point (right, left, above, below); a fifth has nowhere to go.
+describe('the pill collision pass (after idle)', () => {
+  // Five stops on one spot: only one pill fits above it; the rest collapse to anchor and dot.
   const stack = (n: number) =>
-    Array.from({ length: n }, (_, i) => stop(`s${i}`, 38.7, -9.15, { priority: i }))
+    Array.from({ length: n }, (_, i) => stop(`s${i}`, 38.7, -9.15, { priority: i + 2 }))
 
-  it('keeps the higher priorities and hides the one that would overlap; every pip stays', () => {
-    const { ctl, map } = make(props(scene(stack(5))))
+  it('keeps the highest priority and collapses the ones that would overlap; every anchor stays', () => {
+    const { ctl, map } = make(props(scene(stack(3))))
     map.view.zoom = 10
     map.emit('idle')
     ctl.layoutLabels()
-    const hidden = FakeMarker.pins().filter((m) => m.content.classList.contains('label-hidden'))
-    expect(hidden.map((m) => m.title)).toEqual(['s4'])
-    expect(FakeMarker.pins().every((m) => m.shown && m.content.querySelector('.gm-pip'))).toBe(true)
-    // The four that stay take four different sides.
-    const sides = FakeMarker.pins()
-      .filter((m) => m !== hidden[0])
-      .map((m) => [...m.content.classList].find((c) => c.startsWith('a-')))
-    expect(new Set(sides).size).toBe(4)
+    const collapsed = FakeMarker.pins().filter((m) => m.content.classList.contains('label-hidden'))
+    expect(collapsed.map((m) => m.title)).toEqual(['s1', 's2'])
+    expect(FakeMarker.pins().every((m) => m.shown && m.content.querySelector('.gm-anchor'))).toBe(
+      true,
+    )
   })
 
   it('lets a hovered stop in even when it would collide', () => {
-    const { ctl, map } = make(props(scene(stack(5))))
+    const { ctl, map } = make(props(scene(stack(3))))
     map.view.zoom = 10
     map.emit('idle')
-    ctl.sync(props(scene(stack(5)), { hotId: 's4' }))
+    ctl.sync(props(scene(stack(3)), { hotId: 's2' }))
     ctl.layoutLabels()
-    expect(pin('s4').content).not.toHaveClass('label-hidden')
-    expect(pin('s4').content).toHaveClass('is-hot')
+    expect(pin('s2').content).not.toHaveClass('label-hidden')
+    expect(pin('s2').content).toHaveClass('is-hot')
   })
 
-  it('does not hide names of clustered stops that are not on the map', () => {
-    const { ctl, map } = make(props(scene(stack(5))))
+  it('does not collapse clustered stops that are not on the map', () => {
+    const { ctl, map } = make(props(scene(stack(3))))
     const cl = FakeClusterer.last as FakeClusterer
-    cl.stack(FakeMarker.pins().slice(0, 3))
+    cl.stack(FakeMarker.pins().slice(0, 2))
     map.view.zoom = 10
     map.emit('idle')
     ctl.layoutLabels()
-    // Only the two stops still on the map compete for space: both fit.
     expect(
       FakeMarker.pins().filter((m) => m.shown && m.content.classList.contains('label-hidden')),
     ).toHaveLength(0)
   })
 
-  it('is a pure greedy pass: priority order, other sides tried, the loser dropped', () => {
-    const size = { width: 400, height: 300 }
-    const items = Array.from({ length: 5 }, (_, i) => ({
-      id: `p${i}`,
-      x: 200,
-      y: 150,
-      text: 'Some place',
-      priority: i,
-    }))
-    expect([...resolveLabels(items, size).keys()].sort()).toEqual(['p0', 'p1', 'p2', 'p3'])
+  it('is a pure greedy pass: priority order, the selected and next always kept, the loser dropped', () => {
+    const size = pillSize({ name: 'Some place' })
+    const at = (id: string, x: number, y: number, priority: number, hot = false) => ({
+      id,
+      x,
+      y,
+      ...size,
+      priority,
+      hot,
+    })
+    const items = [at('p2', 200, 150, 2), at('p3', 210, 150, 3), at('p4', 190, 150, 4)]
+    expect([...resolvePills(items)]).toEqual(['p2'])
     // The order in the list does not matter, priority does.
-    expect([...resolveLabels([...items].reverse(), size).keys()].sort()).toEqual([
-      'p0',
-      'p1',
-      'p2',
-      'p3',
-    ])
-    // A hovered stop jumps the queue.
-    const hot = resolveLabels(
-      items.map((i) => ({ ...i, hot: i.id === 'p4' })),
-      size,
-    )
-    expect(hot.has('p4')).toBe(true)
-    expect(hot.has('p3')).toBe(false)
-    // Apart, both stay; a label never leaves the screen.
-    const apart = resolveLabels(
-      [items[0], { ...items[1], y: 250 }, { id: 'edge', x: 2, y: 2, text: 'Edge', priority: 9 }],
-      size,
-    )
-    expect([...apart.keys()].sort()).toEqual(['p0', 'p1'])
+    expect([...resolvePills([...items].reverse())]).toEqual(['p2'])
+    // A hovered stop jumps the queue; the next stop is always kept.
+    expect(resolvePills(items.map((i) => ({ ...i, hot: i.id === 'p4' }))).has('p4')).toBe(true)
+    expect(resolvePills([...items, at('n', 205, 150, 1)]).has('n')).toBe(true)
+    // Apart, both stay.
+    expect([...resolvePills([items[0], at('far', 200, 300, 3)])].sort()).toEqual(['far', 'p2'])
   })
 
-  it('never lets a label sit on a stop whose name is hidden', () => {
-    const size = { width: 400, height: 300 }
-    const items = [{ id: 'a', x: 100, y: 100, text: 'Name', priority: 1 }]
-    expect(resolveLabels(items, size).get('a')).toBe('right')
-    expect(resolveLabels(items, size, [{ x: 112, y: 100 }]).get('a')).not.toBe('right')
+  it('never lets a pill sit on the anchor of another stop', () => {
+    const size = pillSize({ name: 'Name' })
+    const items = [{ id: 'a', x: 100, y: 100, ...size, priority: 3 }]
+    expect(resolvePills(items).has('a')).toBe(true)
+    // Another stop's anchor right where the pill stands.
+    expect(resolvePills(items, [{ x: 100, y: 100 - 10 - size.h / 2 }]).has('a')).toBe(false)
+  })
+
+  it('sizes a pill from its name, time and kicker; the phone pill is smaller and has no time', () => {
+    const desk = pillSize({ name: 'Pena Palace', time: '10:15', kicker: true })
+    const bare = pillSize({ name: 'Pena Palace' })
+    expect(desk.h).toBe(34)
+    expect(desk.w).toBeGreaterThan(bare.w)
+    const phone = pillSize({ name: 'Pena Palace', time: '10:15', compact: true })
+    expect(phone.h).toBe(30)
+    expect(phone.w).toBeLessThan(bare.w)
   })
 })
 
@@ -442,97 +521,79 @@ describe('the camera does not move for emphasis (brief 6q)', () => {
       stop('y', 38.95, -9.2, { dayIndex: 1 }),
     ]
     make(props(scene(stops, { emphasisDay: 1 })))
-    expect(FakePolyline.all).toHaveLength(2)
-    const [d0, d1] = FakePolyline.all.map((l) => l.options.strokeOpacity)
+    // A casing and a line for each of the two days.
+    expect(FakePolyline.all).toHaveLength(4)
+    const [, d0, , d1] = FakePolyline.all.map((l) => l.options.strokeOpacity)
     expect(d0).toBeLessThan(d1)
-    expect(d1).toBe(0.55)
+    expect(d1).toBe(1)
   })
 })
 
-describe('click to add', () => {
-  const click = (map: FakeMap, extra: Record<string, unknown> = {}) => {
-    const stopFn = vi.fn()
-    const e = { latLng: { lat: () => 38.7, lng: () => -9.2 }, stop: stopFn, ...extra }
-    return { e, stopFn, run: () => act(async () => map.emit('click', e)) }
-  }
+describe('the emphasised day is off the map (brief 6q)', () => {
+  const far = stop('y', 41.1, -8.6, { dayIndex: 1 })
+  const day = (emphasisDay: number | null, extra: Partial<MapScene> = {}) =>
+    scene([A, B, far], { mode: 'all', route: false, emphasisDay, ...extra })
 
-  it('turns a click on a place into its place_id, with the Essentials fields only', async () => {
-    const p = props(scene([A, B]), { onMapClick: vi.fn() })
-    const { map } = make(p)
-    const { stopFn, run } = click(map, { placeId: 'ChIJpoi' })
-    await run()
-    expect(stopFn).toHaveBeenCalled()
-    expect(FakePlace.fetches).toEqual([
-      { id: 'ChIJpoi', fields: ['id', 'displayName', 'formattedAddress', 'location'] },
-    ])
-    expect(p.onMapClick).toHaveBeenCalledTimes(1)
-    expect(p.onMapClick).toHaveBeenCalledWith(
-      expect.objectContaining({
-        place_id: 'ChIJpoi',
-        lat: 38.711,
-        lng: -9.142,
-        displayName: 'Livraria Bertrand',
-        x: expect.any(Number),
-        y: expect.any(Number),
-      }),
-    )
-    expect(FakeGeocoder.calls).toHaveLength(0)
-  })
-
-  it('reverse-geocodes an empty spot, with no place_id', async () => {
-    const p = props(scene([A, B]), { onMapClick: vi.fn() })
-    const { map } = make(p)
-    await click(map).run()
-    expect(FakeGeocoder.calls).toEqual([{ location: { lat: 38.7, lng: -9.2 } }])
-    const got = (p.onMapClick as ReturnType<typeof vi.fn>).mock.calls[0][0]
-    expect(got).toMatchObject({ lat: 38.7, lng: -9.2, displayName: 'Rua Augusta 10, Lisboa' })
-    expect(got).not.toHaveProperty('place_id')
-  })
-
-  it('still opens the card, as a dropped pin, when Google cannot answer', async () => {
-    const p = props(scene([A, B]), { onMapClick: vi.fn() })
-    const { map } = make(p)
-    FakeGeocoder.result = 'fail'
-    await click(map).run()
-    FakePlace.next = 'fail'
-    await click(map, { placeId: 'ChIJgone' }).run()
-    const calls = (p.onMapClick as ReturnType<typeof vi.fn>).mock.calls
-    expect(calls[0][0]).toMatchObject({ lat: 38.7, lng: -9.2 })
-    expect(calls[0][0]).not.toHaveProperty('displayName')
-    expect(calls[1][0]).toMatchObject({ place_id: 'ChIJgone', lat: 38.7 })
-  })
-
-  it('does not wait on a slow geocoder', async () => {
-    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
-    const p = props(scene([A, B]), { onMapClick: vi.fn() })
-    const { map } = make(p)
-    FakeGeocoder.result = 'hang'
-    const { e } = click(map)
-    map.emit('click', e)
-    await vi.advanceTimersByTimeAsync(2000)
-    expect(p.onMapClick).toHaveBeenCalledWith(expect.objectContaining({ lat: 38.7 }))
-  })
-
-  it('only the last of two quick clicks reports', async () => {
-    const p = props(scene([A, B]), { onMapClick: vi.fn() })
-    const { map } = make(p)
-    const one = click(map)
-    const two = click(map, { placeId: 'ChIJtwo' })
-    await act(async () => {
-      map.emit('click', one.e)
-      map.emit('click', two.e)
+  it('reports the day off the map when none of its stops is in view, and clears when it is', () => {
+    const onOffMap = vi.fn()
+    const container = document.createElement('div')
+    document.body.append(container)
+    const ctl = new MapController({
+      google: google(),
+      container,
+      config: { key: 'k', mapId: 'M' },
+      props: props(day(0)),
+      onOffMap,
     })
-    expect(p.onMapClick).toHaveBeenCalledTimes(1)
-    expect(p.onMapClick).toHaveBeenCalledWith(expect.objectContaining({ place_id: 'ChIJtwo' }))
+    const map = FakeMap.last as FakeMap
+    map.emit('idle')
+    map.emit('idle')
+    // The viewport is around Lisbon: day 0 is in view.
+    expect(onOffMap).not.toHaveBeenCalled()
+    // Scrolling to the Porto day: emphasis only, no camera move, but it is off the map.
+    map.clearMoves()
+    ctl.sync(props(day(1)))
+    map.emit('idle')
+    expect(map.moves).toBe(0)
+    expect(onOffMap).toHaveBeenLastCalledWith(true)
+    // Back to a day that is on the map.
+    ctl.sync(props(day(0)))
+    expect(onOffMap).toHaveBeenLastCalledWith(false)
   })
 
-  it('is desktop only: the phone map is read-only', async () => {
-    const p = props(scene([A, B]), { interactive: false, onMapClick: vi.fn() })
+  it('reports a day whose stops all sit on top of each other when zoomed out', () => {
+    const onOffMap = vi.fn()
+    const container = document.createElement('div')
+    document.body.append(container)
+    const near1 = stop('n1', 38.7, -9.15, { dayIndex: 0 })
+    const near2 = stop('n2', 38.7001, -9.1501, { dayIndex: 0 })
+    new MapController({
+      google: google(),
+      container,
+      config: { key: 'k', mapId: 'M' },
+      props: props(scene([near1, near2], { mode: 'all', route: false, emphasisDay: 0 })),
+      onOffMap,
+    })
+    const map = FakeMap.last as FakeMap
+    map.view.zoom = 6
+    map.emit('idle')
+    map.emit('idle')
+    expect(onOffMap).toHaveBeenLastCalledWith(true)
+  })
+})
+
+describe('the pill is the only click', () => {
+  it('reports a pill click and a hover, and handles no click on the map or its places', () => {
+    const p = props(scene([A, B]), { onPinHover: vi.fn() })
     const { map } = make(p)
-    expect(map.options).toMatchObject({ clickableIcons: false, keyboardShortcuts: false })
-    await click(map, { placeId: 'ChIJpoi' }).run()
-    expect(p.onMapClick).not.toHaveBeenCalled()
-    expect(FakePlace.fetches).toHaveLength(0)
+    pin('a').click()
+    expect(p.onPinClick).toHaveBeenCalledWith('a')
+    pin('a').content.dispatchEvent(new Event('pointerenter'))
+    expect(p.onPinHover).toHaveBeenLastCalledWith('a')
+    pin('a').content.dispatchEvent(new Event('pointerleave'))
+    expect(p.onPinHover).toHaveBeenLastCalledWith(null)
+    expect(map.listeners.has('click')).toBe(false)
+    expect(map.options.clickableIcons).toBe(false)
   })
 })
 
@@ -604,6 +665,33 @@ describe('loading Google', () => {
     act(() => window.gm_authFailure?.())
     expect(await screen.findByText('Map preview')).toBeInTheDocument()
     expect(document.body.textContent).not.toContain(key)
+  })
+
+  it('shows the chip "Wed 28 is off the map · Show" for a day off the map, and Show asks the page to fit it', async () => {
+    const far = stop('y', 41.1, -8.6, { dayIndex: 1 })
+    const onShowDay = vi.fn()
+    const s = scene([A, B, far], {
+      mode: 'all',
+      route: false,
+      emphasisDay: 1,
+      emphasisLabel: 'Wed 28',
+    })
+    render(<TripMap {...props(s, { onShowDay })} />)
+    await waitFor(() => expect(FakeMap.last).not.toBeNull())
+    await waitFor(() => expect(screen.queryByText('Loading map')).not.toBeInTheDocument())
+    act(() => (FakeMap.last as FakeMap).emit('idle'))
+    // The viewport is around Lisbon, so the Porto day is off the map.
+    expect(await screen.findByText('Wed 28 is off the map')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Show' }))
+    expect(onShowDay).toHaveBeenCalledTimes(1)
+  })
+
+  it('has no chip when the emphasised day is on the map', async () => {
+    const s = scene([A, B], { mode: 'all', route: false, emphasisDay: 0, emphasisLabel: 'Thu 15' })
+    render(<TripMap {...props(s, { onShowDay: vi.fn() })} />)
+    await waitFor(() => expect(screen.queryByText('Loading map')).not.toBeInTheDocument())
+    act(() => (FakeMap.last as FakeMap).emit('idle'))
+    expect(screen.queryByText(/is off the map/)).not.toBeInTheDocument()
   })
 
   it('has no zoom keys on the phone', async () => {

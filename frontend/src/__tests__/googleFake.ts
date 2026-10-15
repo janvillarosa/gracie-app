@@ -39,12 +39,11 @@ export class FakeMap {
     return { remove: () => {} }
   }
   emit(type: string, e?: unknown) {
+    // One-shot listeners added while this event runs wait for the next one, as on Google's map.
+    const once = type === 'idle' ? (this.once.get('idle') ?? []) : []
+    if (type === 'idle') this.once.delete('idle')
     for (const fn of this.listeners.get(type) ?? []) fn(e)
-    if (type === 'idle') {
-      const once = this.once.get('idle') ?? []
-      this.once.delete('idle')
-      for (const fn of once) fn()
-    }
+    for (const fn of once) fn()
   }
   getBounds() {
     const v = this.view
@@ -113,8 +112,12 @@ export class FakeMarker {
   static preview() {
     return FakeMarker.all.find((m) => m.content.classList.contains('gm-preview'))
   }
+  /** The pill's name. */
   get label() {
-    return this.content.querySelector('.gm-label')?.textContent ?? ''
+    return this.content.querySelector('.gm-name')?.textContent ?? ''
+  }
+  get time() {
+    return this.content.querySelector('.gm-time')?.textContent ?? ''
   }
   get shown() {
     return this.map !== null
@@ -267,7 +270,7 @@ export const libs = () => ({
   marker: { AdvancedMarkerElement: FakeMarker },
   core: {
     LatLngBounds: FakeBounds,
-    SymbolPath: { FORWARD_CLOSED_ARROW: 1 },
+    SymbolPath: { FORWARD_CLOSED_ARROW: 1, CIRCLE: 0 },
     event: {
       addListenerOnce: (map: FakeMap, type: string, fn: Fn) =>
         map.once.set(type, [...(map.once.get(type) ?? []), fn]),

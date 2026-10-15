@@ -95,29 +95,44 @@ why the config forces a single fork.
   `components/trips/gmap/`: `loader.ts`, `controller.ts`, `pin.ts`, `labels.ts`, `geometry.ts`,
   `gmap.css`) behind the `MapViewProps` adapter in `components/trips/mapView.ts`; `TripMap` picks
   the real map or the plain SVG "Map preview". Google's script is loaded only when the map is first
-  shown, through `@googlemaps/js-api-loader` (`importLibrary('maps'|'marker'|'core')`; `places` and
-  `geocoding` only on the first click-to-add), and never offline.
+  shown, through `@googlemaps/js-api-loader` (`importLibrary('maps'|'marker'|'core')`; `places` loads
+  on the first search, see Places), and never offline.
   - **Keys:** `VITE_GOOGLE_MAPS_API_KEY` (browser key, restricted by HTTP referrer and to the Maps
-    JavaScript, Places (New) and Geocoding APIs) and `VITE_GOOGLE_MAP_ID` (the cloud style;
+    JavaScript and Places (New) APIs) and `VITE_GOOGLE_MAP_ID` (the cloud style;
     `DEMO_MAP_ID` in dev only). Both live in the git-ignored `.env.development.local`. No key or no
     Map ID: the plain "Map preview". **Never print, log or render the key.**
   - **Third-party origins:** `maps.googleapis.com` and `maps.gstatic.com` (script, tiles, fonts of
     Google's own UI) are the only allowed non-self origins, and only for the map. No service worker
     caches Google content, and nothing from Google (tiles, names, addresses) is stored by us; the
-    only Google value we keep is `place_id`. A click's `displayName` is for display only.
+    only Google value we keep is `place_id`.
   - **Attribution:** Google's logo (bottom-left) and terms (bottom-right) stay visible; our +/- sit
     above the terms strip, and on the phone the bottom card sits below the map, never over the logo.
-  - **Markers** are `AdvancedMarkerElement`s with our own HTML (`gmap/pin.ts`, styled in
-    `gmap/gmap.css`): a `--pip-*` pip and a Figtree 600 12.5px name with a white halo. After `idle`
-    a greedy pass (`gmap/labels.ts`, priority selected, next, day order) hides labels that
-    overlap; pips always show. Stacked stops cluster with `@googlemaps/markerclusterer` ("+N" disc);
-    the next and selected stop are never clustered.
-  - **Camera (brief 6q):** only explicit actions move it (Fit day, Show all days, "Show on map",
-    picking a day, an opened item or a drag preview that is off screen). A scene that only changes
-    `emphasisDay` (which day is in colour, the others dimmed) never moves it.
-  - **Click to add (desktop):** a POI click gives `place_id` (`Place.fetchFields` with `id`,
-    `displayName`, `formattedAddress`, `location`); an empty spot is reverse-geocoded; Google's own
-    info window is suppressed. Phones are read-only (no click-to-add, `clickableIcons` off).
+  - **View only (brief 6v):** `clickableIcons: false`, no `click` handler on the map, no POI popover,
+    no add-from-map, no dropped pins, no reverse geocoding. The one click action is a pill: it
+    selects its item. Desktop: `scrollIntoView({block:'nearest'})` on the Days row, the highlighter
+    sweep, and the item opens in the inspector; the camera does not move. Phone map view: the map
+    closes (`MapScreen.onPickRow`), then the list scrolls to the row and lights it. Kept: pan/zoom,
+    +/-, Fit day, Show all days, row hover lifts the pill (`hotId`), pill hover lights the row
+    (`onPinHover`, class `is-pin-linked`), and the add bar's preview pin.
+  - **Pills (brief 6u, `gmap/pin.ts`, `gmap/gmap.css`):** each stop is an `AdvancedMarkerElement`
+    with our HTML: a 34px white paper pill (12px category dot, name in Figtree 14/600, time 12.5/600
+    if set), a pointer tail and a 10px anchor ring on the exact coordinate. Next is the yellow key
+    pill with a "NEXT" kicker; done is grey; selected has a 2px ink outline; ideas are outlined. The
+    pills are `aria-hidden` and `cursor: pointer`. After `idle` a greedy pass (`gmap/labels.ts`
+    `resolvePills`, priority selected, next, day order; selected, next and hovered always kept)
+    collapses pills that would overlap, and the pills of other days, to anchor and dot; they expand
+    on hover (`isLabelled()` decides which are in full). Clusters ("+N", `@googlemaps/markerclusterer`)
+    are 30px ink pills; the next, selected and emphasised-day pins are never clustered. Phone: 30px
+    pills, 13px text, no time, names cut at 16 (`labelLimit`).
+  - **Routes:** per day a 5px day-colour line on a 10px white casing with white chevrons ~100px
+    apart; a leg to a `transport` stop is dotted in `--trip-transport` (defined in `gmap.css`).
+  - **Camera (brief 6q):** only explicit actions move it (Fit day, Show all days, "Show" on the
+    chip, picking a day, an opened item or a drag preview that is off screen). The first fit is the
+    emphasised day (today during the trip, else the first day with places). Scrolling the list only
+    changes `emphasisDay`. When that day's stops are all off screen (or piled up when zoomed out) the
+    controller calls `onOffMap` and `MapCanvas` shows the chip "Wed 28 is off the map · Show"
+    (`onShowDay` is Fit day). A programmatic move holds its own token until its own `idle`; the first
+    fit waits for the map's first idle (`gmap/controller.ts`).
   - **Budget:** our map chunk (JS + CSS) must stay well under **320 KB gzip** (MapLibre is gone);
     Google's script is third-party, loaded on demand and outside that budget. Trip route chunks
     stay near 50 KB. On phones the map is a full-screen view (history `#map`). Offline the map pane
