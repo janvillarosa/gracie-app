@@ -389,6 +389,20 @@ empty map), and planning before the trip happens on desktop. The user chose opti
 - **The header** spans the Days column: icon, title on one line, route · dates · countdown, and
   avatars on the right.
 
+## 6o. Details on the desk (2026-10-15)
+
+- **Pips and leading glyphs** are centred on the title's first line (within 1px), everywhere.
+- **Ideas look draggable:**
+  - On desktop, the grip shows at rest, with grab and grabbing cursors and a lift on hover.
+  - While dragging: a placeholder at the source, every day becomes a drop target with an insertion
+    line, and the Days column auto-scrolls near its edges.
+- **Touch at any width** (`pointer: coarse`):
+  - Long-press drag with a haptic tick.
+  - No hover-only actions; swipe left to delete.
+  - 44px hit areas.
+- **Quick delete for ideas:** a hover trash icon, swipe, or Delete/Backspace, all with Undo (5s) and
+  never a confirm dialog. Spine rows share the same row-actions component.
+
 ## 7. Constraints and open decisions
 
 Constraints:
