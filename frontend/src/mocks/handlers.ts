@@ -1,7 +1,16 @@
 // MSW handlers that put a MockTripServer behind the real trips URLs.
 import { http, HttpResponse } from 'msw'
-import type { TripOp } from '../api/tripTypes'
-import { MockTripServer } from './tripsServer'
+import { MockHttpError, MockTripServer } from './tripsServer'
+
+/** Runs a handler body; a MockHttpError becomes the status the real server would answer. */
+async function answer(body: () => unknown) {
+  try {
+    return HttpResponse.json(body() as never)
+  } catch (e) {
+    if (e instanceof MockHttpError) return HttpResponse.json(e.body, { status: e.status })
+    throw e
+  }
+}
 
 export function tripHandlers(server: MockTripServer, opts: { latencyMs?: number } = {}) {
   const wait = () =>
@@ -10,12 +19,12 @@ export function tripHandlers(server: MockTripServer, opts: { latencyMs?: number 
     http.post('/api/rooms/:roomId/trips/sync', async ({ request, params }) => {
       await wait()
       const { known } = (await request.json()) as { known: Record<string, number> }
-      return HttpResponse.json(server.sync(String(params.roomId), known ?? {}))
+      return answer(() => server.sync(String(params.roomId), known ?? {}))
     }),
     http.post('/api/rooms/:roomId/trips/ops', async ({ request, params }) => {
       await wait()
-      const { ops } = (await request.json()) as { ops: TripOp[] }
-      return HttpResponse.json(server.ops(String(params.roomId), ops))
+      const { ops } = (await request.json()) as { ops: unknown[] }
+      return answer(() => server.ops(String(params.roomId), ops))
     }),
     http.post('/api/rooms/:roomId/trips/:tripId/packing-list', async ({ params }) => {
       await wait()
@@ -24,12 +33,14 @@ export function tripHandlers(server: MockTripServer, opts: { latencyMs?: number 
     }),
     http.get('/api/places/search', async ({ request }) => {
       await wait()
-      const q = new URL(request.url).searchParams.get('q') ?? ''
-      return HttpResponse.json(server.searchPlaces(q))
+      const u = new URL(request.url).searchParams
+      return answer(() =>
+        server.searchPlaces(u.get('q') ?? '', Number(u.get('limit')) || undefined),
+      )
     }),
     http.get('/api/places/reverse', async ({ request }) => {
       const u = new URL(request.url).searchParams
-      return HttpResponse.json(server.reverse(Number(u.get('lat')), Number(u.get('lng'))))
+      return answer(() => server.reverse(Number(u.get('lat')), Number(u.get('lng'))))
     }),
   ]
 }
