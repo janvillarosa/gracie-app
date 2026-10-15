@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { act, render, screen } from '@testing-library/react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { TripHeader } from '@components/trips/TripHeader'
 import { lisbonTrip, rel } from './trips.helpers'
 
@@ -10,13 +10,13 @@ const members = (n: number) =>
     avatar_key: `a${i}`,
   }))
 
-const header = (n: number) =>
+const header = (n: number, pending = 0) =>
   render(
     <TripHeader
       trip={lisbonTrip()}
       today={rel(0)}
       offline={false}
-      pending={0}
+      pending={pending}
       persistFailed={false}
       deletedBy=""
       readOnlyOver={false}
@@ -70,5 +70,25 @@ describe('the avatar stack in the trip header', () => {
     expect(meta).not.toBeNull()
     expect(meta.querySelector('.trip-dayline')).not.toBeNull()
     expect(meta.querySelector('.trip-avatars')).not.toBeNull()
+  })
+})
+
+describe('the sync line', () => {
+  afterEach(() => vi.useRealTimers())
+
+  it('stays quiet for an everyday save, so the plan never jumps', () => {
+    vi.useFakeTimers()
+    header(2, 1)
+    expect(screen.queryByText('Syncing…')).not.toBeInTheDocument()
+    expect(document.querySelector('.trip-header-row')).toBeNull()
+  })
+
+  it('speaks up when a save is still waiting after two seconds', () => {
+    vi.useFakeTimers()
+    header(2, 1)
+    act(() => {
+      vi.advanceTimersByTime(2000)
+    })
+    expect(screen.getByText('Syncing…')).toBeInTheDocument()
   })
 })

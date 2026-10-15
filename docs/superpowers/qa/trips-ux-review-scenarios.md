@@ -253,16 +253,38 @@ screenshot at each step, and write a one-line look-and-flow judgement for each.
    - Run once with no key (the interactive preview) and once with `VITE_PMTILES_URL` (real MapLibre).
    - Zoom with the wheel, a pinch and +/−; drag to pan.
    - Fit day resets; a manual pan pauses follow-scroll.
-   - Click to add a stop.
+   - The map is view-only: clicking the map or a Google POI does nothing; clicking a pill selects
+     its row (inspector opens, the camera stays).
    - Labels and pips don't collide; clusters split when you zoom.
-10. **Place autocomplete** (the dev mock serves a synthetic gazetteer; `!offline` in the query forces the degraded state):
-    - The add bar suggests places, and arrow plus Enter picks one, with the map preview pip showing.
+10. **Place autocomplete** (Google Places with the key in `frontend/.env.development.local`; no key gives the labelled demo list):
+    - The add bar suggests places ("Powered by Google"). The slips rise **above** the bar, so ↑ then Enter picks one, with the map preview pin showing.
+    - The pick stores only `{source:'google', place_id, lat, lng, coords_fetched_at}` and a blank title; the row and the inspector title both read the Google name.
     - Typing a time first still parses.
     - Search, pick and clear work in the desktop inspector, the phone picker and the booking From/To fields.
     - The degraded message shows when search is unavailable.
-    - Map click-to-add uses reverse geocoding.
 8. **Before → during:** switch `?mockPhase=during`. The Next stop card replaces Ready to go, and
    nothing else jumps.
 
 A flow passes only if it works **and** reads calmly, with no jank, jumps, misalignment or confusing
 state at any step.
+
+### S16. Smooth editing (no jumps), desktop inspector and phone sheet
+
+Watch the layout while you edit, not just the result. Instrument with a `layout-shift`
+`PerformanceObserver` (log each entry's sources and their dy/dh) plus a per-frame sampler of the
+edited row, the inspector/sheet and the add bar, and the Days pane's `scrollTop`.
+
+1. With an item open in the desk inspector: type in the title, pick a length, a category, type a
+   three-line note, tick and untick done. **Expect zero layout shifts** and no movement of the
+   header, the rows or the inspector. (A transient "Syncing…" line used to push the plan down
+   32px on every save; it now shows only for a sync still waiting after 2 s.)
+2. Change the time so the row reorders: the row moves to its slot, stays selected and in view; the
+   Days pane does not scroll.
+3. Add from the bar, then delete with Undo: rows above the edit never move; rows below move by
+   exactly one row; the pane keeps its scroll.
+4. Move the item to another day: the day it left closes the gap; nothing above it moves.
+5. Phone (375): open a todo sheet and repeat 1. The sheet keeps its top and height; only a
+   picker's own slide registers.
+
+Script used in the 2026-10-15 final QA: `.playwright-mcp/smooth.js` (local, not committed: it
+holds a test account key).

@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { Button, Note, Sheet } from '@components/ui'
 import { Card, Dropdown, Typography } from 'antd'
 import type { MenuProps } from 'antd'
@@ -8,6 +8,23 @@ import { countdown, routeText, shortDay, shortRange, tripPhase } from '@lib/trip
 import { Avatar } from '@components/Avatar'
 import type { Member } from '@lib/trips/hooks'
 import { toTripEmoji } from '../../icons'
+
+// An everyday save takes about a second; saying "Syncing…" for it would push the plan down and
+// back on every edit. Only a sync still waiting after this long is worth a line.
+const SYNC_NOTICE_MS = 2000
+
+function useSlowSync(pending: boolean): boolean {
+  const [slow, setSlow] = useState(false)
+  useEffect(() => {
+    if (!pending) {
+      setSlow(false)
+      return
+    }
+    const t = setTimeout(() => setSlow(true), SYNC_NOTICE_MS)
+    return () => clearTimeout(t)
+  }, [pending])
+  return slow
+}
 
 type HeaderProps = {
   trip: Trip
@@ -66,6 +83,7 @@ export const TripHeader: React.FC<HeaderProps> = ({
   desk,
   band,
 }) => {
+  const slowSync = useSlowSync(pending > 0)
   const route = routeText(trip)
   const phase = tripPhase(trip, today)
   const line =
@@ -154,9 +172,10 @@ export const TripHeader: React.FC<HeaderProps> = ({
       {n.text}
     </Note>
   ))
-  const status = (offline || pending > 0 || readOnlyOver || persistFailed) && (
+  const syncing = slowSync && pending > 0
+  const status = (offline || syncing || readOnlyOver || persistFailed) && (
     <div className="trip-header-row">
-      {(offline || pending > 0) && (
+      {(offline || syncing) && (
         <span className="trip-offline" role="status">
           {offline ? 'Saved on this device · syncs when online' : 'Syncing…'}
         </span>
