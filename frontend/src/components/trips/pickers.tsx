@@ -252,7 +252,9 @@ export const NotePick: React.FC<{
   onCommit: (v: string) => void
   label?: string
   placeholder?: string
-}> = ({ value, max, onCommit, label = 'Notes', placeholder = 'Add a note' }) => {
+  // The picker opens to type in it; an inline note is just there, so it does not take focus.
+  autoFocus?: boolean
+}> = ({ value, max, onCommit, label = 'Notes', placeholder = 'Add a note', autoFocus = true }) => {
   const [problem, setProblem] = useState('')
   const latest = useRef(value)
   const saved = useRef(value)
@@ -275,7 +277,7 @@ export const NotePick: React.FC<{
       defaultValue={value}
       error={problem}
       // biome-ignore lint/a11y/noAutofocus: the picker opens to type in it
-      autoFocus
+      autoFocus={autoFocus}
       onChange={(e) => {
         latest.current = e.target.value
         setProblem(notesProblem(e.target.value, max))

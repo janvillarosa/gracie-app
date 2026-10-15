@@ -18,6 +18,8 @@ export {
   suggestionKey,
   suggestionLabel,
 } from './InlinePlace'
+export { InlineSelect } from './InlineSelect'
+export { InlineWhen } from './InlineWhen'
 export { NavRow } from './NavRow'
 export { Note } from './Note'
 export { Pip } from './Pip'
@@ -30,5 +32,6 @@ export { SheetFooter } from './SheetFooter'
 export { SheetIdentity } from './SheetIdentity'
 export { SheetTitle } from './SheetTitle'
 export { Stamp } from './Stamp'
+export { StampSelect } from './StampSelect'
 export { Switch } from './Switch'
 export { useMedia, WIDE } from './useMedia'

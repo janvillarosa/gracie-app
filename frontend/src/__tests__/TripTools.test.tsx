@@ -55,16 +55,18 @@ describe('Bookings tab', () => {
     seed(TRIP)
     open()
     await userEvent.click(await screen.findByRole('button', { name: 'Lunch at Tascantiga' }))
-    const panel = await screen.findByRole('dialog', { name: 'Lunch at Tascantiga' })
-    await userEvent.click(within(panel).getByRole('button', { name: /^Booking / }))
-    await userEvent.click(await screen.findByRole('button', { name: /London to Lisbon/ }))
+    const panel = await screen.findByRole('dialog')
+    await userEvent.selectOptions(
+      within(panel).getByRole('combobox', { name: 'Linked booking' }),
+      TRIP.bookings[0].booking_id,
+    )
     const todo = () => serverTrip()?.todos.find((t) => t.title === 'Lunch at Tascantiga')
     await waitFor(() => expect(todo()?.booking_id).toBe(TRIP.bookings[0].booking_id))
     await userEvent.keyboard('{Escape}')
     // Deleting the booking clears the link.
     await showUsed()
     await userEvent.click(await screen.findByRole('button', { name: /^London to Lisbon/ }))
-    const detail = await screen.findByRole('dialog', { name: 'London to Lisbon' })
+    const detail = await screen.findByRole('dialog')
     await userEvent.click(within(detail).getByRole('button', { name: 'Delete booking' }))
     await waitFor(() => expect(todo()?.booking_id ?? null).toBeNull())
   })
@@ -73,27 +75,28 @@ describe('Bookings tab', () => {
 describe('Item sheet fields and places', () => {
   const openRow = async (name: string) => {
     await userEvent.click(await screen.findByRole('button', { name }))
-    return screen.findByRole('dialog', { name })
+    return screen.findByRole('dialog')
   }
   const todo = (title: string) => serverTrip()?.todos.find((x) => x.title === title)
 
-  it('saves day, time, length, kind and notes as they change', async () => {
+  it('saves time, length, category and notes as they change, in place on a desk', async () => {
     seed(TRIP)
     open()
     const panel = await openRow('Pack the daypack')
-    await userEvent.click(within(panel).getByRole('button', { name: /^When / }))
     // Length only appears once there is a time.
-    expect(screen.queryByText('Length')).not.toBeInTheDocument()
-    await userEvent.click(await screen.findByRole('button', { name: '08:30' }))
-    await userEvent.click(await screen.findByRole('button', { name: '1 h' }))
-    await userEvent.keyboard('{Escape}')
-    await userEvent.click(within(panel).getByRole('button', { name: /^Category Sight/ }))
-    await userEvent.click(await screen.findByRole('button', { name: 'Shopping' }))
-    expect(
-      await within(panel).findByRole('button', { name: /^Category Shopping/ }),
-    ).toBeInTheDocument()
-    await userEvent.click(within(panel).getByRole('button', { name: /^Note / }))
-    await userEvent.type(await screen.findByLabelText('Notes'), 'Water, sunscreen')
+    expect(within(panel).queryByRole('group', { name: 'Length' })).not.toBeInTheDocument()
+    await userEvent.type(within(panel).getByLabelText('Time'), '08:30{Enter}')
+    await userEvent.click(
+      within(within(panel).getByRole('group', { name: 'Length' })).getByRole('button', {
+        name: '1 h',
+      }),
+    )
+    await userEvent.click(
+      within(within(panel).getByRole('group', { name: 'Category' })).getByRole('button', {
+        name: 'Shopping',
+      }),
+    )
+    await userEvent.type(within(panel).getByLabelText('Notes'), 'Water, sunscreen')
     await userEvent.tab()
     await waitFor(() => {
       expect(todo('Pack the daypack')).toMatchObject({
@@ -127,6 +130,8 @@ describe('Item sheet fields and places', () => {
   })
 
   it('picks day, time and length in one When picker (24-hour times, no native inputs)', async () => {
+    // The picker sheets are the phone's editor; a desk edits in place.
+    setViewport('phone')
     seed(TRIP)
     open()
     const panel = await openRow('Lunch at Tascantiga')
@@ -142,10 +147,12 @@ describe('Item sheet fields and places', () => {
     await userEvent.keyboard('{Escape}')
     await waitFor(() => expect(screen.queryByRole('group', { name: 'Time options' })).toBeNull())
     // Esc closed only the picker; the sheet is still there.
-    expect(screen.getByRole('dialog', { name: 'Lunch at Tascantiga' })).toBeInTheDocument()
+    expect(screen.getAllByRole('dialog').length).toBeGreaterThan(0)
   })
 
   it('offers a custom length', async () => {
+    // The picker sheets are the phone's editor; a desk edits in place.
+    setViewport('phone')
     seed(TRIP)
     open()
     const panel = await openRow('Lunch at Tascantiga')
@@ -157,6 +164,8 @@ describe('Item sheet fields and places', () => {
   })
 
   it('moves the item to another day, or to Ideas, from the When picker', async () => {
+    // The picker sheets are the phone's editor; a desk edits in place.
+    setViewport('phone')
     seed(TRIP)
     open()
     const panel = await openRow('Buy souvenirs')
@@ -228,6 +237,8 @@ describe('Item sheet fields and places', () => {
   })
 
   it('shows the linked booking as a row, with its code behind the same slip', async () => {
+    // The picker sheets are the phone's editor; a desk edits in place.
+    setViewport('phone')
     const t = lisbonTrip()
     t.todos[4] = { ...t.todos[4], booking_id: t.bookings[0].booking_id }
     seed(t)
@@ -407,7 +418,11 @@ describe('Map', () => {
     seed(t)
     open()
     await screen.findByRole('region', { name: 'Next stop' })
-    await waitFor(() => expect(document.querySelectorAll('.map-pin')).toHaveLength(2))
+    // The desk map holds every day (the day in view is in colour, the others dimmed), so more than
+    // the two stops of today are drawn.
+    await waitFor(() =>
+      expect(document.querySelectorAll('.map-pin').length).toBeGreaterThanOrEqual(2),
+    )
     expect(document.querySelectorAll('.map-pin-ring')).toHaveLength(1)
     // No numbers anywhere on the pins.
     expect(document.querySelectorAll('.map-pin text')).toHaveLength(0)

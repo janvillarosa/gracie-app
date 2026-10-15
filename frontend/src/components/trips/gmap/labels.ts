@@ -19,6 +19,15 @@ export function labelText(
 /** Names are on for a day; for all days and for ideas only a hovered stop shows its name. */
 export const labelledByDefault = (scene: Pick<MapScene, 'mode'>) => scene.mode === 'day'
 
+/** Whether a stop carries its name: every stop of a day, and in all-days mode the stops of the day
+ *  in emphasis (the desk's map, scrolling the list changes which). */
+export const isLabelled = (
+  scene: Pick<MapScene, 'mode' | 'emphasisDay'>,
+  stop: Pick<MapStop, 'dayIndex'>,
+) =>
+  labelledByDefault(scene) ||
+  (scene.mode === 'all' && scene.emphasisDay != null && stop.dayIndex === scene.emphasisDay)
+
 export type LabelCandidate = {
   id: string
   // The pip's pixel position in the map div.
@@ -54,7 +63,6 @@ export function resolveLabels(
 /** Pins that carry a label right now (everything on a day; only a hovered stop otherwise). */
 export function eligibleIds(scene: MapScene, hotId: string | null | undefined): Set<string> {
   const out = new Set<string>()
-  const all = labelledByDefault(scene)
-  for (const s of scene.stops) if (all || s.id === hotId) out.add(s.id)
+  for (const s of scene.stops) if (isLabelled(scene, s) || s.id === hotId) out.add(s.id)
   return out
 }

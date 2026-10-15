@@ -258,6 +258,37 @@ describe('what each marker looks like', () => {
     expect(pin('a').content).not.toHaveClass('is-dim')
   })
 
+  it('names the stops of the day in emphasis, so scrolling the list moves the names, not the camera', () => {
+    const d1 = stop('x', 38.9, -9.1, { dayIndex: 1 })
+    const { ctl, map } = make(props(scene([A, d1], { mode: 'all', route: false, emphasisDay: 0 })))
+    expect(pin('a').content).toHaveClass('is-labelled')
+    expect(pin('x').content).not.toHaveClass('is-labelled')
+    map.clearMoves()
+    ctl.sync(props(scene([A, d1], { mode: 'all', route: false, emphasisDay: 1 })))
+    expect(pin('x').content).toHaveClass('is-labelled')
+    expect(pin('a').content).not.toHaveClass('is-labelled')
+    expect(map.moves).toBe(0)
+  })
+
+  it('fits only the day in emphasis on an explicit fit, and the whole trip on load', () => {
+    const d1 = stop('x', 38.9, -9.1, { dayIndex: 1 })
+    const far = stop('y', 41.1, -8.6, { dayIndex: 2 })
+    const { ctl, map } = make(
+      props(scene([A, d1, far], { mode: 'all', route: false, emphasisDay: 0 })),
+    )
+    // On load: everything.
+    expect(map.fitBounds.mock.calls[0][0].points).toHaveLength(3)
+    map.clearMoves()
+    ctl.sync(props(scene([A, d1, far], { mode: 'all', route: false, emphasisDay: 1 })))
+    expect(map.moves).toBe(0)
+    ctl.sync(
+      props(scene([A, d1, far], { mode: 'all', route: false, emphasisDay: 1 }), { fitToken: 1 }),
+    )
+    expect(map.moves).toBe(1)
+    // Day 1 has one stop: centred, not the whole trip.
+    expect(map.setCenter).toHaveBeenCalled()
+  })
+
   it('has the same states as pure functions', () => {
     const s = scene([A], { mode: 'all' })
     expect(pipColours(A, s)).toEqual({ fill: '--trip-day-0', stroke: '--on-pin' })
@@ -615,6 +646,7 @@ describe('one marker per place per day', () => {
         selectedId,
         schedule: {
           ideas: [],
+          outside: [],
           days: [
             {
               date: 'd1',

@@ -8,7 +8,7 @@
 // are hollow. The next and selected stops get a yellow ring. The name is Figtree SemiBold with a
 // white halo, all in CSS (gmap.css).
 import type { MapScene, MapStop } from '@lib/trips/mapScene'
-import type { Anchor } from './labels'
+import { isLabelled, type Anchor } from './labels'
 
 export type PinState = {
   next: boolean
@@ -75,7 +75,7 @@ export function pinState(
       scene.emphasisDay !== null &&
       stop.dayIndex !== scene.emphasisDay,
     hot: opts.hot,
-    labelled: scene.mode === 'day',
+    labelled: isLabelled(scene, stop),
     hidden: opts.hidden,
     anchor: opts.anchor,
   }

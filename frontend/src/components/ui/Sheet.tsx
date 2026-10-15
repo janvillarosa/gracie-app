@@ -244,7 +244,7 @@ export const Sheet: React.FC<Props> = ({
   if (docked) {
     return open ? (
       <>
-        <div className="ui-sheet-panel" role="dialog" aria-label={name}>
+        <div className="ui-sheet-panel" role="dialog" aria-label={name} tabIndex={-1}>
           {body(false)}
         </div>
         {confirm}

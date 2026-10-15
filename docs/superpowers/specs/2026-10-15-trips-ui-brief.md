@@ -437,8 +437,10 @@ Context lines leave an 8px gap before the stamp.
 
 User feedback: the map jumped while the list scrolled. This supersedes "the map follows the day in
 view" as a camera move.
-- **No camera moves on scroll.** The map fits the whole trip on load, and scrolling only changes
-  emphasis: the day in view gets its colour, and other days dim.
+- **No camera moves on scroll.** The map fits the emphasised day on load (today, or the first day
+  with places). Scrolling only changes emphasis: the day in view gets its colour, and other days dim.
+  When the day in view is off-screen, a chip "Wed 28 is off the map · Show" offers one click to move.
+  The emphasised day's pins are never clustered.
 - **The camera moves only on explicit actions:**
   - Fit day or Show all days;
   - "Show on map";
@@ -476,6 +478,26 @@ Every "Open Maps" is one `MapsLink`, named for the place:
 - **iOS and iPadOS, including the installed PWA:** the Apple Maps universal link, so it opens the Maps
   app.
 - **Android:** the Google Maps universal link, so it opens the app, falling back to the web.
+
+## 6u. Map pills and paths (approved 2026-10-15)
+
+Reference: `.impeccable/mocks/map-pills.html`.
+- **Stops are 34px white paper pills:** category dot, name in Figtree 14/600, and the time. A pointer
+  tail and an anchor ring sit on the exact spot.
+  - **Next:** the yellow key pill with a "NEXT" kicker.
+  - **Done:** grey. **Selected:** an ink outline. **Ideas:** outlined.
+- **Collisions** collapse lower-priority pills to their anchor and dot, and they expand on hover.
+- **Clusters** are an ink "+N" pill.
+- **Routes** are a 5px day-colour line on a 10px white casing, with white chevrons. Transport legs are
+  dotted.
+- **Phone:** 30px pills with 13px text and no time.
+
+## 6v. Map place popover (revised 2026-10-15)
+
+**No adding from the map** (user: it was clunky, and people check reviews in Google Maps anyway).
+Clicking a Google place icon shows only a tiny popover: the place name and **Open in Google Maps ↗**.
+Empty-spot clicks do nothing. Clicking our own pills selects the row. Places are added through the
+add bar's search, which still previews the pin on the map. This supersedes click-to-add in 6j.
 
 ## 7. Constraints and open decisions
 

@@ -7,18 +7,21 @@ import { endClock, mapsUrl, shortDay } from '@lib/trips/schedule'
 import {
   Button,
   DetailGroup,
+  InlineSelect,
+  InlineWhen,
   NavRow,
   Sheet,
   SheetActions,
   SheetFooter,
   SheetIdentity,
   Stamp,
+  StampSelect,
 } from '@components/ui'
 import { CodeReveal } from './CodeReveal'
 import type { MoveTarget } from './MoveMenu'
 import { PlacePicker } from './PlacePicker'
 import { BookingPick, CategoryPick, NotePick, WhenPick, lengthText } from './pickers'
-import { categoryLabel } from './tripUi'
+import { CATEGORIES, categoryLabel } from './tripUi'
 
 type Bias = { lat: number; lng: number } | null
 
@@ -64,6 +67,8 @@ export const TodoSheet: React.FC<Props> = ({
   onDelete,
   onCopy,
 }) => {
+  // The desktop inspector edits in place (no picker sheets); the phone sheet opens pickers.
+  const inline = variant === 'panel'
   const pin = hasPin(todo.place) ? todo.place : null
   const linked = bookings.find((b) => b.booking_id === todo.booking_id)
   const end = todo.start_time ? endClock(todo.start_time, todo.duration_min) : ''
@@ -147,29 +152,46 @@ export const TodoSheet: React.FC<Props> = ({
       }
       details={
         <DetailGroup label="Details">
-          <NavRow
-            label="When"
-            value={whenText}
-            disabled={locked}
-            defaultOpen={focusTime}
-            picker={{
-              title: 'When',
-              content: () => (
-                <WhenPick
-                  days={days}
-                  day={todo.day ?? null}
-                  time={todo.start_time ?? null}
-                  length={todo.duration_min}
-                  allowIdeas
-                  withLength
-                  clearableTime
-                  onDay={onMove}
-                  onTime={(t) => onPatch({ start_time: t })}
-                  onLength={(n) => onPatch({ duration_min: n })}
-                />
-              ),
-            }}
-          />
+          {inline ? (
+            <InlineWhen
+              days={days}
+              day={todo.day ?? null}
+              time={todo.start_time ?? null}
+              length={todo.duration_min}
+              allowIdeas
+              withLength
+              clearableTime
+              disabled={locked}
+              autoFocusTime={focusTime}
+              onDay={onMove}
+              onTime={(t) => onPatch({ start_time: t })}
+              onLength={(n) => onPatch({ duration_min: n })}
+            />
+          ) : (
+            <NavRow
+              label="When"
+              value={whenText}
+              disabled={locked}
+              defaultOpen={focusTime}
+              picker={{
+                title: 'When',
+                content: () => (
+                  <WhenPick
+                    days={days}
+                    day={todo.day ?? null}
+                    time={todo.start_time ?? null}
+                    length={todo.duration_min}
+                    allowIdeas
+                    withLength
+                    clearableTime
+                    onDay={onMove}
+                    onTime={(t) => onPatch({ start_time: t })}
+                    onLength={(n) => onPatch({ duration_min: n })}
+                  />
+                ),
+              }}
+            />
+          )}
           <NavRow
             label="Place"
             value={placeText || 'Add a place'}
@@ -191,24 +213,53 @@ export const TodoSheet: React.FC<Props> = ({
               ),
             }}
           />
-          <NavRow
-            label="Category"
-            value={categoryLabel(todo.category)}
-            disabled={locked}
-            picker={{
-              title: 'Category',
-              content: (close) => (
-                <CategoryPick
-                  value={todo.category}
-                  onPick={(c: TripCategory) => {
-                    onPatch({ category: c })
-                    close()
-                  }}
-                />
-              ),
-            }}
-          />
-          {(bookings.length > 0 || linked) && (
+          {inline ? (
+            <StampSelect
+              rowLabel="Category"
+              label="Category"
+              value={todo.category}
+              disabled={locked}
+              options={CATEGORIES.map((c) => ({
+                value: c.value,
+                label: c.label,
+                fg: `var(--trip-cat-${c.value}-fg)`,
+                bg: `var(--trip-cat-${c.value}-bg)`,
+              }))}
+              onChange={(c) => onPatch({ category: c as TripCategory })}
+            />
+          ) : (
+            <NavRow
+              label="Category"
+              value={categoryLabel(todo.category)}
+              disabled={locked}
+              picker={{
+                title: 'Category',
+                content: (close) => (
+                  <CategoryPick
+                    value={todo.category}
+                    onPick={(c: TripCategory) => {
+                      onPatch({ category: c })
+                      close()
+                    }}
+                  />
+                ),
+              }}
+            />
+          )}
+          {(bookings.length > 0 || linked) && inline && (
+            <InlineSelect
+              rowLabel="Booking"
+              label="Linked booking"
+              value={todo.booking_id ?? ''}
+              disabled={locked}
+              options={[
+                { value: '', label: 'None' },
+                ...bookings.map((b) => ({ value: b.booking_id, label: b.title })),
+              ]}
+              onChange={(id) => onPatch({ booking_id: id || null })}
+            />
+          )}
+          {(bookings.length > 0 || linked) && !inline && (
             <NavRow
               label="Booking"
               value={linked ? linked.title : 'None'}
@@ -229,22 +280,33 @@ export const TodoSheet: React.FC<Props> = ({
               }}
             />
           )}
-          <NavRow
-            label="Note"
-            value={todo.notes ? todo.notes.split('\n')[0] : 'Add a note'}
-            empty={!todo.notes}
-            disabled={locked}
-            picker={{
-              title: 'Note',
-              content: () => (
-                <NotePick
-                  value={todo.notes ?? ''}
-                  max={LIMITS.itemNotesBytes}
-                  onCommit={(v) => onPatch({ notes: v })}
-                />
-              ),
-            }}
-          />
+          {inline ? (
+            <div className="ui-inline-note">
+              <NotePick
+                value={todo.notes ?? ''}
+                max={LIMITS.itemNotesBytes}
+                autoFocus={false}
+                onCommit={(v) => onPatch({ notes: v })}
+              />
+            </div>
+          ) : (
+            <NavRow
+              label="Note"
+              value={todo.notes ? todo.notes.split('\n')[0] : 'Add a note'}
+              empty={!todo.notes}
+              disabled={locked}
+              picker={{
+                title: 'Note',
+                content: () => (
+                  <NotePick
+                    value={todo.notes ?? ''}
+                    max={LIMITS.itemNotesBytes}
+                    onCommit={(v) => onPatch({ notes: v })}
+                  />
+                ),
+              }}
+            />
+          )}
         </DetailGroup>
       }
       footer={<SheetFooter who={byline} onDelete={locked ? undefined : onDelete} />}
