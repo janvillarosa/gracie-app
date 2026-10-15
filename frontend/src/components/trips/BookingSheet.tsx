@@ -186,8 +186,14 @@ export const BookingSheet: React.FC<Props> = ({
       ...(draft.confirmation_code ? { confirmation_code: draft.confirmation_code } : {}),
       starts_at: draft.starts_at ?? null,
       ends_at: draft.ends_at ?? null,
-      start_tz: draft.start_tz ?? null,
-      ...(draft.end_tz ? { end_tz: draft.end_tz } : {}),
+      // Always a defined zone: the place's, else the trip's. The end follows its own place (the
+      // server derives it) and otherwise the trip's.
+      start_tz: draft.start_tz ?? tripTz ?? null,
+      ...(draft.end_tz
+        ? { end_tz: draft.end_tz }
+        : !draft.end_place && tripTz
+          ? { end_tz: tripTz }
+          : {}),
       place: draft.place ?? null,
       ...(draft.end_place ? { end_place: draft.end_place } : {}),
       ...(draft.notes ? { notes: draft.notes } : {}),

@@ -1,4 +1,5 @@
 import React from 'react'
+import { PencilSimple } from '@phosphor-icons/react'
 import { SheetTitle } from './SheetTitle'
 import './ui.css'
 
@@ -16,6 +17,10 @@ type Props = {
   disabled?: boolean
   placeholder?: string
   titleLabel?: string
+  // The leading mark is a 44px tile (an icon button), not a 28px checkbox or kind tile.
+  tile?: boolean
+  // Show a small pencil after the title on hover and focus: this title can be renamed here.
+  editHint?: boolean
 }
 
 /** Tier 1 of a sheet: what this is, big. A leading mark, the title, and one context line. */
@@ -29,18 +34,27 @@ export const SheetIdentity: React.FC<Props> = ({
   disabled,
   placeholder,
   titleLabel,
+  tile,
+  editHint,
 }) => (
-  <div className={leading ? 'ui-sheet-identity has-lead' : 'ui-sheet-identity'}>
+  <div
+    className={
+      leading ? `ui-sheet-identity has-lead${tile ? ' has-tile' : ''}` : 'ui-sheet-identity'
+    }
+  >
     {leading && <span className="ui-sheet-lead">{leading}</span>}
     <div className="ui-sheet-identity-text">
-      <SheetTitle
-        value={title}
-        onCommit={onTitle}
-        autoFocus={autoFocus}
-        disabled={disabled}
-        placeholder={placeholder}
-        label={titleLabel}
-      />
+      <div className="ui-sheet-titlerow">
+        <SheetTitle
+          value={title}
+          onCommit={onTitle}
+          autoFocus={autoFocus}
+          disabled={disabled}
+          placeholder={placeholder}
+          label={titleLabel}
+        />
+        {editHint && onTitle && <PencilSimple className="ui-sheet-pencil" aria-hidden />}
+      </div>
       {(context || children) && (
         <p className="ui-sheet-context">
           {context}

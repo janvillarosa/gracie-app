@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Card } from 'antd'
-import { PencilSimple } from '@phosphor-icons/react'
 import { useAuth } from '@auth/AuthProvider'
 import { HouseLoader } from '@components/HouseLoader'
 import { TopNav } from '@components/TopNav'
@@ -118,24 +117,23 @@ export const TripSettings: React.FC = () => {
     <div className="container">
       <TopNav back={{ to: `/app/trips/${trip.trip_id}`, label: trip.title }} />
       <Card className="trip-settings">
-        <div className="trip-settings-identity">
-          <SheetIdentity
-            leading={
-              <button
-                type="button"
-                className="list-icon settings-icon"
-                aria-label="Change icon"
-                onClick={() => setSheet('icon')}
-              >
-                {toTripEmoji(trip.icon)}
-              </button>
-            }
-            title={trip.title}
-            onTitle={(v) => patch({ title: v })}
-            titleLabel="Trip name"
-          />
-          <PencilSimple className="settings-pencil" aria-hidden />
-        </div>
+        <SheetIdentity
+          tile
+          editHint
+          leading={
+            <button
+              type="button"
+              className="list-icon"
+              aria-label="Change icon"
+              onClick={() => setSheet('icon')}
+            >
+              {toTripEmoji(trip.icon)}
+            </button>
+          }
+          title={trip.title}
+          onTitle={(v) => patch({ title: v })}
+          titleLabel="Trip name"
+        />
 
         <SectionLabel>This trip</SectionLabel>
         <DetailGroup label="This trip">

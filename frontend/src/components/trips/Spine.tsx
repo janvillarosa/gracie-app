@@ -215,11 +215,21 @@ type LabelProps = {
   suggested: string
   locked: boolean
   prefix?: string
+  // Today's header: on touch screens, the only one that offers "Add a label" without a hover.
+  isToday?: boolean
   onSet: (d: string, l: string) => void
 }
 
 // The day's name: yours, or a muted suggestion from where its stops are. Click to accept or edit.
-const DayLabel: React.FC<LabelProps> = ({ date, label, suggested, locked, prefix, onSet }) => {
+const DayLabel: React.FC<LabelProps> = ({
+  date,
+  label,
+  suggested,
+  locked,
+  prefix,
+  isToday,
+  onSet,
+}) => {
   const [editing, setEditing] = useState(false)
   const shown = label || suggested
   if (editing) {
@@ -255,7 +265,9 @@ const DayLabel: React.FC<LabelProps> = ({ date, label, suggested, locked, prefix
           ? 'trip-daylabel'
           : suggested
             ? 'trip-daylabel is-suggested'
-            : 'trip-daylabel is-empty'
+            : isToday
+              ? 'trip-daylabel is-empty is-today'
+              : 'trip-daylabel is-empty'
       }
       onClick={() => setEditing(true)}
       aria-label={
@@ -384,6 +396,7 @@ export const DaySection = React.memo<DayProps>(function DaySection({
           suggested={day.suggested}
           locked={shared.locked}
           prefix={isToday && !heading ? 'in ' : undefined}
+          isToday={isToday}
           onSet={shared.setDayLabel}
         />
         <button

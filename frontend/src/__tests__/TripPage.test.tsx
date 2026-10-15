@@ -461,6 +461,29 @@ describe('Days', () => {
     expect(screen.getAllByPlaceholderText(/^Add (a|an|to) /)).toHaveLength(1)
   })
 
+  it('with no dates, keeps the first-step prompts after an idea is added, and links to Ideas', async () => {
+    seed(makeTrip(7, { title: 'Draft' }))
+    open(makeTrip(7).trip_id)
+    const field = await screen.findByRole('combobox', { name: /^Add (to|an)/ })
+    await userEvent.type(field, 'Fado night{Enter}')
+    // Plan is not blank: the prompts stay, with one quiet row for the ideas.
+    expect(await screen.findByRole('heading', { name: 'Where to first?' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'When are you going?' })).toBeInTheDocument()
+    const row = await screen.findByRole('button', { name: /^1 idea/ })
+    await userEvent.click(row)
+    expect(screen.getByRole('tab', { name: 'Ideas' })).toHaveAttribute('aria-selected', 'true')
+  })
+
+  it('offers "Add a label" without a hover only on today\u2019s header', async () => {
+    seed(TRIP)
+    open()
+    await screen.findByRole('heading', { name: 'Later today' })
+    const empties = [...document.querySelectorAll('.trip-daylabel.is-empty')]
+    expect(empties.length).toBeGreaterThan(0)
+    for (const e of empties)
+      expect(e.classList.contains('is-today')).toBe(!!e.closest('.trip-day.is-today, [data-today]'))
+  })
+
   it('draws one friendly sheet when nothing is planned yet', async () => {
     seed(makeTrip(7, { title: 'Draft' }))
     open(makeTrip(7).trip_id)
