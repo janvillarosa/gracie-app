@@ -304,6 +304,17 @@ flagged done days, and it didn't say which items clashed. Gaps now show where th
 - **Offline: no map.** On desktop the pane hides (after a ~5s debounce) and the list widens, with
   "The map comes back when you're online." On the phone the map button hides. The map chunk is
   not fetched while offline.
+- **Names and category pips replace numbers** (approved 2026-10-15; sketch:
+  `.impeccable/mocks/map-labels.html`).
+  - **Pips:** each stop is a pip in its category colour, and done stops are muted. The next and
+    selected stops get a yellow ring.
+  - **Names:** drawn beside the pip, truncated (about 22 characters on desktop, 14 on the phone).
+    MapLibre hides names that collide; pips always stay. Priority: selected, then next, then the
+    day's order.
+  - **Grouping:** stacked stops merge into a "+N" pip that zooms in on click.
+  - **Order:** arrows on the route line show the order. Hovering a row or a pip shows its name.
+  - **Other views:** all-days mode uses day colours with names on hover only. Ideas are hollow pips.
+  - **No numbers anywhere,** neither on the map nor in the rows.
 - **Phone map: a full-screen, read-only view.**
   - **Opening:** a labelled "🗺 Map" pill in the PillNav row opens it.
   - **Top bar:** ✕ close on the left and a "‹ Thu 15 · Sintra ›" day stepper in the centre.
