@@ -1,10 +1,9 @@
 import React, { useState } from 'react'
 import { Button } from 'antd'
-import { Copy } from '@phosphor-icons/react'
+import { CaretDown, CaretRight } from '@phosphor-icons/react'
 import type { Booking, BookingKind, Place } from '@api/tripTypes'
-import { zoneLabel } from '@lib/trips/schedule'
+import { shortDay, zoneLabel } from '@lib/trips/schedule'
 import { BOOKING_KINDS, KIND_ICON } from './tripUi'
-import { CodeReveal } from './CodeReveal'
 import { PlacePicker } from './PlacePicker'
 
 export type BookingActions = {
@@ -27,6 +26,21 @@ export function bookingWhen(b: Booking): string {
   return start
 }
 
+/** One line for a row: "London → Lisbon" for "London to Lisbon"; other titles as they are. */
+export function bookingHeadline(b: Booking): string {
+  const m = /^(.+?) to (.+)$/.exec(b.title)
+  return m && (b.kind === 'flight' || b.kind === 'train') ? `${m[1]} → ${m[2]}` : b.title
+}
+
+/** Muted second line: "Tue 13 · 07:05 → 09:40" (a stay across days: "Tue 13 → Fri 16"). */
+export function bookingSub(b: Booking): string {
+  if (!b.starts_at) return ''
+  const [sd, st = ''] = b.starts_at.split('T')
+  const [ed, et = ''] = (b.ends_at ?? '').split('T')
+  if (ed && ed !== sd) return `${shortDay(sd)} → ${shortDay(ed)}`
+  return [shortDay(sd), [st, et].filter(Boolean).join(' → ')].filter(Boolean).join(' · ')
+}
+
 const validZone = (z: string) => {
   try {
     new Intl.DateTimeFormat('en', { timeZone: z })
@@ -40,7 +54,8 @@ type EditorProps = {
   booking?: Booking
   tripTz?: string
   bias: { lat: number; lng: number } | null
-  defaultDay?: string
+  // A starting time for a new booking, as a datetime-local value.
+  defaultStart?: string
   initialTitle?: string
   onSave: (patch: Record<string, unknown>) => void
   onCancel: () => void
@@ -51,7 +66,7 @@ export const BookingEditor: React.FC<EditorProps> = ({
   booking,
   tripTz,
   bias,
-  defaultDay,
+  defaultStart,
   initialTitle,
   onSave,
   onCancel,
@@ -60,9 +75,7 @@ export const BookingEditor: React.FC<EditorProps> = ({
   const [kind, setKind] = useState<BookingKind>(booking?.kind ?? 'ticket')
   const [title, setTitle] = useState(booking?.title ?? initialTitle ?? '')
   const [code, setCode] = useState(booking?.confirmation_code ?? '')
-  const [startsAt, setStartsAt] = useState(
-    booking?.starts_at ?? (defaultDay ? `${defaultDay}T09:00` : ''),
-  )
+  const [startsAt, setStartsAt] = useState(booking?.starts_at ?? defaultStart ?? '')
   const [endsAt, setEndsAt] = useState(booking?.ends_at ?? '')
   const [startTz, setStartTz] = useState(booking?.start_tz ?? tripTz ?? '')
   const [endTz, setEndTz] = useState(booking?.end_tz ?? '')
@@ -287,24 +300,35 @@ export const BookingLine = React.memo<LineProps>(function BookingLine({
 type PanelProps = {
   bookings: Booking[]
   nowMs: number
-  actions: BookingActions
   startMs: (b: Booking) => number
   onOpen: (id: string) => void
   locked: boolean
 }
 
-/** Every booking, grouped by kind, codes one tap from copying. */
-export const BookingsPanel: React.FC<PanelProps> = ({
-  bookings,
-  nowMs,
-  actions,
-  startMs,
-  onOpen,
-}) => {
+/** Every booking, grouped by kind. A row is just the trip: tap it for the sheet, where the
+ *  code lives. Bookings that are over fold into one "used" line. */
+export const BookingsPanel: React.FC<PanelProps> = ({ bookings, nowMs, startMs, onOpen }) => {
+  const [showUsed, setShowUsed] = useState(false)
+  const isUsed = (b: Booking) =>
+    (b.ends_at ? startMs({ ...b, starts_at: b.ends_at }) : startMs(b)) < nowMs
+  const upcoming = bookings.filter((b) => !isUsed(b))
+  const used = bookings.filter(isUsed).sort((a, c) => startMs(a) - startMs(c))
   const groups = BOOKING_KINDS.map((k) => ({
     ...k,
-    items: bookings.filter((b) => b.kind === k.value).sort((a, c) => startMs(a) - startMs(c)),
+    items: upcoming.filter((b) => b.kind === k.value).sort((a, c) => startMs(a) - startMs(c)),
   })).filter((g) => g.items.length)
+  const row = (b: Booking, stamp: boolean) => (
+    <li key={b.booking_id} className={stamp ? 'trip-bcard is-used' : 'trip-bcard'}>
+      <button type="button" className="trip-bcard-main" onClick={() => onOpen(b.booking_id)}>
+        <span className="trip-stub-icon">{KIND_ICON[b.kind]}</span>
+        <span className="trip-bcard-text">
+          <span className="trip-title">{bookingHeadline(b)}</span>
+          <span className="trip-sub">{bookingSub(b)}</span>
+        </span>
+        {stamp && <span className="trip-used">Used</span>}
+      </button>
+    </li>
+  )
   return (
     <section className="trip-pane-body" aria-label="Bookings">
       {!bookings.length && (
@@ -315,43 +339,23 @@ export const BookingsPanel: React.FC<PanelProps> = ({
       {groups.map((g) => (
         <div key={g.value} className="trip-group">
           <h3>{g.label}s</h3>
-          <ul className="trip-list">
-            {g.items.map((b) => {
-              const end = b.ends_at ? startMs({ ...b, starts_at: b.ends_at }) : startMs(b)
-              return (
-                <li
-                  key={b.booking_id}
-                  className={end < nowMs ? 'trip-bcard is-used' : 'trip-bcard'}
-                >
-                  <button
-                    type="button"
-                    className="trip-bcard-main"
-                    onClick={() => onOpen(b.booking_id)}
-                  >
-                    <span className="trip-stub-icon">{KIND_ICON[b.kind]}</span>
-                    <span className="trip-bcard-text">
-                      <span className="trip-title">{b.title}</span>
-                      <span className="trip-sub">
-                        {[b.starts_at?.split('T')[0], bookingWhen(b)].filter(Boolean).join(' · ')}
-                      </span>
-                    </span>
-                  </button>
-                  {b.confirmation_code && (
-                    <CodeReveal
-                      compact
-                      code={b.confirmation_code}
-                      title={b.title}
-                      kind={b.kind}
-                      line={[b.starts_at?.split('T')[1], b.place?.name].filter(Boolean).join(' · ')}
-                      onCopy={actions.copy}
-                    />
-                  )}
-                </li>
-              )
-            })}
-          </ul>
+          <ul className="trip-list">{g.items.map((b) => row(b, false))}</ul>
         </div>
       ))}
+      {used.length > 0 && (
+        <div className="trip-group">
+          <button
+            type="button"
+            className="completed-toggle trip-donetoggle"
+            aria-expanded={showUsed}
+            onClick={() => setShowUsed((v) => !v)}
+          >
+            {showUsed ? <CaretDown aria-hidden /> : <CaretRight aria-hidden />} {used.length} used ·{' '}
+            {showUsed ? 'Hide' : 'Show'}
+          </button>
+          {showUsed && <ul className="trip-list">{used.map((b) => row(b, true))}</ul>}
+        </div>
+      )}
     </section>
   )
 }

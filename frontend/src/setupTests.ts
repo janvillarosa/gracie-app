@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto'
 import '@testing-library/jest-dom'
-import { afterEach } from 'vitest'
+import { afterEach, vi } from 'vitest'
 import { cleanup, configure } from '@testing-library/react'
 import { server, tripServer } from './testServer'
 
@@ -13,6 +13,8 @@ afterEach(() => {
   tripServer.trips.clear()
   tripServer.degradedPlaces = false
   cleanup()
+  // Registered first, so it runs last: a test that froze the clock never leaks it to the next file.
+  vi.useRealTimers()
 })
 afterAll(() => server.close())
 

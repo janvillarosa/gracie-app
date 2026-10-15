@@ -1902,7 +1902,8 @@ textarea.trip-field {
   padding: 16px 20px 8px;
   text-align: center;
   background: var(--panel);
-  border-bottom: 2px dashed var(--border-strong);
+  /* The tear edge is at the top, like the stub of a ticket. */
+  border-top: 2px dashed var(--border-strong);
 }
 .trip-slip-title {
   display: flex;
@@ -1938,6 +1939,10 @@ textarea.trip-field {
 }
 .trip-slip-drawer .ant-drawer-body {
   padding: 8px 16px 24px;
+}
+.trip-slip-copy {
+  margin-bottom: 8px;
+  color: var(--muted);
 }
 
 /* ---- tighter rows, and the add bar above the map handle -------------------------------- */

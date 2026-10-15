@@ -3,6 +3,7 @@ import { render } from '@testing-library/react'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { http, HttpResponse } from 'msw'
+import { vi } from 'vitest'
 import { AuthProvider } from '@auth/AuthProvider'
 import { TripPage } from '@pages/TripPage'
 import { Dashboard, TripsDashboard } from '@pages/Dashboard'
@@ -106,7 +107,17 @@ export function renderTrips(path: string) {
   )
 }
 
+/** Midday today on the wall clock: Date only (timers stay real). Fixtures are date-relative,
+ *  so a test can never straddle midnight or depend on the hour it runs at. */
+export function freezeClock() {
+  vi.useFakeTimers({ toFake: ['Date'] })
+  const d = new Date()
+  d.setHours(12, 0, 0, 0)
+  vi.setSystemTime(d)
+}
+
 export async function resetTripsWorld() {
+  vi.useRealTimers()
   resetTripStores()
   tripServer.trips.clear()
   await new Promise<void>((resolve) => {
@@ -120,6 +131,7 @@ export async function resetTripsWorld() {
   try {
     localStorage.removeItem('bauhouse_house_pill')
   } catch {}
+  freezeClock()
 }
 
 export const seed = (t: Trip) => tripServer.seed(ROOM, t, MIA)

@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react'
-import { Button, Drawer, Popover } from 'antd'
+import { Button, Popover } from 'antd'
 import type { BookingKind } from '@api/tripTypes'
 import { KIND_ICON } from './tripUi'
 import { useMedia } from './Phone'
+import { Sheet } from './Sheet'
 
 type Props = {
   code: string
@@ -33,7 +34,9 @@ const Slip: React.FC<Pick<Props, 'code' | 'title' | 'kind' | 'line' | 'onCopy'>>
         {code}
       </p>
       <Button
-        type="text"
+        shape="round"
+        size="small"
+        className="trip-slip-copy"
         onClick={() => {
           onCopy(code)
           setCopied(true)
@@ -94,17 +97,14 @@ export const CodeReveal: React.FC<Props> = ({ compact, ...slip }) => {
     <>
       {button}
       {open && (
-        <Drawer
-          open
-          placement="bottom"
-          height="auto"
+        <Sheet
+          bare
+          title={`Ticket for ${slip.title}`}
+          className="trip-slip-drawer"
           onClose={() => setOpen(false)}
-          title={<span className="sr-only">Ticket for {slip.title}</span>}
-          className="trip-sheet-drawer trip-slip-drawer"
-          destroyOnClose
         >
           <Slip {...slip} />
-        </Drawer>
+        </Sheet>
       )}
     </>
   )

@@ -2,7 +2,15 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { tripServer } from '../testServer'
-import { lisbonTrip, renderTrips, resetTripsWorld, seed, setViewport } from './trips.helpers'
+import {
+  MIA,
+  lisbonTrip,
+  rel,
+  renderTrips,
+  resetTripsWorld,
+  seed,
+  setViewport,
+} from './trips.helpers'
 
 const TRIP = lisbonTrip()
 const open = (id = TRIP.trip_id) => renderTrips(`/app/trips/${id}`)
@@ -13,23 +21,59 @@ beforeEach(async () => {
   Element.prototype.scrollIntoView = vi.fn()
   setViewport('desktop')
 })
-afterEach(resetTripsWorld)
+afterEach(async () => {
+  vi.restoreAllMocks()
+  await resetTripsWorld()
+})
 
 describe('Bookings tab', () => {
-  it('lists bookings by kind, with codes behind a ticket slip', async () => {
+  // The seeded flight is two days old, so it sits behind "N used".
+  const showUsed = async () => {
+    await userEvent.click(await screen.findByRole('tab', { name: 'Bookings' }))
+    await userEvent.click(await screen.findByRole('button', { name: /1 used/ }))
+  }
+
+  it('folds bookings that are over into one line, with a Used stamp when shown', async () => {
     seed(TRIP)
     open()
     await userEvent.click(await screen.findByRole('tab', { name: 'Bookings' }))
-    expect(await screen.findByText('Flights')).toBeInTheDocument()
-    expect(screen.queryByText('TP1355')).not.toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Show code' }))
-    expect(
-      await screen.findByLabelText(/Confirmation code for London to Lisbon/),
-    ).toHaveTextContent('TP1355')
-    await userEvent.click(screen.getByRole('button', { name: /Copy code for London to Lisbon/ }))
+    expect(screen.queryByText('Flights')).not.toBeInTheDocument()
+    const fold = await screen.findByRole('button', { name: '1 used · Show' })
+    expect(fold).toHaveAttribute('aria-expanded', 'false')
+    await userEvent.click(fold)
+    const row = (await screen.findByText('London → Lisbon')).closest('li') as HTMLElement
+    expect(within(row).getByText('Used')).toBeInTheDocument()
+    // A row is the trip and its day, not a button for the code.
+    expect(within(row).queryByRole('button', { name: 'Show code' })).not.toBeInTheDocument()
+    expect(within(row).getByText(/^\w{3} \d+ · 07:05 → 09:40$/)).toBeInTheDocument()
+  })
+
+  it('lists upcoming bookings by kind, one line each, and keeps codes behind the sheet', async () => {
+    const t = lisbonTrip()
+    t.bookings.push({
+      booking_id: `tbk_${'5'.padStart(32, '0')}`,
+      kind: 'train',
+      title: 'Lisbon to Porto',
+      confirmation_code: 'CP-1',
+      starts_at: `${rel(1)}T17:00`,
+      ends_at: `${rel(1)}T19:45`,
+      created_by: MIA,
+    })
+    seed(t)
+    open()
+    await userEvent.click(await screen.findByRole('tab', { name: 'Bookings' }))
+    expect(await screen.findByText('Trains')).toBeInTheDocument()
+    const row = screen.getByText('Lisbon → Porto').closest('li') as HTMLElement
+    expect(within(row).getByText(/17:00 → 19:45$/)).toBeInTheDocument()
+    expect(screen.queryByText('CP-1')).not.toBeInTheDocument()
+    await userEvent.click(within(row).getByRole('button'))
+    const detail = await screen.findByRole('dialog', { name: 'Lisbon to Porto' })
+    await userEvent.click(within(detail).getByRole('button', { name: 'Show code' }))
+    expect(await screen.findByLabelText(/Confirmation code for Lisbon to Porto/)).toHaveTextContent(
+      'CP-1',
+    )
+    await userEvent.click(screen.getByRole('button', { name: /Copy code for Lisbon to Porto/ }))
     expect(await screen.findByRole('button', { name: 'Copied' })).toBeInTheDocument()
-    await userEvent.keyboard('{Escape}')
-    await waitFor(() => expect(screen.queryByText('TP1355')).not.toBeInTheDocument())
   })
 
   it('adds a booking through the form sheet', async () => {
@@ -62,8 +106,8 @@ describe('Bookings tab', () => {
   it('edits a booking in its sheet without a Save button, and checks time zones', async () => {
     seed(TRIP)
     open()
-    await userEvent.click(await screen.findByRole('tab', { name: 'Bookings' }))
-    await userEvent.click(await screen.findByRole('button', { name: /^London to Lisbon/ }))
+    await showUsed()
+    await userEvent.click(await screen.findByRole('button', { name: /^London → Lisbon/ }))
     const detail = await screen.findByRole('dialog', { name: 'London to Lisbon' })
     expect(within(detail).queryByRole('button', { name: /^Save/ })).not.toBeInTheDocument()
     // From and to, each with its own zone.
@@ -101,8 +145,8 @@ describe('Bookings tab', () => {
     await waitFor(() => expect(todo()?.booking_id).toBe(TRIP.bookings[0].booking_id))
     await userEvent.keyboard('{Escape}')
     // Deleting the booking clears the link.
-    await userEvent.click(await screen.findByRole('tab', { name: 'Bookings' }))
-    await userEvent.click(await screen.findByRole('button', { name: /^London to Lisbon/ }))
+    await showUsed()
+    await userEvent.click(await screen.findByRole('button', { name: /^London → Lisbon/ }))
     const detail = await screen.findByRole('dialog', { name: 'London to Lisbon' })
     await userEvent.click(within(detail).getByRole('button', { name: 'Delete booking' }))
     await waitFor(() => expect(todo()?.booking_id ?? null).toBeNull())

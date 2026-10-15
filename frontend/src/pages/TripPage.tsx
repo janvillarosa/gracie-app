@@ -979,17 +979,24 @@ const TripScreen: React.FC<{
     <BookingsPanel
       bookings={trip.bookings}
       nowMs={nowMs}
-      actions={bookingActions}
       startMs={bookingStart}
       onOpen={rowActions.open}
       locked={locked}
     />
   )
+  // A new booking starts at the next full hour today during the trip, else on day one at 09:00,
+  // so it never lands in the past by default.
+  const defaultStart =
+    phase === 'during'
+      ? `${today}T${String(Math.min(23, new Date(nowMs).getHours() + 1)).padStart(2, '0')}:00`
+      : trip.start_date
+        ? `${trip.start_date}T09:00`
+        : undefined
   const bookingFormNode = bookingDraft ? (
     <BookingEditor
       tripTz={trip.tz}
       bias={bias}
-      defaultDay={trip.start_date ?? undefined}
+      defaultStart={defaultStart}
       initialTitle={bookingDraft.title}
       onCancel={() => setBookingDraft(null)}
       onSave={(patch) => {
