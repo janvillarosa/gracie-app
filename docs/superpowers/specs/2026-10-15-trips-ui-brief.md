@@ -146,8 +146,13 @@ section wins. Hierarchy now has three levels:
   dot. Past days collapse to a one-line summary; today is marked with a Today pill and the Now
   marker; on the phone only today and the day picked in the date strip are expanded. There is no
   per-day add control: like the List page, the trip screen has **one** sticky add bar (with a
-  target switch, defaulting to the day in view or to Ideas on the Ideas tab) on every breakpoint. "Day
-  done" stamps once, then shows as ✓ in the summary.
+  target switch, defaulting to the day in view or to Ideas on the Ideas tab) on every breakpoint. **Done days**
+  (every todo ticked, any date) fold into a slim muted line, not a card ("✓ Tue 13 · Arrival · 5
+  done"); consecutive done days merge into one line ("✓ Tue 13 – Wed 14 · 2 days done"). Tapping
+  expands it in place. Ticking a day's last item plays the confetti and a ~1s "Day done" stamp,
+  then the card folds; unticking unfolds it. A past day with open items is not done and stays a
+  full card. Done days show ✓ in the phone date strip and are not drawn on the map unless
+  expanded.
 - **Item:** rows are two lines at most (checkbox, time, title / place). The category is an icon
   or dot, not a text chip. The handle, trash, duration and "added by" move off the row. Tapping
   opens the item detail: a bottom sheet on the phone, a panel over the map on desktop. It has
