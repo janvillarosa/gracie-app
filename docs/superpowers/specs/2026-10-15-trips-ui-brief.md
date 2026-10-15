@@ -198,6 +198,25 @@ this." This section outranks feature completeness; when in doubt, show less.
   page's list rows. On the phone, days after tomorrow are folded to their header line until
   tapped. `?day=` deep links still work.
 
+## 6d. During the trip: the next-stop deck (2026-10-15)
+
+User direction: on the trip, the pressing question is where to go next; make it feel like an
+adventure or a scavenger hunt.
+
+- During the trip, the Plan tab opens on a **deck of paper cards**: today's remaining stops, top
+  card in full (a "Next stop" kicker, a big title, one line of time · place · Open in Maps), with
+  sheet edges peeking beneath and "2 more today".
+- Two actions: **Go** (yellow key; opens Maps and marks the card "on the way" locally) and
+  **Done** (ticks the todo and deals the next card with the highlighter and confetti). "Skip for
+  now" moves the stop to the end of today, with Undo.
+- Progress shows as small Bauhaus shapes (circle, square, triangle in brand red, yellow and blue),
+  outlined while open and filled when done. This is the only scavenger-hunt ornament.
+- The next card is the first unticked todo in the day's order. An overdue time is noted gently.
+  A booking appears as a card with its code large.
+- An empty deck shows Day done, then a teaser for tomorrow's first stop.
+- "Later today" rows sit below the deck.
+- No deck before or after the trip. No geolocation in v1. The deck works offline.
+
 ## 7. Constraints and open decisions
 
 Constraints:
