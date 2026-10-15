@@ -1,4 +1,4 @@
-import React, { useEffect, useId, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useId, useRef, useState } from 'react'
 
 export type PillItem = {
   key: string
@@ -26,31 +26,39 @@ export const PillNav: React.FC<Props> = ({ items, value, onChange, extra, label 
   const tabs = useRef<Array<HTMLButtonElement | null>>([])
   const [vars, setVars] = useState<React.CSSProperties>({})
   const active = items.find((i) => i.key === value) ?? items[0]
+  const activeIndex = Math.max(
+    0,
+    items.findIndex((x) => x.key === active.key),
+  )
+  const activeRef = useRef(activeIndex)
+  activeRef.current = activeIndex
 
-  // Slide the pill under the active tab; re-measure when the strip changes size.
+  // Slide the pill under the active tab. The observer is set up once (callers pass a fresh
+  // items array every render); a change of tab just measures again.
+  const measure = useCallback(() => {
+    const el = tabs.current[activeRef.current]
+    if (!el) return
+    const left = `${el.offsetLeft}px`
+    const width = `${el.offsetWidth}px`
+    setVars((p) =>
+      (p as Record<string, string>)['--tab-x'] === left &&
+      (p as Record<string, string>)['--tab-w'] === width
+        ? p
+        : ({ '--tab-x': left, '--tab-w': width } as React.CSSProperties),
+    )
+  }, [])
   useEffect(() => {
-    const i = items.findIndex((x) => x.key === active.key)
     const list = listRef.current
-    const el = tabs.current[i]
-    if (!list || !el) return
-    const update = () => {
-      const left = `${el.offsetLeft}px`
-      const width = `${el.offsetWidth}px`
-      setVars((p) =>
-        (p as Record<string, string>)['--tab-x'] === left &&
-        (p as Record<string, string>)['--tab-w'] === width
-          ? p
-          : ({ '--tab-x': left, '--tab-w': width } as React.CSSProperties),
-      )
-    }
-    const id = requestAnimationFrame(update)
-    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(update) : null
-    ro?.observe(list)
-    return () => {
-      cancelAnimationFrame(id)
-      ro?.disconnect()
-    }
-  }, [active.key, items])
+    if (!list || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(measure)
+    ro.observe(list)
+    return () => ro.disconnect()
+  }, [measure])
+  // biome-ignore lint/correctness/useExhaustiveDependencies: measure again when the tab changes
+  useEffect(() => {
+    const id = requestAnimationFrame(measure)
+    return () => cancelAnimationFrame(id)
+  }, [measure, active.key])
 
   const onKeyDown = (e: React.KeyboardEvent, i: number) => {
     let n: number | null = null
@@ -78,7 +86,8 @@ export const PillNav: React.FC<Props> = ({ items, value, onChange, extra, label 
               role="tab"
               id={`${uid}-tab-${it.key}`}
               aria-selected={it.key === active.key}
-              aria-controls={`${uid}-panel-${it.key}`}
+              // Only the open tab has a panel in the page to point at.
+              aria-controls={it.key === active.key ? `${uid}-panel-${it.key}` : undefined}
               aria-label={it.ariaLabel}
               tabIndex={it.key === active.key ? 0 : -1}
               className="pill-nav-tab"

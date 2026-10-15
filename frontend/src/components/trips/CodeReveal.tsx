@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { Button, Popover } from 'antd'
 import type { BookingKind } from '@api/tripTypes'
 import { KIND_ICON } from './tripUi'
@@ -28,8 +28,22 @@ const Slip: React.FC<Pick<Props, 'code' | 'title' | 'kind' | 'line' | 'onCopy'>>
     const t = setTimeout(() => setCopied(false), 2000)
     return () => clearTimeout(t)
   }, [copied])
+  const root = useRef<HTMLDivElement>(null)
+  // The slip is a dialog: focus moves into it when it opens.
+  useEffect(() => {
+    // After the popover is in the page (its portal attaches a frame later).
+    const id = requestAnimationFrame(() => root.current?.focus({ preventScroll: true }))
+    return () => cancelAnimationFrame(id)
+  }, [])
   return (
-    <div className="trip-slip">
+    // biome-ignore lint/a11y/useSemanticElements: a popover dialog anchored to its button
+    <div
+      ref={root}
+      className="trip-slip"
+      role="dialog"
+      aria-label={`Ticket for ${title}`}
+      tabIndex={-1}
+    >
       <p className="trip-slip-title">
         <span className="trip-slip-icon">{KIND_ICON[kind ?? 'ticket']}</span>
         {title}
@@ -100,16 +114,15 @@ export const CodeReveal: React.FC<Props> = ({ compact, ...slip }) => {
   return (
     <>
       {button}
-      {open && (
-        <Sheet
-          bare
-          title={`Ticket for ${slip.title}`}
-          className="trip-slip-drawer"
-          onClose={() => setOpen(false)}
-        >
-          <Slip {...slip} />
-        </Sheet>
-      )}
+      <Sheet
+        bare
+        open={open}
+        title={`Ticket for ${slip.title}`}
+        className="trip-slip-drawer"
+        onClose={() => setOpen(false)}
+      >
+        {open ? <Slip {...slip} /> : null}
+      </Sheet>
     </>
   )
 }

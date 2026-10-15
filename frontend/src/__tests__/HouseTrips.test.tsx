@@ -167,7 +167,10 @@ describe('Trips pill', () => {
 
   it('asks one thing to create a trip, then opens it', async () => {
     renderTrips('/app/trips')
-    await userEvent.click(await screen.findByRole('button', { name: /New trip/ }))
+    // The key waits for the device's own copy to load (nothing is made out of order).
+    const key = await screen.findByRole('button', { name: /New trip/ })
+    await waitFor(() => expect(key).toBeEnabled())
+    await userEvent.click(key)
     const dialog = await screen.findByRole('dialog', { name: 'Name your trip' })
     expect(dialog.closest('.paper-modal')).not.toBeNull()
     expect(within(dialog).getAllByRole('textbox')).toHaveLength(1)

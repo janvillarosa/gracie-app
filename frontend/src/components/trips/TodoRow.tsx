@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { Button, Checkbox } from 'antd'
 import { CalendarPlus, DotsSixVertical, Trash } from '@phosphor-icons/react'
 import { useDraggable, useDroppable } from '@dnd-kit/core'
@@ -42,7 +42,39 @@ type Props = {
   clash?: boolean
   // An idea is not a task: a category dot instead of a checkbox, and a key to add it to a day.
   idea?: boolean
+  // Long trips: the drag and drop handles arrive when the row is first touched or focused.
+  lazyDnd?: boolean
+  // A drag is under way: every row is a drop target.
+  dragging?: boolean
   actions: RowActions
+}
+
+type DndListeners = ReturnType<typeof useDraggable>['listeners']
+
+/** Registers the row with dnd-kit (drag source and drop target) without owning any markup, so
+ *  the row itself can render before, and without, it. */
+const DndBridge: React.FC<{
+  id: string
+  disabled: boolean
+  node: React.MutableRefObject<HTMLLIElement | null>
+  onChange: (v: { listeners?: DndListeners; dragging: boolean }) => void
+}> = ({ id, disabled, node, onChange }) => {
+  const drag = useDraggable({ id, data: { kind: 'todo' }, disabled })
+  // Rows are drop targets too: dropping a row on another places it before or after it.
+  const drop = useDroppable({ id: `row:${id}`, disabled })
+  const { setNodeRef } = drag
+  const setDrop = drop.setNodeRef
+  useEffect(() => {
+    setNodeRef(node.current)
+    setDrop(node.current)
+    return () => {
+      setNodeRef(null)
+      setDrop(null)
+    }
+  }, [node, setNodeRef, setDrop])
+  const { listeners, isDragging } = drag
+  useEffect(() => onChange({ listeners, dragging: isDragging }), [listeners, isDragging, onChange])
+  return null
 }
 
 // Memoized so ticking one row or typing in the add bar doesn't re-render the whole spine.
@@ -59,18 +91,22 @@ export const TodoRow = React.memo<Props>(function TodoRow({
   entering,
   clash,
   idea,
+  lazyDnd,
+  dragging,
   actions,
 }) {
   const id = todo.todo_id
   const boxRef = useRef<HTMLSpanElement>(null)
   const liRef = useRef<HTMLLIElement | null>(null)
-  const { listeners, setNodeRef, isDragging } = useDraggable({
-    id,
-    data: { kind: 'todo' },
-    disabled: locked,
-  })
-  // Rows are drop targets too: dropping a row on another places it before or after it.
-  const drop = useDroppable({ id: `row:${id}`, disabled: locked })
+  // Mounting drag and drop hooks for 150 rows is real work on an old phone: with many rows they
+  // mount on first touch, focus or pointer-over (or when any drag starts).
+  const [armed, setArmed] = useState(!lazyDnd)
+  const [dnd, setDnd] = useState<{ listeners?: DndListeners; dragging: boolean } | null>(null)
+  useEffect(() => {
+    if (dragging) setArmed(true)
+  }, [dragging])
+  const isDragging = !!dnd?.dragging
+  const listeners = dnd?.listeners
   const swipe = useSwipeToDelete(() => actions.remove(id), locked)
 
   // A row that was just added scrolls into view if it is off screen.
@@ -100,11 +136,11 @@ export const TodoRow = React.memo<Props>(function TodoRow({
   return (
     // biome-ignore lint/a11y/noNoninteractiveElementInteractions: Alt+arrows reorder from anywhere in the row
     <li
-      ref={(el) => {
-        liRef.current = el
-        setNodeRef(el)
-        drop.setNodeRef(el)
-      }}
+      ref={liRef}
+      data-dnd={armed ? 'on' : 'off'}
+      onPointerEnter={armed ? undefined : () => setArmed(true)}
+      onFocusCapture={armed ? undefined : () => setArmed(true)}
+      onTouchStartCapture={armed ? undefined : () => setArmed(true)}
       id={`row-${id}`}
       data-entry-id={id}
       className={[
@@ -121,6 +157,7 @@ export const TodoRow = React.memo<Props>(function TodoRow({
         .join(' ')}
       onKeyDown={onKeyDown}
     >
+      {armed && <DndBridge id={id} disabled={locked} node={liRef} onChange={setDnd} />}
       <div className="item-swipe">
         <div ref={swipe.trayRef} className="swipe-tray" aria-hidden>
           <Trash weight="bold" className="swipe-tray-icon" />

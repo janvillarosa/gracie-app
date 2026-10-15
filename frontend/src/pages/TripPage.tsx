@@ -330,7 +330,12 @@ const TripScreen: React.FC<{
   const [sheetOpen, setSheetOpen] = useState(false)
   const [currentDay, setCurrentDay] = useState<string | null>(null)
   const [allDays, setAllDays] = useState(false)
-  const [announcement, setAnnouncement] = useState('')
+  const [announcement, setAnnouncementRaw] = useState('')
+  // The same message twice in a row still reaches a screen reader (the text changes invisibly).
+  const setAnnouncement = useCallback(
+    (t: string) => setAnnouncementRaw((p) => (p === t ? `${t}\u200b` : t)),
+    [],
+  )
   const [hidden, setHidden] = useState<ReadonlySet<string>>(() => new Set())
   const [nowMs, setNowMs] = useState(() => Date.now())
   const [addTarget, setAddTarget] = useState<string>('auto')
@@ -674,12 +679,26 @@ const TripScreen: React.FC<{
       notes: state.notes,
       locked,
       setDayLabel,
+      now: nowMs,
+      lazyDnd: trip.todos.length > 40,
+      dragging: dragging !== null,
       onClash: (id: string) => {
         ctx.current.openItem(id)
         setFocusTime(id)
       },
     }),
-    [rowActions, moveTargets, userId, members, state.notes, locked, setDayLabel],
+    [
+      rowActions,
+      moveTargets,
+      userId,
+      members,
+      state.notes,
+      locked,
+      setDayLabel,
+      nowMs,
+      trip.todos.length,
+      dragging,
+    ],
   )
 
   // ---- the day in view -----------------------------------------------------------------
@@ -1091,6 +1110,10 @@ const TripScreen: React.FC<{
     panel = { key: 'ideas', title: 'Ideas', node: ideasNode, close: () => setTab('plan') }
   }
 
+  // The sheet stays mounted while it closes, so focus returns to what opened it.
+  const lastPanel = useRef(panel)
+  if (panel) lastPanel.current = panel
+  const shownPanel = panel ?? lastPanel.current
   const showSide = desktop
   const showAdd = !locked
 
@@ -1358,14 +1381,13 @@ const TripScreen: React.FC<{
             </aside>
           )}
         </div>
-        {whenOpen && (
-          <WhenSheet
-            start={trip.start_date}
-            end={trip.end_date}
-            onChange={(s, e) => store.updateTrip(trip.trip_id, { start_date: s, end_date: e })}
-            onClose={() => setWhenOpen(false)}
-          />
-        )}
+        <WhenSheet
+          open={whenOpen}
+          start={trip.start_date}
+          end={trip.end_date}
+          onChange={(s, e) => store.updateTrip(trip.trip_id, { start_date: s, end_date: e })}
+          onClose={() => setWhenOpen(false)}
+        />
         {phone && sheetOpen && (
           <Sheet
             title={`Map · ${currentModel ? shortDay(currentModel.date) : 'ideas'}`}
@@ -1376,20 +1398,21 @@ const TripScreen: React.FC<{
             {mapNode}
           </Sheet>
         )}
-        {!desktop && daysOpen && (
-          <Panel desktop={false} title="Days" onClose={() => setDaysOpen(false)}>
-            {dayListNode}
+        {!desktop && (
+          <Panel desktop={false} open={daysOpen} title="Days" onClose={() => setDaysOpen(false)}>
+            {daysOpen ? dayListNode : null}
           </Panel>
         )}
-        {!desktop && panel && (
+        {!desktop && shownPanel && (
           <Panel
-            key={panel.key}
+            key={shownPanel.key}
             desktop={false}
-            bare={panel.key.startsWith('item-')}
-            title={panel.title}
-            onClose={panel.close}
+            open={!!panel}
+            bare={shownPanel.key.startsWith('item-')}
+            title={shownPanel.title}
+            onClose={shownPanel.close}
           >
-            {panel.node}
+            {panel ? shownPanel.node : null}
           </Panel>
         )}
         <div className="sr-only" role="status" aria-live="polite">

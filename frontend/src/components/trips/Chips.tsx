@@ -83,11 +83,9 @@ export const ChipPicker: React.FC<ChipProps> = ({
   return (
     <>
       {button}
-      {open && (
-        <Sheet title={title} onClose={close}>
-          <div className="trip-sheet-pad">{children(close)}</div>
-        </Sheet>
-      )}
+      <Sheet title={title} open={open} onClose={close}>
+        <div className="trip-sheet-pad">{open ? children(close) : null}</div>
+      </Sheet>
     </>
   )
 }

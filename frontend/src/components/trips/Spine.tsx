@@ -19,6 +19,12 @@ export type Shared = {
   notes: Record<string, ConflictNote>
   locked: boolean
   setDayLabel: (date: string, label: string) => void
+  // The page's clock (ticks once a minute), so rows never read the time while rendering.
+  now: number
+  // Many rows: each one gets its drag and drop handles only when it is first touched.
+  lazyDnd: boolean
+  // A drag is under way: every row becomes a drop target.
+  dragging: boolean
   // Opens an item's sheet with its time ready to change (from the overlap line).
   onClash: (id: string) => void
 }
@@ -138,7 +144,7 @@ export const EntryRows: React.FC<RowsProps> = ({
   ideas,
 }) => {
   const out: React.ReactNode[] = []
-  const t = Date.now()
+  const t = shared.now
   const nowMarker = (
     <li key="now" className="trip-now" aria-label={`Now, ${nowLabel}`}>
       <span>Now · {nowLabel}</span>
@@ -163,6 +169,8 @@ export const EntryRows: React.FC<RowsProps> = ({
           entering={enteringId === td.todo_id}
           clash={!!clashIds?.includes(td.todo_id)}
           idea={ideas}
+          lazyDnd={shared.lazyDnd}
+          dragging={shared.dragging}
           actions={shared.actions}
         />,
       )

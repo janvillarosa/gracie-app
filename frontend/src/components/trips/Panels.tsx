@@ -17,12 +17,21 @@ type PanelProps = {
   desktop: boolean
   // No visible title: the content carries its own heading (the item sheets).
   bare?: boolean
+  // Sheets (not the docked panel) stay mounted and close, so focus returns to the opener.
+  open?: boolean
   children: React.ReactNode
 }
 
 /** One surface for details, ideas, bookings and notes: docked over the map on desktop, a
  *  focus-trapped bottom sheet on touch screens. Rendered only while open. */
-export const Panel: React.FC<PanelProps> = ({ title, onClose, desktop, bare, children }) => {
+export const Panel: React.FC<PanelProps> = ({
+  title,
+  onClose,
+  desktop,
+  bare,
+  open = true,
+  children,
+}) => {
   const closeRef = useRef<HTMLButtonElement>(null)
   const rootRef = useRef<HTMLDivElement>(null)
   const onCloseRef = useRef(onClose)
@@ -45,7 +54,7 @@ export const Panel: React.FC<PanelProps> = ({ title, onClose, desktop, bare, chi
   }, [desktop])
   if (!desktop) {
     return (
-      <Sheet title={title} bare={bare} onClose={onClose}>
+      <Sheet title={title} bare={bare} open={open} onClose={onClose}>
         {children}
       </Sheet>
     )

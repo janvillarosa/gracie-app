@@ -208,37 +208,32 @@ export const TripSettings: React.FC = () => {
         </div>
       </Card>
 
-      {sheet === 'icon' && (
-        <Sheet title="Trip icon" onClose={() => setSheet(null)}>
-          <div className="trip-sheet-pad">
-            <IconPicker<TripIcon>
-              value={(trip.icon as TripIcon | undefined) ?? 'SUITCASE'}
-              options={TRIP_ICONS}
-              emoji={TRIP_ICON_EMOJI}
-              allowNone={false}
-              onChange={(v) => {
-                patch({ icon: v ?? 'SUITCASE' })
-                setSheet(null)
-              }}
-            />
-          </div>
-        </Sheet>
-      )}
-      {sheet === 'where' && (
-        <Sheet title="Where" height="80%" onClose={() => setSheet(null)}>
-          <div className="trip-sheet-pad">
-            <WhereSheet stops={stops} tz={trip.tz} onChange={setStops} />
-          </div>
-        </Sheet>
-      )}
-      {sheet === 'when' && (
-        <WhenSheet
-          start={trip.start_date}
-          end={trip.end_date}
-          onChange={(s, e) => patch({ start_date: s, end_date: e })}
-          onClose={() => setSheet(null)}
-        />
-      )}
+      <Sheet title="Trip icon" open={sheet === 'icon'} onClose={() => setSheet(null)}>
+        <div className="trip-sheet-pad">
+          <IconPicker<TripIcon>
+            value={(trip.icon as TripIcon | undefined) ?? 'SUITCASE'}
+            options={TRIP_ICONS}
+            emoji={TRIP_ICON_EMOJI}
+            allowNone={false}
+            onChange={(v) => {
+              patch({ icon: v ?? 'SUITCASE' })
+              setSheet(null)
+            }}
+          />
+        </div>
+      </Sheet>
+      <Sheet title="Where" height="80%" open={sheet === 'where'} onClose={() => setSheet(null)}>
+        <div className="trip-sheet-pad">
+          <WhereSheet stops={stops} tz={trip.tz} onChange={setStops} />
+        </div>
+      </Sheet>
+      <WhenSheet
+        open={sheet === 'when'}
+        start={trip.start_date}
+        end={trip.end_date}
+        onChange={(s, e) => patch({ start_date: s, end_date: e })}
+        onClose={() => setSheet(null)}
+      />
       <Modal
         open={confirming}
         title={`Delete ${trip.title}?`}

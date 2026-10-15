@@ -6,12 +6,13 @@ type Props = {
   start?: string | null
   end?: string | null
   onChange: (start: string | null, end: string | null) => void
+  open?: boolean
   onClose: () => void
 }
 
 /** "When": the one range calendar in a sheet. Used by Trip settings and by the empty trip. */
-export const WhenSheet: React.FC<Props> = ({ start, end, onChange, onClose }) => (
-  <Sheet title="When" onClose={onClose}>
+export const WhenSheet: React.FC<Props> = ({ start, end, onChange, open = true, onClose }) => (
+  <Sheet title="When" open={open} onClose={onClose}>
     <div className="trip-sheet-pad">
       <RangeCalendar start={start} end={end} onChange={onChange} onDone={onClose} />
     </div>
