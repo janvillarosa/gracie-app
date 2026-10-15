@@ -387,7 +387,9 @@ empty map), and planning before the trip happens on desktop. The user chose opti
 - **The map column** only claims space when the trip has places. Before that it shows a quiet
   empty state ("Places you add show up here"). It follows the day in view as before.
 - **One add bar** sits under the Days column, with the target chip including Ideas. The Ideas column
-  has no add field of its own.
+  has no add field of its own. On desktop it is a **floating composer** and the star of the planning
+  view: fixed to the viewport bottom over the Days column, 56px tall with 17px text, elevated, with a
+  48px yellow key and a `/` key hint. The plan scrolls clear beneath it.
 - **The header** spans the Days column: icon, title on one line, route · dates · countdown, and
   avatars on the right.
 
