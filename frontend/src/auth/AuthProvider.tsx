@@ -34,7 +34,9 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
       try {
         await getMe(apiKey)
       } catch (e) {
-        // invalid/expired key → logout and go to login
+        // Only a refused key ends the session. Offline, a timeout or a 5xx says nothing about the
+        // key, and signing out here would wipe the device's unsynced trips.
+        if ((e as { status?: number } | null)?.status !== 401) return
         setApiKey(null)
         navigate('/login', { replace: true })
       }
