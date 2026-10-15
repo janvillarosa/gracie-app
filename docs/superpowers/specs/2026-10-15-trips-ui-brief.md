@@ -492,12 +492,17 @@ Reference: `.impeccable/mocks/map-pills.html`.
   dotted.
 - **Phone:** 30px pills with 13px text and no time.
 
-## 6v. Map place popover (revised 2026-10-15)
+## 6v. The map is for viewing only (revised 2026-10-15)
 
-**No adding from the map** (user: it was clunky, and people check reviews in Google Maps anyway).
-Clicking a Google place icon shows only a tiny popover: the place name and **Open in Google Maps ↗**.
-Empty-spot clicks do nothing. Clicking our own pills selects the row. Places are added through the
-add bar's search, which still previews the pin on the map. This supersedes click-to-add in 6j.
+The map has **no click actions**: no adding, no place popover, Google place icons aren't clickable,
+and clicking our pills does nothing. It keeps viewing aids:
+- pan and zoom, with +/−, Fit day and Show all days;
+- the "off the map · Show" chip;
+- emphasis on scroll;
+- hover-linking between rows and pills, which is visual only;
+- the add-bar search preview pin.
+
+This supersedes click-to-add in 6j.
 
 ## 7. Constraints and open decisions
 
