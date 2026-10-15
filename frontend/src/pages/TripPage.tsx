@@ -65,9 +65,8 @@ import {
 } from '@components/trips/Spine'
 import { TripHeader } from '@components/trips/TripHeader'
 import { TripMap, type TripMapHandle } from '@components/trips/TripMap'
-import { MapAddPopover } from '@components/trips/MapAddPopover'
 import { MapScreen } from '@components/trips/MapScreen'
-import { pinPlace, useClickAdd, useMapFollow, useMapOk } from '@components/trips/useTripMap'
+import { useMapFollow, useMapOk } from '@components/trips/useTripMap'
 import { buildScene, hasMapPlaces, type MapPreview } from '@lib/trips/mapScene'
 import type { RowActions } from '@components/trips/TodoRow'
 import { DAY_COLOURS } from '@components/trips/tripUi'
@@ -119,9 +118,7 @@ const TripScreen: React.FC<{
   const [screenOpen, setScreenOpen] = useState(false)
   const mapPill = useRef<HTMLButtonElement>(null)
   const mapFollow = useMapFollow()
-  const [clickTarget, setClickTarget] = useState<string | null>(null)
   const [barPreview, setBarPreview] = useState<MapPreview | null>(null)
-  const mapPane = useRef<HTMLDivElement>(null)
   const [allDays, setAllDays] = useState(false)
   const [announcement, setAnnouncementRaw] = useState('')
   // The same message twice in a row still reaches a screen reader (the text changes invisibly).
@@ -532,8 +529,15 @@ const TripScreen: React.FC<{
   const emphasisDay = deskScene && !allDays && dayIdx >= 0 ? dayIdx : null
   const scene = useMemo(() => {
     const s = sceneFor(mapMode, currentDay, selected)
-    return deskScene ? { ...s, route: true, emphasisDay } : s
-  }, [sceneFor, mapMode, currentDay, selected, deskScene, emphasisDay])
+    return deskScene
+      ? {
+          ...s,
+          route: true,
+          emphasisDay,
+          ...(emphasisDay !== null && currentModel ? { emphasisLabel: shortDay(currentModel.date) } : {}),
+        }
+      : s
+  }, [sceneFor, mapMode, currentDay, selected, deskScene, emphasisDay, currentModel])
   const dayStopCount =
     deskScene && emphasisDay !== null
       ? scene.stops.filter((s) => s.dayIndex === emphasisDay).length
@@ -552,14 +556,53 @@ const TripScreen: React.FC<{
       ? { lat: focusPlace.lat, lng: focusPlace.lng }
       : null
 
-  const onPinClick = useCallback((id: string) => {
+  // A pill selects its item (brief 6v). The Days pane scrolls to the row only if it is off
+  // screen, the row gets the highlighter sweep, and on the desk the item opens in the inspector.
+  // The map's camera does not move.
+  const revealRow = useCallback((id: string, block: ScrollLogicalPosition, focus: boolean) => {
     const row = document.getElementById(`row-${id}`)
     if (!row) return
-    row.scrollIntoView?.({ block: 'center', behavior: reduced() ? 'auto' : 'smooth' })
+    row.scrollIntoView?.({ block, behavior: reduced() ? 'auto' : 'smooth' })
     row.classList.add('is-sweep')
-    row.querySelector<HTMLElement>('.trip-main, .trip-stubline')?.focus({ preventScroll: true })
+    if (focus) row.querySelector<HTMLElement>('.trip-main, .trip-stubline')?.focus({ preventScroll: true })
     if (sweepTimer.current) clearTimeout(sweepTimer.current)
     sweepTimer.current = setTimeout(() => row.classList.remove('is-sweep'), 1400)
+  }, [])
+  const onPinClick = useCallback(
+    (id: string) => {
+      revealRow(id, 'nearest', false)
+      ctx.current.openItem(id)
+    },
+    [revealRow],
+  )
+  // The phone's map view closes first, then the list scrolls to the row and lights it.
+  const onPickRow = useCallback(
+    (id: string) => {
+      const day =
+        trip.todos.find((t) => t.todo_id === id)?.day ??
+        trip.bookings.find((b) => b.booking_id === id)?.starts_at?.slice(0, 10)
+      if (day) {
+        setCurrentDay(day)
+        openDay(day)
+      }
+      let tries = 0
+      const go = () => {
+        if (document.querySelector('.map-screen') && tries++ < 60) {
+          requestAnimationFrame(go)
+          return
+        }
+        requestAnimationFrame(() => revealRow(id, 'center', true))
+      }
+      requestAnimationFrame(go)
+    },
+    [trip.todos, trip.bookings, setCurrentDay, openDay, revealRow],
+  )
+  // A pill under the pointer lights its row (visual only).
+  const linked = useRef<HTMLElement | null>(null)
+  const onPinHover = useCallback((id: string | null) => {
+    linked.current?.classList.remove('is-pin-linked')
+    linked.current = id ? document.getElementById(`row-${id}`) : null
+    linked.current?.classList.add('is-pin-linked')
   }, [])
 
   const onSpineOver = (e: React.SyntheticEvent) => {
@@ -567,29 +610,10 @@ const TripScreen: React.FC<{
     mapRef.current?.setHot(li?.dataset.entryId ?? null)
   }
 
-  const clickAdd = useClickAdd(apiKey, trip.tz)
-  // Click to add a stop (wide screens only): the card's day defaults to the one on the map.
-  const clickDefault = ideasOpen ? 'ideas' : (currentDay ?? 'ideas')
-  const clickDay = clickTarget ?? clickDefault
-  const clickLabel = clickDay === 'ideas' ? 'Ideas' : shortDay(clickDay)
-  const addFromPin = (more: boolean) => {
-    const pin = clickAdd.pin
-    const place = pin ? pinPlace(pin) : null
-    if (!pin || !place) return
-    const id = add(clickDay === 'ideas' ? null : clickDay, { title: place.name, place })
-    clickAdd.dismiss()
-    setClickTarget(null)
-    if (more && id) {
-      setFreshId(id)
-      ctx.current.openItem(id)
-    }
-  }
-  const preview: MapPreview | null = clickAdd.pin
-    ? { lat: clickAdd.pin.pos.lat, lng: clickAdd.pin.pos.lng }
-    : barPreview
+  const preview: MapPreview | null = barPreview
 
   const mapNode = (
-    <div className="trip-map" ref={mapPane}>
+    <div className="trip-map">
       <div className="trip-map-bar">
         <span className="trip-pill">
           {ideasOpen || !currentModel ? 'Ideas' : shortDay(currentModel.date)}
@@ -631,35 +655,10 @@ const TripScreen: React.FC<{
         focusPoint={focusPoint}
         focusInset={0}
         onPinClick={onPinClick}
-        onMapClick={clickAdd.onMapClick}
-        onUserMove={() => {
-          mapFollow.pause()
-          clickAdd.dismiss()
-        }}
+        onPinHover={onPinHover}
+        onShowDay={mapFollow.fit}
+        onUserMove={mapFollow.pause}
       />
-      {clickAdd.pin && (
-        <MapAddPopover
-          at={{ x: clickAdd.pin.pos.x, y: clickAdd.pin.pos.y }}
-          bounds={{
-            w: mapPane.current?.clientWidth ?? 600,
-            h: mapPane.current?.clientHeight ?? 400,
-          }}
-          place={clickAdd.pin.place}
-          degraded={clickAdd.pin.degraded}
-          name={clickAdd.pin.name}
-          onName={clickAdd.setName}
-          targetLabel={clickLabel}
-          targets={targetOptions.map((t) => ({
-            value: t.value,
-            label: t.value === 'ideas' ? 'Ideas' : t.label,
-          }))}
-          target={clickDay}
-          onTarget={setClickTarget}
-          onAdd={() => addFromPin(false)}
-          onMore={() => addFromPin(true)}
-          onDismiss={clickAdd.dismiss}
-        />
-      )}
     </div>
   )
 
@@ -1234,6 +1233,7 @@ const TripScreen: React.FC<{
             }
             scene={(date, sel) => sceneFor('day', date, sel)}
             onOpenItem={(id) => ctx.current.openItem(id)}
+            onPickRow={onPickRow}
             onClose={() => setScreenOpen(false)}
             opener={mapPill}
           />

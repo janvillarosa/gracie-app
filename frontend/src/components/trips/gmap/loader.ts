@@ -31,10 +31,6 @@ export function loadGoogle(config: MapsConfig): Promise<Google> {
   return pending
 }
 
-/** The click-to-add libraries load on the first click, not with the map. */
-export const loadPlaces = () => importLibrary('places')
-export const loadGeocoding = () => importLibrary('geocoding')
-
 /** Test hook: forget a loaded API. */
 export function resetGoogleLoader() {
   pending = null

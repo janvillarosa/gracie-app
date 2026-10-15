@@ -25,6 +25,8 @@ const MapCanvas: React.FC<Props> = (props) => {
   const latest = useRef(props)
   latest.current = props
   const [ready, setReady] = useState(false)
+  // The emphasised day is off the map (or its stops are piled up): the chip offers to show it.
+  const [offMap, setOffMap] = useState(false)
 
   useEffect(() => {
     let dead = false
@@ -41,6 +43,9 @@ const MapCanvas: React.FC<Props> = (props) => {
           config,
           props: latest.current,
           onReady: () => setReady(true),
+          onOffMap: (off) => {
+            if (!dead) setOffMap(off)
+          },
         })
       })
       .catch(failed)
@@ -65,6 +70,15 @@ const MapCanvas: React.FC<Props> = (props) => {
     >
       <div ref={box} className="trip-map-gl gm-map" role="img" aria-label={props.title} />
       {!ready && <span className="map-label-badge">Loading map</span>}
+      {offMap && props.onShowDay && (
+        <div className="gm-chip">
+          <span>{props.scene.emphasisLabel ?? 'That day'} is off the map</span>
+          <span aria-hidden>·</span>
+          <button type="button" onClick={props.onShowDay}>
+            Show
+          </button>
+        </div>
+      )}
       {props.interactive && (
         <div className="gm-zoom" role="group" aria-label="Zoom">
           <button type="button" aria-label="Zoom in" onClick={() => ctl.current?.zoomBy(1)}>

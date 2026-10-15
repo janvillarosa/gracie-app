@@ -1,17 +1,20 @@
 // The Google map behind the MapView adapter, as plain imperative code (the React component in
 // MapCanvas.tsx only owns its lifetime). It draws a MapScene as AdvancedMarkerElements with our
-// own HTML, clusters stacked stops, joins a day with a Polyline, and answers clicks.
+// own HTML (the pills of brief 6u), clusters the stacked stops of the other days, joins a day with
+// a cased line, and reports when the emphasised day is off the map. The map is for viewing (brief
+// 6v): there is no click handling on it, and a pill's click is the only action.
 //
 // Camera rule (brief 6q): the camera moves only on an explicit action. `sync` never moves it for
 // an emphasis change; it fits when the set of stops changes while `following`, on `fitToken`, and
-// pans only when an opened item or a previewed place is off screen.
+// pans only when an opened item or a previewed place is off screen. A fit takes the emphasised
+// day (the first day with places when that has none); Show all days is the explicit whole trip.
 import { MarkerClusterer, SuperClusterAlgorithm } from '@googlemaps/markerclusterer'
-import type { MapClick, MapStop } from '@lib/trips/mapScene'
+import type { MapStop } from '@lib/trips/mapScene'
 import type { MapViewProps } from '../mapView'
 import type { MapsConfig } from './config'
 import { centreFor, isVisible, projector, type Bounds } from './geometry'
-import { eligibleIds, labelText, resolveLabels, type Anchor } from './labels'
-import { loadGeocoding, loadPlaces, type Google } from './loader'
+import { eligibleIds, pillSize, pillText, resolvePills, type PillSize } from './labels'
+import type { Google } from './loader'
 import {
   clusterElement,
   createPin,
@@ -24,14 +27,14 @@ import {
 
 const MAX_FIT_ZOOM = 15
 const CLUSTER_RADIUS = 28
-const GEOCODE_WAIT_MS = 1500
 
 type Pin = {
   stop: MapStop
   marker: google.maps.marker.AdvancedMarkerElement
   el: HTMLElement
-  text: string
-  anchor: Anchor
+  name: string
+  time: string
+  size: PillSize
   hidden: boolean
 }
 
@@ -44,6 +47,8 @@ export type ControllerInit = {
   config: MapsConfig
   props: MapViewProps
   onReady?: () => void
+  // The emphasised day is (true) or is not (false) off the map: the page's chip shows or hides.
+  onOffMap?: (off: boolean) => void
 }
 
 export class MapController {
@@ -67,15 +72,17 @@ export class MapController {
   // the one that ends it and the map's start-up idle is not taken for it.
   private pendingFit: 'auto' | 'forced' | null = null
   private raf = 0
-  private clickSeq = 0
   private disposed = false
   private ready = false
+  private offMap = false
   private onReady?: () => void
+  private onOffMap?: (off: boolean) => void
 
-  constructor({ google: g, container, config, props, onReady }: ControllerInit) {
+  constructor({ google: g, container, config, props, onReady, onOffMap }: ControllerInit) {
     this.g = g
     this.container = container
     this.onReady = onReady
+    this.onOffMap = onOffMap
     const interactive = props.interactive
     this.map = new g.maps.Map(container, {
       mapId: config.mapId,
@@ -84,7 +91,8 @@ export class MapController {
       // Our own +/− and Fit buttons; only the Google logo and terms stay.
       disableDefaultUI: true,
       gestureHandling: 'greedy',
-      clickableIcons: interactive,
+      // View only: Google's place icons are not clickable and there is no info window.
+      clickableIcons: false,
       keyboardShortcuts: interactive,
       backgroundColor: cssVar('--trip-map-ground', '#E9EEE6'),
       headingInteractionEnabled: false,
@@ -124,9 +132,7 @@ export class MapController {
         this.pendingFit = null
         if (pending) this.fit(pending === 'forced')
       }
-    })
-    this.map.addListener('click', (e: google.maps.MapMouseEvent | google.maps.IconMouseEvent) => {
-      void this.handleClick(e)
+      this.checkOffMap()
     })
     this.clusterer.addListener('clusteringend', () => this.scheduleLabels())
     this.sync(props, true)
@@ -145,6 +151,8 @@ export class MapController {
       this.renderPins()
       this.renderRoutes()
       this.fit(false)
+      // An emphasis change moves nothing, but may leave the day off the map (or bring it back).
+      if (!this.activeMove) this.checkOffMap()
     }
     if (!first && next.fitToken !== prev.fitToken) this.fit(true)
     if (first || next.preview !== prev.preview) this.renderPreview()
@@ -187,18 +195,27 @@ export class MapController {
     return { north: j.north, south: j.south, east: j.east, west: j.west }
   }
 
-  /** Fit every stop in the scene, clear of the view's own chrome. An explicit fit (Fit day, a day
-   *  picked) of a scene with a day in emphasis fits that day's stops; the automatic fit on load
-   *  always takes the whole scene, so scrolling the list never moves the camera. */
+  /** The stops a fit takes: the emphasised day. When it has none, an explicit fit takes the whole
+   *  scene and the automatic one the first day with places. No emphasis (Show all days, the phone's
+   *  one day, the ideas): every stop. */
+  private fitStops(force: boolean): MapStop[] {
+    const { scene } = this.props
+    const all = scene.stops
+    const day = scene.emphasisDay
+    if (day === undefined || day === null) return all
+    const ofDay = all.filter((s) => s.dayIndex === day)
+    if (ofDay.length) return ofDay
+    if (force || !all.length) return all
+    const first = Math.min(...all.map((s) => s.dayIndex))
+    return all.filter((s) => s.dayIndex === first)
+  }
+
+  /** Fit the stops in view, clear of the view's own chrome. */
   fit(force: boolean) {
     const p = this.props
-    const all = p.scene.stops
-    const day = p.scene.emphasisDay
-    const ofDay =
-      force && day !== undefined && day !== null ? all.filter((s) => s.dayIndex === day) : []
-    const stops = ofDay.length ? ofDay : all
+    const stops = this.fitStops(force)
     if (!stops.length) return
-    const key = all.map((s) => `${s.id}:${s.lat}:${s.lng}`).join('|')
+    const key = p.scene.stops.map((s) => `${s.id}:${s.lat}:${s.lng}`).join('|')
     if (!force && (!p.following || key === this.lastFit)) return
     if (!this.ready) {
       this.pendingFit = force || this.pendingFit === 'forced' ? 'forced' : 'auto'
@@ -234,26 +251,60 @@ export class MapController {
     this.userMoved()
   }
 
+  /** Whether the emphasised day is off the map: none of its stops in view, or (zoomed out) all of
+   *  them sitting on top of one another. Reported to the page, which shows its chip. */
+  private checkOffMap() {
+    if (this.disposed || !this.ready) return
+    const { scene } = this.props
+    const day = scene.emphasisDay
+    let off = false
+    const b = this.bounds()
+    if (day !== undefined && day !== null && b) {
+      const stops = scene.stops.filter((s) => s.dayIndex === day)
+      if (stops.length) {
+        if (!stops.some((s) => isVisible(b, s, 0))) off = true
+        else if (stops.length > 1 && (this.map.getZoom() ?? 0) < MAX_FIT_ZOOM) {
+          const at = projector(b, this.map.getZoom() ?? 2)
+          const pts = stops.map((s) => at(s.lat, s.lng))
+          const xs = pts.map((q) => q.x)
+          const ys = pts.map((q) => q.y)
+          off =
+            Math.max(...xs) - Math.min(...xs) < CLUSTER_RADIUS &&
+            Math.max(...ys) - Math.min(...ys) < CLUSTER_RADIUS
+        }
+      }
+    }
+    if (off === this.offMap) return
+    this.offMap = off
+    this.onOffMap?.(off)
+  }
+
   // ---- pins, routes, preview ---------------------------------------------------------------
 
   private spec(pin: Pin): PinSpec {
-    const { scene } = this.props
-    const colours = pipColours(pin.stop, scene)
+    const { scene, nextPrefix } = this.props
     return {
-      text: pin.text,
+      name: pin.name,
+      time: pin.time,
       title: pin.stop.label,
-      ...colours,
+      ...pipColours(pin.stop, scene),
       state: pinState(pin.stop, scene, {
         hot: pin.stop.id === this.hotId,
         hidden: pin.hidden,
-        anchor: pin.anchor,
+        kicker: nextPrefix,
       }),
     }
+  }
+
+  private zFor(pin: Pin) {
+    // Lower priority numbers sit on top: selected, then next, then the day's order.
+    return 1000 - Math.min(pin.stop.priority, 500)
   }
 
   private renderPins() {
     const p = this.props
     const { scene } = p
+    const emphasis = scene.emphasisDay
     const seen = new Set<string>()
     const toCluster: google.maps.marker.AdvancedMarkerElement[] = []
     const lit: google.maps.marker.AdvancedMarkerElement[] = []
@@ -268,19 +319,42 @@ export class MapController {
           gmpClickable: true,
         })
         marker.addEventListener('gmp-click', () => this.props.onPinClick(s.id))
-        pin = { stop: s, marker, el, text: '', anchor: 'right', hidden: false }
+        // Hover-linking: the pointer on a pill lights its row.
+        el.addEventListener('pointerenter', () => this.pinHover(s.id))
+        el.addEventListener('pointerleave', () => this.pinHover(null))
+        pin = {
+          stop: s,
+          marker,
+          el,
+          name: '',
+          time: '',
+          size: { w: 0, h: 0 },
+          hidden: false,
+        }
         this.pins.set(s.id, pin)
       } else {
         pin.stop = s
         pin.marker.position = { lat: s.lat, lng: s.lng }
       }
-      pin.text = labelText(s, scene, p.labelLimit, p.nextPrefix)
+      pin.name = pillText(s, p.labelLimit)
+      // The time is for the desk; the phone's pill is smaller and leaves it out.
+      pin.time = p.interactive ? (s.time ?? '') : ''
+      pin.size = pillSize({
+        name: pin.name,
+        time: pin.time,
+        kicker: p.nextPrefix && s.id === scene.nextId,
+        compact: !p.interactive,
+      })
       pin.marker.title = s.label
-      // Lower priority numbers sit on top: selected, then next, then the day's order.
-      pin.marker.zIndex = 1000 - Math.min(s.priority, 500)
+      pin.marker.zIndex = this.zFor(pin)
       updatePin(pin.el, this.spec(pin))
-      // The next and selected stops are never clustered.
-      if (s.id === scene.nextId || s.id === scene.selectedId) lit.push(pin.marker)
+      // The next and selected stops, and every stop of the emphasised day, are never clustered;
+      // only the other days cluster.
+      const never =
+        s.id === scene.nextId ||
+        s.id === scene.selectedId ||
+        (emphasis !== undefined && emphasis !== null && s.dayIndex === emphasis)
+      if (never) lit.push(pin.marker)
       else toCluster.push(pin.marker)
     }
     for (const [id, pin] of this.pins) {
@@ -293,6 +367,14 @@ export class MapController {
     for (const m of lit) m.map = this.map
     this.clusterer.addMarkers(toCluster)
     this.scheduleLabels()
+  }
+
+  private pinHover(id: string | null) {
+    const pin = id ? this.pins.get(id) : undefined
+    // A hovered pill rises above its neighbours; the page lights its row.
+    for (const q of this.pins.values()) if (q !== pin) q.marker.zIndex = this.zFor(q)
+    if (pin) pin.marker.zIndex = 1100
+    this.props.onPinHover?.(id)
   }
 
   private renderRoutes() {
@@ -308,32 +390,103 @@ export class MapController {
       if (stops.length < 2) continue
       const colour = cssVar(one ? scene.colourVar : `--trip-day-${dayIndex % 6}`, '#2348A6')
       const dim = emphasis !== undefined && emphasis !== null && dayIndex !== emphasis
-      this.lines.push(
-        new this.g.maps.Polyline({
-          map: this.map,
-          path: stops.map((s) => ({ lat: s.lat, lng: s.lng })),
-          strokeColor: colour,
-          strokeOpacity: dim ? 0.2 : 0.55,
-          strokeWeight: 3,
-          clickable: false,
-          // Arrows along the line show the order.
-          icons: [
-            {
-              icon: {
-                path: this.g.core.SymbolPath.FORWARD_CLOSED_ARROW,
-                scale: 2.2,
-                strokeColor: colour,
-                strokeOpacity: dim ? 0.3 : 0.85,
-                fillColor: colour,
-                fillOpacity: dim ? 0.3 : 0.85,
-              },
-              offset: '50%',
-              repeat: '120px',
-            },
-          ],
-        }),
-      )
+      // A leg to a train, flight or car is dotted; the rest of the day is one solid line.
+      let run: MapStop[] = [stops[0]]
+      for (let i = 1; i < stops.length; i++) {
+        const prev = stops[i - 1]
+        const to = stops[i]
+        if (to.category === 'transport') {
+          if (run.length > 1) this.solid(run, colour, dim)
+          this.dotted(prev, to, dim)
+          run = [to]
+        } else run.push(to)
+      }
+      if (run.length > 1) this.solid(run, colour, dim)
     }
+  }
+
+  private path(stops: MapStop[]) {
+    return stops.map((s) => ({ lat: s.lat, lng: s.lng }))
+  }
+
+  /** A 5px day-colour line on a 10px white casing, with white chevrons ~100px apart. */
+  private solid(stops: MapStop[], colour: string, dim: boolean) {
+    const path = this.path(stops)
+    const fade = dim ? 0.35 : 1
+    this.lines.push(
+      new this.g.maps.Polyline({
+        map: this.map,
+        path,
+        strokeColor: '#ffffff',
+        strokeOpacity: 0.95 * fade,
+        strokeWeight: 10,
+        zIndex: 1,
+        clickable: false,
+      }),
+      new this.g.maps.Polyline({
+        map: this.map,
+        path,
+        strokeColor: colour,
+        strokeOpacity: fade,
+        strokeWeight: 5,
+        zIndex: 2,
+        clickable: false,
+        icons: [
+          {
+            icon: {
+              // A chevron pointing along the line, filled white and edged in the day colour.
+              path: 'M -3 3 L 0 -3 L 3 3 L 0 1.2 Z',
+              scale: 1.5,
+              strokeColor: colour,
+              strokeOpacity: fade,
+              strokeWeight: 1.5,
+              fillColor: '#ffffff',
+              fillOpacity: fade,
+            },
+            offset: '50px',
+            repeat: '100px',
+          },
+        ],
+      }),
+    )
+  }
+
+  /** A transport leg: dots in --trip-transport on a white casing. */
+  private dotted(from: MapStop, to: MapStop, dim: boolean) {
+    const path = this.path([from, to])
+    const fade = dim ? 0.35 : 1
+    this.lines.push(
+      new this.g.maps.Polyline({
+        map: this.map,
+        path,
+        strokeColor: '#ffffff',
+        strokeOpacity: 0.95 * fade,
+        strokeWeight: 9,
+        zIndex: 1,
+        clickable: false,
+      }),
+      new this.g.maps.Polyline({
+        map: this.map,
+        path,
+        // The line itself is invisible; the repeated dots are the leg.
+        strokeOpacity: 0,
+        zIndex: 2,
+        clickable: false,
+        icons: [
+          {
+            icon: {
+              path: this.g.core.SymbolPath.CIRCLE,
+              scale: 2.2,
+              fillColor: cssVar('--trip-transport', '#4B5563'),
+              fillOpacity: fade,
+              strokeOpacity: 0,
+            },
+            offset: '0',
+            repeat: '10px',
+          },
+        ],
+      }),
+    )
   }
 
   private renderPreview() {
@@ -363,13 +516,13 @@ export class MapController {
     for (const key of [before, id]) {
       const pin = key ? this.pins.get(key) : undefined
       if (!pin) continue
-      pin.marker.zIndex = key === id ? 1100 : 1000 - Math.min(pin.stop.priority, 500)
+      pin.marker.zIndex = key === id ? 1100 : this.zFor(pin)
       updatePin(pin.el, this.spec(pin))
     }
     this.scheduleLabels()
   }
 
-  // ---- label collision ----------------------------------------------------------------------
+  // ---- pill collision ------------------------------------------------------------------------
 
   private scheduleLabels() {
     if (this.raf || this.disposed) return
@@ -379,7 +532,7 @@ export class MapController {
     })
   }
 
-  /** After the map settles: hide the names that would overlap (pips always stay). */
+  /** After the map settles: collapse the pills that would overlap (the anchor and dot stay). */
   layoutLabels() {
     if (this.disposed) return
     const b = this.bounds()
@@ -390,7 +543,7 @@ export class MapController {
     const items = []
     const obstacles = []
     for (const [id, pin] of this.pins) {
-      // Clustered stops have no marker on the map: nothing to label or to avoid.
+      // Clustered stops have no marker on the map: nothing to place or to avoid.
       if (!pin.marker.map) continue
       const at = project(pin.stop.lat, pin.stop.lng)
       if (eligible.has(id))
@@ -398,83 +551,20 @@ export class MapController {
           id,
           x: at.x,
           y: at.y,
-          text: pin.text,
+          w: pin.size.w,
+          h: pin.size.h,
           priority: pin.stop.priority,
           hot: id === this.hotId,
         })
       else obstacles.push(at)
     }
-    const placed = resolveLabels(
-      items,
-      { width: this.container.clientWidth, height: this.container.clientHeight },
-      obstacles,
-    )
+    const kept = resolvePills(items, obstacles)
     for (const [id, pin] of this.pins) {
-      const anchor = placed.get(id)
-      const hidden = eligible.has(id) && !anchor
-      if (pin.hidden === hidden && (!anchor || pin.anchor === anchor)) continue
+      const hidden = eligible.has(id) && !!pin.marker.map && !kept.has(id)
+      if (pin.hidden === hidden) continue
       pin.hidden = hidden
-      if (anchor) pin.anchor = anchor
       updatePin(pin.el, this.spec(pin))
     }
-  }
-
-  // ---- click to add ---------------------------------------------------------------------------
-
-  private pixel(lat: number, lng: number) {
-    const b = this.bounds()
-    return b ? projector(b, this.map.getZoom() ?? 2)(lat, lng) : { x: 0, y: 0 }
-  }
-
-  /** A click on a Google place gives its place_id (Place Details, Essentials fields); an empty
-   *  spot is reverse-geocoded. The display name is Google content: shown, never stored. */
-  private async handleClick(e: google.maps.MapMouseEvent | google.maps.IconMouseEvent) {
-    const p = this.props
-    if (!p.interactive || !p.onMapClick || !e.latLng) return
-    // No Google info window on top of our own card.
-    e.stop()
-    const my = ++this.clickSeq
-    let lat = e.latLng.lat()
-    let lng = e.latLng.lng()
-    const placeId = (e as google.maps.IconMouseEvent).placeId ?? undefined
-    let displayName: string | undefined
-    let place_id: string | undefined
-    try {
-      if (placeId) {
-        const { Place } = await loadPlaces()
-        const place = new Place({ id: placeId })
-        await place.fetchFields({
-          fields: ['id', 'displayName', 'formattedAddress', 'location'],
-        })
-        place_id = placeId
-        displayName = place.displayName ?? undefined
-        if (place.location) {
-          lat = place.location.lat()
-          lng = place.location.lng()
-        }
-      } else {
-        const { Geocoder } = await loadGeocoding()
-        const found = await Promise.race([
-          new Geocoder().geocode({ location: { lat, lng } }),
-          new Promise<null>((r) => window.setTimeout(() => r(null), GEOCODE_WAIT_MS)),
-        ])
-        displayName = found?.results?.[0]?.formatted_address || undefined
-      }
-    } catch {
-      // The card still opens, as a dropped pin the person can name.
-      if (placeId) place_id = placeId
-    }
-    if (my !== this.clickSeq || this.disposed) return
-    const at = this.pixel(lat, lng)
-    const click: MapClick = {
-      lat,
-      lng,
-      x: at.x,
-      y: at.y,
-      ...(place_id ? { place_id } : {}),
-      ...(displayName ? { displayName, name: displayName } : {}),
-    }
-    this.props.onMapClick?.(click)
   }
 
   // ---- lifetime --------------------------------------------------------------------------------

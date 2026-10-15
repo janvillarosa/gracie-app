@@ -16,13 +16,15 @@ type Props = {
   scene: (date: string, selectedId: string | null) => MapScene
   // Tapping the card's text opens that item's detail.
   onOpenItem: (id: string) => void
+  // Tapping a pill closes the map, then the list scrolls to that row and lights it.
+  onPickRow: (id: string) => void
   onClose: () => void
   // Focus returns here when the map closes.
   opener?: React.RefObject<HTMLElement | null>
 }
 
 /** The phone's map: full screen and read-only. A top bar (close, day stepper), the map, and one
- *  card for the stop you tapped. Back (the gesture or button) closes it: opening pushes a
+ *  card for the day's next (or first) stop. A tap on a pill closes the map and lights its row. Back (the gesture or button) closes it: opening pushes a
  *  history entry. Mounted only while open, so nothing runs in the background. */
 export const MapScreen: React.FC<Props> = ({
   days,
@@ -30,6 +32,7 @@ export const MapScreen: React.FC<Props> = ({
   defaultSelected,
   scene,
   onOpenItem,
+  onPickRow,
   onClose,
   opener,
 }) => {
@@ -171,13 +174,16 @@ export const MapScreen: React.FC<Props> = ({
         <TripMap
           scene={shown}
           interactive={false}
-          labelLimit={14}
+          labelLimit={16}
           nextPrefix={false}
           following
           fitToken={index}
           fitPadding={{ top: 56, bottom: 48, left: 40, right: 40 }}
           title={`Map of ${day.long}, ${shown.stops.length} ${shown.stops.length === 1 ? 'stop' : 'stops'}`}
-          onPinClick={setSelected}
+          onPinClick={(id) => {
+            close()
+            onPickRow(id)
+          }}
         />
       </div>
       {stop ? (
