@@ -117,50 +117,9 @@ textarea.trip-field {
 }
 .trip-field:focus-visible,
 .trip-add-input:focus-visible,
-.trip-daylabel-input:focus-visible,
-.place-picker .ant-input:focus-visible {
+.trip-daylabel-input:focus-visible {
   outline: none;
   box-shadow: var(--focus-ring);
-}
-.trip-label {
-  display: grid;
-  gap: 4px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--muted);
-}
-.trip-label .trip-field,
-.trip-label .place-picker,
-.trip-label .place-chosen {
-  font-weight: 400;
-}
-.trip-mono,
-.trip-code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  letter-spacing: 0.08em;
-}
-.trip-editor {
-  display: grid;
-  gap: 12px;
-  padding: 12px 0 8px;
-}
-.trip-editor-pair {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-.trip-editor-foot {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.trip-editor-btns {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
 }
 .trip-error {
   color: var(--brand-red);
@@ -300,10 +259,6 @@ textarea.trip-field {
   color: var(--ink);
   font-weight: 600;
 }
-.trip-details {
-  display: grid;
-  gap: 14px;
-}
 .trip-stops {
   margin: 0;
   padding: 0;
@@ -431,9 +386,9 @@ textarea.trip-field {
   top: 12px;
   right: 14px;
   padding: 2px 10px;
-  border: 2px solid #2e6b32;
+  border: 2px solid var(--ok-ink);
   border-radius: 6px;
-  color: #2e6b32;
+  color: var(--ok-ink);
   font-weight: 700;
   font-size: 12px;
   letter-spacing: 0.08em;
@@ -873,22 +828,7 @@ textarea.trip-field {
   box-shadow: var(--paper-edge), var(--lift-0);
   overflow: hidden;
 }
-.trip-overlay {
-  position: absolute;
-  z-index: 5;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: min(420px, 100%);
-  display: flex;
-  flex-direction: column;
-  background: var(--panel);
-  box-shadow: var(--lift-2);
-}
 @media (prefers-reduced-motion: no-preference) {
-  .trip-overlay {
-    animation: trip-panel-in var(--dur-base) var(--ease-out) both;
-  }
   @keyframes trip-panel-in {
     from {
       opacity: 0;
@@ -899,32 +839,6 @@ textarea.trip-field {
       transform: none;
     }
   }
-}
-.trip-overlay-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 12px 12px 8px 16px;
-  border-bottom: 1px solid var(--border);
-}
-.trip-overlay-head h2 {
-  margin: 0;
-  font-family: var(--font-headings);
-  font-size: 18px;
-  color: var(--ink);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.trip-overlay-body {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-}
-.trip-sheet-drawer.ant-drawer-content {
-  border-radius: 20px 20px 0 0;
-  box-shadow: var(--lift-2);
 }
 .trip-pane-body {
   padding: 16px;
@@ -952,79 +866,6 @@ textarea.trip-field {
 }
 
 /* Item detail */
-.trip-detail {
-  display: grid;
-  gap: 14px;
-  padding: 16px;
-}
-.trip-fieldset {
-  border: 0;
-  margin: 0;
-  padding: 0;
-  min-width: 0;
-  display: grid;
-  gap: 12px;
-}
-.trip-byline {
-  margin: 0;
-  color: var(--muted);
-  font-size: 13px;
-}
-.trip-detail-actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.trip-move-anchor {
-  position: relative;
-  display: inline-block;
-}
-.trip-bigcode {
-  display: grid;
-  gap: 6px;
-  justify-items: start;
-  padding: 14px 16px;
-  border-radius: 14px;
-  background: var(--panel-subtle);
-  border: 1px solid var(--border);
-}
-.trip-bigcode-label {
-  color: var(--muted);
-  font-size: 13px;
-}
-.trip-bigcode-value {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 30px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  color: var(--ink);
-  overflow-wrap: anywhere;
-}
-.trip-facts {
-  margin: 0;
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 4px 14px;
-  font-size: 14px;
-}
-.trip-facts dt {
-  color: var(--muted);
-}
-.trip-facts dd {
-  margin: 0;
-  color: var(--ink);
-}
-.trip-code-wrap {
-  display: inline-flex;
-  align-items: center;
-}
-.trip-code {
-  font-weight: 700;
-  font-size: 13px;
-  color: var(--brand-blue);
-}
 .trip-bcard {
   display: flex;
   align-items: center;
@@ -1064,9 +905,6 @@ textarea.trip-field {
   }
   .trip-grip {
     display: none;
-  }
-  .trip-editor-pair {
-    grid-template-columns: 1fr;
   }
 }
 @media (min-width: 768px) and (max-width: 1023px) {
@@ -1134,13 +972,13 @@ textarea.trip-field {
   cursor: pointer;
 }
 .map-pin-disc {
-  stroke: #fff;
+  stroke: var(--on-pin);
   stroke-width: 3;
   transform-box: fill-box;
   transform-origin: center;
 }
 .map-pin text {
-  fill: #fff;
+  fill: var(--on-pin);
   font: 700 13px var(--font-body);
   pointer-events: none;
 }
@@ -1181,7 +1019,7 @@ textarea.trip-field {
   padding: 1px 6px;
   border-radius: 4px;
   background: rgba(255, 255, 255, 0.85);
-  color: #555;
+  color: var(--muted);
   font-size: 11px;
 }
 .trip-map-bar {
@@ -1271,24 +1109,6 @@ textarea.trip-field {
   border: 0;
   font: inherit;
   cursor: pointer;
-}
-.trip-days-pop .ant-popover-inner {
-  padding: 4px 8px;
-  min-width: 280px;
-  box-shadow: var(--lift-3);
-}
-.trip-dayrow {
-  background: none;
-  border: 0;
-  width: 100%;
-  text-align: left;
-  font: inherit;
-  cursor: pointer;
-}
-.trip-dayrow[aria-current='true'] .list-row-name {
-  text-decoration: underline;
-  text-decoration-color: var(--brand-yellow-deep);
-  text-underline-offset: 4px;
 }
 .trip-header-row {
   display: flex;
@@ -1626,27 +1446,6 @@ textarea.trip-field {
     font-size: 30px;
   }
 }
-.trip-reveal {
-  display: grid;
-  gap: 6px;
-  justify-items: start;
-}
-.trip-reveal-code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 30px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  color: var(--ink);
-  overflow-wrap: anywhere;
-}
-.trip-reveal.is-compact .trip-reveal-code {
-  font-size: 16px;
-  letter-spacing: 0.08em;
-}
-.trip-reveal-actions {
-  display: inline-flex;
-  gap: 6px;
-}
 
 /* ---- header: the date line, avatars and the pill share one line ------------------------ */
 .trip-metaline {
@@ -1660,210 +1459,12 @@ textarea.trip-field {
 }
 
 /* ---- the item sheet: one editor, grouped by spacing and hairlines, not boxes ------------- */
-.trip-sheet {
-  display: grid;
-  gap: 4px;
-  padding: 8px 20px 24px;
-}
-.trip-sheet-headline {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 4px 0 8px;
-}
-.trip-sheet-headline .trip-check {
-  margin-top: 8px;
-}
-.trip-sheet-title {
-  flex: 1;
-  min-width: 0;
-  padding: 0;
-  background: none;
-  border: 0;
-  font-family: var(--font-headings);
-  font-size: 24px;
-  font-weight: 600;
-  line-height: 1.25;
-  color: var(--ink);
-  outline: none;
-  text-overflow: ellipsis;
-}
-.trip-sheet-title:focus-visible {
-  box-shadow: var(--focus-ring);
-  border-radius: 6px;
-}
-.trip-sheet-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  min-height: 48px;
-  padding: 0;
-  background: none;
-  border: 0;
-  border-top: 1px solid var(--border);
-  font: inherit;
-  color: var(--ink);
-  text-align: left;
-  cursor: pointer;
-}
-.trip-sheet-row-icon {
-  display: grid;
-  place-items: center;
-  color: var(--muted);
-  font-size: 18px;
-}
-.trip-sheet-row-text {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 .trip-muted {
   color: var(--muted);
-}
-.trip-sheet-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 10px 0;
-  border-top: 1px solid var(--border);
-}
-.trip-chip {
-  min-height: 36px;
-  padding: 0 14px;
-  font: inherit;
-  font-size: 15px;
-  color: var(--ink);
-  background: var(--panel-subtle);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-}
-.trip-chip.is-add {
-  color: var(--muted);
-  cursor: pointer;
-}
-.trip-chip:focus-visible,
-.trip-pick-row:focus-visible,
-.trip-sheet-row:focus-visible,
-.trip-stamp-btn:focus-visible {
-  box-shadow: var(--focus-ring);
-  outline: none;
-}
-.trip-sheet-stamps {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  padding: 10px 0;
-  border-top: 1px solid var(--border);
-}
-.trip-stamp-btn {
-  cursor: pointer;
-  opacity: 0.55;
-  min-height: 28px;
-}
-.trip-stamp-btn.is-on {
-  opacity: 1;
-  outline: 2px solid currentColor;
-  outline-offset: 1px;
-}
-.trip-sheet-sub {
-  padding: 0 0 10px 30px;
-}
-.trip-sheet-notes,
-.trip-sheet-line {
-  width: 100%;
-  padding: 10px 0;
-  font: inherit;
-  font-size: 16px;
-  color: var(--ink);
-  background: none;
-  border: 0;
-  border-top: 1px solid var(--border);
-  resize: none;
-  outline: none;
-}
-.trip-sheet-notes:focus-visible,
-.trip-sheet-line:focus-visible {
-  box-shadow: var(--focus-ring);
-}
-.trip-sheet-foot {
-  display: grid;
-  gap: 10px;
-  justify-items: start;
-  padding-top: 12px;
-  border-top: 1px solid var(--border);
-}
-.trip-byline {
-  margin: 0;
-  color: var(--muted);
-  font-size: 13px;
-}
-.trip-delete {
-  padding: 8px 0;
-  min-height: 44px;
-  background: none;
-  border: 0;
-  color: var(--brand-red);
-  font: inherit;
-  font-size: 14px;
-  cursor: pointer;
-}
-.trip-sheet-back {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-  font-weight: 600;
-}
-.trip-pick {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-.trip-pick-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  min-height: 48px;
-  background: none;
-  border: 0;
-  border-top: 1px solid var(--border);
-  font: inherit;
-  text-align: left;
-  color: var(--ink);
-  cursor: pointer;
-}
-.trip-pick-row[aria-pressed='true'] {
-  font-weight: 650;
-}
-.trip-fromto {
-  display: grid;
-  gap: 8px;
-  padding: 10px 0;
-  border-top: 1px solid var(--border);
-}
-.trip-fromto-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-.trip-fromto-label {
-  width: 40px;
-  color: var(--muted);
-  font-size: 13px;
 }
 .trip-stub-icon.is-big {
   font-size: 24px;
   margin-top: 6px;
-}
-.trip-overlay-head.is-bare {
-  justify-content: flex-end;
-  border-bottom: 0;
-  padding-bottom: 0;
 }
 
 /* ---- the ticket slip: where a confirmation code lives ----------------------------------- */
@@ -1878,24 +1479,6 @@ textarea.trip-field {
   /* The tear edge is at the top, like the stub of a ticket. */
   border-top: 2px dashed var(--border-strong);
 }
-.trip-slip-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0;
-  font-weight: 650;
-  color: var(--ink);
-}
-.trip-slip-icon {
-  display: grid;
-  place-items: center;
-  color: var(--muted);
-}
-.trip-slip-line {
-  margin: 0;
-  color: var(--muted);
-  font-size: 14px;
-}
 .trip-slip-code {
   margin: 10px 0 6px;
   font-family: var(--font-headings);
@@ -1905,17 +1488,6 @@ textarea.trip-field {
   letter-spacing: 0.12em;
   color: var(--ink);
   overflow-wrap: anywhere;
-}
-.trip-slip-pop .ant-popover-inner {
-  padding: 0;
-  overflow: hidden;
-}
-.trip-slip-drawer .ant-drawer-body {
-  padding: 8px 16px 24px;
-}
-.trip-slip-copy {
-  margin-bottom: 8px;
-  color: var(--muted);
 }
 
 /* ---- tighter rows, and the add bar above the map handle -------------------------------- */
@@ -1927,68 +1499,11 @@ textarea.trip-field {
   font-size: 12.5px;
 }
 /* ---- trip settings: grouped rows on paper, no boxed inputs ------------------------------ */
-.settings-identity {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding-bottom: 8px;
-}
 .settings-icon {
   width: 56px;
   height: 56px;
   font-size: 28px;
   cursor: pointer;
-}
-.settings-identity .trip-sheet-title {
-  font-size: 28px;
-}
-.settings-group {
-  margin-top: 20px;
-}
-.settings-group h4 {
-  margin: 0 0 4px;
-  font-family: var(--font-headings);
-  color: var(--ink-heading);
-}
-.settings-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  min-height: 64px;
-  padding: 0;
-  background: none;
-  border: 0;
-  border-top: 1px solid var(--border);
-  font: inherit;
-  color: var(--ink);
-  text-align: left;
-  text-decoration: none;
-  cursor: pointer;
-}
-.settings-row:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-.settings-row:focus-visible {
-  box-shadow: var(--focus-ring);
-  outline: none;
-}
-.settings-row .list-row-text {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-}
-.settings-row .list-row-name {
-  font-weight: 600;
-}
-.settings-row .list-row-desc {
-  color: var(--muted);
-}
-.settings-danger {
-  margin-top: 40px;
-  padding-top: 8px;
 }
 .list-row-desc.is-now {
   color: var(--ink);
@@ -2095,68 +1610,29 @@ textarea.trip-field {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.add-launch {
-  display: block;
-  box-sizing: border-box;
-  min-height: 44px;
-  padding: 10px 16px;
-  border: 1px solid var(--border-strong);
-  border-radius: 22px;
-  background: var(--panel-subtle);
-  color: var(--muted);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-.add-launch:focus-visible {
-  box-shadow: var(--focus-ring);
-  outline: none;
-}
 .trip-map-drawer .trip-map {
   min-height: 0;
 }
 
 /* ---- an overlap: one quiet amber line under the day header, a rule on both rows ---------- */
-:root {
-  --trip-warn-bg: #fff4d6;
-  --trip-warn-ink: #7a4b00;
-  --trip-warn-rule: var(--brand-yellow-deep);
-}
 .trip-clash {
-  display: block;
-  box-sizing: border-box;
-  width: 100%;
-  min-height: 36px;
   margin: 2px 0 6px;
-  padding: 6px 12px;
-  border: 0;
-  border-left: 3px solid var(--trip-warn-rule);
-  border-radius: 0 10px 10px 0;
-  background: var(--trip-warn-bg);
-  color: var(--trip-warn-ink);
-  font: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1.35;
-  text-align: left;
-  cursor: pointer;
+  padding-left: calc(var(--lead-col) + var(--tcol));
 }
-.trip-clash:focus-visible {
-  box-shadow: var(--focus-ring);
-  outline: none;
+.trip-row.is-clash .trip-time,
+.trip-stub.is-clash .trip-time {
+  position: relative;
+  color: var(--warn-ink);
+  font-weight: 700;
 }
-.trip-row.is-clash,
-.trip-stub.is-clash {
-  box-shadow: inset 3px 0 0 var(--trip-warn-rule);
-}
-.trip-flag-dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  margin-left: 8px;
-  border-radius: 50%;
-  background: var(--trip-warn-rule);
-  vertical-align: middle;
+.trip-time-flag {
+  position: absolute;
+  top: 50%;
+  right: 100%;
+  width: 12px;
+  height: 12px;
+  margin-right: 1px;
+  transform: translateY(-50%);
 }
 .trip-outside-note {
   margin: 0 0 8px;
@@ -2164,45 +1640,7 @@ textarea.trip-field {
 }
 
 /* ---- the one bottom sheet: handle bar, optional Outfit title, no divider ------------------- */
-.trip-sheet-drawer.ant-drawer-content {
-  max-height: 90dvh;
-}
-.trip-sheet-drawer.ant-drawer-content::before {
-  content: '';
-  display: block;
-  flex: none;
-  width: 36px;
-  height: 4px;
-  margin: 8px auto 0;
-  border-radius: 2px;
-  background: var(--border-strong);
-}
-.trip-sheet-drawer .ant-drawer-wrapper-body {
-  min-height: 0;
-}
-.trip-sheet-drawer .ant-drawer-header {
-  padding: 12px 24px 4px;
-  border-bottom: 0;
-}
-.trip-sheet-drawer .ant-drawer-title {
-  font-family: var(--font-headings);
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--ink);
-}
-.trip-sheet-drawer.is-bare .ant-drawer-header {
-  display: none;
-}
 @media (max-width: 1023px) {
-  .trip-sheet-drawer .ant-drawer-close {
-    display: none;
-  }
-}
-.trip-sheet-pad {
-  padding: 4px 24px 24px;
-}
-.trip-sheet-drawer .trip-daylist {
-  padding: 0 24px 24px;
 }
 .trip-cal-foot {
   display: flex;
@@ -2345,53 +1783,6 @@ textarea.trip-field {
 }
 
 /* ---- the edit sheet: a 24px heading, real chips on one row, one quiet stamp --------------- */
-.trip-sheet-title {
-  font-weight: 700;
-}
-.trip-sheet-headline {
-  align-items: center;
-}
-.trip-sheet-headline .trip-check {
-  margin-top: 0;
-}
-.trip-sheet-chips {
-  align-items: center;
-}
-.trip-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-  white-space: nowrap;
-}
-.trip-chip svg {
-  color: var(--muted);
-  font-size: 12px;
-}
-.trip-chip:disabled {
-  cursor: default;
-}
-.trip-chip .category-tag {
-  margin: 0;
-}
-.trip-chip-pop .ant-popover-inner {
-  padding: 4px;
-  min-width: 200px;
-}
-.trip-pick-scroll {
-  max-height: 260px;
-  overflow-y: auto;
-}
-.trip-chip-pop .trip-pick-row,
-.trip-sheet-pad .trip-pick-row {
-  padding: 0 12px;
-  border-top: 0;
-  border-radius: 10px;
-}
-.trip-pick-row[aria-selected='true'] {
-  font-weight: 650;
-  background: color-mix(in srgb, var(--brand-yellow) 22%, white);
-}
 .trip-custom-length {
   display: flex;
   gap: 8px;
@@ -2401,21 +1792,6 @@ textarea.trip-field {
   width: 96px;
 }
 /* The stamp the item has is the only loud one; the others wait in the picker. */
-.trip-sheet-stamps {
-  padding: 8px;
-  border-top: 0;
-}
-.trip-stamp-btn {
-  opacity: 0.7;
-}
-.trip-stamp-btn.is-on {
-  opacity: 1;
-  outline: 0;
-}
-.trip-chip .trip-stamp-btn {
-  min-height: 0;
-  cursor: inherit;
-}
 
 /* ---- ONE row grid for every line in the plan sheet ----------------------------------------
    [lead 24] 12 [time 48] 12 [title 1fr] [trail]. The lead holds a checkbox, a booking icon or
@@ -2515,9 +1891,6 @@ textarea.trip-field {
   border: 0;
   border-radius: 0;
   text-align: left;
-}
-.trip-clash {
-  padding-left: calc(var(--lead-col) + var(--tcol));
 }
 /* Bookings list: icon in the lead, title column for the text. */
 .trip-bcard-main {
@@ -2673,19 +2046,6 @@ textarea.trip-field {
 .trip-kindchip .trip-kind-icon {
   font-size: 16px;
 }
-.trip-sheet-titlewrap {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-.trip-sheet-titlewrap .trip-sheet-title {
-  flex: 1 1 0;
-}
-.trip-sheet-titlewrap .trip-error {
-  flex-basis: 100%;
-  margin: 0;
-}
 .trip-when {
   display: flex;
   flex-wrap: wrap;
@@ -2699,22 +2059,6 @@ textarea.trip-field {
   color: var(--muted);
   font-size: 13px;
 }
-.trip-chip-zone {
-  color: var(--muted);
-  font-size: 13px;
-}
-.trip-code-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-height: 48px;
-  border-top: 1px solid var(--border);
-}
-.trip-code-label {
-  flex: 0 0 76px;
-  color: var(--muted);
-  font-size: 13px;
-}
 .trip-linked {
   padding: 6px 0;
   background: none;
@@ -2724,11 +2068,6 @@ textarea.trip-field {
   font-size: 13px;
   text-align: left;
   cursor: pointer;
-}
-.trip-sheet-foot.is-create {
-  border-top: 0;
-  padding-top: 8px;
-  justify-items: stretch;
 }
 .trip-zone-field {
   display: grid;
@@ -2820,7 +2159,7 @@ textarea.trip-field {
   fill: var(--ink);
   font: 600 12.5px var(--font-body);
   paint-order: stroke;
-  stroke: #fff;
+  stroke: var(--on-pin);
   stroke-width: 2px;
   stroke-linejoin: round;
   pointer-events: none;
@@ -2830,7 +2169,7 @@ textarea.trip-field {
   text-decoration: line-through;
 }
 .map-next-pill {
-  fill: #fff;
+  fill: var(--on-pin);
   stroke: var(--brand-yellow);
   stroke-width: 2px;
 }

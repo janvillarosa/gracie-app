@@ -5,6 +5,7 @@ import type { Booking, TripTodo } from '@api/tripTypes'
 import { shortDay, type Clash, type DayModel, type Entry } from '@lib/trips/schedule'
 import type { ConflictNote } from '@lib/trips/store'
 import { memberName, type Member } from '@lib/trips/hooks'
+import { Note } from '@components/ui'
 import { BookingLine } from './Bookings'
 import type { MoveTarget } from './MoveMenu'
 import { TodoRow, type RowActions } from './TodoRow'
@@ -397,9 +398,9 @@ export const DaySection = React.memo<DayProps>(function DaySection({
         {celebrating && <span className="trip-stamp">Day done</span>}
       </header>
       {clash && (
-        <button type="button" className="trip-clash" onClick={() => shared.onClash(clash.laterId)}>
+        <Note tone="warn" className="trip-clash" onClick={() => shared.onClash(clash.laterId)}>
           {clash.text}
-        </button>
+        </Note>
       )}
       {day.entries.length === 0 && !stay ? (
         <p className="trip-empty-row">Nothing planned yet</p>

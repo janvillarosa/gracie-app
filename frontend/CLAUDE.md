@@ -91,18 +91,50 @@ why the config forces a single fork.
   store (outbox), never straight to the API. Ids are client-made (`trip_`/`ttd_`/`tbk_` + 32 hex).
 - **Tabs:** every tab group on the House, List and Trip screens uses `components/PillNav.tsx`.
   Do not add another tab style.
-- **Map and tiles-origin exception:** the map is lazy (`MapCanvas`: maplibre-gl, pmtiles,
-  `@protomaps/basemaps`) and loads only when `VITE_PMTILES_URL` is set (optional
-  `VITE_GLYPHS_URL`; without it text layers are dropped). That origin is the one allowed
-  non-self origin and is served by us; no third-party tile or glyph hosts. Without it the page
-  draws the plain SVG "Offline map".
-- **Dev mock (no backend needed):** `cd frontend && VITE_MOCK_TRIPS=1 pnpm dev`
-  (optionally `--port 5174 --strictPort --host 127.0.0.1`). It boots an MSW worker (a fetch
+- **Map, tiles and offline:** the map is lazy (`MapCanvas`: maplibre-gl, `@protomaps/basemaps`; the
+  provider sits behind the `MapViewProps` adapter in `components/trips/mapView.ts`). Tiles come from
+  the Protomaps hosted API TileJSON `https://api.protomaps.com/tiles/v4.json?key=${VITE_PROTOMAPS_API_KEY}`.
+  That one origin (`api.protomaps.com`) is the only allowed non-self origin; glyphs load only from
+  `VITE_GLYPHS_URL` when set (otherwise labels use a hover tag). With no key the page draws the plain
+  SVG "Map preview". No service worker prefetches third-party tiles. The map chunk must stay under
+  **320 KB gzip** (JS + CSS); trip route chunks stay near 50 KB. On phones the map is a read-only
+  full-screen view (history `#map`); pan/zoom/click-to-add are desktop only. Offline the map pane and
+  its button are not rendered (5 s debounce), the plan widens, and no map chunk is requested.
+- **Dev mock (no backend needed):** `cd frontend && VITE_MOCK_TRIPS=1 pnpm dev --port 5174 --strictPort --host 127.0.0.1`
+  (or just `pnpm dev`). It boots an MSW worker (a fetch
   shim if a service worker can't register) backed by `mocks/tripsServer.ts`, seeded from
   `mocks/seed.ts` ("Lisbon & Porto", dates relative to today). `?mockPhase=` picks the trip
   phase. Dev only; never in a production build.
 - **Tests:** `__tests__/trips.helpers.tsx` has `renderTrips`, `seed`, `setViewport`,
   `lisbonTrip`, `meState`, `resetTripsWorld`; the shared in-memory `tripServer` is in `testServer.ts`.
+
+## UI primitives (`src/components/ui/`)
+
+Every trip overlay (and the House's New list / Edit list) is a composition of these, one file
+each, styled by `ui/ui.css` from tokens on `:root` in `styles.css` (`--space-*`, `--radius-*`,
+`--control-*`, `--row-h`, `--lead/--gap/--time-w`, `--sheet-*`, `--tier-*`, `--warn-*`). Import from
+`@components/ui`; do not write one-off buttons, fields, chips or modals.
+
+| Primitive | File | Is |
+|---|---|---|
+| `Sheet` | `Sheet.tsx` | The one overlay. Variants `sheet`, `panel` (docked over the map), `slip`, `confirm`, `chips` (popover on wide, small sheet elsewhere, hangs from `anchor`). Header: phone drag handle + close key; closes with the key, Esc (innermost only), scrim and swipe-down; `dirty` asks "Discard this?"; focus trap and return. Slots `identity`, `actions`, `details`, `footer` always lay out in that order. |
+| `SheetIdentity`, `SheetTitle` | `SheetIdentity.tsx`, `SheetTitle.tsx` | Tier 1: leading mark, Outfit title (inline-editable, with the server's title limit), one muted context line. |
+| `SheetActions` | `SheetActions.tsx` | Tier 2: the one yellow key and at most one quiet button. |
+| `DetailGroup`, `NavRow` | `DetailGroup.tsx`, `NavRow.tsx` | Tier 3: a tinted group of 52px rows (label, value, chevron); a row is a button, link or opens a picker (`Sheet variant="chips"`). |
+| `SheetFooter` | `SheetFooter.tsx` | Tier 4: "Added by Mia" and a red Delete. |
+| `Button` | `Button.tsx` | `key`, `quiet`, `text` (`danger`); `href` makes it a link. |
+| `Chip`, `ChipGroup` | `Chip.tsx`, `ChipGroup.tsx` | A pill that opens a picker; the large toggle choices (kinds, categories, times). |
+| `Field`, `Switch` | `Field.tsx`, `Switch.tsx` | Borderless text field (with inline problem text); the yellow switch. |
+| `Stamp`, `Pip` | `Stamp.tsx`, `Pip.tsx` | Category/state tag; the colour dot. |
+| `Row` | `Row.tsx` | The row grid `[lead 24] 12 [time 48] 12 [title] [trail]`. |
+| `Note`, `SectionLabel`, `EmptyState` | `Note.tsx`, `SectionLabel.tsx`, `EmptyState.tsx` | Muted/warn one-liner (warn = amber text + glyph, no side rule), small caps label, friendly empty line. |
+
+Rules, enforced by `__tests__/ui.enforcement.test.ts`: trip files and `RoomPage` import no Ant
+`Modal`/`Drawer`/`Popover` (trip files also no `Input`/`Select`/`Button`/`Switch`/`DatePicker`);
+`trips.css` and `ui.css` contain no hex colours outside `:root` and no side-stripe accent borders;
+every token `ui.css` uses is defined. A sheet has at most one `key` Button (`ui.helpers.ts`).
+The dev-only gallery at `/dev/ui` shows every primitive in a phone and a desktop frame. Pickers
+(`components/trips/pickers.tsx`) apply their choice at once; sheets autosave.
 
 ## Ratchets (raise over time; never lower)
 

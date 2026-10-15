@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Button } from '@components/ui'
 import { Checkbox } from 'antd'
-import { CalendarPlus, DotsSixVertical, Trash } from '@phosphor-icons/react'
+import { CalendarPlus, DotsSixVertical, Trash, Warning } from '@phosphor-icons/react'
 import { useDraggable, useDroppable } from '@dnd-kit/core'
 import type { TripTodo } from '@api/tripTypes'
 import { confettiAt } from '@lib/confetti'
@@ -183,7 +183,12 @@ export const TodoRow = React.memo<Props>(function TodoRow({
                 />
               </span>
             )}
-            {todo.start_time && <span className="trip-time">{todo.start_time}</span>}
+            {todo.start_time && (
+              <span className="trip-time">
+                {clash && <Warning className="trip-time-flag" weight="bold" aria-hidden />}
+                {todo.start_time}
+              </span>
+            )}
             <button
               type="button"
               className="trip-main"

@@ -8,6 +8,7 @@ import {
   bookingSub,
   inferKind,
   joinDt,
+  normalizeZone,
   splitDt,
 } from '@lib/trips/bookings'
 import { LIMITS } from '@lib/trips/limits'
@@ -61,15 +62,6 @@ type Props = {
 }
 
 type Draft = Partial<Booking>
-
-const validZone = (z: string) => {
-  try {
-    new Intl.DateTimeFormat('en', { timeZone: z })
-    return true
-  } catch {
-    return false
-  }
-}
 
 /** Which rows a kind shows, and what its places and times are called. */
 const KIND_ROWS: Record<
@@ -509,10 +501,10 @@ const ZoneSheet: React.FC<{
   const [error, setError] = useState('')
   const [zones, setZones] = useState<string[] | null>(null)
   const commit = (field: 'start_tz' | 'end_tz', v: string, cur?: string | null) => {
-    const z = v.trim()
-    if (z && !validZone(z)) return setError('Time zones look like Europe/Lisbon.')
+    const z = v.trim() ? normalizeZone(v) : null
+    if (v.trim() && !z) return setError('Time zones look like Europe/Lisbon.')
     setError('')
-    if ((z || null) !== (cur ?? null)) onSave({ [field]: z || null })
+    if (z !== (cur ?? null)) onSave({ [field]: z })
   }
   // The long list of zone names is only built once a field is used.
   const load = () =>

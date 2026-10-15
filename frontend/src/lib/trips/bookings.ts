@@ -84,3 +84,22 @@ export function bookingHeadline(b: Booking): string {
   const m = /^(.+?) to (.+)$/.exec(b.title)
   return m && (b.kind === 'flight' || b.kind === 'train') ? `${m[1]} → ${m[2]}` : b.title
 }
+
+/** A typed time zone as the canonical IANA name ("europe/lisbon" → "Europe/Lisbon"), or null when
+ *  it is not a zone. Where the engine lists its zones, the name must be one of them. */
+export function normalizeZone(input: string): string | null {
+  const z = input.trim()
+  if (!z) return null
+  let name: string
+  try {
+    name = new Intl.DateTimeFormat('en', { timeZone: z }).resolvedOptions().timeZone
+  } catch {
+    return null
+  }
+  const list = (
+    Intl as unknown as { supportedValuesOf?: (k: string) => string[] }
+  ).supportedValuesOf?.('timeZone')
+  // The engines leave UTC out of that list; it is still a zone.
+  if (list?.length && name !== 'UTC' && !list.includes(name)) return null
+  return name
+}

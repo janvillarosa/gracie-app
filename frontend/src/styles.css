@@ -2892,6 +2892,8 @@ textarea.notes-textarea {
   --warn-ink: #7A4B00;
   --warn-rule: var(--brand-yellow-deep);
   --on-red: #FFFFFF;
+  --on-pin: #FFFFFF;
+  --ok-ink: #2E6B32;
 
   /* Category stamps: tinted ground, darker ink of the same hue (4.5:1 on the tint). */
   --trip-cat-food-bg: #FDE7D2;

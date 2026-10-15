@@ -31,6 +31,10 @@ import { TRIP_ICONS, TRIP_ICON_EMOJI, toTripEmoji, type TripIcon } from '../icon
 import { ChipGroup } from '@components/ui'
 import '../trips.css'
 
+/** The same place by identity (OSM ref, else coordinates), never by name: two places can share one. */
+const samePlace = (a: Place, b?: Place) =>
+  !!b && (a.osm_ref && b.osm_ref ? a.osm_ref === b.osm_ref : a.lat === b.lat && a.lng === b.lng)
+
 type SheetKind = 'icon' | 'where' | 'when' | null
 
 /** Trip settings, as a page in the same tiers as a sheet: the trip's identity, then what is
@@ -87,7 +91,7 @@ export const TripSettings: React.FC = () => {
   const setStops = (next: Place[]) => {
     // Changing where the trip starts also moves its zone (an explicit edit), when the place has one.
     const first = next[0]
-    const moved = first && first.name !== stops[0]?.name && first.tz
+    const moved = first && !samePlace(first, stops[0]) && first.tz
     patch({ stops: next, destination: first ?? null, ...(moved ? { tz: first.tz } : {}) })
   }
   const days = trip.start_date && trip.end_date ? diffDays(trip.end_date, trip.start_date) + 1 : 0

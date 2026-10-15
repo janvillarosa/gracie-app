@@ -1,6 +1,5 @@
 import React, { useId, useState } from 'react'
-import { Button } from '@components/ui'
-import { Input } from 'antd'
+import { Button, Field } from '@components/ui'
 import { MapPin, X } from '@phosphor-icons/react'
 import { useAuth } from '@auth/AuthProvider'
 import type { Place } from '@api/tripTypes'
@@ -110,7 +109,7 @@ export const PlacePicker: React.FC<Props> = ({
 
   return (
     <div className="place-picker">
-      <Input
+      <Field
         role="combobox"
         aria-label={label}
         aria-expanded={open}

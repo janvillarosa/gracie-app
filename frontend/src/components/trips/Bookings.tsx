@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Button } from '@components/ui'
-import { CaretDown, CaretRight } from '@phosphor-icons/react'
+import { CaretDown, CaretRight, Warning } from '@phosphor-icons/react'
 import type { Booking } from '@api/tripTypes'
 import { bookingHeadline, bookingSub, groupBookings, nextMeta, nowMeta } from '@lib/trips/bookings'
 import { KIND_ICON } from './tripUi'
@@ -58,6 +58,7 @@ export const BookingLine = React.memo<LineProps>(function BookingLine({
       >
         <span className="trip-stub-icon">{KIND_ICON[b.kind]}</span>
         <span className="trip-time">
+          {clash && <Warning className="trip-time-flag" weight="bold" aria-hidden />}
           {tonight ? 'Tonight' : (b.starts_at?.split('T')[1] ?? '')}
         </span>
         <span className="trip-stub-title">{b.title}</span>

@@ -20,6 +20,8 @@ import {
   todo,
 } from './trips.helpers'
 
+import { expectAtMostOneKey } from './ui.helpers'
+
 const scrollIntoView = vi.fn()
 const TRIP = lisbonTrip()
 const open = (id = TRIP.trip_id) => renderTrips(`/app/trips/${id}`)
@@ -558,6 +560,7 @@ describe('Rows', () => {
     // The title is one borderless heading, not repeated in a header.
     const title = within(panel).getByLabelText('Title')
     expect(title).toHaveValue('Lunch at Tascantiga')
+    expectAtMostOneKey(panel)
     // The details are one group of rows: label on the left, value on the right.
     const details = within(panel).getByRole('group', { name: 'Details' })
     expect(within(details).getByRole('button', { name: /^When /i })).toHaveTextContent(

@@ -2,7 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Booking } from '@api/tripTypes'
-import { groupBookings, inferKind } from '@lib/trips/bookings'
+import { groupBookings, inferKind, normalizeZone } from '@lib/trips/bookings'
 import { tripServer } from '../testServer'
 import {
   MIA,
@@ -13,6 +13,7 @@ import {
   seed,
   setViewport,
 } from './trips.helpers'
+import { expectAtMostOneKey } from './ui.helpers'
 
 const TRIP = lisbonTrip()
 const serverTrip = () => tripServer.trips.get(TRIP.trip_id)
@@ -57,6 +58,16 @@ describe('guessing a kind from what was typed', () => {
     ['', undefined],
   ])('%s → %s', (text, kind) => {
     expect(inferKind(text as string)).toBe(kind)
+  })
+})
+
+describe('time zone names', () => {
+  it('are sent in their canonical form, and only when they are zones', () => {
+    expect(normalizeZone('europe/lisbon')).toBe('Europe/Lisbon')
+    expect(normalizeZone(' Europe/London ')).toBe('Europe/London')
+    expect(normalizeZone('UTC')).toBe('UTC')
+    expect(normalizeZone('Mars/Olympus')).toBeNull()
+    expect(normalizeZone('')).toBeNull()
   })
 })
 
@@ -198,6 +209,7 @@ describe('adding a booking', () => {
     expect(within(sheet).queryByRole('button', { name: 'Add booking' })).not.toBeInTheDocument()
     await userEvent.click(within(sheet).getByRole('button', { name: 'Train' }))
     const create = within(sheet).getByRole('button', { name: 'Add booking' })
+    expectAtMostOneKey(sheet)
     expect(create).toBeDisabled()
     await userEvent.type(within(sheet).getByLabelText('Title'), 'Lisbon to Porto{Enter}')
     expect(create).toBeEnabled()
@@ -265,6 +277,19 @@ describe('adding a booking', () => {
       expect(screen.queryByRole('dialog', { name: 'New booking' })).not.toBeInTheDocument(),
     )
     expect(serverTrip()?.bookings.some((b) => b.title.startsWith('Hotel Ribeira'))).toBe(false)
+  })
+})
+
+describe('the bookings cap', () => {
+  it('says so at 50 bookings and sends nothing more', async () => {
+    const t = lisbonTrip()
+    t.bookings = Array.from({ length: 50 }, (_, i) => bk(i + 1, { title: `Booking ${i + 1}` }))
+    seed(t)
+    renderTrips(`/app/trips/${t.trip_id}`)
+    const sheet = await newSheet('Hotel Extra')
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Add booking' }))
+    expect(await screen.findByText(/all the bookings it can hold \(50\)/)).toBeInTheDocument()
+    expect(tripServer.trips.get(t.trip_id)?.bookings).toHaveLength(50)
   })
 })
 
@@ -365,7 +390,7 @@ describe('editing a booking', () => {
     await userEvent.tab()
     expect(await screen.findByRole('alert')).toHaveTextContent(/Europe\/Lisbon/)
     await userEvent.clear(zone)
-    await userEvent.type(zone, 'Europe/London')
+    await userEvent.type(zone, 'europe/london')
     await userEvent.tab()
     const t = () => serverTrip()?.bookings.find((b) => b.booking_id === stay.booking_id)
     await waitFor(() => expect(t()?.end_tz).toBe('Europe/London'))

@@ -166,11 +166,22 @@
   padding-inline: 0;
 }
 .ui-note.is-warn {
-  border-left: 3px solid var(--warn-rule);
-  border-radius: 0 var(--radius-md) var(--radius-md) 0;
-  background: var(--warn-bg);
+  justify-content: flex-start;
+  gap: var(--space-2);
+  padding-inline: 0;
+  background: none;
   color: var(--warn-ink);
+  font-size: var(--size-meta);
   font-weight: 600;
+}
+.ui-note-flag {
+  flex: none;
+  width: 14px;
+  height: 14px;
+}
+button.ui-note.is-warn:hover > span,
+button.ui-note.is-warn:focus-visible > span {
+  text-decoration: underline;
 }
 button.ui-note {
   cursor: pointer;

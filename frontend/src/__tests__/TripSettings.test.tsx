@@ -139,6 +139,21 @@ describe('Trip settings: Where', () => {
     await waitFor(() => expect(t()?.destination ?? null).toBeNull())
   })
 
+  it("moves the trip to the new first stop's time zone, and not when only the order of names matches", async () => {
+    seed(makeTrip(7, { title: 'Draft', stops: [place('Lisbon')] }))
+    settings(makeTrip(7).trip_id)
+    await userEvent.click((await screen.findByText('Where')).closest('button') as HTMLElement)
+    const sheet = await screen.findByRole('dialog')
+    await userEvent.type(within(sheet).getByRole('combobox', { name: 'Add a place' }), 'Heathrow')
+    await userEvent.click(await within(sheet).findByRole('option', { name: /Heathrow/ }))
+    const t = () => tripServer.trips.get(makeTrip(7).trip_id)?.fields
+    await waitFor(() => expect(t()?.stops).toHaveLength(2))
+    // Adding after the first stop leaves the zone alone.
+    expect(t()?.tz).not.toBe('Europe/London')
+    await userEvent.click(within(sheet).getByRole('button', { name: /^Move Heathrow.* earlier$/ }))
+    await waitFor(() => expect(t()?.tz).toBe('Europe/London'))
+  })
+
   it('reads the route as Lisbon → Porto', async () => {
     seed({ ...TRIP, stops: [place('Lisbon'), place('Porto', 41.1, -8.6)] })
     settings()
