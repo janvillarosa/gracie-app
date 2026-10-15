@@ -132,6 +132,7 @@ export class TripStore {
     this.now = deps.now ?? Date.now
     this.onForbidden = deps.onForbidden
     this.onUnauthorized = deps.onUnauthorized
+    this.db.onInvalidated?.(() => void this.dispose())
     this.state = this.makeState()
   }
 
@@ -143,6 +144,9 @@ export class TripStore {
     }
   }
   getState = () => this.state
+  get isDisposed() {
+    return this.disposed
+  }
 
   private makeState(): StoreState {
     return {
@@ -726,7 +730,8 @@ export class TripStore {
 const registry = new Map<string, TripStore>()
 export function getTripStore(key: string, make: () => TripStore): TripStore {
   let s = registry.get(key)
-  if (!s) {
+  // A disposed store (its database was removed under it) never comes back; make a fresh one.
+  if (!s || s.isDisposed) {
     s = make()
     registry.set(key, s)
   }

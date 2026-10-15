@@ -23,6 +23,9 @@ export interface TripDB {
   deleteOps(opIds: string[]): Promise<void>
   /** Tags every queued op with `roomId` (ops target trip ids, so they still apply after a join). */
   retagOps(roomId: string): Promise<void>
+  /** Called when the database was deleted or upgraded under this connection (another tab,
+   *  sign-out elsewhere). The owner should stop; the database refuses to reopen. */
+  onInvalidated?(fn: () => void): void
   /** Releases the connection. */
   close(): void
   /** Deletes everything this database holds (sign-out). */
@@ -86,23 +89,64 @@ const remember = (name: string) => {
   } catch {}
 }
 
-/** Deletes every trips database this browser made for any user (sign-out). */
+/** How long a delete may take before we stop waiting for it (a hung or blocked delete must
+ *  not hang sign-out or the next sign-in). */
+export const DELETE_TIMEOUT_MS = 3000
+const pendingDeletes = new Map<string, Promise<void>>()
+
+/** Deletes a database, resolving when it is gone, failed, or took too long. While a delete is
+ *  pending, opening the same name waits for it (see IdbTripDB.open), so a fast re-login can never
+ *  open a database that is about to disappear. */
+export function deleteDb(name: string): Promise<void> {
+  const running = pendingDeletes.get(name)
+  if (running) return running
+  const p = new Promise<void>((resolve) => {
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const finish = () => {
+      if (timer !== undefined) clearTimeout(timer)
+      resolve()
+    }
+    timer = setTimeout(finish, DELETE_TIMEOUT_MS)
+    try {
+      const r = indexedDB.deleteDatabase(name)
+      r.onsuccess = r.onerror = finish
+    } catch {
+      finish()
+    }
+  }).finally(() => pendingDeletes.delete(name))
+  pendingDeletes.set(name, p)
+  return p
+}
+
+const registered = (): string[] => {
+  try {
+    return JSON.parse(localStorage.getItem(REGISTRY_KEY) ?? '[]') as string[]
+  } catch {
+    return []
+  }
+}
+const forget = (names: string[]) => {
+  try {
+    const left = registered().filter((n) => !names.includes(n))
+    if (left.length) localStorage.setItem(REGISTRY_KEY, JSON.stringify(left))
+    else localStorage.removeItem(REGISTRY_KEY)
+  } catch {}
+}
+
+/** Deletes one user's trips database (sign-out of that user; never anyone else's). */
+export async function wipeTripDatabase(userId: string): Promise<void> {
+  if (typeof indexedDB === 'undefined') return
+  const name = `${DB_PREFIX}${userId}`
+  forget([name])
+  await deleteDb(name)
+}
+
+/** Deletes every trips database this browser made for any user (tests; never on sign-out). */
 export async function wipeTripDatabases(): Promise<void> {
   if (typeof indexedDB === 'undefined') return
-  let names: string[] = []
-  try {
-    names = JSON.parse(localStorage.getItem(REGISTRY_KEY) ?? '[]') as string[]
-    localStorage.removeItem(REGISTRY_KEY)
-  } catch {}
-  await Promise.all(
-    names.map(
-      (n) =>
-        new Promise<void>((resolve) => {
-          const r = indexedDB.deleteDatabase(n)
-          r.onsuccess = r.onerror = r.onblocked = () => resolve()
-        }),
-    ),
-  )
+  const names = registered()
+  forget(names)
+  await Promise.all(names.map(deleteDb))
 }
 
 const req = <T>(r: IDBRequest<T>) =>
@@ -121,13 +165,30 @@ const done = (tx: IDBTransaction) =>
 export class IdbTripDB implements TripDB {
   private opening: Promise<IDBDatabase> | null = null
   private name: string
+  private invalidated = false
+  private invalidatedListener: (() => void) | null = null
 
   constructor(userId: string) {
     this.name = `${DB_PREFIX}${userId}`
   }
 
   private open() {
-    this.opening ??= new Promise<IDBDatabase>((resolve, reject) => {
+    this.opening ??= this.connect().catch((e) => {
+      // A failed open must not poison every later call.
+      this.opening = null
+      throw e
+    })
+    return this.opening
+  }
+
+  private async connect(): Promise<IDBDatabase> {
+    // The database was deleted or upgraded under this connection: it is gone, and opening it
+    // again would silently create an empty one that then looks like "everything was sent".
+    if (this.invalidated) throw new Error('The trips database was removed')
+    // Never open a name that has a delete in flight (sign-out, then a quick sign-in).
+    await pendingDeletes.get(this.name)
+    if (this.invalidated) throw new Error('The trips database was removed')
+    return new Promise<IDBDatabase>((resolve, reject) => {
       const r = indexedDB.open(this.name, 1)
       r.onupgradeneeded = () => {
         const db = r.result
@@ -138,24 +199,19 @@ export class IdbTripDB implements TripDB {
       r.onsuccess = () => {
         const db = r.result
         remember(this.name)
-        // Let another tab (or a test) upgrade or delete the database.
+        // Another tab (or a test) deleted or upgraded the database: close, and tell the owner
+        // to stop. It must not reload (an empty database would read as "other tabs sent it all").
         db.onversionchange = () => {
           db.close()
           this.opening = null
+          this.invalidated = true
+          this.invalidatedListener?.()
         }
         resolve(db)
       }
-      r.onerror = () => {
-        // A failed open must not poison every later call.
-        this.opening = null
-        reject(r.error)
-      }
-      r.onblocked = () => {
-        this.opening = null
-        reject(new Error('IndexedDB is blocked'))
-      }
+      r.onerror = () => reject(r.error)
+      r.onblocked = () => reject(new Error('IndexedDB is blocked'))
     })
-    return this.opening
   }
 
   async load(roomId?: string) {
@@ -220,12 +276,13 @@ export class IdbTripDB implements TripDB {
     this.opening = null
     void p?.then((db) => db.close()).catch(() => {})
   }
+  onInvalidated(fn: () => void) {
+    this.invalidatedListener = fn
+  }
   async destroy() {
     this.close()
-    await new Promise<void>((resolve) => {
-      const r = indexedDB.deleteDatabase(this.name)
-      r.onsuccess = r.onerror = r.onblocked = () => resolve()
-    })
+    forget([this.name])
+    await deleteDb(this.name)
   }
 }
 
