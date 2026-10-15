@@ -276,6 +276,17 @@ adventure or a scavenger hunt.
     its confirm says the trip can be restored for 30 days.
   - Back is the TopNav chevron; there is no separate Back button.
 
+## 6i. Gaps live inline (2026-10-15)
+
+The "N things to look at" header pill and its popover are removed. On mobile it looked wonky, it
+flagged done days, and it didn't say which items clashed. Gaps now show where they are:
+- An **overlap** (today and future days only) gets one quiet amber line under the day header that
+  names the clash, with both rows marked. Tapping the line opens the later item with its time chip
+  focused.
+- An **empty day** says "Nothing planned yet".
+- Todos **outside trip dates** sit in their own end section, with one explanatory line.
+- The day list marks days that have an overlap with a small amber dot.
+
 ## 7. Constraints and open decisions
 
 Constraints:

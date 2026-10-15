@@ -95,3 +95,9 @@ Severity: **B** blocker · **Ma** major · **Mi** minor · **N** nit. Viewport: 
   - The edit sheet's controls (E1–E3).
   - The desktop Ideas and map relationship (T8, T15).
 - **What's working:** the deck and deal, the ticket slip concept, done-day folding, the House pill nav, PillNav consistency, and Trip settings' grouped structure.
+
+## Addendum: gaps pill (after the user's "looks wonky on mobile")
+
+| ID | VP | Lens | Sev | What I saw | What it should be |
+|---|---|---|---|---|---|
+| T18 | M | L1 L3 L6 | **B** | The pill floats under the header and its popover is clipped. Both entries are overlaps, one on a done day. Tapping "Sun 18 has two things at the same time" scrolls to Sun 18 but marks nothing. | Remove the pill. Show gaps inline (brief 6i). This supersedes T9 and the gaps part of T3. |
