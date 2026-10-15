@@ -27,6 +27,17 @@ cd frontend && VITE_MOCK_TRIPS=1 pnpm dev --port 5174 --strictPort --host 127.0.
 
 ## What to judge on every screen
 
+**Look and flow, not just function.** For every screen and flow, capture screenshots and judge them
+as the product owner would, in addition to the measurements:
+- Does it read calmly?
+- Is there one clear focus?
+- Do columns look aligned to the eye (optical, not only numeric)?
+- Does each step lead naturally to the next (where did my action go, what changed, what's next)?
+- Do transitions and states (hover, drag, drop, empty, loading) feel finished?
+
+Record a one-line visual judgement next to each numeric check. A passing measurement with a ragged
+look is still a finding.
+
 Score each screen against these seven lenses. Log a finding whenever one fails.
 
 | # | Lens | Ask |
