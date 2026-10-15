@@ -16,7 +16,7 @@ func TestTripAmendmentFieldsOverHTTP(t *testing.T) {
 		hOp(1, "trip.create", "", map[string]any{"title": "Portugal"}),
 		hOp(2, "trip.update", "", map[string]any{
 			"days":  map[string]string{"2026-10-24": "Sintra"},
-			"stops": []map[string]any{{"name": "Lisbon", "locality": "Lisbon", "lat": 38.7, "lng": -9.1, "source": "photon"}},
+			"stops": []map[string]any{{"name": "Lisbon", "locality": "Lisbon", "lat": 38.7, "lng": -9.1, "source": "manual"}},
 		}),
 		hOp(3, "todo.create", todo, map[string]any{"title": "Palace"}),
 		hOp(4, "todo.update", todo, map[string]any{"created_by": "someone-else"}),
