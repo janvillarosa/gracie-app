@@ -2831,6 +2831,8 @@ textarea.notes-textarea {
    reuses day 1. */
 :root {
   --trip-map-ground: #E9EEE6;
+  --trip-map-earth: #EEF0E9;
+  --trip-map-water: #CFDDE3;
   --trip-day-0: #2348A6;
   --trip-day-1: #BE1E2D;
   --trip-day-2: #946D00;

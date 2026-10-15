@@ -16,7 +16,11 @@
   border: 0;
   background: none;
   color: var(--ink);
-  transition: transform var(--dur-press) var(--ease-out), box-shadow var(--dur-fast) ease;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .ui-btn {
+    transition: transform var(--dur-press) var(--ease-out), box-shadow var(--dur-fast) ease;
+  }
 }
 .ui-btn:disabled {
   cursor: default;
@@ -719,5 +723,47 @@ input.ui-sheet-title:focus-visible {
   }
   .trip-day-head .trip-daylabel.is-empty.is-today {
     opacity: 1;
+  }
+}
+
+/* ---- touch targets: 44px hit areas, the visuals unchanged ---------------------------------- */
+/* On touch screens (and any phone-width screen) every control reaches 44x44 through an invisible
+   pseudo-element, so what you see keeps its size. The checkbox grows its own label instead. */
+@media (pointer: coarse), (max-width: 1023px) {
+  .ui-btn,
+  .ui-chip,
+  .trip-daylabel,
+  .trip-day-fold,
+  .trip-dayline,
+  .trip-deck-titlebtn,
+  .pill-nav-tab {
+    position: relative;
+  }
+  /* (Icon buttons already reach 44 with their own -4px pseudo-element.) */
+  .ui-btn:not(.is-icon)::after,
+  .ui-chip::after,
+  .trip-daylabel::after,
+  .trip-day-fold::after,
+  .trip-dayline::after,
+  .trip-deck-titlebtn::after {
+    content: '';
+    position: absolute;
+    inset: auto;
+    left: 50%;
+    top: 50%;
+    width: max(100%, 44px);
+    height: max(100%, 44px);
+    transform: translate(-50%, -50%);
+  }
+  /* The tab fills the 44px track (the pill's visual is the list's own indicator). */
+  .pill-nav-tab::before {
+    content: '';
+    position: absolute;
+    inset: -4px 0;
+  }
+  .trip-check .ant-checkbox-wrapper {
+    box-sizing: content-box;
+    padding: 11px;
+    margin: -11px;
   }
 }

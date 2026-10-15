@@ -18,8 +18,8 @@ function buildStyle(config: TileConfig): maplibregl.StyleSpecification {
   const flavor = {
     ...namedFlavor('light'),
     background: css('--trip-map-ground', '#E9EEE6'),
-    earth: '#EEF0E9',
-    water: '#CFDDE3',
+    earth: css('--trip-map-earth', '#EEF0E9'),
+    water: css('--trip-map-water', '#CFDDE3'),
   }
   const all = layers('protomaps', flavor, { lang: 'en' })
   const withGlyphs = !!config.glyphs
@@ -75,7 +75,7 @@ function pillImage(border: string): ImageData {
   const c = document.createElement('canvas')
   c.width = c.height = 24
   const g = c.getContext('2d') as CanvasRenderingContext2D
-  g.fillStyle = '#fff'
+  g.fillStyle = css('--on-pin', '#fff')
   g.strokeStyle = border
   g.lineWidth = 2
   g.beginPath()
@@ -111,7 +111,7 @@ function features(scene: MapScene, cfg: Cfg) {
   const make = (s: MapStop) => {
     const category = col.pips[s.category] ?? col.pips.other
     const fill = hollow
-      ? '#ffffff'
+      ? css('--on-pin', '#ffffff')
       : s.done
         ? col.done
         : byDay
