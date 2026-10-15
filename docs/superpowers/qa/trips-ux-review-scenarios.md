@@ -228,3 +228,29 @@ Also check by eye:
 - The Next stop card's checkbox, heading, subheading and buttons align to its own lead and title columns.
 - The left and right inner padding of each card or sheet is equal.
 - Nothing touches a card edge.
+
+### S15. Desk flows (desktop planning, ≥1024), run as real use, not as static shots
+
+Run each flow with a real mouse or trackpad (and once with touch emulation at 1180×820). Capture a
+screenshot at each step, and write a one-line look-and-flow judgement for each.
+
+1. **Independent scrolling:**
+   - Scroll the Ideas pane to its end; the Days pane must not move.
+   - Scroll Days; Ideas must not move.
+   - The wheel over the map scrolls nothing (or zooms the map, desktop).
+2. **Plan a day from scratch:** on an empty trip (Ghent), add three ideas with the composer, then drag
+   each onto a different day. Watch the auto-scroll, the drop slot, the toast and Undo.
+3. **Long trip:** drag an idea from the bottom of Ideas to the last day. Hold near the edge and let
+   auto-scroll carry Days. Then try the jump rail.
+4. **Edit in place:** open the inspector on one row and change the day, time, place and category.
+   Count the clicks (target ≤5). Press J/K through 5 items without closing.
+5. **Delete fast:** delete an idea with the hover trash, with Delete, and with a swipe (touch), then
+   Undo each one.
+6. **Geography check:** scroll Days. The map follows each day and the sticky day header matches it.
+   Drag an idea over days and the map previews the idea's place.
+7. **Leave and return:** open Trip settings, go back, and check both panes keep their scroll.
+8. **Before → during:** switch `?mockPhase=during`. The Next stop card replaces Ready to go, and
+   nothing else jumps.
+
+A flow passes only if it works **and** reads calmly, with no jank, jumps, misalignment or confusing
+state at any step.
