@@ -30,7 +30,9 @@ describe('N2: a lower seq never goes out after a higher one', () => {
         const resp = await direct(srv).ops(r, ops)
         if (calls === 1) {
           // Tab B queues the lower seq, then tab A (which is flushing) queues the higher one.
-          tabB?.updateTrip(id, { destination: 'from B' })
+          tabB?.updateTrip(id, {
+            destination: { name: 'Lisbon', lat: 38.72, lng: -9.14, source: 'photon' },
+          })
           await tabB?.settle()
           tabA?.updateTrip(id, { notes: 'from A' })
           await tabA?.settle()
@@ -51,7 +53,7 @@ describe('N2: a lower seq never goes out after a higher one', () => {
     id = a.createTrip({ title: 'T' })
     await a.flush()
     const t = srv.trips.get(id)
-    expect(t?.fields.destination).toBe('from B')
+    expect(t?.fields.destination?.name).toBe('Lisbon')
     expect(t?.fields.notes).toBe('from A')
     expect(sent).toEqual([...sent].sort((x, y) => x - y))
     expect(a.getState().pending).toBe(0)
@@ -150,6 +152,37 @@ describe('N4: ops queued before a house join are not stranded', () => {
     expect(srv.trips.get(id)?.fields.notes).toBe('queued in house A')
     await next.dispose()
     await new IdbTripDB(name).destroy()
+  })
+})
+
+describe('conflict notes and the pull that follows a stale delta', () => {
+  it('keeps a note made in this flush, and forgets it when the trip changes again later', async () => {
+    const srv = new MockTripServer()
+    let online = false
+    const api: TripApi = {
+      sync: async (_r, k) => (online ? srv.sync(ROOM, k) : Promise.reject(new Error('offline'))),
+      ops: async (_r, o) => (online ? srv.ops(ROOM, o) : Promise.reject(new Error('offline'))),
+    }
+    const store = new TripStore({ roomId: ROOM, userId: ME, api, db: new MemoryTripDB() })
+    await store.hydrate()
+    online = true
+    const id = store.createTrip({ title: 'T' })
+    const todo = store.createTodo(id, { title: 'Dinner', order: 1 })
+    await store.flush()
+    online = false
+    store.updateTodo(id, todo, { title: 'Dinner at 8' })
+    await store.settle()
+    ;(store as unknown as { outbox: TripOp[] }).outbox[0].at = srv.nowMs() - 60_000
+    // A housemate edits the same field in between: the delta that comes back is stale.
+    srv.housemateUpdateTodo(id, todo, { title: 'Dinner at Mia’s' })
+    online = true
+    await store.flush()
+    expect(store.getState().notes[todo]?.fields).toEqual(['title'])
+    // The trip changes again later: the older clash is no longer worth showing.
+    srv.housemateUpdateTodo(id, todo, { notes: 'later' })
+    await store.flush()
+    expect(store.getState().notes[todo]).toBeUndefined()
+    await store.dispose()
   })
 })
 

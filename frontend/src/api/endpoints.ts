@@ -41,8 +41,9 @@ export async function getMe(apiKey: string): Promise<User> {
   return apiFetch<User>('/me', { apiKey })
 }
 
-export async function updateMe(apiKey: string, name: string): Promise<User> {
-  return apiFetch<User>('/me', { method: 'PUT', apiKey, body: JSON.stringify({ name }) })
+// The server answers 204: callers refetch ['me'] to see the new name.
+export async function updateMe(apiKey: string, name: string): Promise<void> {
+  await apiFetch<void>('/me', { method: 'PUT', apiKey, body: JSON.stringify({ name }) })
 }
 
 export async function updateMyProfile(
