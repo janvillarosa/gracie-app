@@ -3,6 +3,7 @@ package router
 import (
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -13,17 +14,28 @@ import (
 
 // Handlers groups the HTTP handlers the router wires up.
 type Handlers struct {
-	Auth   *handlers.AuthHandler
-	User   *handlers.UserHandler
-	Room   *handlers.RoomHandler
-	List   *handlers.ListHandler
-	Trip   *handlers.TripHandler
-	Places *handlers.PlacesHandler
+	Auth *handlers.AuthHandler
+	User *handlers.UserHandler
+	Room *handlers.RoomHandler
+	List *handlers.ListHandler
+	Trip *handlers.TripHandler
+}
+
+// redactPlacesQuery keeps /places/* query strings (search text, exact coordinates) out of
+// the access log. Logger reads RequestURI; handlers read URL.RawQuery, which is untouched.
+func redactPlacesQuery(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasPrefix(r.URL.Path, "/places/") {
+			r.RequestURI = r.URL.Path
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func NewRouter(userFinder authmw.UserFinder, h Handlers) http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
+	r.Use(redactPlacesQuery)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Compress(5, "application/json"))
@@ -87,10 +99,6 @@ func NewRouter(userFinder authmw.UserFinder, h Handlers) http.Handler {
 			ar.Post("/rooms/{room_id}/trips/sync", h.Trip.Sync)
 			ar.Post("/rooms/{room_id}/trips/ops", h.Trip.Ops)
 			ar.Post("/rooms/{room_id}/trips/{trip_id}/packing-list", h.Trip.PackingList)
-		}
-		if h.Places != nil {
-			ar.Get("/places/search", h.Places.Search)
-			ar.Get("/places/reverse", h.Places.Reverse)
 		}
 	})
 

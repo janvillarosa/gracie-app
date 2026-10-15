@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { errorMessage } from '@lib/errors'
-import { useParams } from 'react-router-dom'
+import { useLocation, useParams } from 'react-router-dom'
 import { useTransitionNavigate } from '@lib/viewTransition'
 import { useAuth } from '@auth/AuthProvider'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -31,7 +31,6 @@ import {
   Dropdown,
   message,
   Alert,
-  Tabs,
   Tag,
 } from 'antd'
 import {
@@ -69,6 +68,7 @@ import { useDocumentTitle } from '@lib/useDocumentTitle'
 import { ItemRow, reorderLock } from '@components/ItemRow'
 import { AddItemBar } from '@components/AddItemBar'
 import { TopNav } from '@components/TopNav'
+import { PillNav } from '@components/PillNav'
 import { HouseLoader } from '@components/HouseLoader'
 import { RowSkeleton } from '@components/RowSkeleton'
 
@@ -76,6 +76,11 @@ export const ListPage: React.FC = () => {
   const { apiKey } = useAuth()
   const navigate = useTransitionNavigate()
   const { listId = '' } = useParams()
+  // Arrived from a trip (its packing list): the way back is the trip.
+  const arrival = useLocation().state as { from?: string; fromLabel?: string } | null
+  const fromTrip = arrival?.from?.startsWith('trip:')
+    ? { id: arrival.from.slice(5), label: arrival.fromLabel || 'Trip' }
+    : null
   const [includeCompleted, setIncludeCompleted] = useState(false)
   const [groupByCat, setGroupByCat] = useState(() => {
     const saved = localStorage.getItem('gracie_group_by_cat')
@@ -109,8 +114,6 @@ export const ListPage: React.FC = () => {
   const [clearedNotes, setClearedNotes] = useState<string | null>(null)
   // Save says "Saved" in place for a moment instead of raising a toast.
   const [notesJustSaved, setNotesJustSaved] = useState(false)
-  const tabsWrapRef = useRef<HTMLDivElement | null>(null)
-  const [tabVars, setTabVars] = useState<React.CSSProperties>({})
 
   const meQuery = useQuery({ queryKey: ['me'], queryFn: () => getMe(apiKey!) })
   const roomId = meQuery.data?.room_id as string | undefined
@@ -614,35 +617,6 @@ export const ListPage: React.FC = () => {
   const ready =
     !meQuery.isLoading && !listsQuery.isLoading && !itemsQuery.isLoading && !!roomId && !!listMeta
 
-  // Slide the pill indicator under the active tab. A ResizeObserver replaces the window
-  // resize listener so we only measure when the tab strip actually changes size.
-  useEffect(() => {
-    const wrap = tabsWrapRef.current
-    if (!ready || !wrap) return
-    const list = wrap.querySelector('.ant-tabs-nav .ant-tabs-nav-list') as HTMLElement | null
-    if (!list) return
-    const update = () => {
-      const active = wrap.querySelector('.ant-tabs-nav .ant-tabs-tab-active') as HTMLElement | null
-      if (!active) return
-      const lr = list.getBoundingClientRect()
-      const ar = active.getBoundingClientRect()
-      const left = `${Math.max(0, ar.left - lr.left)}px`
-      const width = `${Math.max(0, ar.width)}px`
-      setTabVars((prev) =>
-        (prev as any)['--tab-x'] === left && (prev as any)['--tab-w'] === width
-          ? prev
-          : { ['--tab-x' as any]: left, ['--tab-w' as any]: width },
-      )
-    }
-    const id = requestAnimationFrame(update)
-    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(update) : null
-    ro?.observe(list)
-    return () => {
-      cancelAnimationFrame(id)
-      ro?.disconnect()
-    }
-  }, [activeTab, ready])
-
   // Items load inside the Items tab (it has its own skeleton), so a list already in the
   // cache from the house page renders at once, and its sticker can land mid-transition.
   if (meQuery.isLoading || listsQuery.isLoading || (itemsQuery.isLoading && !listMeta)) {
@@ -718,7 +692,13 @@ export const ListPage: React.FC = () => {
 
   return (
     <div className="container">
-      <TopNav back={{ to: '/app', label: houseQuery.data?.display_name || 'House' }} />
+      <TopNav
+        back={
+          fromTrip
+            ? { to: `/app/trips/${fromTrip.id}`, label: fromTrip.label }
+            : { to: '/app', label: houseQuery.data?.display_name || 'House' }
+        }
+      />
       {contextHolder}
       <div className="paper-stack">
         {/* Bottom sheet: title + details + actions */}
@@ -765,27 +745,24 @@ export const ListPage: React.FC = () => {
 
         {/* Top sheet: tabs over list content */}
         <Card className="paper-card paper-list">
-          <div ref={tabsWrapRef}>
-            <Tabs
-              className="list-tabs"
-              style={tabVars}
-              activeKey={activeTab}
+          <div>
+            <PillNav
+              value={activeTab}
               onChange={(k) => setActiveTab(k as 'items' | 'notes')}
-              tabBarExtraContent={{
-                right:
-                  isGroceryList && activeTab === 'items' ? (
-                    <button
-                      type="button"
-                      className="view-toggle"
-                      aria-pressed={groupByCat}
-                      onClick={() => setGroupByCat(!groupByCat)}
-                      aria-label="Group by category"
-                      title="Group by category"
-                    >
-                      <Rows size={20} weight={groupByCat ? 'bold' : 'regular'} aria-hidden />
-                    </button>
-                  ) : null,
-              }}
+              extra={
+                isGroceryList && activeTab === 'items' ? (
+                  <button
+                    type="button"
+                    className="view-toggle"
+                    aria-pressed={groupByCat}
+                    onClick={() => setGroupByCat(!groupByCat)}
+                    aria-label="Group by category"
+                    title="Group by category"
+                  >
+                    <Rows size={20} weight={groupByCat ? 'bold' : 'regular'} aria-hidden />
+                  </button>
+                ) : null
+              }
               items={[
                 {
                   key: 'items',

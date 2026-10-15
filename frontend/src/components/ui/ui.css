@@ -1,0 +1,1032 @@
+/* The UI primitives. Every value is a token from :root in styles.css; this file has no colours
+   of its own. See "UI primitives" in frontend/CLAUDE.md. */
+
+/* ---- Button: key, quiet, text -------------------------------------------------------------- */
+.ui-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  box-sizing: border-box;
+  margin: 0;
+  font: inherit;
+  font-weight: 650;
+  text-decoration: none;
+  cursor: pointer;
+  border: 0;
+  background: none;
+  color: var(--ink);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .ui-btn {
+    transition: transform var(--dur-press) var(--ease-out), box-shadow var(--dur-fast) ease;
+  }
+}
+.ui-btn:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+.ui-btn:focus-visible {
+  box-shadow: var(--focus-ring);
+  outline: none;
+}
+.ui-btn.is-block {
+  display: flex;
+  width: 100%;
+}
+.ui-btn.is-key {
+  min-height: var(--control-lg);
+  padding: 0 var(--space-5);
+  border-radius: var(--radius-pill);
+  background: var(--brand-yellow);
+  box-shadow: var(--shadow-key);
+}
+.ui-btn.is-key:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.ui-btn.is-key.is-danger {
+  background: var(--brand-red);
+  color: var(--on-red);
+}
+.ui-btn.is-quiet {
+  min-height: var(--control-md);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--panel);
+}
+.ui-btn.is-text {
+  min-height: var(--control-lg);
+  padding: 0 var(--space-2);
+  font-weight: 600;
+  font-size: var(--size-meta);
+  border-radius: var(--radius-sm);
+}
+.ui-btn.is-text.is-danger {
+  color: var(--brand-red);
+}
+/* Icon only: round, 36px, with the 44px hit area reaching past the glyph. */
+.ui-btn.is-icon {
+  position: relative;
+  width: var(--control-md);
+  min-width: var(--control-md);
+  min-height: var(--control-md);
+  padding: 0;
+  border-radius: 50%;
+  color: var(--muted);
+}
+.ui-btn.is-icon::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+}
+/* A round key (the add bar's plus). */
+.ui-btn.is-key.is-icon {
+  width: var(--control-lg);
+  min-width: var(--control-lg);
+  min-height: var(--control-lg);
+  padding: 0;
+  border-radius: 50%;
+  color: var(--ink);
+}
+@media (hover: hover) {
+  .ui-btn.is-key:hover:not(:disabled) {
+    box-shadow: var(--shadow-key-hover);
+  }
+  .ui-btn.is-quiet:hover:not(:disabled),
+  .ui-btn.is-text:hover:not(:disabled) {
+    background: var(--panel-subtle);
+  }
+}
+
+/* ---- Field: borderless text ---------------------------------------------------------------- */
+.ui-field {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: var(--space-3) 0;
+  font: inherit;
+  font-size: var(--size-body);
+  color: var(--ink);
+  background: none;
+  border: 0;
+  border-radius: var(--radius-sm);
+  outline: none;
+  resize: none;
+}
+.ui-field::placeholder {
+  color: var(--muted);
+}
+.ui-field:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+.ui-field.has-error {
+  box-shadow: 0 0 0 2px var(--brand-red);
+}
+.ui-field-error {
+  margin: var(--space-1) 0 0;
+  color: var(--brand-red);
+  font-size: var(--size-meta);
+}
+
+/* ---- Switch -------------------------------------------------------------------------------- */
+.ui-switch.ant-switch-checked {
+  background: var(--brand-yellow);
+}
+.ui-switch.ant-switch-checked .ant-switch-handle::before {
+  background: var(--ink);
+}
+
+/* ---- Section label ------------------------------------------------------------------------- */
+.ui-section-label {
+  margin: 0 0 var(--space-2);
+  color: var(--muted);
+  font: 700 var(--size-label) var(--font-body);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* ---- Note ---------------------------------------------------------------------------------- */
+.ui-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--control-md);
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  font: inherit;
+  font-size: var(--size-meta);
+  line-height: 1.35;
+  text-align: left;
+}
+.ui-note.is-muted {
+  color: var(--muted);
+  padding-inline: 0;
+}
+.ui-note.is-warn {
+  justify-content: flex-start;
+  gap: var(--space-2);
+  padding-inline: 0;
+  background: none;
+  color: var(--warn-ink);
+  font-size: var(--size-meta);
+  font-weight: 600;
+}
+.ui-note-flag {
+  flex: none;
+  width: 14px;
+  height: 14px;
+}
+button.ui-note.is-warn:hover > span,
+button.ui-note.is-warn:focus-visible > span {
+  text-decoration: underline;
+}
+button.ui-note {
+  cursor: pointer;
+}
+button.ui-note:focus-visible {
+  box-shadow: var(--focus-ring);
+  outline: none;
+}
+
+/* ---- Empty state --------------------------------------------------------------------------- */
+.ui-empty {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+  padding: var(--space-6) 0 var(--space-2);
+}
+.ui-empty h3 {
+  margin: 0;
+  font-family: var(--font-headings);
+  font-size: 22px;
+  color: var(--ink);
+}
+.ui-empty p {
+  margin: 0;
+  color: var(--muted);
+}
+
+/* ---- Pip ----------------------------------------------------------------------------------- */
+.ui-pip {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--pip);
+}
+.ui-pip.is-hollow {
+  background: var(--panel);
+  box-shadow: inset 0 0 0 2px var(--pip);
+}
+
+/* ---- Stamp --------------------------------------------------------------------------------- */
+.ui-stamp {
+  display: inline-block;
+  padding: 3px 7px;
+  border-radius: 5px;
+  font: 700 11px var(--font-body);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  vertical-align: 2px;
+  background: var(--panel-subtle);
+  color: var(--muted);
+}
+.ui-stamp.is-used {
+  border: 1px solid var(--border-strong);
+  background: none;
+}
+.ui-stamp.is-done {
+  background: var(--brand-yellow);
+  color: var(--ink);
+}
+
+/* ---- Row: [lead] [time] [title] [trail] ------------------------------------------------------ */
+.ui-row {
+  display: grid;
+  grid-template-columns: var(--lead-col) var(--tcol, 0px) minmax(0, 1fr) auto;
+  align-items: start;
+  min-width: 0;
+}
+.ui-row-lead {
+  grid-column: 1;
+  grid-row: 1;
+  width: var(--lead);
+}
+.ui-row-time {
+  grid-column: 2;
+  grid-row: 1;
+  width: var(--time-w);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.ui-row-title {
+  grid-column: 3;
+  grid-row: 1;
+  min-width: 0;
+}
+.ui-row-trail {
+  grid-column: 4;
+  grid-row: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* ---- NavRow and DetailGroup ----------------------------------------------------------------- */
+.ui-detail-group {
+  display: grid;
+  background: var(--panel-subtle);
+  border-radius: var(--radius-lg);
+  padding: 2px 0;
+}
+.ui-navrow {
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--detail-label-w) minmax(0, 1fr) 18px;
+  align-items: center;
+  gap: var(--space-3);
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--row-h);
+  padding: 0 var(--detail-inset);
+  background: none;
+  border: 0;
+  font: inherit;
+  text-align: left;
+  color: var(--ink);
+  text-decoration: none;
+  cursor: pointer;
+}
+.ui-navrow:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+.ui-navrow:focus-visible {
+  box-shadow: var(--focus-ring);
+  outline: none;
+  border-radius: var(--radius-md);
+}
+/* Hairlines between rows, inset like the rows. */
+.ui-detail-group > * + *::before,
+.ui-detail-group > .ui-navrow + .ui-navrow::before {
+  content: '';
+  position: absolute;
+  left: var(--detail-inset);
+  right: 0;
+  top: 0;
+  height: 1px;
+  background: var(--border);
+}
+.ui-detail-group > * {
+  position: relative;
+}
+.ui-navrow-label {
+  color: var(--muted);
+  font-size: 14px;
+}
+.ui-navrow-value {
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ui-navrow-value.is-empty {
+  color: var(--muted);
+  font-weight: 400;
+}
+.ui-navrow-chev {
+  color: var(--brand-yellow-deep);
+}
+.ui-navrow-icon {
+  display: grid;
+  place-items: center;
+  width: var(--lead);
+  color: var(--muted);
+  font-size: 18px;
+}
+/* List layout (days, settings): the label is the text; the value is a muted note. */
+.ui-navrow.is-list {
+  grid-template-columns: minmax(0, 1fr) auto 18px;
+  padding: 0;
+  border-bottom: 1px solid var(--border);
+}
+.ui-navrow.is-list .ui-navrow-icon + .ui-navrow-label {
+  margin-left: 0;
+}
+.ui-navrow.is-list .ui-navrow-label {
+  color: var(--ink);
+  font-size: var(--size-body);
+  font-weight: 600;
+}
+.ui-navrow.is-list .ui-navrow-value {
+  color: var(--muted);
+  font-weight: 400;
+  font-size: var(--size-meta);
+}
+.ui-navrow.is-current .ui-navrow-label {
+  font-weight: 700;
+}
+
+/* A label and a field in one row of a group (a description, a time zone). */
+.ui-fieldrow {
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--detail-label-w) minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--row-h);
+  padding: 0 var(--detail-inset);
+}
+.ui-fieldrow .ui-field {
+  padding: 0;
+}
+
+/* ---- Chip and the choice chips -------------------------------------------------------------- */
+.ui-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  box-sizing: border-box;
+  min-height: var(--control-md);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--panel);
+  font: inherit;
+  font-size: var(--size-body);
+  color: var(--ink);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.ui-chip svg {
+  color: var(--muted);
+  font-size: 12px;
+}
+.ui-chip.is-empty {
+  color: var(--muted);
+}
+.ui-chip.is-open {
+  border-color: var(--brand-yellow-deep);
+  background: var(--brand-yellow);
+  box-shadow: var(--shadow-key);
+}
+.ui-chip.is-open svg {
+  color: var(--ink);
+}
+.ui-chip:disabled {
+  cursor: default;
+}
+.ui-chip:focus-visible {
+  box-shadow: var(--focus-ring);
+  outline: none;
+}
+.ui-chipgroup {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 6), minmax(0, 1fr));
+  gap: var(--space-2);
+  width: 100%;
+}
+.ui-choice {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: var(--space-1);
+  min-height: 56px;
+  padding: var(--space-2) 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--panel);
+  color: var(--muted);
+  font: inherit;
+  font-size: var(--size-label);
+  font-weight: 600;
+  cursor: pointer;
+}
+.ui-choice-icon {
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+}
+.ui-choice[aria-pressed='true'] {
+  border-color: var(--brand-yellow-deep);
+  background: var(--brand-yellow);
+  color: var(--ink);
+  box-shadow: var(--shadow-key);
+}
+.ui-choice:focus-visible {
+  box-shadow: var(--focus-ring);
+  outline: none;
+}
+
+/* ---- Sheet: header, then the four tiers ------------------------------------------------------ */
+.ui-sheet {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-height: var(--sheet-max-h);
+  background: var(--panel);
+}
+.ui-sheet-header {
+  position: relative;
+  flex: none;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  height: var(--control-lg);
+  padding: 0 var(--space-2) 0 var(--sheet-inset);
+  touch-action: none;
+}
+.ui-sheet-handle {
+  position: absolute;
+  left: 50%;
+  top: var(--space-2);
+  width: 36px;
+  height: 4px;
+  margin-left: -18px;
+  border-radius: 2px;
+  background: var(--border-strong);
+}
+.ui-sheet-x {
+  width: var(--control-lg);
+  min-width: var(--control-lg);
+  padding: 0;
+  border-radius: 50%;
+  color: var(--muted);
+  font-size: 18px;
+}
+.ui-sheet-scroll {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 var(--sheet-inset) var(--space-6);
+}
+.ui-sheet.is-slip .ui-sheet-scroll,
+.ui-sheet.is-chips .ui-sheet-scroll {
+  padding-bottom: var(--space-4);
+}
+/* Tier 1: identity */
+.ui-sheet-identity {
+  display: block;
+}
+.ui-sheet-identity.has-lead {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: start;
+}
+.ui-sheet-lead {
+  display: grid;
+  place-items: center;
+  min-height: 34px;
+}
+.ui-sheet-title {
+  display: block;
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-headings);
+  font-size: var(--title-sheet);
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--ink);
+}
+input.ui-sheet-title {
+  /* The global "no iOS zoom" rule forces inputs to 16px with !important; a 26px title is
+     bigger than that, so it can say so too. */
+  font-size: var(--title-sheet) !important;
+  box-sizing: border-box;
+  /* A little room inside, taken back from the left, so the focus ring is inset and the text
+     keeps its column and the 20px right inset. */
+  width: calc(100% + var(--space-1));
+  margin-left: calc(-1 * var(--space-1));
+  padding: 0 var(--space-1);
+  background: none;
+  border: 0;
+  border-radius: var(--radius-sm);
+}
+input.ui-sheet-title:focus-visible {
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--brand-blue) 70%, transparent);
+  outline: none;
+}
+.ui-sheet-titlerow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.ui-sheet-titlerow input.ui-sheet-title {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.ui-sheet-pencil {
+  flex: none;
+  color: var(--muted);
+  opacity: 0;
+  pointer-events: none;
+}
+.ui-sheet-titlerow:hover .ui-sheet-pencil,
+.ui-sheet-titlerow:focus-within .ui-sheet-pencil {
+  opacity: 0.7;
+}
+@media (hover: none) {
+  .ui-sheet-pencil {
+    opacity: 0.45;
+  }
+}
+.ui-sheet-identity.has-tile {
+  grid-template-columns: var(--control-lg) minmax(0, 1fr);
+  align-items: center;
+}
+.ui-sheet-identity.has-tile .ui-sheet-lead {
+  min-height: 0;
+}
+.ui-sheet-identity.has-tile .list-icon {
+  width: var(--control-lg);
+  height: var(--control-lg);
+  font-size: 22px;
+}
+.ui-sheet-identity.has-tile input.ui-sheet-title {
+  font-size: var(--title-page) !important;
+}
+.ui-sheet-context {
+  margin: var(--space-2) 0 0;
+  color: var(--muted);
+  font-size: var(--size-context);
+  line-height: 1.4;
+}
+/* Tier 2: do */
+.ui-sheet-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin: var(--tier-identity-actions) 0 0 calc(28px + var(--space-3));
+}
+.ui-sheet-identity:not(.has-lead) + .ui-sheet-actions {
+  margin-left: 0;
+}
+/* Tier 3: details */
+.ui-sheet-actions + .ui-detail-group,
+.ui-sheet-identity + .ui-detail-group {
+  margin-top: var(--tier-actions-details);
+}
+.ui-sheet-identity ~ .ui-detail-group {
+  margin-top: var(--tier-actions-details);
+}
+/* Tier 4: footer */
+.ui-sheet-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--tier-details-footer);
+  padding: 0 var(--space-1);
+}
+.ui-sheet-who {
+  color: var(--muted);
+  font-size: var(--size-meta);
+}
+
+/* Where the sheet appears */
+.ui-drawer.ant-drawer-content,
+.ui-drawer .ant-drawer-content {
+  border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
+  box-shadow: var(--lift-2);
+}
+.ui-drawer.ant-drawer-content {
+  max-height: var(--sheet-max-h);
+}
+.ui-drawer .ant-drawer-header,
+.ui-dialog .ant-modal-header {
+  display: none;
+}
+.ui-dialog .ant-modal-content {
+  padding: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--paper-edge), var(--lift-2);
+  overflow: hidden;
+}
+.ui-dialog .ant-modal-body {
+  padding: 0;
+}
+.ui-sheet-panel {
+  position: absolute;
+  z-index: 5;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(420px, 100%);
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  box-shadow: var(--lift-2);
+}
+.ui-sheet-panel .ui-sheet {
+  flex: 1;
+  max-height: none;
+}
+.ui-popover .ant-popover-inner {
+  padding: 0;
+  min-width: 260px;
+  max-width: 360px;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--lift-3);
+  overflow: hidden;
+}
+.ui-popover .ui-sheet-title {
+  font-size: 18px;
+}
+.ui-popover .ui-sheet-scroll {
+  max-height: 60dvh;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ui-sheet-panel {
+    animation: ui-panel-in var(--dur-base) var(--ease-out) both;
+  }
+  @keyframes ui-panel-in {
+    from {
+      opacity: 0;
+      transform: translateX(24px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ui-drawer.ant-drawer-content,
+  .ui-drawer .ant-drawer-content-wrapper,
+  .ui-dialog .ant-modal-content {
+    transition: opacity var(--dur-fast) linear;
+    transform: none !important;
+  }
+}
+
+/* ---- the plan's day lines, in the row grid (kept here: components/trips owns the rest) ------- */
+/* "Nothing planned yet" starts in the title column, like the rows of a day that has times. */
+.trip-day .trip-empty-row {
+  padding-left: calc(var(--lead-col) + var(--time-w) + var(--gap));
+}
+/* "Add a label" is noise on every header: hover/focus on desktop, today's header on a phone. */
+@media (hover: none) {
+  .trip-day-head .trip-daylabel.is-empty {
+    opacity: 0;
+  }
+  .trip-day-head .trip-daylabel.is-empty.is-today {
+    opacity: 1;
+  }
+}
+
+/* ---- touch targets: 44px hit areas, the visuals unchanged ---------------------------------- */
+/* On touch screens (and any phone-width screen) every control reaches 44x44 through an invisible
+   pseudo-element, so what you see keeps its size. The checkbox grows its own label instead. */
+@media (pointer: coarse), (max-width: 1023px) {
+  .ui-btn,
+  .ui-chip,
+  .trip-daylabel,
+  .trip-day-fold,
+  .trip-dayline,
+  .trip-deck-titlebtn,
+  .pill-nav-tab {
+    position: relative;
+  }
+  /* (Icon buttons already reach 44 with their own -4px pseudo-element.) */
+  .ui-btn:not(.is-icon)::after,
+  .ui-chip::after,
+  .trip-daylabel::after,
+  .trip-day-fold::after,
+  .trip-dayline::after,
+  .trip-deck-titlebtn::after {
+    content: '';
+    position: absolute;
+    inset: auto;
+    left: 50%;
+    top: 50%;
+    width: max(100%, 44px);
+    height: max(100%, 44px);
+    transform: translate(-50%, -50%);
+  }
+  /* The tab fills the 44px track (the pill's visual is the list's own indicator). */
+  .pill-nav-tab::before {
+    content: '';
+    position: absolute;
+    inset: -4px 0;
+  }
+  .trip-check .ant-checkbox-wrapper {
+    box-sizing: content-box;
+    padding: 11px;
+    margin: -11px;
+  }
+}
+
+/* ---- InlinePlace: an inline place field with slips below --------------------------------- */
+.pantry-slips.is-below {
+  top: calc(100% + 6px);
+  right: 0;
+  bottom: auto;
+  left: 0;
+  z-index: 5;
+  flex-direction: column;
+}
+.ui-inline-place {
+  position: relative;
+  display: grid;
+  gap: var(--space-1);
+}
+.ui-inline-place-value {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--control-md);
+}
+.ui-inline-place-text {
+  display: grid;
+  min-width: 0;
+  flex: 1;
+  text-align: left;
+}
+.ui-inline-place-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink);
+  font-weight: 600;
+}
+.ui-inline-place-sub {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: var(--size-meta);
+}
+.ui-inline-place-value > button.ui-inline-place-text {
+  padding: 0;
+  background: none;
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+}
+.ui-combobox-count {
+  /* the polite "5 suggestions" is for screen readers only */
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.ui-inline-place-attrib {
+  padding: 6px 12px 2px;
+  color: var(--muted);
+  font-size: var(--size-meta);
+}
+
+/* ---- The inline inspector: rows that need no picker (desktop) ---------------------------------- */
+.ui-inline-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--detail-label-w) minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--row-h);
+  padding: var(--space-2) var(--detail-inset);
+  box-sizing: border-box;
+}
+.ui-inline-row.is-top {
+  align-items: start;
+}
+.ui-inline-row.is-top .ui-navrow-label {
+  padding-top: 7px;
+}
+.ui-inline-hint {
+  margin: 0;
+  padding: 0 var(--detail-inset) var(--space-2) calc(var(--detail-label-w) + var(--detail-inset) + var(--space-3));
+  color: var(--brand-red);
+  font-size: var(--size-meta);
+}
+.ui-inlinewhen {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.ui-inlinewhen .ui-select {
+  flex: 1 1 auto;
+}
+
+/* A native select drawn like the paper: panel fill, hairline, the yellow caret. */
+.ui-select {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  width: 100%;
+}
+.ui-select select {
+  appearance: none;
+  width: 100%;
+  min-height: var(--control-md);
+  padding: 0 28px 0 var(--space-3);
+  box-sizing: border-box;
+  font: inherit;
+  font-size: var(--size-body);
+  font-weight: 500;
+  color: var(--ink);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  text-overflow: ellipsis;
+}
+.ui-select select:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.ui-select select:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+.ui-select-caret {
+  position: absolute;
+  right: 10px;
+  color: var(--brand-yellow-deep);
+  pointer-events: none;
+}
+.ui-timefield {
+  flex: 0 0 84px;
+  width: 84px;
+  min-height: var(--control-md);
+  padding: 0 var(--space-3);
+  box-sizing: border-box;
+  font: inherit;
+  font-size: var(--size-body);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.ui-timefield::placeholder {
+  color: var(--muted);
+  font-weight: 400;
+}
+.ui-timefield:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.ui-timefield.has-error {
+  box-shadow: 0 0 0 2px var(--brand-red);
+}
+
+/* Length: a row of segments, one pressed. */
+.ui-segments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+.ui-segment {
+  min-height: var(--control-md);
+  padding: 0 10px;
+  font: inherit;
+  font-size: var(--size-meta);
+  font-weight: 600;
+  color: var(--muted);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+.ui-segment[aria-pressed='true'] {
+  color: var(--ink);
+  background: var(--brand-yellow);
+  border-color: var(--brand-yellow-deep);
+}
+.ui-segment:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.ui-segment:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+/* Category: outlined stamps in their own colours; only the chosen one is filled. */
+.ui-stampselect {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.ui-stampselect-btn {
+  padding: 6px 10px;
+  font: 700 11px var(--font-body);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--stamp-fg);
+  background: none;
+  border: 1.5px solid var(--stamp-fg);
+  border-radius: 6px;
+  cursor: pointer;
+  opacity: 0.78;
+}
+.ui-stampselect-btn[aria-pressed='true'] {
+  background: var(--stamp-bg);
+  opacity: 1;
+}
+.ui-stampselect-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  opacity: 1;
+}
+.ui-stampselect-btn:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+@media (hover: hover) {
+  .ui-stampselect-btn:hover:not(:disabled):not([aria-pressed='true']) {
+    background: var(--stamp-bg);
+    opacity: 1;
+  }
+}
+
+/* A note on show: the field is just there, in its own row. */
+.ui-inline-note {
+  padding: var(--space-2) var(--detail-inset) var(--space-2);
+}
+.ui-inline-note .ui-field {
+  min-height: 84px;
+  padding: var(--space-2) var(--space-3);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+/* Place slips in the narrow inspector: the name on one line, where it is under it, so the name
+   is never squeezed down to a letter by a long address. */
+.ui-inline-place .pantry-slip {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0;
+}
+.ui-inline-place .pantry-slip .slip-name,
+.ui-inline-place .pantry-slip .slip-usual {
+  flex: 0 1 auto;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

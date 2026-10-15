@@ -1,5 +1,6 @@
-import React, { useMemo, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { errorMessage } from '@lib/errors'
+import { deviceZone } from '@lib/trips/limits'
 import type { RoomView, List } from '@api/types'
 import { useAuth } from '@auth/AuthProvider'
 import { useTransitionNavigate } from '@lib/viewTransition'
@@ -13,17 +14,7 @@ import {
 } from '@api/endpoints'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useLiveQueryOpts } from '@lib/liveQuery'
-import {
-  Card,
-  Typography,
-  Space,
-  Button,
-  Modal,
-  Input,
-  List as AntList,
-  Dropdown,
-  message,
-} from 'antd'
+import { Card, Typography, Space, Button, List as AntList, Dropdown, message } from 'antd'
 import {
   DotsThreeVertical,
   CaretRight,
@@ -40,15 +31,39 @@ import { ShareCodeModal } from '@components/ShareCodeModal'
 import { TopNav } from '@components/TopNav'
 import { TransitionLink } from '@components/TransitionLink'
 import { RowSkeleton } from '@components/RowSkeleton'
+import { PillNav } from '@components/PillNav'
+import { TripNameModal } from '@components/trips/NewTripModal'
+import { TripsPanel } from '@components/trips/TripsPanel'
+import { useTripState, useTripStoreFor } from '@lib/trips/hooks'
+import { localDateKey, tripPhase } from '@lib/trips/schedule'
 import { toEmoji } from '../icons'
+import {
+  Button as KeyButton,
+  DetailGroup,
+  Field,
+  NavRow,
+  Sheet,
+  SheetActions,
+} from '@components/ui'
 import type { ListIcon } from '@api/types'
 import { useDocumentTitle } from '@lib/useDocumentTitle'
 
-export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string }> = ({
-  room,
-  roomId,
-  userId,
-}) => {
+const PILL_KEY = 'bauhouse_house_pill'
+export const lastHousePill = (): 'lists' | 'trips' => {
+  try {
+    return localStorage.getItem(PILL_KEY) === 'trips' ? 'trips' : 'lists'
+  } catch {
+    return 'lists'
+  }
+}
+
+export const RoomPage: React.FC<{
+  room: RoomView
+  roomId: string
+  userId: string
+  // Which pill the URL asks for: /app is Lists, /app/trips is Trips.
+  tab?: 'lists' | 'trips'
+}> = ({ room, roomId, userId, tab = 'lists' }) => {
   const { apiKey } = useAuth()
   const navigate = useTransitionNavigate()
   useDocumentTitle(room.display_name || 'House')
@@ -68,6 +83,26 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
   const [editIcon, setEditIcon] = useState<ListIcon | undefined>(undefined)
   const [editIconTouched, setEditIconTouched] = useState(false)
   const qc = useQueryClient()
+  const tripStore = useTripStoreFor(roomId, userId, apiKey)
+  const tripState = useTripState(tripStore)
+  const [newTripOpen, setNewTripOpen] = useState(false)
+  const today = localDateKey()
+  const liveNow = Object.values(tripState.trips).some(
+    (t) => !t.deleted && tripPhase(t, today) === 'during',
+  )
+  const onTab = (k: string) => {
+    const next = k === 'trips' ? 'trips' : 'lists'
+    try {
+      localStorage.setItem(PILL_KEY, next)
+    } catch {}
+    navigate(next === 'trips' ? '/app/trips' : '/app')
+  }
+  // The pill is remembered for this viewer; the URL is what is shown.
+  useEffect(() => {
+    try {
+      localStorage.setItem(PILL_KEY, tab)
+    } catch {}
+  }, [tab])
 
   const onShare = async () => {
     try {
@@ -228,90 +263,144 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
           </div>
         </Card>
 
-        {/* Top list sheet: lists and actions */}
+        {/* The second sheet: a pill switch between Lists and Trips, with the section's key. */}
         <Card className="paper-card paper-list">
-          <Space direction="vertical" style={{ width: '100%' }} size="large">
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 12,
-              }}
-            >
-              <Typography.Title level={3} style={{ marginTop: 0, marginBottom: 0 }}>
-                Our Lists
-              </Typography.Title>
-              <Button
-                type="primary"
-                shape="round"
-                onClick={() => setCreateOpen(true)}
-                icon={<Plus />}
-              >
-                New list
-              </Button>
-            </div>
-
-            {listsQuery.isLoading ? (
-              <RowSkeleton variant="list" rows={3} label="Loading your lists" />
-            ) : lists.length === 0 ? (
-              <Typography.Text type="secondary">
-                No lists yet. Create one with New list.
-              </Typography.Text>
-            ) : (
-              <AntList
-                className={listsWereLoading.current ? 'lists-list is-arriving' : 'lists-list'}
-                dataSource={lists}
-                renderItem={(l) => (
-                  <AntList.Item>
-                    <TransitionLink to={`/app/lists/${l.list_id}`} className="list-row-link">
-                      {l.icon ? (
-                        <span className="list-icon" aria-hidden>
-                          {toEmoji(l.icon)}
-                        </span>
-                      ) : null}
-                      <span className="list-row-text">
-                        <span className="list-row-name">{l.name}</span>
-                        {l.description && (
-                          <Typography.Text type="secondary" className="list-row-desc">
-                            {l.description}
-                          </Typography.Text>
-                        )}
-                      </span>
-                    </TransitionLink>
-                    <Dropdown
-                      trigger={['click']}
-                      placement="bottomRight"
-                      menu={{
-                        items: [
-                          { key: 'edit', label: 'Edit details' },
-                          ...(l.deletion_votes && l.deletion_votes[userId]
-                            ? [{ key: 'cancel', label: 'Cancel delete vote' }]
-                            : [{ key: 'vote', label: 'Vote to delete list' }]),
-                        ],
-                        onClick: ({ key }) => {
-                          if (key === 'edit') onOpenEdit(l)
-                          if (key === 'vote') onVoteList(l)
-                          if (key === 'cancel') onCancelVoteList(l)
-                        },
-                      }}
-                    >
-                      <Button
-                        className="list-row-menu"
-                        icon={<DotsThreeVertical size={20} weight="bold" />}
-                        type="text"
-                        shape="circle"
-                        aria-label={`Actions for ${l.name}`}
-                      />
-                    </Dropdown>
-                    <CaretRight className="list-row-caret" size={18} weight="bold" aria-hidden />
-                  </AntList.Item>
-                )}
-              />
-            )}
-          </Space>
+          <PillNav
+            label="House sections"
+            value={tab}
+            onChange={onTab}
+            extra={
+              tab === 'trips' ? (
+                <Button
+                  type="primary"
+                  shape="round"
+                  // Not before the device's own copy has loaded, so nothing is made out of order.
+                  disabled={!tripState.ready}
+                  onClick={() => setNewTripOpen(true)}
+                  icon={<Plus />}
+                >
+                  New trip
+                </Button>
+              ) : (
+                <Button
+                  type="primary"
+                  shape="round"
+                  onClick={() => setCreateOpen(true)}
+                  icon={<Plus />}
+                >
+                  New list
+                </Button>
+              )
+            }
+            items={[
+              {
+                key: 'lists',
+                label: 'Lists',
+                children: listsQuery.isLoading ? (
+                  <RowSkeleton variant="list" rows={3} label="Loading your lists" />
+                ) : lists.length === 0 ? (
+                  <Typography.Text type="secondary">
+                    No lists yet. Create one with New list.
+                  </Typography.Text>
+                ) : (
+                  <AntList
+                    className={listsWereLoading.current ? 'lists-list is-arriving' : 'lists-list'}
+                    dataSource={lists}
+                    renderItem={(l) => {
+                      // A trip's packing list says whose it is.
+                      const packing = l.name.startsWith('Packing · ')
+                      const icon = l.icon ? toEmoji(l.icon) : packing ? '🧳' : null
+                      const meta = packing
+                        ? `For ${l.name.slice('Packing · '.length)}`
+                        : l.description
+                      return (
+                        <AntList.Item>
+                          <TransitionLink to={`/app/lists/${l.list_id}`} className="list-row-link">
+                            {icon ? (
+                              <span className="list-icon" aria-hidden>
+                                {icon}
+                              </span>
+                            ) : null}
+                            <span className="list-row-text">
+                              <span className="list-row-name">{packing ? 'Packing' : l.name}</span>
+                              {meta && (
+                                <Typography.Text type="secondary" className="list-row-desc">
+                                  {meta}
+                                </Typography.Text>
+                              )}
+                            </span>
+                          </TransitionLink>
+                          <Dropdown
+                            trigger={['click']}
+                            placement="bottomRight"
+                            menu={{
+                              items: [
+                                { key: 'edit', label: 'Edit details' },
+                                ...(l.deletion_votes && l.deletion_votes[userId]
+                                  ? [{ key: 'cancel', label: 'Cancel delete vote' }]
+                                  : [{ key: 'vote', label: 'Vote to delete list' }]),
+                              ],
+                              onClick: ({ key }) => {
+                                if (key === 'edit') onOpenEdit(l)
+                                if (key === 'vote') onVoteList(l)
+                                if (key === 'cancel') onCancelVoteList(l)
+                              },
+                            }}
+                          >
+                            <Button
+                              className="list-row-menu"
+                              icon={<DotsThreeVertical size={20} weight="bold" />}
+                              type="text"
+                              shape="circle"
+                              aria-label={`Actions for ${l.name}`}
+                            />
+                          </Dropdown>
+                          <CaretRight
+                            className="list-row-caret"
+                            size={18}
+                            weight="bold"
+                            aria-hidden
+                          />
+                        </AntList.Item>
+                      )
+                    }}
+                  />
+                ),
+              },
+              {
+                key: 'trips',
+                label: (
+                  <span className="pill-label">
+                    Trips
+                    {liveNow && tab !== 'trips' && <span className="pill-dot" aria-hidden />}
+                  </span>
+                ),
+                ariaLabel: liveNow ? 'Trips, one happening now' : undefined,
+                children: (
+                  <TripsPanel trips={tripState.trips} store={tripStore} ready={tripState.ready} />
+                ),
+              },
+            ]}
+          />
         </Card>
       </div>
+
+      {newTripOpen && tripStore && (
+        <TripNameModal
+          title="Name your trip"
+          cta="Create trip"
+          onCancel={() => setNewTripOpen(false)}
+          onSubmit={(title) => {
+            const id = tripStore.createTrip({
+              title,
+              // The canonical zone name, or nothing when the browser cannot say.
+              ...(deviceZone() ? { tz: deviceZone() } : {}),
+            })
+            setNewTripOpen(false)
+            navigate(`/app/trips/${id}`)
+          }}
+        />
+      )}
 
       <ShareCodeModal
         open={shareOpen}
@@ -327,91 +416,137 @@ export const RoomPage: React.FC<{ room: RoomView; roomId: string; userId: string
         }}
       />
 
-      {/* Create List Modal */}
-      <Modal
-        title="Add list"
+      {/* New list and Rename list: the same Sheet as the trip screens. */}
+      <Sheet
         open={createOpen}
-        onCancel={() => setCreateOpen(false)}
-        footer={
-          <Space>
-            <Button onClick={() => setCreateOpen(false)} icon={<X />}>
-              Cancel
-            </Button>
-            <Button
-              type="primary"
+        label="Add list"
+        onClose={() => setCreateOpen(false)}
+        identity={
+          <div className="ui-sheet-identity">
+            <div className="ui-sheet-identity-text">
+              <Field
+                className="ui-sheet-title"
+                placeholder="List name"
+                aria-label="List name"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !creating && newName.trim()) void onCreateList()
+                }}
+                // biome-ignore lint/a11y/noAutofocus: the sheet opens because the user asked for it
+                autoFocus
+              />
+              <p className="ui-sheet-context">Add list</p>
+            </div>
+          </div>
+        }
+        actions={
+          <SheetActions>
+            <KeyButton
+              kind="key"
               disabled={creating || !newName.trim()}
-              onClick={onCreateList}
-              icon={<Plus />}
+              onClick={() => void onCreateList()}
             >
               Create
-            </Button>
-          </Space>
+            </KeyButton>
+          </SheetActions>
         }
-      >
-        <Space direction="vertical" style={{ width: '100%' }}>
-          <Input
-            placeholder="List name"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            autoFocus
-          />
-          <Input
-            placeholder="Description (optional)"
-            value={newDesc}
-            onChange={(e) => setNewDesc(e.target.value)}
-          />
-          <div>
-            <Typography.Text type="secondary">Icon (optional)</Typography.Text>
-            <IconPicker value={newIcon} onChange={setNewIcon} />
-          </div>
-        </Space>
-      </Modal>
-
-      {/* Edit List Modal */}
-      <Modal
-        title="Edit list"
-        open={editOpen}
-        onCancel={() => setEditOpen(false)}
-        footer={
-          <Space>
-            <Button onClick={() => setEditOpen(false)} icon={<X />}>
-              Cancel
-            </Button>
-            <Button
-              type="primary"
-              disabled={editing || !editName.trim()}
-              onClick={onSaveEdit}
-              icon={<FloppyDisk />}
-            >
-              Save
-            </Button>
-          </Space>
-        }
-      >
-        <Space direction="vertical" size="large" style={{ width: '100%', paddingTop: 8 }}>
-          <Input
-            placeholder="List name"
-            value={editName}
-            onChange={(e) => setEditName(e.target.value)}
-            autoFocus
-          />
-          <Input
-            placeholder="Description (optional)"
-            value={editDesc}
-            onChange={(e) => setEditDesc(e.target.value)}
-          />
-          <div>
-            <Typography.Text type="secondary">Icon</Typography.Text>
-            <IconPicker
-              value={editIcon}
-              onChange={(val) => {
-                setEditIcon(val)
-                setEditIconTouched(true)
+        details={
+          <DetailGroup label="Details">
+            <div className="ui-fieldrow">
+              <span className="ui-navrow-label">Description</span>
+              <Field
+                placeholder="Description (optional)"
+                value={newDesc}
+                onChange={(e) => setNewDesc(e.target.value)}
+              />
+            </div>
+            <NavRow
+              label="Icon"
+              value={newIcon ? (toEmoji(newIcon) ?? 'Add an icon') : 'Add an icon (optional)'}
+              empty={!newIcon}
+              picker={{
+                title: 'Icon',
+                content: (close) => (
+                  <IconPicker
+                    value={newIcon}
+                    onChange={(v) => {
+                      setNewIcon(v)
+                      close()
+                    }}
+                  />
+                ),
               }}
             />
+          </DetailGroup>
+        }
+      />
+
+      <Sheet
+        open={editOpen}
+        label="Edit list"
+        onClose={() => setEditOpen(false)}
+        identity={
+          <div className="ui-sheet-identity">
+            <div className="ui-sheet-identity-text">
+              <Field
+                className="ui-sheet-title"
+                placeholder="List name"
+                aria-label="List name"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !editing && editName.trim()) void onSaveEdit()
+                }}
+                // biome-ignore lint/a11y/noAutofocus: the sheet opens because the user asked for it
+                autoFocus
+              />
+              <p className="ui-sheet-context">Edit list</p>
+            </div>
           </div>
-        </Space>
-      </Modal>
+        }
+        actions={
+          <SheetActions>
+            <KeyButton
+              kind="key"
+              disabled={editing || !editName.trim()}
+              onClick={() => void onSaveEdit()}
+            >
+              Save
+            </KeyButton>
+          </SheetActions>
+        }
+        details={
+          <DetailGroup label="Details">
+            <div className="ui-fieldrow">
+              <span className="ui-navrow-label">Description</span>
+              <Field
+                placeholder="Description (optional)"
+                value={editDesc}
+                onChange={(e) => setEditDesc(e.target.value)}
+              />
+            </div>
+            <NavRow
+              label="Icon"
+              value={editIcon ? (toEmoji(editIcon) ?? 'Add an icon') : 'Add an icon'}
+              empty={!editIcon}
+              picker={{
+                title: 'Icon',
+                content: (close) => (
+                  <IconPicker
+                    value={editIcon}
+                    onChange={(val) => {
+                      setEditIcon(val)
+                      setEditIconTouched(true)
+                      close()
+                    }}
+                  />
+                ),
+              }}
+            />
+          </DetailGroup>
+        }
+      />
     </div>
   )
 }

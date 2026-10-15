@@ -2,6 +2,7 @@ package trips
 
 import (
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/janvillarosa/gracie-app/backend/internal/models"
@@ -17,12 +18,21 @@ type Ctx struct {
 	Actor string    // user performing the batch
 	Now   time.Time // server time
 	NewV  int64     // version this batch will write (current Version + 1)
+	// TZ derives an IANA zone from coordinates for Google places that arrive without one.
+	// Optional (nil = leave tz empty); it must be cheap to call and safe to call concurrently.
+	TZ func(lat, lng float64) string
 }
 
 // Outcome tells the caller what to persist.
 type Outcome struct {
 	Dirty bool // the trip changed in some way (at least acked) and must be written
 	Bump  bool // data changed; t.Version has been set to Ctx.NewV
+}
+
+// stamp returns the batch's server time (UTC) for updated_at.
+func stamp(c Ctx) *time.Time {
+	n := c.Now.UTC()
+	return &n
 }
 
 // NewShell returns an empty, not-yet-persisted trip (Version 0) for trip.create.
@@ -83,6 +93,10 @@ func ApplyOp(t *models.Trip, op models.Op, c Ctx) (models.OpResult, Outcome) {
 		fail(&res, models.CodeForbiddenOrUnknown)
 		return res, Outcome{}
 	}
+	if _, known := t.Acked[op.ClientID]; !known && len(t.Acked) >= MaxAckedClients {
+		fail(&res, models.CodeCap) // bounded document: too many distinct devices; seq not consumed
+		return res, Outcome{}
+	}
 	at := op.At
 	if ms := c.Now.UnixMilli(); at > ms {
 		at = ms // a skewed phone clock must not win forever
@@ -92,8 +106,13 @@ func ApplyOp(t *models.Trip, op models.Op, c Ctx) (models.OpResult, Outcome) {
 		t.Acked = map[string]int64{}
 	}
 	t.Acked[op.ClientID] = op.Seq // every non-duplicate outcome consumes the seq
+	if t.AckedAt == nil {
+		t.AckedAt = map[string]int64{}
+	}
+	t.AckedAt[op.ClientID] = c.Now.UnixMilli()
 	if bump {
 		t.Version = c.NewV
+		RecomputeCoordsExpiry(t)
 	}
 	return res, Outcome{Dirty: true, Bump: bump}
 }
@@ -166,7 +185,65 @@ func tripChanges(t *models.Trip, p TripPatch) []change {
 		v := *p.TZ
 		ch = append(ch, change{"tz", func() { t.TZ = v }})
 	}
+	if p.Icon != nil {
+		v := *p.Icon
+		ch = append(ch, change{"icon", func() { t.Icon = v }})
+	}
+	if p.Stops.Set {
+		var v []models.Place
+		if p.Stops.Val != nil {
+			v = append(v, *p.Stops.Val...)
+		}
+		ch = append(ch, change{"stops", func() { t.Stops = v }})
+	}
+	dates := make([]string, 0, len(p.Days))
+	for d := range p.Days {
+		dates = append(dates, d)
+	}
+	sort.Strings(dates)
+	for _, d := range dates {
+		date, label := d, p.Days[d]
+		ch = append(ch, change{"days." + date, func() {
+			if label == "" {
+				delete(t.Days, date)
+				if len(t.Days) == 0 {
+					t.Days = nil
+				}
+				return
+			}
+			if t.Days == nil {
+				t.Days = map[string]string{}
+			}
+			t.Days[date] = label
+		}})
+	}
 	return ch
+}
+
+// tripCapExceeded reports whether the patch would push stops or day labels over their caps.
+func tripCapExceeded(t *models.Trip, p TripPatch) bool {
+	if p.Stops.Set && p.Stops.Val != nil && len(*p.Stops.Val) > MaxStops {
+		return true
+	}
+	labels, clocks := len(t.Days), 0
+	for k := range t.FieldAt {
+		if strings.HasPrefix(k, "days.") {
+			clocks++
+		}
+	}
+	for d, label := range p.Days {
+		_, exists := t.Days[d]
+		switch {
+		case label != "" && !exists:
+			labels++
+		case label == "" && exists:
+			labels--
+		}
+		if _, has := t.FieldAt["days."+d]; !has {
+			clocks++
+		}
+	}
+	return labels > MaxDays || clocks > MaxDayClocks
 }
 
 func tripCreate(t *models.Trip, op models.Op, at int64, c Ctx, res *models.OpResult) bool {
@@ -177,9 +254,13 @@ func tripCreate(t *models.Trip, op models.Op, at int64, c Ctx, res *models.OpRes
 	if code := decodePatch(op.Patch, &p); code != "" {
 		return fail(res, code)
 	}
-	if !validTripPatch(p, true) || !datesOrdered(pick(p.StartDate, nil), pick(p.EndDate, nil)) {
+	if !validTripPatch(p, true, c.Now) || !datesOrdered(pick(p.StartDate, nil), pick(p.EndDate, nil)) {
 		return fail(res, models.CodeInvalid)
 	}
+	if tripCapExceeded(t, p) {
+		return fail(res, models.CodeCap)
+	}
+	fillTripTZ(&p, c)
 	commit(&t.FieldAt, at, tripChanges(t, p), res)
 	if t.TZ == "" && t.Destination != nil {
 		t.TZ = t.Destination.TZ // taken from the destination once, then only explicit edits change it
@@ -193,9 +274,13 @@ func tripUpdate(t *models.Trip, op models.Op, at int64, c Ctx, res *models.OpRes
 	if code := decodePatch(op.Patch, &p); code != "" {
 		return fail(res, code)
 	}
-	if !validTripPatch(p, false) || !datesOrdered(pick(p.StartDate, t.StartDate), pick(p.EndDate, t.EndDate)) {
+	if !validTripPatch(p, false, c.Now) || !datesOrdered(pick(p.StartDate, t.StartDate), pick(p.EndDate, t.EndDate)) {
 		return fail(res, models.CodeInvalid)
 	}
+	if tripCapExceeded(t, p) {
+		return fail(res, models.CodeCap)
+	}
+	fillTripTZ(&p, c)
 	if !commit(&t.FieldAt, at, tripChanges(t, p), res) {
 		return false
 	}
@@ -351,15 +436,25 @@ func todoChanges(td *models.TripTodo, p TodoPatch, actor string, now time.Time) 
 		v := p.Place.Val
 		ch = append(ch, change{"place", func() { td.Place = v }})
 	}
+	if p.BookingID.Set {
+		v := p.BookingID.Val
+		ch = append(ch, change{"booking_id", func() { td.BookingID = v }})
+	}
 	return ch
 }
 
+// bookingLinkOK reports whether a patch's booking_id (when set to a value) names a live
+// booking of this trip. Deleted bookings are removed from t.Bookings, so tombstoned ids fail too.
+func bookingLinkOK(t *models.Trip, p TodoPatch) bool {
+	return !p.BookingID.Set || p.BookingID.Val == nil || findBooking(t, *p.BookingID.Val) >= 0
+}
+
 func todoCreate(t *models.Trip, op models.Op, at int64, c Ctx, res *models.OpResult) bool {
-	if len(t.Todos) >= MaxTodos {
-		return fail(res, models.CodeCap)
-	}
 	if tombstoned(t, op.EntityID) {
 		return fail(res, models.CodeGone)
+	}
+	if len(t.Todos) >= MaxTodos {
+		return fail(res, models.CodeCap)
 	}
 	if findTodo(t, op.EntityID) >= 0 {
 		return fail(res, models.CodeInvalid)
@@ -368,10 +463,11 @@ func todoCreate(t *models.Trip, op models.Op, at int64, c Ctx, res *models.OpRes
 	if code := decodePatch(op.Patch, &p); code != "" {
 		return fail(res, code)
 	}
-	if !validTodoPatch(p, true) {
+	if !validTodoPatch(p, true, c.Now) || !bookingLinkOK(t, p) || !todoTitleOK(*p.Title, p.Place.Val) {
 		return fail(res, models.CodeInvalid)
 	}
-	td := models.TripTodo{TodoID: op.EntityID, Category: "other", FieldAt: map[string]int64{}}
+	fillPlaceTZ(p.Place.Val, c)
+	td := models.TripTodo{TodoID: op.EntityID, Category: "other", CreatedBy: c.Actor, UpdatedBy: c.Actor, UpdatedAt: stamp(c), FieldAt: map[string]int64{}}
 	commit(&td.FieldAt, at, todoChanges(&td, p, c.Actor, c.Now), res)
 	if p.Order == nil {
 		td.Order = nextOrder(t, td.Day)
@@ -392,15 +488,31 @@ func todoUpdate(t *models.Trip, op models.Op, at int64, c Ctx, res *models.OpRes
 	if code := decodePatch(op.Patch, &p); code != "" {
 		return fail(res, code)
 	}
-	if !validTodoPatch(p, false) {
+	if !validTodoPatch(p, false, c.Now) || !bookingLinkOK(t, p) {
 		return fail(res, models.CodeInvalid)
 	}
+	if p.Title != nil || p.Place.Set {
+		title, place := t.Todos[i].Title, t.Todos[i].Place
+		if p.Title != nil {
+			title = *p.Title
+		}
+		if p.Place.Set {
+			place = p.Place.Val
+		}
+		if !todoTitleOK(title, place) {
+			return fail(res, models.CodeInvalid)
+		}
+	}
+	fillPlaceTZ(p.Place.Val, c)
 	td := &t.Todos[i]
 	if !commit(&td.FieldAt, at, todoChanges(td, p, c.Actor, c.Now), res) {
 		return false
 	}
 	td.V = c.NewV
-	resolveTodoTZ(t, td)
+	td.UpdatedBy, td.UpdatedAt = c.Actor, stamp(c)
+	if p.Place.Set { // a title-only edit must not shift the time after a trip tz change
+		resolveTodoTZ(t, td)
+	}
 	if p.Order != nil || p.Day.Set {
 		renumberIfCramped(t, c.NewV)
 	}
@@ -460,6 +572,15 @@ func bookingChanges(b *models.Booking, p BookingPatch) []change {
 		v := p.Place.Val
 		ch = append(ch, change{"place", func() { b.Place = v }})
 	}
+	if p.EndPlace.Set {
+		v := p.EndPlace.Val
+		ch = append(ch, change{"end_place", func() { b.EndPlace = v }})
+		// end_tz follows the arrival place unless the patch names it (start_tz is not derived).
+		if !p.EndTZ.Set && v != nil && v.TZ != "" {
+			tz := v.TZ
+			ch = append(ch, change{"end_tz", func() { b.EndTZ = &tz }})
+		}
+	}
 	if p.Notes != nil {
 		v := *p.Notes
 		ch = append(ch, change{"notes", func() { b.Notes = v }})
@@ -468,11 +589,11 @@ func bookingChanges(b *models.Booking, p BookingPatch) []change {
 }
 
 func bookingCreate(t *models.Trip, op models.Op, at int64, c Ctx, res *models.OpResult) bool {
-	if len(t.Bookings) >= MaxBookings {
-		return fail(res, models.CodeCap)
-	}
 	if tombstoned(t, op.EntityID) {
 		return fail(res, models.CodeGone)
+	}
+	if len(t.Bookings) >= MaxBookings {
+		return fail(res, models.CodeCap)
 	}
 	if findBooking(t, op.EntityID) >= 0 {
 		return fail(res, models.CodeInvalid)
@@ -481,10 +602,12 @@ func bookingCreate(t *models.Trip, op models.Op, at int64, c Ctx, res *models.Op
 	if code := decodePatch(op.Patch, &p); code != "" {
 		return fail(res, code)
 	}
-	if !validBookingPatch(p, true) {
+	if !validBookingPatch(p, true, c.Now) {
 		return fail(res, models.CodeInvalid)
 	}
-	b := models.Booking{BookingID: op.EntityID, FieldAt: map[string]int64{}}
+	fillPlaceTZ(p.Place.Val, c)
+	fillPlaceTZ(p.EndPlace.Val, c)
+	b := models.Booking{BookingID: op.EntityID, CreatedBy: c.Actor, UpdatedBy: c.Actor, UpdatedAt: stamp(c), FieldAt: map[string]int64{}}
 	commit(&b.FieldAt, at, bookingChanges(&b, p), res)
 	b.V = c.NewV
 	t.Bookings = append(t.Bookings, b)
@@ -500,14 +623,17 @@ func bookingUpdate(t *models.Trip, op models.Op, at int64, c Ctx, res *models.Op
 	if code := decodePatch(op.Patch, &p); code != "" {
 		return fail(res, code)
 	}
-	if !validBookingPatch(p, false) {
+	if !validBookingPatch(p, false, c.Now) {
 		return fail(res, models.CodeInvalid)
 	}
+	fillPlaceTZ(p.Place.Val, c)
+	fillPlaceTZ(p.EndPlace.Val, c)
 	b := &t.Bookings[i]
 	if !commit(&b.FieldAt, at, bookingChanges(b, p), res) {
 		return false
 	}
 	b.V = c.NewV
+	b.UpdatedBy, b.UpdatedAt = c.Actor, stamp(c)
 	return true
 }
 
@@ -518,5 +644,38 @@ func bookingDelete(t *models.Trip, op models.Op, c Ctx, res *models.OpResult) bo
 	}
 	t.Bookings = append(t.Bookings[:i], t.Bookings[i+1:]...)
 	t.Tombstones = append(t.Tombstones, models.Tombstone{ID: op.EntityID, V: c.NewV, At: c.Now})
+	for k := range t.Todos { // cascade: no todo may point at a deleted booking
+		if td := &t.Todos[k]; td.BookingID != nil && *td.BookingID == op.EntityID {
+			td.BookingID = nil
+			td.V = c.NewV
+			td.UpdatedBy, td.UpdatedAt = c.Actor, stamp(c)
+		}
+	}
 	return true
+}
+
+// fillPlaceTZ derives tz from coordinates for a Google place that arrived without one.
+// The place belongs to the (already decoded) patch, so mutating it is safe.
+func fillPlaceTZ(p *models.Place, c Ctx) {
+	if p != nil && c.TZ != nil && p.Source == models.SourceGoogle && p.TZ == "" && p.Lat != nil && p.Lng != nil {
+		p.TZ = c.TZ(*p.Lat, *p.Lng)
+	}
+}
+
+func fillTripTZ(p *TripPatch, c Ctx) {
+	fillPlaceTZ(p.Destination.Val, c)
+	if p.Stops.Val != nil {
+		for i := range *p.Stops.Val {
+			fillPlaceTZ(&(*p.Stops.Val)[i], c)
+		}
+	}
+}
+
+// todoTitleOK: a todo needs a non-blank title unless it has a Google place, whose display
+// name the client shows online (the title is user content only and stays blank by design).
+func todoTitleOK(title string, place *models.Place) bool {
+	if strings.TrimSpace(title) != "" {
+		return true
+	}
+	return place != nil && place.Source == models.SourceGoogle
 }

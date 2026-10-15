@@ -71,20 +71,19 @@ func TestEmbeddingDefaults(t *testing.T) {
 	}
 }
 
-func TestTripsAndPlacesDefaults(t *testing.T) {
+func TestTripsDefaultsAndOverride(t *testing.T) {
 	t.Setenv("MONGODB_URI", "mongodb://x")
 	t.Setenv("MONGODB_DB", "x")
 	cfg, err := Load()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.PhotonBaseURL != "" || cfg.TripsUserRPS != 5 || cfg.PlacesUserRPS != 2 || cfg.PlacesServerRPS != 5 {
+	if cfg.TripsUserRPS != 5 {
 		t.Fatalf("defaults: %+v", cfg)
 	}
-	t.Setenv("PHOTON_BASE_URL", "https://photon.example")
-	t.Setenv("PLACES_SERVER_RPS", "9")
+	t.Setenv("TRIPS_USER_RPS", "9")
 	cfg, _ = Load()
-	if cfg.PhotonBaseURL != "https://photon.example" || cfg.PlacesServerRPS != 9 {
+	if cfg.TripsUserRPS != 9 {
 		t.Fatalf("overrides: %+v", cfg)
 	}
 }

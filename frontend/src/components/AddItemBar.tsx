@@ -1,10 +1,11 @@
-import React, { useId, useMemo, useRef, useState } from 'react'
+import React, { useMemo, useRef, useState } from 'react'
 import { Button, Input } from 'antd'
 import { Plus } from '@phosphor-icons/react'
 import type { PantryItem } from '@api/types'
 import { parseInput } from '@lib/parseInput'
 import { ghostRemainder, rankSuggestions, type Suggestion } from '@lib/suggest'
 import { getCategoryClass } from '@lib/category'
+import { Combobox } from '@components/ui/Combobox'
 
 type Parsed = { description: string; quantity?: string; unit?: string }
 
@@ -17,34 +18,19 @@ type Props = {
 
 const MAX_SLIPS = 5
 
-const Slip = React.memo(function Slip({
-  s,
-  id,
-  active,
-  onPick,
-}: {
-  s: Suggestion
-  id: string
-  active: boolean
-  onPick: (s: Suggestion) => void
-}) {
+const slipUsual = (item: PantryItem) => [item.quantity, item.unit].filter(Boolean).join(' ')
+const slipKey = (s: Suggestion) => s.item.description
+const slipLabel = (s: Suggestion) => {
+  const usual = slipUsual(s.item)
+  return usual ? `${s.item.description}, ${usual}` : s.item.description
+}
+
+// The inside of one slip; the Combobox owns the option element (role, id, click) around it.
+const SlipBody = React.memo(function SlipBody({ s }: { s: Suggestion }) {
   const { item, start, length } = s
-  const usual = [item.quantity, item.unit].filter(Boolean).join(' ')
+  const usual = slipUsual(item)
   return (
-    // Options aren't focusable by design: focus stays in the field and the active slip is
-    // announced through aria-activedescendant.
-    // biome-ignore lint/a11y/useFocusableInteractive: combobox options are not tab stops
-    // biome-ignore lint/a11y/useKeyWithClickEvents: keyboard goes through the combobox field
-    <div
-      id={id}
-      role="option"
-      aria-selected={active}
-      aria-label={usual ? `${item.description}, ${usual}` : item.description}
-      className={active ? 'pantry-slip is-active' : 'pantry-slip'}
-      // Keep focus in the field so the keyboard stays up for the next add.
-      onPointerDown={(e) => e.preventDefault()}
-      onClick={() => onPick(s)}
-    >
+    <>
       <span className="slip-name">
         {item.description.slice(0, start)}
         <mark className="slip-hit">{item.description.slice(start, start + length)}</mark>
@@ -56,9 +42,10 @@ const Slip = React.memo(function Slip({
           {item.category}
         </span>
       )}
-    </div>
+    </>
   )
 })
+const renderSlip = (s: Suggestion) => <SlipBody s={s} />
 
 // Owns the draft text so keystrokes re-render only this bar, not the whole list page.
 export const AddItemBar: React.FC<Props> = ({ onCreate, pantry }) => {
@@ -66,10 +53,6 @@ export const AddItemBar: React.FC<Props> = ({ onCreate, pantry }) => {
   // Bumped on every add; re-keys the plus icon so its turn animation replays.
   const [adds, setAdds] = useState(0)
   const ref = useRef<any>(null)
-  const uid = useId()
-  const listId = `${uid}-slips`
-  const [active, setActive] = useState(-1)
-  const [dismissed, setDismissed] = useState(false)
 
   const parsed = useMemo(() => {
     const text = value.trim()
@@ -83,15 +66,13 @@ export const AddItemBar: React.FC<Props> = ({ onCreate, pantry }) => {
     () => (pantry?.length ? rankSuggestions(value, pantry, MAX_SLIPS) : []),
     [value, pantry],
   )
-  const open = slips.length > 0 && !dismissed
-  const ghost = open && active < 0 ? ghostRemainder(value, slips[0]) : ''
+  // The Combobox draws it only while the top slip is the target (nothing arrowed to).
+  const ghostTail = slips.length ? ghostRemainder(value, slips[0]) : ''
 
   const armed = value.trim().length > 0
 
   const add = (item: Parsed, restore: string) => {
     setValue('')
-    setActive(-1)
-    setDismissed(false)
     setAdds((n) => n + 1)
     // A short tick where supported (Android); a no-op elsewhere.
     navigator.vibrate?.(8)
@@ -124,94 +105,59 @@ export const AddItemBar: React.FC<Props> = ({ onCreate, pantry }) => {
     )
   }
 
-  const onKeyDown = (e: React.KeyboardEvent) => {
-    const composing = e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229
-    if (composing) return
-    if (open && e.key === 'ArrowUp') {
-      e.preventDefault()
-      setActive((i) => Math.min(i + 1, slips.length - 1))
-    } else if (open && e.key === 'ArrowDown') {
-      e.preventDefault()
-      setActive((i) => Math.max(i - 1, -1))
-    } else if (open && e.key === 'Escape') {
-      e.preventDefault()
-      setDismissed(true)
-      setActive(-1)
-    } else if (e.key === 'Tab' && ghost && !e.shiftKey) {
-      e.preventDefault()
-      setValue(value.trimEnd() + ghost)
-    } else if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      // Enter only takes a slip the user explicitly moved to; otherwise it adds the typed text.
-      if (open && active >= 0) pick(slips[active])
-      else submit()
-    }
-  }
-
   return (
     <div className="add-bar" role="region" aria-label="Add new item">
-      {open && (
-        <div id={listId} role="listbox" aria-label="Suggestions" className="pantry-slips">
-          {slips.map((s, i) => (
-            <Slip
-              key={s.item.description}
-              s={s}
-              id={`${uid}-slip-${i}`}
-              active={i === active}
-              onPick={pick}
-            />
-          ))}
-        </div>
-      )}
-      <span className="sr-only" role="status" aria-live="polite">
-        {open ? `${slips.length} suggestion${slips.length === 1 ? '' : 's'}` : ''}
-      </span>
-      <div className="add-row">
-        <div className={qty ? 'add-field has-qty' : 'add-field'}>
-          {ghost && (
-            <div className="add-ghost" aria-hidden>
-              <span className="add-ghost-typed">{value.trimEnd()}</span>
-              {ghost}
+      <Combobox
+        options={slips}
+        getKey={slipKey}
+        getLabel={slipLabel}
+        renderOption={renderSlip}
+        onPick={pick}
+        onSubmitText={submit}
+        query={value}
+        ghost={ghostTail}
+        onAcceptGhost={() => setValue(value.trimEnd() + ghostTail)}
+        autoComplete="both"
+      >
+        {({ input, ghost }) => (
+          <div className="add-row">
+            <div className={qty ? 'add-field has-qty' : 'add-field'}>
+              {ghost && (
+                <div className="add-ghost" aria-hidden>
+                  <span className="add-ghost-typed">{value.trimEnd()}</span>
+                  {ghost}
+                </div>
+              )}
+              <Input.TextArea
+                ref={ref}
+                className="add-input"
+                value={value}
+                onChange={(e) => setValue(e.target.value)}
+                placeholder="Add an item"
+                autoSize={{ minRows: 1, maxRows: 3 }}
+                enterKeyHint="enter"
+                aria-label="Add item input"
+                {...input}
+              />
+              {qty && (
+                <span className="add-qty-chip" aria-hidden>
+                  {qty}
+                </span>
+              )}
             </div>
-          )}
-          <Input.TextArea
-            ref={ref}
-            className="add-input"
-            value={value}
-            onChange={(e) => {
-              setValue(e.target.value)
-              setActive(-1)
-              setDismissed(false)
-            }}
-            placeholder="Add an item"
-            autoSize={{ minRows: 1, maxRows: 3 }}
-            enterKeyHint="enter"
-            onKeyDown={onKeyDown}
-            onBlur={() => setActive(-1)}
-            aria-label="Add item input"
-            role="combobox"
-            aria-expanded={open}
-            aria-controls={open ? listId : undefined}
-            aria-autocomplete="both"
-            aria-activedescendant={open && active >= 0 ? `${uid}-slip-${active}` : undefined}
-          />
-          {qty && (
-            <span className="add-qty-chip" aria-hidden>
-              {qty}
-            </span>
-          )}
-        </div>
-        <Button
-          className={armed ? 'add-btn is-armed' : 'add-btn'}
-          type="primary"
-          shape="circle"
-          onClick={submit}
-          disabled={!armed}
-          icon={<Plus key={adds} className={adds ? 'add-plus is-turning' : 'add-plus'} />}
-          size="large"
-          aria-label="Add item"
-        />
-      </div>
+            <Button
+              className={armed ? 'add-btn is-armed' : 'add-btn'}
+              type="primary"
+              shape="circle"
+              onClick={submit}
+              disabled={!armed}
+              icon={<Plus key={adds} className={adds ? 'add-plus is-turning' : 'add-plus'} />}
+              size="large"
+              aria-label="Add item"
+            />
+          </div>
+        )}
+      </Combobox>
     </div>
   )
 }

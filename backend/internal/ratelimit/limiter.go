@@ -2,6 +2,7 @@
 package ratelimit
 
 import (
+	"math"
 	"sync"
 	"time"
 )
@@ -22,6 +23,12 @@ type Limiter struct {
 	burst   float64
 	buckets map[string]*bucket
 	now     func() time.Time
+}
+
+// Burst returns a bucket size of four seconds of traffic, never below one token
+// (a rate under 1/s would otherwise truncate to a bucket that rejects everything).
+func Burst(ratePerSec float64) int {
+	return int(math.Max(1, math.Ceil(ratePerSec*4)))
 }
 
 func New(ratePerSec float64, burst int) *Limiter {

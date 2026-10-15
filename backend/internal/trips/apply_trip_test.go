@@ -16,14 +16,16 @@ var now0 = time.UnixMilli(t0 + 10_000_000)
 
 // harness drives ApplyOp the way the service does: one op per "batch".
 type harness struct {
-	t    *testing.T
-	trip *models.Trip
-	now  time.Time
-	seq  map[string]int64
+	t     *testing.T
+	trip  *models.Trip
+	now   time.Time
+	seq   map[string]int64
+	actor string
+	tz    func(lat, lng float64) string
 }
 
 func newHarness(t *testing.T) *harness {
-	return &harness{t: t, trip: NewShell(testTripID, "room_1", "user_a", now0), now: now0, seq: map[string]int64{}}
+	return &harness{t: t, trip: NewShell(testTripID, "room_1", "user_a", now0), now: now0, seq: map[string]int64{}, actor: "user_a"}
 }
 
 func todoID(n int) string    { return "ttd_" + strings.Repeat(fmt.Sprintf("%x", n%16), 32) }
@@ -47,7 +49,7 @@ func (h *harness) doSeq(client string, seq int64, typ, entity string, patch any,
 	}
 	op := models.Op{V: 1, OpID: fmt.Sprintf("op-%s-%d", client, seq), ClientID: client, Seq: seq, At: at,
 		Type: typ, TripID: testTripID, EntityID: entity, Patch: raw}
-	res, _ := ApplyOp(h.trip, op, Ctx{Actor: "user_a", Now: h.now, NewV: h.trip.Version + 1})
+	res, _ := ApplyOp(h.trip, op, Ctx{Actor: h.actor, Now: h.now, NewV: h.trip.Version + 1, TZ: h.tz})
 	return res
 }
 

@@ -19,6 +19,8 @@ type UserRepository interface {
 	GetByAPIKeyLookup(ctx context.Context, lookup string) (*models.User, error)
 	SetAPIKey(ctx context.Context, userID string, hash, lookup string, expiresAt *time.Time, updatedAt time.Time) error
 	UpdateName(ctx context.Context, userID string, name string, updatedAt time.Time) error
+	// UpdatePreferences sets only the non-nil preference fields (nested $set), leaving the rest untouched.
+	UpdatePreferences(ctx context.Context, userID string, prefs models.UserPreferences, updatedAt time.Time) error
 	SetRoomID(ctx context.Context, userID string, roomID *string, updatedAt time.Time) error
 	UpdateUsername(ctx context.Context, userID string, username string, updatedAt time.Time) error
 	UpdatePasswordEnc(ctx context.Context, userID string, enc string, updatedAt time.Time) error
@@ -95,10 +97,7 @@ type TripRepository interface {
 	// MoveRoom re-homes every trip of fromRoomID into toRoomID and bumps their version.
 	MoveRoom(ctx context.Context, fromRoomID, toRoomID string, at time.Time) error
 	DeleteByRoom(ctx context.Context, roomID string) error
-}
-
-// PlaceCacheRepository caches geocoder results (TTL-expired by the datastore).
-type PlaceCacheRepository interface {
-	Get(ctx context.Context, key string) ([]models.Place, bool, error)
-	Put(ctx context.Context, key string, places []models.Place, at time.Time) error
+	// ListCoordsExpired returns up to limit trips (including soft-deleted ones) whose stored
+	// Google coordinates were due to expire before `before`. Served from an index on coords_expire_at.
+	ListCoordsExpired(ctx context.Context, before time.Time, limit int) ([]models.Trip, error)
 }

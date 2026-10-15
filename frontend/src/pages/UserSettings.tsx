@@ -10,13 +10,14 @@ import { Avatar } from '@components/Avatar'
 import { ArrowLeft, FloppyDisk, Trash } from '@phosphor-icons/react'
 import { useDocumentTitle } from '@lib/useDocumentTitle'
 import { TopNav } from '@components/TopNav'
+import { TripsPreference } from '@components/trips/TripsPreference'
 
 function isEmail(v: string) {
   return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)
 }
 
 export const UserSettings: React.FC = () => {
-  const { apiKey, setApiKey } = useAuth()
+  const { apiKey, setApiKey, signOut } = useAuth()
   const navigate = useTransitionNavigate()
   useDocumentTitle('Account settings')
   const qc = useQueryClient()
@@ -104,7 +105,7 @@ export const UserSettings: React.FC = () => {
   async function onConfirmDelete() {
     try {
       await deleteMyAccount(apiKey!)
-      setApiKey(null)
+      await signOut('expired')
       navigate('/login', { replace: true })
     } catch (e: any) {
       message.error(errorMessage(e, 'Couldn’t delete your account. Try again.'))
@@ -192,6 +193,15 @@ export const UserSettings: React.FC = () => {
               </Button>
             </div>
           </Form>
+
+          <Divider className="settings-divider" />
+
+          <div>
+            <Typography.Title level={4} style={{ marginTop: 0 }}>
+              Trips
+            </Typography.Title>
+            <TripsPreference />
+          </div>
 
           <Divider className="settings-divider" />
 

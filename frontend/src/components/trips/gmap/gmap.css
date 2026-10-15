@@ -1,0 +1,350 @@
+/* The Google map: our own pills, clusters and controls. The map style itself (a quiet light
+   Map ID) is light in both themes, so the pills keep a dark ink on white paper. Google's
+   logo (bottom-left) and terms (bottom-right) are never covered: the +/- sit above the terms. */
+.gm-wrap {
+  --gm-ink: #1a1a1a;
+  --gm-halo: #ffffff;
+  --gm-muted: #5d635c;
+  position: relative;
+  isolation: isolate;
+}
+.gm-wrap .gm-map {
+  position: absolute;
+  inset: 0;
+}
+
+/* ---- a stop: a 0x0 box whose top-left is the exact point (brief 6u) ------------------------- */
+:root {
+  /* Transport legs (to a train, flight or car) are dotted in this grey. */
+  --trip-transport: #4b5563;
+}
+.gm-pin {
+  position: relative;
+  width: 0;
+  height: 0;
+  cursor: pointer;
+  font-family: var(--font-body);
+  --gm-h: 34px;
+}
+.gm-wrap.is-phone .gm-pin {
+  --gm-h: 30px;
+}
+/* the anchor: a 10px ring in the stop's colour on the exact coordinate */
+.gm-anchor {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 10px;
+  height: 10px;
+  box-sizing: border-box;
+  border: 3px solid var(--gm-fill, var(--pip-other));
+  border-radius: 50%;
+  background: #fff;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
+}
+/* a comfortable tap target without a bigger ring */
+.gm-anchor::before {
+  content: '';
+  position: absolute;
+  inset: -12px;
+}
+/* the pill stands 10px above the anchor, a pointer tail between them */
+.gm-pill {
+  position: absolute;
+  left: 0;
+  bottom: 10px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-sizing: border-box;
+  height: var(--gm-h);
+  padding: 0 14px 0 10px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--gm-ink);
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.08),
+    0 6px 14px -6px rgba(0, 0, 0, 0.28);
+  transition: transform 120ms var(--ease-out, ease-out);
+}
+.gm-pill::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -6px;
+  width: 10px;
+  height: 10px;
+  background: inherit;
+  border-right: 1px solid rgba(0, 0, 0, 0.08);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  transform: translateX(-50%) rotate(45deg);
+}
+.gm-dot {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--gm-fill, var(--pip-other));
+  box-shadow: 0 0 0 2px #fff;
+}
+.gm-time {
+  color: var(--gm-muted);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+.gm-time:empty,
+.gm-kicker {
+  display: none;
+}
+.gm-wrap.is-phone .gm-pill {
+  gap: 6px;
+  padding: 0 12px 0 9px;
+  font-size: 13px;
+}
+.gm-wrap.is-phone .gm-time {
+  display: none;
+}
+
+/* next: the yellow key pill with a NEXT kicker */
+.gm-pin.is-next .gm-pill {
+  background: var(--brand-yellow);
+  border-color: #e6be00;
+  box-shadow:
+    0 1px 0 #e6be00,
+    0 8px 16px -6px rgba(150, 115, 0, 0.45);
+}
+.gm-pin.is-next .gm-pill::after {
+  border-color: #e6be00;
+}
+.gm-pin.is-next .gm-anchor {
+  border-color: #e6be00;
+}
+.gm-pin.is-next .gm-time {
+  color: #5b4a00;
+}
+.gm-pin.has-kicker .gm-kicker {
+  display: inline;
+  color: var(--gm-ink);
+  opacity: 0.75;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* done: a quiet grey pill */
+.gm-pin.is-done .gm-pill {
+  background: #f3f3f3;
+  color: #6b7079;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+.gm-pin.is-done .gm-dot {
+  background: var(--pip-done);
+}
+.gm-pin.is-done .gm-anchor {
+  border-color: var(--pip-done);
+}
+
+/* selected: a 2px ink outline */
+.gm-pin.is-selected .gm-pill {
+  box-shadow:
+    0 0 0 2px var(--gm-ink),
+    0 6px 14px -6px rgba(0, 0, 0, 0.28);
+}
+
+/* ideas: outlined in the category colour, with a hollow dot */
+.gm-pin.is-hollow .gm-pill {
+  background: var(--panel, #fff);
+  border: 2px solid var(--gm-fill);
+}
+.gm-pin.is-hollow .gm-pill::after {
+  border-width: 2px;
+  border-color: var(--gm-fill);
+}
+.gm-pin.is-hollow .gm-dot {
+  background: transparent;
+  box-shadow: inset 0 0 0 2px var(--gm-fill);
+}
+
+/* the other days are dimmed (emphasis only: the camera never moves for it) */
+.gm-pin.is-dim {
+  opacity: 0.55;
+}
+
+/* collapsed (a collision, or another day): the anchor and the dot; the pill returns on hover */
+.gm-pin:not(.is-labelled):not(.is-hot):not(:hover) .gm-pill,
+.gm-pin.label-hidden:not(.is-hot):not(:hover) .gm-pill {
+  --gm-h: 22px;
+  gap: 0;
+  padding: 0 4px;
+  bottom: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+}
+.gm-pin:not(.is-labelled):not(.is-hot):not(:hover) :is(.gm-name, .gm-time, .gm-kicker),
+.gm-pin.label-hidden:not(.is-hot):not(:hover) :is(.gm-name, .gm-time, .gm-kicker) {
+  display: none;
+}
+.gm-pin:not(.is-labelled):not(.is-hot):not(:hover) .gm-pill::after,
+.gm-pin.label-hidden:not(.is-hot):not(:hover) .gm-pill::after {
+  display: none;
+}
+
+/* the row under the pointer lifts its pill; a hovered pill rises above its neighbours */
+.gm-pin.is-hot .gm-pill {
+  transform: translate(-50%, -3px);
+  box-shadow:
+    0 2px 3px rgba(0, 0, 0, 0.1),
+    0 12px 18px -8px rgba(0, 0, 0, 0.36);
+}
+.gm-pin:hover,
+.gm-pin.is-hot {
+  z-index: 2;
+}
+
+/* the row under a hovered pill */
+.trip-row.is-pin-linked {
+  background: var(--highlighter);
+}
+
+/* ---- a cluster: an ink pill with +N, 30px --------------------------------------------------- */
+.gm-cluster {
+  position: relative;
+  width: 0;
+  height: 0;
+  cursor: pointer;
+}
+.gm-cluster-pill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  min-width: 30px;
+  height: 30px;
+  padding: 0 11px;
+  transform: translate(-50%, -50%);
+  border-radius: 999px;
+  background: var(--gm-ink);
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 4px 10px -4px rgba(0, 0, 0, 0.4);
+}
+
+/* ---- "Wed 28 is off the map · Show": a paper chip at the top centre, under the bar ------------------------- */
+.gm-chip {
+  position: absolute;
+  z-index: 1;
+  /* under the pane's own bar (day, Show all days, Fit day) */
+  top: 62px;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: calc(100% - 24px);
+  padding: 6px 6px 6px 14px;
+  transform: translateX(-50%);
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--panel);
+  box-shadow: var(--lift-1);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.gm-chip button {
+  padding: 4px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--brand-yellow);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+.gm-chip button:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+@media (hover: hover) {
+  .gm-chip button:hover {
+    filter: brightness(0.96);
+  }
+}
+
+/* ---- the previewed place: a hollow pin ----------------------------------------------------------- */
+.gm-preview {
+  position: relative;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+.gm-preview-ring {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 18px;
+  height: 18px;
+  box-sizing: border-box;
+  transform: translate(-50%, -50%);
+  border: 2.5px solid var(--gm-ink);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.4);
+}
+
+/* ---- our +/- (the default controls are off) -------------------------------------------------------- */
+.gm-zoom {
+  position: absolute;
+  z-index: 1;
+  right: 12px;
+  /* above Google's terms strip, which stays visible in the bottom-right corner */
+  bottom: 44px;
+  display: grid;
+  overflow: hidden;
+  border: 1px solid var(--border-strong);
+  border-radius: 14px;
+  background: var(--panel);
+  box-shadow: var(--lift-1);
+}
+.gm-zoom button {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  cursor: pointer;
+}
+.gm-zoom button + button {
+  border-top: 1px solid var(--border);
+}
+@media (hover: hover) {
+  .gm-zoom button:hover {
+    background: var(--brand-yellow);
+  }
+}
+.gm-zoom button:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* ---- the phone: the card sits under the map, never over Google's logo ------------------------------- */
+.map-screen-map .gm-wrap {
+  margin-bottom: calc(180px + env(safe-area-inset-bottom, 0px));
+}
+.map-screen-map .gm-wrap.is-phone {
+  min-height: 0;
+}

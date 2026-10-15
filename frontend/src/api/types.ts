@@ -7,13 +7,16 @@ export type User = {
   updated_at: string
   avatar_key?: string
   avatar_style?: string
+  // Per-account preferences (kept on the account, not on the device).
+  preferences?: { trips_show_next_stop?: boolean }
 }
 
 export type RoomView = {
   display_name?: string
   description?: string
   members: string[]
-  members_meta?: { name: string; avatar_key: string }[]
+  // user_id is optional: the room view does not send it yet, so "Added by" names need it.
+  members_meta?: { name: string; avatar_key: string; user_id?: string }[]
   created_at: string
   updated_at: string
   my_deletion_vote?: boolean

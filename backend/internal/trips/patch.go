@@ -21,7 +21,9 @@ func (o *Opt[T]) UnmarshalJSON(b []byte) error {
 		return nil
 	}
 	var v T
-	if err := json.Unmarshal(b, &v); err != nil {
+	dec := json.NewDecoder(bytes.NewReader(b))
+	dec.DisallowUnknownFields() // unknown nested fields (a newer client) surface as "unsupported"
+	if err := dec.Decode(&v); err != nil {
 		return err
 	}
 	o.Val = &v
@@ -35,6 +37,11 @@ type TripPatch struct {
 	StartDate   Opt[string]       `json:"start_date"`
 	EndDate     Opt[string]       `json:"end_date"`
 	TZ          *string           `json:"tz"`
+	Icon        *string           `json:"icon"` // "" clears
+	// Stops replaces the whole route; null or [] clears it.
+	Stops Opt[[]models.Place] `json:"stops"`
+	// Days sets labels per date; an empty string removes the label.
+	Days map[string]string `json:"days"`
 }
 
 type TodoPatch struct {
@@ -47,6 +54,7 @@ type TodoPatch struct {
 	Category    *string           `json:"category"`
 	Notes       *string           `json:"notes"`
 	Place       Opt[models.Place] `json:"place"`
+	BookingID   Opt[string]       `json:"booking_id"`
 }
 
 type BookingPatch struct {
@@ -58,6 +66,7 @@ type BookingPatch struct {
 	StartTZ          Opt[string]       `json:"start_tz"`
 	EndTZ            Opt[string]       `json:"end_tz"`
 	Place            Opt[models.Place] `json:"place"`
+	EndPlace         Opt[models.Place] `json:"end_place"`
 	Notes            *string           `json:"notes"`
 }
 

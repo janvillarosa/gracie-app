@@ -111,19 +111,14 @@ func (r *TripRepo) DeleteByRoom(_ context.Context, roomID string) error {
 	return nil
 }
 
-// PlaceCacheRepo is the in-memory store.PlaceCacheRepository (no TTL in tests).
-type PlaceCacheRepo struct{ st *Store }
-
-func (r *PlaceCacheRepo) Get(_ context.Context, key string) ([]models.Place, bool, error) {
+func (r *TripRepo) ListCoordsExpired(_ context.Context, before time.Time, limit int) ([]models.Trip, error) {
 	r.st.mu.RLock()
 	defer r.st.mu.RUnlock()
-	p, ok := r.st.places[key]
-	return append([]models.Place(nil), p...), ok, nil
-}
-
-func (r *PlaceCacheRepo) Put(_ context.Context, key string, places []models.Place, _ time.Time) error {
-	r.st.mu.Lock()
-	defer r.st.mu.Unlock()
-	r.st.places[key] = append([]models.Place(nil), places...)
-	return nil
+	var out []models.Trip
+	for _, t := range r.st.trips {
+		if t.CoordsExpireAt != nil && t.CoordsExpireAt.Before(before) && len(out) < limit {
+			out = append(out, *t.Clone())
+		}
+	}
+	return out, nil
 }

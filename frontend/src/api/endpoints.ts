@@ -41,8 +41,9 @@ export async function getMe(apiKey: string): Promise<User> {
   return apiFetch<User>('/me', { apiKey })
 }
 
-export async function updateMe(apiKey: string, name: string): Promise<User> {
-  return apiFetch<User>('/me', { method: 'PUT', apiKey, body: JSON.stringify({ name }) })
+// The server answers 204: callers refetch ['me'] to see the new name.
+export async function updateMe(apiKey: string, name: string): Promise<void> {
+  await apiFetch<void>('/me', { method: 'PUT', apiKey, body: JSON.stringify({ name }) })
 }
 
 export async function updateMyProfile(
@@ -254,4 +255,12 @@ export async function reorderListItem(
     apiKey,
     body: JSON.stringify(params),
   })
+}
+
+export async function setMyPreferences(
+  apiKey: string,
+  preferences: { trips_show_next_stop?: boolean },
+): Promise<void> {
+  // 204: the caller re-reads /me.
+  await apiFetch<void>('/me', { method: 'PUT', apiKey, body: JSON.stringify({ preferences }) })
 }

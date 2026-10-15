@@ -1,0 +1,150 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Desktop planning</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F7F7F7;--panel:#fff;--sub:#FAFAFA;--ink:#1A1A1A;--text:#3B3B3B;--muted:#5C626B;--line:#ECECEC;--yellow:#FFD417;--yd:#E6BE00;--blue:#2348A6;--red:#BE1E2D;
+--food:#E07A1F;--sight:#2348A6;--act:#2E8B57;--tr:#5F6670;--stay:#B08900;--key:inset 0 1px 0 rgba(255,255,255,.55),0 1px 0 var(--yd),0 2px 6px -1px rgba(150,115,0,.28);
+--lift:0 1px 2px rgba(0,0,0,.04),0 6px 18px -6px rgba(0,0,0,.08)}
+*{box-sizing:border-box;margin:0}
+body{background:#DCDCDC;font:14px/1.45 Figtree,sans-serif;color:var(--text);padding:24px}
+h1.page{font:700 22px Outfit;color:var(--ink)} p.lede{color:#3F444C;max-width:980px;margin:6px 0 18px}
+.opt{margin-bottom:34px}
+.opt h2{font:700 18px Outfit;color:var(--ink);margin-bottom:4px} .opt p{color:#3F444C;max-width:980px;margin-bottom:10px}
+.screen{width:1440px;height:860px;background:var(--bg);border-radius:14px;overflow:hidden;position:relative;box-shadow:0 2px 10px rgba(0,0,0,.08)}
+.sheet{background:var(--panel);border-radius:16px;box-shadow:var(--lift)}
+.top{display:flex;align-items:center;justify-content:space-between;padding:18px 28px 12px}
+.top b{font:600 15px Outfit;color:var(--ink)}
+.av{width:30px;height:30px;border-radius:50%;background:#C9D3EC;display:inline-block;border:2px solid #fff}.av+.av{margin-left:-8px;background:#E9C6D6}
+.hdr{display:flex;align-items:center;gap:16px;padding:18px 22px}
+.icon{width:52px;height:52px;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;font-size:26px;background:#fff}
+.hdr h1{font:700 32px/1.05 Outfit;color:var(--ink)} .meta{color:var(--muted);font-size:14px}
+.pill{display:inline-flex;background:#F1F1F1;border-radius:999px;padding:4px;gap:2px}
+.pill span{padding:7px 14px;border-radius:999px;font-weight:600;font-size:13px;color:var(--muted)} .pill span.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.key{background:var(--yellow);box-shadow:var(--key);border-radius:999px;padding:8px 16px;font-weight:700;color:var(--ink);font-size:13px;display:inline-block}
+.quiet{border:1px solid #DADADA;border-radius:999px;padding:7px 14px;font-weight:600;color:var(--ink);font-size:13px;background:#fff;display:inline-block}
+.sec{font:700 11px Figtree;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.row{display:grid;grid-template-columns:22px 44px 1fr 10px;gap:10px;align-items:center;min-height:40px;padding:4px 0}
+.cb{width:18px;height:18px;border:1.5px solid #BDBDBD;border-radius:5px}
+.t{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.n{color:var(--ink);font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pip{width:9px;height:9px;border-radius:50%}
+.stub{color:var(--muted);font-size:13px}
+.empty{border:1.5px dashed #D9D9D9;border-radius:12px;color:#5C626B;font-size:13px;padding:10px 12px;text-align:center}
+.idea{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:9px 12px;margin-bottom:8px;box-shadow:0 1px 1px rgba(0,0,0,.03)}
+.idea .n{font-size:13.5px}
+.grip{color:#B5B5B5;font-size:13px;letter-spacing:-2px}
+.map{background:#E9EEE6;border-radius:16px;position:relative;overflow:hidden}
+.map .road{position:absolute;background:#fff;height:5px}
+.mp{position:absolute;width:12px;height:12px;border-radius:50%;border:2.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.ml{position:absolute;font:600 11.5px Figtree;color:var(--ink);text-shadow:0 0 3px #fff,0 0 3px #fff}
+.addbar{display:flex;gap:8px;align-items:center}
+.addbar .f{flex:1;background:#F4F4F4;border-radius:999px;height:44px;display:flex;align-items:center;gap:10px;padding:0 6px 0 6px;color:#5C626B}
+.chip{background:#FFE58A;border-radius:999px;padding:5px 10px;font-weight:700;font-size:12px;color:var(--ink)}
+.plus{width:44px;height:44px;border-radius:50%;background:var(--yellow);display:grid;place-items:center;font:600 22px Figtree;color:var(--ink);box-shadow:var(--key)}
+.check{display:flex;flex-direction:column;gap:6px;font-size:13px}
+.check div{display:flex;gap:8px;align-items:center}
+.ok{color:#2E8B57;font-weight:700} .todo{color:#9A6B00;font-weight:700}
+.daycol{background:#fff;border-radius:14px;box-shadow:var(--lift);padding:12px 12px 10px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.dayhd{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px}
+.dayhd b{font:700 17px Outfit;color:var(--ink)} .dayhd span{color:var(--muted);font-size:12.5px}
+.card{background:var(--sub);border-radius:10px;padding:8px 10px;display:grid;grid-template-columns:8px 1fr;gap:8px;align-items:center}
+.card .n{font-size:13px}.card .t{font-size:12px}
+.drop{border:1.5px dashed #E6BE00;background:#FFFBEA;border-radius:10px;color:#6E5400;font-size:12.5px;text-align:center;padding:9px}
+</style></head><body>
+<h1 class="page">Desktop planning, before the trip</h1>
+<p class="lede">Synthetic data: Weekend in Ghent, 24–26 Nov, and Lisbon &amp; Porto, 9 days. Both options keep the Bauhouse paper world, PillNav, the four-tier sheets and the phone layout exactly as they are. They change only what desktop shows <b>before</b> the trip. During the trip, desktop keeps today's view: Next stop, then the plan, then the map.</p>
+
+<!-- OPTION A -->
+<div class="opt">
+<h2>A · Planning desk: Ideas | Days | Map</h2>
+<p>Three columns you see at once. Ideas sit permanently on the left (drag one onto a day). The days are a wide column, and <b>every date shows</b>, empty ones as drop slots. The map is on the right and only takes space once there are places. A "Ready to go?" checklist at the top replaces the Next stop card before the trip.</p>
+<div class="screen">
+ <div class="top"><b>‹ The Villarosa House</b><span><i class="av"></i><i class="av"></i></span></div>
+ <div style="display:grid;grid-template-columns:300px 1fr 420px;gap:20px;padding:0 28px;height:790px">
+  <!-- ideas -->
+  <div class="sheet" style="padding:18px;display:flex;flex-direction:column">
+   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><span class="sec">Ideas · 6</span><span class="meta" style="font-size:12px">Drag onto a day</span></div>
+   <div class="idea"><span class="grip">⋮⋮</span><i class="pip" style="background:var(--sight)"></i><span class="n">Gravensteen castle</span></div>
+   <div class="idea"><span class="grip">⋮⋮</span><i class="pip" style="background:var(--food)"></i><span class="n">Frites at Frietketel</span></div>
+   <div class="idea"><span class="grip">⋮⋮</span><i class="pip" style="background:var(--sight)"></i><span class="n">Ghent Altarpiece</span></div>
+   <div class="idea"><span class="grip">⋮⋮</span><i class="pip" style="background:var(--act)"></i><span class="n">Boat along the Leie</span></div>
+   <div class="idea"><span class="grip">⋮⋮</span><i class="pip" style="background:var(--food)"></i><span class="n">Cuberdons at the market</span></div>
+   <div class="idea"><span class="grip">⋮⋮</span><i class="pip" style="background:var(--act)"></i><span class="n">Graffiti street</span></div>
+   <div style="margin-top:auto" class="addbar"><div class="f"><span class="chip">Ideas ▾</span>Add an idea</div><span class="plus">+</span></div>
+  </div>
+  <!-- days -->
+  <div style="display:flex;flex-direction:column;gap:14px;min-width:0">
+   <div class="sheet hdr" style="justify-content:space-between">
+    <div style="display:flex;gap:16px;align-items:center"><span class="icon">🚆</span><div><h1>Weekend in Ghent</h1><div class="meta" style="margin-top:4px">Brussels → Ghent · Tue 24 – Thu 26 Nov · in 40 days</div></div></div>
+    <span class="pill"><span class="on">Plan</span><span>Bookings</span></span>
+   </div>
+   <div class="sheet" style="padding:16px 20px;display:grid;grid-template-columns:auto 1fr;gap:22px;align-items:start">
+    <div><div class="sec" style="margin-bottom:8px">Ready to go?</div>
+     <div class="check"><div><span class="ok">✓</span> Train to Ghent booked</div><div><span class="todo">○</span> Stay for 2 nights · <u>add a stay</u></div><div><span class="todo">○</span> 2 days still empty</div></div></div>
+    <div style="border-left:1px solid var(--line);padding-left:22px"><div class="sec" style="margin-bottom:8px">Packing</div><div class="check"><div>3 of 12 packed · <u>open list</u></div></div></div>
+   </div>
+   <div class="sheet" style="padding:6px 20px 14px;flex:1;overflow:hidden">
+    <div style="display:flex;align-items:baseline;gap:10px;padding:14px 0 6px;border-bottom:1px solid var(--line)"><b style="font:700 20px Outfit;color:var(--ink)">Tue 24</b><span class="meta">Arrive</span></div>
+    <div class="row"><span>🚆</span><span class="t">09:12</span><span class="stub">Train Brussels → Ghent</span><span></span></div>
+    <div class="row"><i class="cb"></i><span class="t">11:00</span><span class="n">Check bags at the hotel</span><i class="pip" style="background:var(--stay)"></i></div>
+    <div class="row"><i class="cb"></i><span class="t"></span><span class="n">Wander the Graslei at dusk</span><i class="pip" style="background:var(--act)"></i></div>
+    <div style="display:flex;align-items:baseline;gap:10px;padding:16px 0 8px;border-bottom:1px solid var(--line)"><b style="font:700 20px Outfit;color:var(--ink)">Wed 25</b><span class="meta">Add a label</span></div>
+    <div class="drop" style="margin-top:10px">Nothing planned yet · drop an idea here</div>
+    <div style="display:flex;align-items:baseline;gap:10px;padding:16px 0 8px;border-bottom:1px solid var(--line)"><b style="font:700 20px Outfit;color:var(--ink)">Thu 26</b><span class="meta">Head home</span></div>
+    <div class="empty" style="margin-top:10px">Nothing planned yet</div>
+   </div>
+   <div class="addbar"><div class="f" style="background:#fff;box-shadow:var(--lift)"><span class="chip">Tue 24 ▾</span>Add to Tue 24</div><span class="plus">+</span></div>
+  </div>
+  <!-- map -->
+  <div class="map">
+   <i class="road" style="left:0;top:300px;width:420px;transform:rotate(8deg)"></i><i class="road" style="left:200px;top:0;width:5px;height:790px"></i>
+   <i class="mp" style="left:180px;top:280px;background:var(--stay)"></i><span class="ml" style="left:198px;top:276px">Hotel</span>
+   <i class="mp" style="left:240px;top:340px;background:var(--act)"></i><span class="ml" style="left:258px;top:336px">Graslei</span>
+   <span class="ml" style="left:16px;top:16px;background:#fff;padding:6px 12px;border-radius:999px;text-shadow:none">Tue 24</span>
+   <span class="ml" style="left:16px;bottom:14px;background:#fff;padding:3px 8px;border-radius:999px;text-shadow:none;font-weight:500">© OpenStreetMap</span>
+  </div>
+ </div>
+</div>
+</div>
+
+<!-- OPTION B -->
+<div class="opt">
+<h2>B · Day board: days as columns</h2>
+<p>The days lay out side by side as paper columns, like a weekly planner. Ideas are the first column, so dragging an idea right puts it on a day. You see the whole trip's shape at once (which days are packed, which are empty). The map is a toggle that slides in over the board for geography checks. For trips longer than about 5 days the board scrolls sideways, with the trip header and checklist fixed.</p>
+<div class="screen">
+ <div class="top"><b>‹ The Villarosa House</b><span><i class="av"></i><i class="av"></i></span></div>
+ <div style="padding:0 28px;display:flex;flex-direction:column;gap:14px;height:790px">
+  <div class="sheet hdr" style="justify-content:space-between">
+   <div style="display:flex;gap:16px;align-items:center"><span class="icon">🏙️</span><div><h1>Lisbon &amp; Porto</h1><div class="meta" style="margin-top:4px">Lisbon → Porto · Tue 13 – Wed 21 Oct · in 7 days</div></div></div>
+   <div style="display:flex;gap:10px;align-items:center"><span class="meta" style="margin-right:6px"><span class="ok">✓</span> Flights · <span class="todo">○</span> Stay Sun 18 · 4 days empty</span><span class="pill"><span class="on">Board</span><span>Bookings</span></span><span class="quiet">🗺 Map</span></div>
+  </div>
+  <div style="display:grid;grid-template-columns:250px repeat(5, minmax(210px,1fr));gap:12px;flex:1;min-height:0">
+   <div class="daycol" style="background:#FFFDF2;box-shadow:none;border:1px dashed #E6D27A">
+    <div class="dayhd"><b>Ideas</b><span>14</span></div>
+    <div class="idea"><span class="grip">⋮⋮</span><i class="pip" style="background:var(--food)"></i><span class="n">Ginjinha tasting</span></div>
+    <div class="idea"><span class="grip">⋮⋮</span><i class="pip" style="background:var(--act)"></i><span class="n">Day trip to Cascais</span></div>
+    <div class="idea"><span class="grip">⋮⋮</span><i class="pip" style="background:var(--sight)"></i><span class="n">Cabo da Roca</span></div>
+    <div class="idea"><span class="grip">⋮⋮</span><i class="pip" style="background:var(--food)"></i><span class="n">Pink Street drinks</span></div>
+    <div class="idea"><span class="grip">⋮⋮</span><i class="pip" style="background:var(--sight)"></i><span class="n">Casa da Música</span></div>
+    <div style="margin-top:auto" class="addbar"><div class="f" style="height:40px"><span class="chip">Ideas ▾</span>Add</div><span class="plus" style="width:40px;height:40px">+</span></div>
+   </div>
+   <div class="daycol"><div class="dayhd"><b>Tue 13</b><span>Arrival</span></div>
+    <div class="card"><span>✈️</span><div><div class="n">London → Lisbon</div><div class="t">07:05 → 09:40</div></div></div>
+    <div class="card"><i class="pip" style="background:var(--sight)"></i><div><div class="n">Sé de Lisboa</div><div class="t">13:00</div></div></div>
+    <div class="card"><i class="pip" style="background:var(--food)"></i><div><div class="n">Dinner at Taberna</div><div class="t">20:00</div></div></div></div>
+   <div class="daycol"><div class="dayhd"><b>Wed 14</b><span>Alfama</span></div>
+    <div class="card"><i class="pip" style="background:var(--sight)"></i><div><div class="n">Castelo de S. Jorge</div><div class="t">10:00</div></div></div>
+    <div class="card"><i class="pip" style="background:var(--act)"></i><div><div class="n">Tram 28</div><div class="t">Anytime</div></div></div></div>
+   <div class="daycol"><div class="dayhd"><b>Thu 15</b><span>Sintra</span></div>
+    <div class="card"><span>🎟</span><div><div class="n">Pena Palace</div><div class="t">10:15 · Booked</div></div></div>
+    <div class="card"><i class="pip" style="background:var(--food)"></i><div><div class="n">Tascantiga</div><div class="t">12:30</div></div></div>
+    <div class="card"><i class="pip" style="background:var(--sight)"></i><div><div class="n">Quinta da Regaleira</div><div class="t">14:00</div></div></div>
+    <div class="card"><i class="pip" style="background:var(--food)"></i><div><div class="n">Piriquita</div><div class="t">16:30</div></div></div></div>
+   <div class="daycol"><div class="dayhd"><b>Fri 16</b><span>Add a label</span></div><div class="drop">Drop an idea here</div></div>
+   <div class="daycol"><div class="dayhd"><b>Sat 17</b><span>Add a label</span></div><div class="empty">Nothing planned yet</div></div>
+  </div>
+  <div class="addbar" style="max-width:640px;align-self:center;width:100%"><div class="f" style="background:#fff;box-shadow:var(--lift)"><span class="chip">Fri 16 ▾</span>Add to Fri 16</div><span class="plus">+</span></div>
+ </div>
+</div>
+</div>
+</body></html>

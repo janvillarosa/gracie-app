@@ -86,32 +86,32 @@ func TestDecodePatchUnknownFieldIsUnsupported(t *testing.T) {
 
 func TestValidators(t *testing.T) {
 	s := func(v string) *string { return &v }
-	if validTripPatch(TripPatch{}, true) {
+	if validTripPatch(TripPatch{}, true, now0) {
 		t.Fatal("create needs a title")
 	}
-	if !validTripPatch(TripPatch{Title: s("Kyoto")}, true) {
+	if !validTripPatch(TripPatch{Title: s("Kyoto")}, true, now0) {
 		t.Fatal("plain title should be valid")
 	}
-	if validTripPatch(TripPatch{Title: s("   ")}, true) {
+	if validTripPatch(TripPatch{Title: s("   ")}, true, now0) {
 		t.Fatal("blank title invalid")
 	}
-	if validTripPatch(TripPatch{TZ: s("Mars/Olympus")}, false) {
+	if validTripPatch(TripPatch{TZ: s("Mars/Olympus")}, false, now0) {
 		t.Fatal("bad tz invalid")
 	}
-	if validTodoPatch(TodoPatch{Title: s("x"), Category: s("nope")}, true) {
+	if validTodoPatch(TodoPatch{Title: s("x"), Category: s("nope")}, true, now0) {
 		t.Fatal("bad category invalid")
 	}
-	if validTodoPatch(TodoPatch{Title: s("x"), StartTime: Opt[string]{Set: true, Val: s("25:99")}}, true) {
+	if validTodoPatch(TodoPatch{Title: s("x"), StartTime: Opt[string]{Set: true, Val: s("25:99")}}, true, now0) {
 		t.Fatal("bad clock invalid")
 	}
-	if validTodoPatch(TodoPatch{Title: s("x"), Day: Opt[string]{Set: true, Val: s("2026-02-30")}}, true) {
+	if validTodoPatch(TodoPatch{Title: s("x"), Day: Opt[string]{Set: true, Val: s("2026-02-30")}}, true, now0) {
 		t.Fatal("impossible date invalid")
 	}
-	if validBookingPatch(BookingPatch{Title: s("Flight")}, true) {
+	if validBookingPatch(BookingPatch{Title: s("Flight")}, true, now0) {
 		t.Fatal("booking create needs kind")
 	}
 	if !validBookingPatch(BookingPatch{Kind: s("flight"), Title: s("NH 105"),
-		StartsAt: Opt[string]{Set: true, Val: s("2026-11-01T09:30")}, StartTZ: Opt[string]{Set: true, Val: s("Asia/Tokyo")}}, true) {
+		StartsAt: Opt[string]{Set: true, Val: s("2026-11-01T09:30")}, StartTZ: Opt[string]{Set: true, Val: s("Asia/Tokyo")}}, true, now0) {
 		t.Fatal("valid booking rejected")
 	}
 }
