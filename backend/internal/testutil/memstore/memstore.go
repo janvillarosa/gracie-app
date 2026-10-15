@@ -139,6 +139,20 @@ func (r *UserRepo) UpdateName(_ context.Context, userID string, name string, upd
 	u.UpdatedAt = updatedAt
 	return nil
 }
+func (r *UserRepo) UpdatePreferences(_ context.Context, userID string, prefs models.UserPreferences, updatedAt time.Time) error {
+	r.st.mu.Lock()
+	defer r.st.mu.Unlock()
+	u, ok := r.st.users[userID]
+	if !ok {
+		return derr.ErrNotFound
+	}
+	if prefs.TripsShowNextStop != nil {
+		v := *prefs.TripsShowNextStop
+		u.Preferences.TripsShowNextStop = &v
+	}
+	u.UpdatedAt = updatedAt
+	return nil
+}
 func (r *UserRepo) SetRoomID(_ context.Context, userID string, roomID *string, updatedAt time.Time) error {
 	r.st.mu.Lock()
 	defer r.st.mu.Unlock()

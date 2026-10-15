@@ -123,6 +123,21 @@ func (r *UserRepo) UpdateName(ctx context.Context, userID string, name string, u
 	return err
 }
 
+func (r *UserRepo) UpdatePreferences(ctx context.Context, userID string, prefs models.UserPreferences, updatedAt time.Time) error {
+	set := bson.D{{Key: "updated_at", Value: updatedAt.UTC()}}
+	if prefs.TripsShowNextStop != nil {
+		set = append(set, bson.E{Key: "preferences.trips_show_next_stop", Value: *prefs.TripsShowNextStop})
+	}
+	res, err := r.col().UpdateOne(ctx, filterByUserID(userID), bson.D{{Key: "$set", Value: set}})
+	if err != nil {
+		return err
+	}
+	if res.MatchedCount == 0 {
+		return derr.ErrNotFound
+	}
+	return nil
+}
+
 func (r *UserRepo) SetRoomID(ctx context.Context, userID string, roomID *string, updatedAt time.Time) error {
 	if roomID == nil || *roomID == "" {
 		_, err := r.col().UpdateOne(ctx, filterByUserID(userID), bson.D{{Key: "$unset", Value: bson.D{{Key: "room_id", Value: ""}}}, {Key: "$set", Value: bson.D{{Key: "updated_at", Value: updatedAt.UTC()}}}})
