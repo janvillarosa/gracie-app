@@ -165,7 +165,7 @@ func (r *AggRepo) SetKeyIntervals(ctx context.Context, id string, iv analytics.K
 		{Key: "intervals.last_at", Value: iv.LastAt.UTC()},
 		{Key: "intervals.computed_at", Value: iv.ComputedAt.UTC()},
 	}
-	update := bson.D{{Key: "$set", Value: set}}
+	var update bson.D
 	if iv.DueAt != nil {
 		set = append(set, bson.E{Key: "intervals.due_at", Value: iv.DueAt.UTC()})
 		update = bson.D{{Key: "$set", Value: set}}

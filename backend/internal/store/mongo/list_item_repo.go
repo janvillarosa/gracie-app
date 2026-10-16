@@ -57,7 +57,7 @@ func (r *ListItemRepo) ListByList(ctx context.Context, listID string) ([]models.
 
 func (r *ListItemRepo) UpdateCompletion(ctx context.Context, itemID string, completed bool, actorID string, updatedAt time.Time) error {
 	set := bson.D{{Key: "completed", Value: completed}, {Key: "updated_at", Value: updatedAt.UTC()}}
-	update := bson.D{}
+	var update bson.D
 	if completed {
 		set = append(set, bson.E{Key: "completed_at", Value: updatedAt.UTC()}, bson.E{Key: "completed_by", Value: actorID})
 		update = bson.D{{Key: "$set", Value: set}}
