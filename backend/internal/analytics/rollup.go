@@ -4,9 +4,11 @@ import (
 	"context"
 	"log"
 	"math/rand"
+	"sort"
 	"time"
 
 	"github.com/janvillarosa/gracie-app/backend/internal/analytics/predict"
+	"github.com/janvillarosa/gracie-app/backend/internal/parse"
 	"github.com/janvillarosa/gracie-app/backend/pkg/ids"
 )
 
@@ -17,6 +19,10 @@ const (
 	foldLimit = 5000
 	leaseTTL  = 5 * time.Minute
 	keyEvents = 500 // newest events read per key when recomputing its rhythm
+	// keysScanned bounds the look-alike search per recompute; maxSiblings bounds how many
+	// look-alike names are merged into one forecast.
+	keysScanned = 2000
+	maxSiblings = 5
 )
 
 func minTime(cur, t time.Time) time.Time {
@@ -87,36 +93,135 @@ func (w *Worker) FoldOnce(ctx context.Context) (int, error) {
 	}
 	// Intervals are derived from the raw history, so recomputing is idempotent and sits
 	// outside the transaction. A failure here is repaired by the next event for the key.
+	// A key's look-alikes ("oranges" for "orange") share its add history, so they are
+	// recomputed too.
+	done := map[string]bool{}
+	var also []KeyRef
 	for _, ref := range batch.Touched {
-		if err := w.recomputeKey(ctx, ref); err != nil {
+		done[ref.ID()] = true
+		sibs, err := w.recomputeKey(ctx, ref)
+		if err != nil {
+			log.Printf("analytics: recompute %s: %v", ref.ID(), err)
+		}
+		also = append(also, sibs...)
+	}
+	for _, ref := range also {
+		if done[ref.ID()] {
+			continue
+		}
+		done[ref.ID()] = true
+		if _, err := w.recomputeKey(ctx, ref); err != nil {
 			log.Printf("analytics: recompute %s: %v", ref.ID(), err)
 		}
 	}
 	return len(evs), nil
 }
 
-// recomputeKey rebuilds one key's rhythm from its newest events: completions first, and
-// requests when there are too few completions to say anything.
-func (w *Worker) recomputeKey(ctx context.Context, ref KeyRef) error {
-	evs, err := w.events.ListForKey(ctx, ref.RoomID, ref.SubjectType, ref.Key, keyEvents)
-	if err != nil {
-		return err
+// weighted is an occurrence and how sure we are it is this key (1 for its own events, the name
+// similarity for a look-alike's).
+type weighted struct {
+	at time.Time
+	w  float64
+}
+
+func timesOf(ws []weighted) []time.Time {
+	sort.Slice(ws, func(i, j int) bool { return ws[i].at.Before(ws[j].at) })
+	out := make([]time.Time, len(ws))
+	for i, x := range ws {
+		out[i] = x.at
 	}
-	var done, asked, ignored []time.Time
-	for _, e := range evs {
-		def, ok := w.reg.Resolve(e.Name)
-		if !ok {
+	return out
+}
+
+func meanWeight(ws []weighted) float64 {
+	if len(ws) == 0 {
+		return 1
+	}
+	var sum float64
+	for _, x := range ws {
+		sum += x.w
+	}
+	return sum / float64(len(ws))
+}
+
+// similarKeys returns the house's other keys of the same type whose names are alike enough to
+// be the same thing, most alike first, with their similarity.
+func (w *Worker) similarKeys(ctx context.Context, ref KeyRef) ([]KeyRef, []float64, error) {
+	keys, err := w.aggs.ListKeys(ctx, ref.RoomID, ref.SubjectType, keysScanned)
+	if err != nil {
+		return nil, nil, err
+	}
+	type sib struct {
+		key string
+		s   float64
+	}
+	var sibs []sib
+	for _, k := range keys {
+		if k == ref.Key {
 			continue
 		}
-		switch def.Role {
-		case RoleComplete:
-			done = append(done, e.OccurredAt)
-		case RoleRequest:
-			asked = append(asked, e.OccurredAt)
-		case RoleDismiss:
-			ignored = append(ignored, e.OccurredAt)
+		if s := parse.Similarity(ref.Key, k); s >= parse.SimilarThreshold {
+			sibs = append(sibs, sib{k, s})
 		}
 	}
+	sort.Slice(sibs, func(i, j int) bool { return sibs[i].s > sibs[j].s })
+	if len(sibs) > maxSiblings {
+		sibs = sibs[:maxSiblings]
+	}
+	refs := make([]KeyRef, len(sibs))
+	sims := make([]float64, len(sibs))
+	for i, s := range sibs {
+		refs[i], sims[i] = KeyRef{RoomID: ref.RoomID, SubjectType: ref.SubjectType, Key: s.key}, s.s
+	}
+	return refs, sims, nil
+}
+
+// recomputeKey rebuilds one key's rhythm from its newest events: completions first, and
+// requests when there are too few completions to say anything. The add forecast also learns
+// from look-alike names ("oranges" for "orange"), and its score is scaled by how sure it is that
+// the merged history is one thing. It returns the look-alikes, whose forecasts share this history.
+func (w *Worker) recomputeKey(ctx context.Context, ref KeyRef) ([]KeyRef, error) {
+	evs, err := w.events.ListForKey(ctx, ref.RoomID, ref.SubjectType, ref.Key, keyEvents)
+	if err != nil {
+		return nil, err
+	}
+	var done, asked []time.Time
+	var wDone, wAsked, wIgnored []weighted
+	classify := func(evs []Event, weight float64, own bool) {
+		for _, e := range evs {
+			def, ok := w.reg.Resolve(e.Name)
+			if !ok {
+				continue
+			}
+			switch def.Role {
+			case RoleComplete:
+				if own {
+					done = append(done, e.OccurredAt)
+				}
+				wDone = append(wDone, weighted{e.OccurredAt, weight})
+			case RoleRequest:
+				if own {
+					asked = append(asked, e.OccurredAt)
+				}
+				wAsked = append(wAsked, weighted{e.OccurredAt, weight})
+			case RoleDismiss:
+				wIgnored = append(wIgnored, weighted{e.OccurredAt, weight})
+			}
+		}
+	}
+	classify(evs, 1, true)
+	sibs, sims, err := w.similarKeys(ctx, ref)
+	if err != nil {
+		return nil, err
+	}
+	for i, s := range sibs {
+		sevs, err := w.events.ListForKey(ctx, s.RoomID, s.SubjectType, s.Key, keyEvents)
+		if err != nil {
+			return sibs, err
+		}
+		classify(sevs, sims[i], false)
+	}
+
 	source, rhythm := "complete", predict.Intervals(done)
 	if rhythm.N < predict.MinOccurrences {
 		if alt := predict.Intervals(asked); alt.N > rhythm.N {
@@ -127,11 +232,16 @@ func (w *Worker) recomputeKey(ctx context.Context, ref KeyRef) error {
 	if due, ok := rhythm.Due(); ok {
 		iv.DueAt = &due
 	}
-	if f, ok := predict.DefaultParams.Predict(asked, done, ignored); ok {
+	if f, ok := predict.DefaultParams.Predict(timesOf(wAsked), timesOf(wDone), timesOf(wIgnored)); ok {
+		certainty := meanWeight(wAsked)
+		if f.Series == predict.SeriesChecked {
+			certainty = meanWeight(wDone)
+		}
 		iv.Add = &AddForecast{Series: f.Series, N: f.N, EWMADays: f.EWMADays, CV: f.CV, LastAt: f.LastAt,
-			DueAt: f.DueAt, OpensAt: f.OpensAt, ClosesAt: f.ClosesAt, Trials: f.Trials, Hits: f.Hits, Score: f.Score}
+			DueAt: f.DueAt, OpensAt: f.OpensAt, ClosesAt: f.ClosesAt, Trials: f.Trials, Hits: f.Hits,
+			Score: f.Score * certainty, NameCertainty: certainty}
 	}
-	return w.aggs.SetKeyIntervals(ctx, ref.ID(), iv)
+	return sibs, w.aggs.SetKeyIntervals(ctx, ref.ID(), iv)
 }
 
 // RunFold folds on a jittered timer until ctx ends, like the coordinate purge.

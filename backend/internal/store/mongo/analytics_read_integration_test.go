@@ -161,3 +161,28 @@ func TestMongoListByContainerIsNewestFirstAndScoped(t *testing.T) {
 		t.Fatalf("other lists, other names and old events are excluded: %d", len(all))
 	}
 }
+
+func TestMongoListKeysIsScopedToTheHouse(t *testing.T) {
+	c := connectOrSkip(t)
+	ctx := context.Background()
+	events := NewEventRepo(c)
+	aggs := NewAggRepo(c, NewTx(c))
+	_ = events.EnsureIndexes(ctx)
+	_ = aggs.EnsureIndexes(ctx)
+	room := "r_keys_" + randHex(4)
+	at := time.Now().UTC().Add(-time.Hour)
+	if err := events.InsertMany(ctx, []analytics.Event{
+		storedEvent("k1"+room, "item.added", "u1", room, "orange", at),
+		storedEvent("k2"+room, "item.added", "u1", room, "oranges", at.Add(time.Minute)),
+		storedEvent("k3"+room, "item.added", "u1", "other_"+room, "milk", at),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := analytics.NewWorker(events, aggs, analyticsReg()).FoldOnce(ctx); err != nil {
+		t.Fatal(err)
+	}
+	keys, err := aggs.ListKeys(ctx, room, "item", 10)
+	if err != nil || len(keys) != 2 {
+		t.Fatalf("keys %v %v", keys, err)
+	}
+}

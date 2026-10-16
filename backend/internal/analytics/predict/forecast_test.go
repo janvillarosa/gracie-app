@@ -51,7 +51,7 @@ func TestWindowClampsLeadAndGrace(t *testing.T) {
 		{60, 48 * time.Hour, 24 * time.Hour}, // long rhythms are capped
 	}
 	for _, c := range cases {
-		opens, closes := DefaultParams.Window(due, c.ewma)
+		opens, closes := DefaultParams.Window(due, c.ewma, 0)
 		if d := due.Sub(opens) - c.lead; d > time.Second || d < -time.Second {
 			t.Errorf("ewma %v: lead %v want %v", c.ewma, due.Sub(opens), c.lead)
 		}
@@ -78,7 +78,7 @@ func TestBacktestCountsTooLateAndTooEarly(t *testing.T) {
 }
 
 func TestBacktestWindowEdgesAreHits(t *testing.T) {
-	opens, closes := DefaultParams.Window(at(21), 7)
+	opens, closes := DefaultParams.Window(at(21), 7, 0)
 	for _, edge := range []time.Time{opens, closes} {
 		trials, hits := DefaultParams.Backtest(append(days(0, 7, 14), edge), nil)
 		if trials != 1 || hits != 1 {
@@ -172,5 +172,29 @@ func TestPredictChecksOnlyHouse(t *testing.T) {
 	f, ok := DefaultParams.Predict(nil, every(7, 8), nil)
 	if !ok || f.Series != SeriesChecked || !f.Confident(DefaultParams) {
 		t.Fatalf("got %+v ok=%v", f, ok)
+	}
+}
+
+// A weekend shopper: Saturday one week, Sunday the next (gaps of 8 and 6 days). The window
+// grows with that wobble, so every cycle is a hit and it opens by Friday.
+func TestWeekendHabitIsConfidentAndOpensTheDayBefore(t *testing.T) {
+	adds := days(0, 8, 14, 22, 28, 36, 42, 50) // Sat, Sun, Sat, Sun, ...
+	f, ok := DefaultParams.Predict(adds, nil, nil)
+	if !ok || f.Hits != f.Trials || !f.Confident(DefaultParams) {
+		t.Fatalf("a Saturday-or-Sunday habit is a habit: %+v", f)
+	}
+	if lead := f.DueAt.Sub(f.OpensAt); lead < 36*time.Hour {
+		t.Fatalf("should open at least a day and a half early (Friday for a weekend), got %v", lead)
+	}
+}
+
+func TestSteadyRhythmKeepsItsTightWindow(t *testing.T) {
+	// No wobble, no extra width: a perfectly weekly item keeps the 1.4 day lead and 0.7 day grace.
+	opens, closes := DefaultParams.Window(at(21), 7, 0)
+	if d := at(21).Sub(opens); d < 33*time.Hour || d > 34*time.Hour {
+		t.Fatalf("lead %v", d)
+	}
+	if d := closes.Sub(at(21)); d < 16*time.Hour || d > 17*time.Hour {
+		t.Fatalf("grace %v", d)
 	}
 }

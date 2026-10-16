@@ -87,6 +87,10 @@ type AddForecast struct {
 	Trials   int       `bson:"trials" json:"trials"`
 	Hits     int       `bson:"hits" json:"hits"`
 	Score    float64   `bson:"score" json:"score"`
+	// NameCertainty is how sure the forecast is that its history is one thing: 1 when every event
+	// was this exact name (or a plural or spacing of it), lower when look-alike names were merged
+	// in ("yoghurt" for "yogurt"). Score already includes it.
+	NameCertainty float64 `bson:"name_certainty,omitempty" json:"name_certainty,omitempty"`
 }
 
 // KeyStat is what is known about one thing in a house ("whole milk"): how often it was
@@ -133,6 +137,9 @@ type AggregateRepository interface {
 	// UpcomingKeys returns keys whose add forecast window contains now, with a score of at
 	// least minScore and a CV of at most maxCV, highest score first.
 	UpcomingKeys(ctx context.Context, roomID, subjectType string, now time.Time, minScore, maxCV float64, limit int) ([]KeyStat, error)
+	// ListKeys returns up to limit keys known in a house for one subject type (for finding
+	// look-alike names).
+	ListKeys(ctx context.Context, roomID, subjectType string, limit int) ([]string, error)
 	// DeleteByRoom and DeleteByUser remove aggregates when a house or account is deleted.
 	DeleteByRoom(ctx context.Context, roomID string) error
 	DeleteByUser(ctx context.Context, userID string) error

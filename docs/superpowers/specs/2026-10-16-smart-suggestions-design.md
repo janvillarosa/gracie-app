@@ -37,7 +37,11 @@ forecast by replaying it.
   checks, as a re-add usually follows a completion. A checks-only house still works. No profile
   is needed.
 - **Window.** For a predicted due time D and smoothed gap E days: opens at D - clamp(0.2E, 12h, 2d),
-  closes at D + clamp(0.1E, 6h, 1d). A suggestion shows only while now is inside it.
+  closes at D + clamp(0.1E, 6h, 1d). A suggestion shows only while now is inside it. The window then
+  widens to cover the habit's own wobble: two standard deviations of the gaps (CV x E x 2) on each side,
+  capped at 2 days early and 1.5 days late, and never narrower than the base. A steady weekly item keeps
+  its tight window; a "Saturday or Sunday" shopper (gaps of 6 and 8 days) gets one that opens on Friday,
+  and their Sunday adds count as hits instead of misses (added 2026-10-16, `JitterK`, `MaxJitterGrace`).
 - **Backtest.** For every occurrence after the first three, forecast it from what came before and
   count a hit when it landed in the window (too early and too late are misses). An
   `item.suggestion_ignored` inside a cycle turns that cycle into a miss, so ignores lower future
@@ -50,6 +54,24 @@ forecast by replaying it.
 The fold stores the result as `KeyIntervals.Add` (`AddForecast`) on `key_stats`, with an index
 on `(room_id, subject_type, intervals.add.opens_at)`. The request path is a cheap indexed read
 (`Reader.Upcoming` -> `UpcomingKeys`).
+
+## Look-alike names (added 2026-10-16)
+
+"orange" and "oranges", or "butterbeans" and "butter beans", are one thing to a household.
+
+- **Similarity** (`parse.Similarity`): 1.0 when the names match after folding spaces, hyphens and simple
+  English plurals (`parse.CompactKey`); otherwise one minus the edit distance over the longer compact
+  name. Names under four letters only match exactly. Look-alikes are names at 0.85 or above.
+- **Merged history:** when the fold recomputes an item, its add forecast also uses the events of up to
+  five look-alike names in the house. The score is multiplied by the name certainty, the average
+  similarity across the merged occurrences: exact names and plurals cost nothing, a spelling apart
+  ("yoghurt" for "yogurt") lowers the score in proportion to how much of the history it supplied. The
+  certainty is stored on the forecast (`AddForecast.NameCertainty`). Look-alikes of a changed item are
+  recomputed in the same pass. The older own-key rhythm used by insights is unchanged.
+- **One slip per cluster:** at request time only the most confident name of a look-alike group is kept,
+  a look-alike already on the list counts as on it, and the slip shows the wording the house used most
+  recently (with that item's quantity and unit).
+- `suggest-eval backtest` still groups by exact name, so it measures without the merge (follow-up).
 
 ## Request path
 

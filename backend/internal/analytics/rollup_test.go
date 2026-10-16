@@ -264,3 +264,76 @@ func TestSuggestionPredictionsAreNotRolledUp(t *testing.T) {
 		t.Fatalf("predictions are measurement records only: %+v", batch.Keys)
 	}
 }
+
+func addForecast(t *testing.T, r *rig, key string) *analytics.AddForecast {
+	t.Helper()
+	iv, ok := r.aggs.Key("room_1:item:" + key)["intervals"].(analytics.KeyIntervals)
+	if !ok {
+		t.Fatalf("no intervals for %q", key)
+	}
+	return iv.Add
+}
+
+func TestLookAlikeNamesShareOneHistory(t *testing.T) {
+	r := newRig(t0.Add(120 * 24 * time.Hour))
+	// "orange" one week, "oranges" the next: neither alone has a rhythm, together they are weekly.
+	for i := 0; i < 8; i++ {
+		key := "orange"
+		if i%2 == 1 {
+			key = "oranges"
+		}
+		r.add(ev("item.added", "mia", "room_1", key, t0.AddDate(0, 0, 7*i)))
+	}
+	if _, err := r.worker.FoldOnce(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	for _, key := range []string{"orange", "oranges"} {
+		a := addForecast(t, r, key)
+		if a == nil || a.Trials != 5 || a.Hits != 5 || a.NameCertainty != 1 || a.Score < 0.7 {
+			t.Fatalf("%s: plurals are the same thing, with full certainty: %+v", key, a)
+		}
+	}
+}
+
+func TestANearMissSpellingCostsConfidence(t *testing.T) {
+	exact := newRig(t0.Add(120 * 24 * time.Hour))
+	mixed := newRig(t0.Add(120 * 24 * time.Hour))
+	for i := 0; i < 8; i++ {
+		at := t0.AddDate(0, 0, 7*i)
+		exact.add(ev("item.added", "mia", "room_1", "yogurt", at))
+		key := "yogurt"
+		if i%2 == 1 {
+			key = "yoghurt" // a spelling apart: probably the same thing, not certainly
+		}
+		mixed.add(ev("item.added", "mia", "room_1", key, at))
+	}
+	for _, r := range []*rig{exact, mixed} {
+		if _, err := r.worker.FoldOnce(context.Background()); err != nil {
+			t.Fatal(err)
+		}
+	}
+	e, m := addForecast(t, exact, "yogurt"), addForecast(t, mixed, "yogurt")
+	if m == nil || m.Trials != e.Trials || m.Hits != e.Hits {
+		t.Fatalf("the merged history has the same rhythm: exact %+v mixed %+v", e, m)
+	}
+	if !(m.NameCertainty < 1 && m.NameCertainty > 0.9) || m.Score >= e.Score {
+		t.Fatalf("the further the names, the lower the score: exact %.3f mixed %.3f (certainty %.3f)", e.Score, m.Score, m.NameCertainty)
+	}
+}
+
+func TestDifferentThingsStayApart(t *testing.T) {
+	r := newRig(t0.Add(120 * 24 * time.Hour))
+	for i := 0; i < 8; i++ {
+		key := "almond milk"
+		if i%2 == 1 {
+			key = "oat milk"
+		}
+		r.add(ev("item.added", "mia", "room_1", key, t0.AddDate(0, 0, 7*i)))
+	}
+	if _, err := r.worker.FoldOnce(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if a := addForecast(t, r, "oat milk"); a != nil && a.Trials > 1 {
+		t.Fatalf("oat milk must not borrow almond milk's history: %+v", a)
+	}
+}
