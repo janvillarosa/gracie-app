@@ -112,6 +112,21 @@ func (r *EventRepo) since(ctx context.Context, match bson.D, since time.Time, li
 	return out, nil
 }
 
+func (r *EventRepo) ListByContainer(ctx context.Context, roomID, containerType, containerID string, names []string, since time.Time, limit int) ([]analytics.Event, error) {
+	filter := bson.D{{Key: "room_id", Value: roomID}, {Key: "container.type", Value: containerType}, {Key: "container.id", Value: containerID},
+		{Key: "name", Value: bson.D{{Key: "$in", Value: names}}},
+		{Key: "occurred_at", Value: bson.D{{Key: "$gte", Value: since.UTC()}}}}
+	cur, err := r.col().Find(ctx, filter, options.Find().SetSort(bson.D{{Key: "occurred_at", Value: -1}}).SetLimit(int64(limit)))
+	if err != nil {
+		return nil, err
+	}
+	var out []analytics.Event
+	if err := cur.All(ctx, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (r *EventRepo) ListByActorSince(ctx context.Context, userID string, since time.Time, limit int) ([]analytics.Event, error) {
 	return r.since(ctx, bson.D{{Key: "actor_id", Value: userID}}, since, limit)
 }

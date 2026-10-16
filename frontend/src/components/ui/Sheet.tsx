@@ -73,16 +73,21 @@ const SheetBody: React.FC<BodyProps> = ({
 }) => {
   const root = useRef<HTMLDivElement>(null)
   const swipe = useRef<number | null>(null)
-  // Focus goes to the first field (or the title), unless something inside already has it.
+  // Focus goes to the first field (or the title), unless something inside already has it. The host
+  // (a popover, a modal) can still be opening on a slow device, so keep trying for a few frames.
   useEffect(() => {
-    const id = requestAnimationFrame(() => {
+    let id = 0
+    let tries = 0
+    const place = () => {
       const el = root.current
       if (!el || el.contains(document.activeElement)) return
       ;(
         el.querySelector<HTMLElement>('input, textarea, [autofocus]') ??
         el.querySelector<HTMLElement>('.ui-sheet-x')
       )?.focus({ preventScroll: true })
-    })
+      if (!el.contains(document.activeElement) && ++tries < 10) id = requestAnimationFrame(place)
+    }
+    id = requestAnimationFrame(place)
     return () => cancelAnimationFrame(id)
   }, [])
   return (

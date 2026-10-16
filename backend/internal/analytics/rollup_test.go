@@ -224,3 +224,43 @@ func TestKeyIntervalsFallBackToRequestsAndWithholdThinDueDates(t *testing.T) {
 		t.Fatalf("two requests are not enough for a due date: %+v", iv)
 	}
 }
+
+func TestKeyIntervalsStoreABacktestedAddForecast(t *testing.T) {
+	r := newRig(t0.Add(120 * 24 * time.Hour))
+	for i := 0; i < 8; i++ {
+		r.add(ev("item.added", "mia", "room_1", "milk", t0.AddDate(0, 0, 7*i)))
+	}
+	if _, err := r.worker.FoldOnce(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	iv := r.aggs.Key("room_1:item:milk")["intervals"].(analytics.KeyIntervals)
+	a := iv.Add
+	if a == nil || a.Series != "added" || a.Trials != 5 || a.Hits != 5 || a.Score < 0.7 {
+		t.Fatalf("forecast: %+v", a)
+	}
+	if want := t0.AddDate(0, 0, 56); !a.DueAt.Equal(want) || !a.OpensAt.Before(want) || !a.ClosesAt.After(want) {
+		t.Fatalf("window: %+v", a)
+	}
+}
+
+func TestIgnoredSuggestionsCountAgainstTheForecast(t *testing.T) {
+	r := newRig(t0.Add(120 * 24 * time.Hour))
+	for i := 0; i < 8; i++ {
+		r.add(ev("item.added", "mia", "room_1", "milk", t0.AddDate(0, 0, 7*i)))
+	}
+	r.add(ev("item.suggestion_ignored", "sam", "room_1", "milk", t0.AddDate(0, 0, 27)))
+	if _, err := r.worker.FoldOnce(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	a := r.aggs.Key("room_1:item:milk")["intervals"].(analytics.KeyIntervals).Add
+	if a == nil || a.Trials != 5 || a.Hits != 4 {
+		t.Fatalf("forecast: %+v", a)
+	}
+}
+
+func TestSuggestionPredictionsAreNotRolledUp(t *testing.T) {
+	batch := analytics.Fold(registry(), []analytics.Event{ev("item.suggestion_predicted", "mia", "room_1", "milk", t0)})
+	if len(batch.Keys) != 0 || len(batch.Periods) != 0 {
+		t.Fatalf("predictions are measurement records only: %+v", batch.Keys)
+	}
+}

@@ -83,3 +83,81 @@ func TestMongoProfilesDirtySetAndDueKeys(t *testing.T) {
 		t.Fatal("DeleteByUser left period stats behind")
 	}
 }
+
+func TestMongoUpcomingKeysAndContainers(t *testing.T) {
+	c := connectOrSkip(t)
+	ctx := context.Background()
+	events := NewEventRepo(c)
+	aggs := NewAggRepo(c, NewTx(c))
+	_ = events.EnsureIndexes(ctx)
+	_ = aggs.EnsureIndexes(ctx)
+
+	room := "r_up_" + randHex(4)
+	// Eight weekly adds ending a week ago: the next one is due now.
+	base := time.Now().UTC().AddDate(0, 0, -56).Truncate(time.Hour)
+	var evs []analytics.Event
+	for i := 0; i < 8; i++ {
+		evs = append(evs, storedEvent("up"+room+string(rune('a'+i)), "item.added", "u1", room, "milk", base.AddDate(0, 0, 7*i)))
+	}
+	if err := events.InsertMany(ctx, evs); err != nil {
+		t.Fatal(err)
+	}
+	w := analytics.NewWorker(events, aggs, analyticsReg())
+	if _, err := w.FoldOnce(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	now := time.Now().UTC()
+	got, err := aggs.UpcomingKeys(ctx, room, "item", now, 0.65, 0.5, 10)
+	if err != nil || len(got) != 1 || got[0].Key != "milk" {
+		t.Fatalf("upcoming: %+v %v", got, err)
+	}
+	if got[0].Containers["list:list_1"] != 8 {
+		t.Fatalf("containers must decode onto KeyStat: %+v", got[0].Containers)
+	}
+	if a := got[0].Intervals.Add; a == nil || a.Trials != 5 || a.Hits != 5 || a.Series != "added" {
+		t.Fatalf("stored forecast: %+v", got[0].Intervals)
+	}
+	if early, _ := aggs.UpcomingKeys(ctx, room, "item", now.AddDate(0, 0, -6), 0.65, 0.5, 10); len(early) != 0 {
+		t.Fatalf("window not open yet: %+v", early)
+	}
+	if strict, _ := aggs.UpcomingKeys(ctx, room, "item", now, 0.99, 0.5, 10); len(strict) != 0 {
+		t.Fatalf("score below the bar: %+v", strict)
+	}
+	if other, _ := aggs.UpcomingKeys(ctx, "other_room", "item", now, 0.65, 0.5, 10); len(other) != 0 {
+		t.Fatalf("other house: %+v", other)
+	}
+}
+
+func TestMongoListByContainerIsNewestFirstAndScoped(t *testing.T) {
+	c := connectOrSkip(t)
+	ctx := context.Background()
+	events := NewEventRepo(c)
+	_ = events.EnsureIndexes(ctx)
+	room := "r_cont_" + randHex(4)
+	now := time.Now().UTC().Truncate(time.Millisecond)
+	mk := func(id, name, list string, ago time.Duration) analytics.Event {
+		e := storedEvent(id+room, name, "u1", room, "milk", now.Add(-ago))
+		e.Container = &analytics.Ref{Type: "list", ID: list}
+		return e
+	}
+	if err := events.InsertMany(ctx, []analytics.Event{
+		mk("a", "item.suggestion_ignored", "l1", 3*time.Hour),
+		mk("b", "item.suggestion_accepted", "l1", 2*time.Hour),
+		mk("c", "item.suggestion_ignored", "l1", time.Hour),
+		mk("d", "item.suggestion_ignored", "l2", 30*time.Minute),
+		mk("e", "item.added", "l1", 10*time.Minute),
+		mk("f", "item.suggestion_ignored", "l1", 40*24*time.Hour),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	names := []string{"item.suggestion_ignored", "item.suggestion_accepted"}
+	got, err := events.ListByContainer(ctx, room, "list", "l1", names, now.Add(-14*24*time.Hour), 2)
+	if err != nil || len(got) != 2 || got[0].Name != "item.suggestion_ignored" || got[1].Name != "item.suggestion_accepted" {
+		t.Fatalf("newest two on l1 within the window: %+v %v", got, err)
+	}
+	all, _ := events.ListByContainer(ctx, room, "list", "l1", names, now.Add(-14*24*time.Hour), 10)
+	if len(all) != 3 {
+		t.Fatalf("other lists, other names and old events are excluded: %d", len(all))
+	}
+}

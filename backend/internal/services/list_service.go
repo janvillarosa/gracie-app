@@ -401,19 +401,11 @@ type PantryItem struct {
 // A house with fewer distinct items than this also gets the common grocery set.
 const pantrySeedThreshold = 60
 
-func (s *ListService) GetPantry(ctx context.Context, user *models.User, roomID string) ([]PantryItem, error) {
-	if err := s.ensureRoomMembership(ctx, user, roomID); err != nil {
-		return nil, err
-	}
-	items, err := s.items.ListByRoom(ctx, roomID)
-	if err != nil {
-		return nil, err
-	}
-
-	// Items arrive newest first, so the first sighting of a key carries the most
-	// recent description, category, quantity and unit.
-	byKey := make(map[string]*PantryItem)
-	order := []string{}
+// pantryByKey groups items (newest first, as ListByRoom returns them) by normalized key, so
+// the first sighting of a key carries its most recent description, category, quantity and
+// unit. order lists keys in first-seen order.
+func pantryByKey(items []models.ListItem) (byKey map[string]*PantryItem, order []string) {
+	byKey = make(map[string]*PantryItem)
 	for _, it := range items {
 		key := parse.NormalizeKey(it.Description)
 		if key == "" {
@@ -433,6 +425,19 @@ func (s *ListService) GetPantry(ctx context.Context, user *models.User, roomID s
 		}
 		order = append(order, key)
 	}
+	return byKey, order
+}
+
+func (s *ListService) GetPantry(ctx context.Context, user *models.User, roomID string) ([]PantryItem, error) {
+	if err := s.ensureRoomMembership(ctx, user, roomID); err != nil {
+		return nil, err
+	}
+	items, err := s.items.ListByRoom(ctx, roomID)
+	if err != nil {
+		return nil, err
+	}
+
+	byKey, order := pantryByKey(items)
 
 	out := make([]PantryItem, 0, len(order))
 	for _, k := range order {
@@ -579,9 +584,20 @@ func (s *ListService) emitList(ctx context.Context, name string, user *models.Us
 // emitItem builds an item event: the container is its list and Key is the
 // normalized text (never the raw text).
 func (s *ListService) emitItem(ctx context.Context, name string, user *models.User, it *models.ListItem) {
-	s.emit(ctx, analytics.Event{
+	var props map[string]any
+	if name == "item.added" {
+		if src := addSourceFrom(ctx); src != "" {
+			props = map[string]any{"source": src}
+		}
+	}
+	ev := analytics.Event{
 		Name: name, ActorID: user.UserID, RoomID: it.RoomID,
 		Subject: analytics.Ref{Type: "item", ID: it.ItemID}, Container: ref(listRef(it.ListID)),
-		Key: parse.NormalizeKey(it.Description), Category: it.Category,
-	})
+		Key: parse.NormalizeKey(it.Description), Category: it.Category, Props: props,
+	}
+	s.emit(ctx, ev)
+	if props != nil {
+		ev.Name, ev.Props = "item.suggestion_accepted", nil
+		s.emit(ctx, ev)
+	}
 }

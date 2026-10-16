@@ -16,6 +16,9 @@ type EventRepository interface {
 	// ListForKey returns up to limit of the newest events for one thing in a house
 	// (subject type + normalized key), oldest first.
 	ListForKey(ctx context.Context, roomID, subjectType, key string, limit int) ([]Event, error)
+	// ListByContainer returns up to limit of the newest events named in names inside one container
+	// (a list, a trip) at or after since, newest first.
+	ListByContainer(ctx context.Context, roomID, containerType, containerID string, names []string, since time.Time, limit int) ([]Event, error)
 	// ListByActorSince and ListByRoomSince return up to limit events at or after since
 	// (by occurred_at), oldest first. They feed profile recomputes.
 	ListByActorSince(ctx context.Context, userID string, since time.Time, limit int) ([]Event, error)

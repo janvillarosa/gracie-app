@@ -63,6 +63,28 @@ func (r *EventRepo) ListForKey(_ context.Context, roomID, subjectType, key strin
 	return out, nil
 }
 
+func (r *EventRepo) ListByContainer(_ context.Context, roomID, containerType, containerID string, names []string, since time.Time, limit int) ([]analytics.Event, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	var out []analytics.Event
+	for _, e := range r.evs {
+		if e.RoomID != roomID || e.Container == nil || e.Container.Type != containerType || e.Container.ID != containerID || e.OccurredAt.Before(since) {
+			continue
+		}
+		for _, n := range names {
+			if e.Name == n {
+				out = append(out, e)
+				break
+			}
+		}
+	}
+	sort.SliceStable(out, func(i, j int) bool { return out[i].OccurredAt.After(out[j].OccurredAt) })
+	if limit > 0 && len(out) > limit {
+		out = out[:limit]
+	}
+	return out, nil
+}
+
 func (r *EventRepo) DeleteByActor(_ context.Context, userID string) error {
 	return r.deleteWhere(func(e analytics.Event) bool { return e.ActorID == userID })
 }

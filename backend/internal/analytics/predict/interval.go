@@ -25,12 +25,7 @@ type Rhythm struct {
 
 // Intervals computes a Rhythm from occurrence times in ascending order.
 func Intervals(times []time.Time) Rhythm {
-	var kept []time.Time
-	for _, t := range times {
-		if len(kept) == 0 || t.Sub(kept[len(kept)-1]) >= MinGap {
-			kept = append(kept, t)
-		}
-	}
+	kept := Collapse(times)
 	r := Rhythm{N: len(kept)}
 	if len(kept) == 0 {
 		return r
@@ -60,6 +55,17 @@ func Intervals(times []time.Time) Rhythm {
 		r.CV = math.Sqrt(sq/float64(len(gaps))) / mean
 	}
 	return r
+}
+
+// Collapse drops occurrences closer than MinGap to the previous kept one (times ascending).
+func Collapse(times []time.Time) []time.Time {
+	var kept []time.Time
+	for _, t := range times {
+		if len(kept) == 0 || t.Sub(kept[len(kept)-1]) >= MinGap {
+			kept = append(kept, t)
+		}
+	}
+	return kept
 }
 
 // Due returns when the next occurrence is expected, or false when there is too little history.

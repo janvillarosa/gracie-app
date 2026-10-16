@@ -11,7 +11,16 @@ import { DeleteVoteSheet } from '@components/DeleteVoteSheet'
 import { AvatarBadge } from '@components/AvatarBadge'
 import { HouseLoader } from '@components/HouseLoader'
 import { TopNav } from '@components/TopNav'
-import { Button, DetailGroup, Field, NavRow, SectionLabel, SheetIdentity } from '@components/ui'
+import {
+  Button,
+  DetailGroup,
+  Field,
+  NavRow,
+  SectionLabel,
+  SheetIdentity,
+  Switch,
+} from '@components/ui'
+import type { RoomView } from '@api/types'
 import { useDocumentTitle } from '@lib/useDocumentTitle'
 
 const nameProblem = (v: string) => (v && !isValidDisplayName(v) ? NAME_RULE : '')
@@ -67,6 +76,23 @@ export const RoomSettings: React.FC = () => {
   const commitDescription = () => {
     if (descError || description === (room.description || '')) return
     void save({ description }, 'Description saved.')
+  }
+
+  // Smart suggestions: a House preference that saves on toggle, and rolls back if refused.
+  const suggestionsOn = !room.suggestions_off
+  const onToggleSuggestions = async (on: boolean) => {
+    const before = qc.getQueryData<RoomView>(['my-room'])
+    qc.setQueryData<RoomView | undefined>(['my-room'], (r) =>
+      r ? { ...r, suggestions_off: !on } : r,
+    )
+    try {
+      await updateRoomSettings(apiKey as string, { suggestions_off: !on })
+      await qc.invalidateQueries({ queryKey: ['my-room'] })
+      qc.invalidateQueries({ queryKey: ['suggestions'] })
+    } catch (e) {
+      qc.setQueryData(['my-room'], before)
+      message.error(errorMessage(e, 'Couldn’t save that. Try again.'))
+    }
   }
 
   const onVote = async () => {
@@ -143,6 +169,26 @@ export const RoomSettings: React.FC = () => {
             </div>
           ))}
           <NavRow label="Invite" value="Get a code" onClick={() => setShareOpen(true)} />
+        </DetailGroup>
+
+        <SectionLabel>Lists</SectionLabel>
+        <DetailGroup label="Lists">
+          <div className="pref">
+            <div className="pref-row">
+              <label htmlFor="smart-suggestions" className="pref-label">
+                Smart suggestions
+              </label>
+              <Switch
+                id="smart-suggestions"
+                checked={suggestionsOn}
+                onChange={(on) => void onToggleSuggestions(on)}
+                aria-describedby="smart-suggestions-help"
+              />
+            </div>
+            <p className="pref-help" id="smart-suggestions-help">
+              Suggest things your House usually adds, a little before they’re due.
+            </p>
+          </div>
         </DetailGroup>
 
         <footer className="ui-sheet-footer house-settings-footer">

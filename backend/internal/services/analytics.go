@@ -52,6 +52,22 @@ func (e *emitter) emit(ctx context.Context, ev analytics.Event) {
 	e.rec.Record(ctx, ev)
 }
 
+// emitSync records an event the next read must see (the buffered recorder flushes about once a
+// second). Recorders without a synchronous path fall back to the ordinary one.
+func (e *emitter) emitSync(ctx context.Context, ev analytics.Event) {
+	if e.rec == nil {
+		return
+	}
+	if ev.Source == "" {
+		ev.Source = analytics.SourceServer
+	}
+	if sr, ok := e.rec.(analytics.SyncRecorder); ok {
+		sr.RecordSync(ctx, ev)
+		return
+	}
+	e.rec.Record(ctx, ev)
+}
+
 func fieldsProp(fields []string) map[string]any {
 	if len(fields) == 0 {
 		return nil

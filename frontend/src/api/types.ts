@@ -22,6 +22,8 @@ export type RoomView = {
   my_deletion_vote?: boolean
   // How many current members have voted to delete the House.
   deletion_votes?: number
+  // Smart suggestions are on unless the house turned them off.
+  suggestions_off?: boolean
 }
 
 export type CreateUserResponse = {
@@ -68,6 +70,18 @@ export type PantryItem = {
   last_added_at: string
   // From the built-in grocery set, not this house's history.
   common: boolean
+}
+
+// Something the house usually adds around now, shown above a list's items.
+export type ListSuggestion = {
+  // Normalized text: what the ignore call needs.
+  key: string
+  description: string
+  quantity?: string
+  unit?: string
+  category?: string
+  every_days: number
+  score: number
 }
 
 export type ListIcon =

@@ -192,13 +192,18 @@ describe('master-detail: J/K and Alt+Up/Down', () => {
   it('J and K open the next and previous item, without closing the inspector', async () => {
     seed(TRIP)
     open()
-    await openRow('Lunch at Tascantiga')
+    const panel = await openRow('Lunch at Tascantiga')
+    // The inspector is ready (its keys listen) once it has taken focus; on a slow machine that is
+    // a few frames after it appears.
+    await waitFor(() => expect(panel.contains(document.activeElement)).toBe(true))
     const first = titles()
     await userEvent.click(document.body)
     await userEvent.keyboard('j')
     await waitFor(() => expect(titles()).not.toBe(first))
     expect(screen.getAllByRole('dialog')).toHaveLength(1)
     const second = titles()
+    // Not typing: J and K only move when focus is outside a field (the panel may have put it in one).
+    await userEvent.click(document.body)
     await userEvent.keyboard('k')
     await waitFor(() => expect(titles()).toBe(first))
     expect(second).not.toBe(first)

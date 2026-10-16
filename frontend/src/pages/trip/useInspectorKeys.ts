@@ -15,6 +15,12 @@ export function neighbourIds(selected: string): string[] {
   return ids
 }
 
+const PANEL = '.trip-side [role="dialog"], .trip-inspector-overlay [role="dialog"]'
+
+const focusPanel = (panel: HTMLElement) => {
+  if (!panel.contains(document.activeElement)) panel.focus({ preventScroll: true })
+}
+
 const editable = (el: Element | null) =>
   !!el &&
   (/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) ||
@@ -53,12 +59,24 @@ export function useInspectorKeys(
       const next = ids[at + dir]
       e.preventDefault()
       if (at < 0 || next === undefined) return
+      const before = document.querySelector<HTMLElement>(PANEL)
       openRef.current(next, at + dir + 1, ids.length)
+      // The next item's panel mounts a moment later (how long depends on the machine), and a sheet
+      // moves focus into its first field one frame after it mounts. Take focus the instant the new
+      // panel appears, so that field focus finds it already inside and leaves it alone; otherwise
+      // the next J or K would be read as typing.
+      const watch = new MutationObserver(() => {
+        const panel = document.querySelector<HTMLElement>(PANEL)
+        if (!panel || panel === before) return
+        focusPanel(panel)
+        watch.disconnect()
+      })
+      watch.observe(document.body, { childList: true, subtree: true })
+      setTimeout(() => watch.disconnect(), 1000)
+      // Same panel, updated in place (no remount): nothing to wait for.
       requestAnimationFrame(() => {
-        const panel = document.querySelector<HTMLElement>(
-          '.trip-side [role="dialog"], .trip-inspector-overlay [role="dialog"]',
-        )
-        if (panel && !panel.contains(document.activeElement)) panel.focus({ preventScroll: true })
+        const panel = document.querySelector<HTMLElement>(PANEL)
+        if (panel) focusPanel(panel)
       })
     }
     document.addEventListener('keydown', onKey)
