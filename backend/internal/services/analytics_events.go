@@ -37,6 +37,9 @@ func RegisterAnalyticsEvents(reg *analytics.Registry) {
 		// shadow-mode measurement record, stored for suggest-eval and never rolled up.
 		analytics.EventDef{Name: "item.suggestion_ignored", Role: analytics.RoleDismiss},
 		analytics.EventDef{Name: "item.suggestion_predicted", Skip: true, Props: predictedProps},
+		// An add that came from tapping a suggestion. With the ignores, it is what decides whether the
+		// house is still interested (two ignores in a row pause suggestions on that list).
+		analytics.EventDef{Name: "item.suggestion_accepted"},
 
 		analytics.EventDef{Name: "house.created"},
 		analytics.EventDef{Name: "house.joined"},

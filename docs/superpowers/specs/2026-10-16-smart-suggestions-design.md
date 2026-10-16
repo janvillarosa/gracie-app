@@ -17,10 +17,13 @@ earning and measuring confidence; the UI is deliberately small.
 - Suggest, never auto-add. One tap adds it.
 - Stateless at request time: a suggestion is a pure function of what analytics knows now
   plus the live list. There is no suggestion table.
-- One at a time, high confidence only, ranked by confidence. Acting on it (add or ignore) lets the
-  next one show.
+- High confidence only, ranked by confidence. One slip at a time (a three-slip stack was tried in
+  the demo and reverted); acting on it (add or ignore) asks the server for the next one.
 - Placement: one slip at the top of the list page, above the items. Not inside the list, not
-  attached to the add bar.
+  attached to the add bar. Its Add is the page's one yellow key; Ignore is a quiet round X.
+- **Two ignores in a row stop suggestions** on that list (no accepted suggestion in between). Jan's
+  rule; the pause length is a builder's call: 14 days, then it tries again. Derived from events
+  (`item.suggestion_ignored`, `item.suggestion_accepted`), so there is still no stored state.
 - Ignore skips the item for this cycle; it can return when next due.
 - A house setting turns the feature off for the whole house (`Room.SuggestionsOff`, default on,
   `PUT /rooms/settings {suggestions_off}`).
@@ -52,19 +55,21 @@ on `(room_id, subject_type, intervals.add.opens_at)`. The request path is a chea
 
 `GET /rooms/{id}/lists/{list}/suggestions` (`SuggestionService.ForList`):
 
-1. Member check. Nothing when mode is `off`, analytics is off, or the house turned it off.
+1. Member check. Nothing when mode is `off`, analytics is off, the house turned it off, or the list is
+   paused (its last two suggestion reactions in the past 14 days were both ignores).
 2. `Upcoming`: forecasts whose window is open now and that clear the bar.
 3. Keep keys whose **home list** is this one (>= 60% of the key's events, `KeyStat.Containers`).
 4. Drop keys already on the list (checked-but-not-cleared counts as on the list).
 5. Drop keys ignored this cycle, or added/checked since the forecast was computed (raw events
    are fresher than the rollup, which lags up to ~17 minutes).
-6. Sort by score, return up to `limit` (the UI shows the first).
+6. Sort by score, return up to `limit` (default 1, max 5; the UI asks for 1).
 
 `POST .../suggestions/ignore {key}` records `item.suggestion_ignored` (an analytics event
-with `RoleDismiss`); there is no other state. The key is in the body because it is free text.
+with `RoleDismiss`) **synchronously** (`SyncRecorder`), because the client asks for the next
+suggestion at once and the buffered recorder flushes only about once a second; there is no other state. The key is in the body because it is free text.
 
-Adding from a suggestion sends `source: "suggestion"`; `item.added` carries it as a prop so
-accepted suggestions are measurable.
+Adding from a suggestion sends `source: "suggestion"`; `item.added` carries it as a prop and the
+server also records `item.suggestion_accepted`, which ends an ignore streak.
 
 ## Rolling out: shadow first
 

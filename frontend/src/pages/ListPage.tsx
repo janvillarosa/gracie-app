@@ -69,7 +69,7 @@ import { useStableCallback } from '@lib/useStableCallback'
 import { useDocumentTitle } from '@lib/useDocumentTitle'
 import { ItemRow, reorderLock } from '@components/ItemRow'
 import { AddItemBar } from '@components/AddItemBar'
-import { SuggestionSlip } from '@components/SuggestionSlip'
+import { SuggestionStack, type SlipPhase } from '@components/SuggestionSlip'
 import { track } from '@lib/analytics'
 import { TopNav } from '@components/TopNav'
 import { PillNav } from '@components/PillNav'
@@ -77,6 +77,14 @@ import { HouseLoader } from '@components/HouseLoader'
 import { RowSkeleton } from '@components/RowSkeleton'
 
 const CLEAR_TOAST_KEY = 'clear-completed'
+
+// Smart suggestions show one at a time: the server answers with the most confident, and after an
+// add or an ignore it is asked again (it pauses the list once two in a row are ignored).
+const MAX_SUGGESTIONS_SHOWN = 1
+// How long a taken or ignored slip takes to pop out before the next answer is shown.
+const SUGGESTION_EXIT_MS = 160
+// How long the emptied slot takes to close when no further suggestion follows.
+const SUGGESTION_COLLAPSE_MS = 220
 
 export const ListPage: React.FC = () => {
   const { apiKey } = useAuth()
@@ -186,7 +194,13 @@ export const ListPage: React.FC = () => {
     retry: false,
     staleTime: 60_000,
   })
-  const suggestion = suggestionsQuery.data?.[0]
+  // A taken or ignored slip keeps its slot while it pops out and the server answers (phase leaving,
+  // then held), so going through suggestions swaps the card in place instead of moving the list. The
+  // slot only collapses (once) when there is no next suggestion.
+  const [spent, setSpent] = useState<{ s: ListSuggestion; phase: SlipPhase } | null>(null)
+  const suggestions = spent
+    ? [spent.s]
+    : (suggestionsQuery.data ?? []).slice(0, MAX_SUGGESTIONS_SHOWN)
 
   // Items that replace a skeleton fade in; cached items just appear with the sheet.
   const itemsWereLoading = useRef(false)
@@ -405,43 +419,72 @@ export const ListPage: React.FC = () => {
       props: { kind: 'recurring' },
     })
 
-  // One slip at a time: taking or ignoring it pops it, and the next in line (if any) shows.
+  // Taking or ignoring the slip pops it; the server is then asked what (if anything) comes next.
   const dropSuggestion = (key: string) =>
     qc.setQueryData<ListSuggestion[]>(suggestionsKey, (prev) => prev?.filter((s) => s.key !== key))
 
-  const onAddSuggestion = useStableCallback(async (s: ListSuggestion) => {
-    nudge('nudge.tapped')
+  // Retire a slip: pop it out, hold its slot while `work` (the add or ignore, then the refetch)
+  // runs, then show the server's next answer in the same slot, or collapse the slot if there is none.
+  const retireSuggestion = async (s: ListSuggestion, work: () => Promise<void>) => {
+    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
     dropSuggestion(s.key)
-    try {
-      await onCreateItem({
-        description: s.description,
-        quantity: s.quantity,
-        unit: s.unit,
-        source: 'suggestion',
-      })
-    } catch {
-      // onCreateItem already rolled back and told the user; bring the slip back.
-      qc.invalidateQueries({ queryKey: suggestionsKey })
-    }
+    setSpent({ s, phase: reduced ? 'held' : 'leaving' })
+    const popped = reduced
+      ? Promise.resolve()
+      : new Promise<void>((resolve) =>
+          setTimeout(() => {
+            setSpent((cur) => (cur ? { ...cur, phase: 'held' } : cur))
+            resolve()
+          }, SUGGESTION_EXIT_MS),
+        )
+    await Promise.all([popped, work()])
+    const next = qc.getQueryData<ListSuggestion[]>(suggestionsKey)?.[0]
+    if (next || reduced) return setSpent(null)
+    setSpent({ s, phase: 'collapsing' })
+    setTimeout(() => setSpent(null), SUGGESTION_COLLAPSE_MS)
+  }
+
+  const onAddSuggestion = useStableCallback(async (s: ListSuggestion) => {
+    if (spent) return
+    nudge('nudge.tapped')
+    await retireSuggestion(s, async () => {
+      try {
+        await onCreateItem({
+          description: s.description,
+          quantity: s.quantity,
+          unit: s.unit,
+          source: 'suggestion',
+        })
+      } catch {
+        // onCreateItem already rolled back and told the user; the refetch brings the slip back.
+      }
+      await qc.invalidateQueries({ queryKey: suggestionsKey })
+    })
   })
 
   const onIgnoreSuggestion = useStableCallback(async (s: ListSuggestion) => {
+    if (spent) return
     nudge('nudge.dismissed')
-    dropSuggestion(s.key)
-    try {
-      await ignoreListSuggestion(apiKey!, roomId!, listId, s.key)
-    } catch {
-      qc.invalidateQueries({ queryKey: suggestionsKey })
-    }
+    await retireSuggestion(s, async () => {
+      try {
+        await ignoreListSuggestion(apiKey!, roomId!, listId, s.key)
+      } catch {
+        // fall through: the refetch puts the slip back if the ignore did not land
+      }
+      await qc.invalidateQueries({ queryKey: suggestionsKey })
+    })
   })
 
   // nudge.shown once per slip per visit, not once per render.
   const shownKeys = useRef(new Set<string>())
+  const suggestionKeys = suggestions.map((s) => s.key).join('\n')
   useEffect(() => {
-    if (!suggestion || shownKeys.current.has(suggestion.key)) return
-    shownKeys.current.add(suggestion.key)
-    nudge('nudge.shown')
-  }, [suggestion?.key])
+    for (const key of suggestionKeys ? suggestionKeys.split('\n') : []) {
+      if (shownKeys.current.has(key)) continue
+      shownKeys.current.add(key)
+      nudge('nudge.shown')
+    }
+  }, [suggestionKeys])
 
   // Optimistically rewrite every cached variant of this list's items; returns a rollback.
   const applyOptimistic = async (
@@ -886,13 +929,12 @@ export const ListPage: React.FC = () => {
                   ),
                   children: (
                     <>
-                      {suggestion && (
-                        <SuggestionSlip
-                          suggestion={suggestion}
-                          onAdd={onAddSuggestion}
-                          onIgnore={onIgnoreSuggestion}
-                        />
-                      )}
+                      <SuggestionStack
+                        suggestions={suggestions}
+                        phase={spent?.phase}
+                        onAdd={onAddSuggestion}
+                        onIgnore={onIgnoreSuggestion}
+                      />
                       <Space
                         // Remount when the items arrive so a skeleton hands over with a fade
                         key={itemsQuery.isLoading ? 'loading' : 'ready'}

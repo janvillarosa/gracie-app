@@ -217,6 +217,9 @@ the analytics aggregates and the live list; the only state is `Room.SuggestionsO
   (`Skip: true`, never rolled up; deterministic id per house, item and cycle) and returns nothing.
 - **`cmd/suggest-eval`** `backtest | shadow | backfill [-apply]`, backed by `analytics/eval` (pure, shared
   with the tests). Go-live gate: shadow precision >= 70% over >= 50 settled predictions across >= 2 weeks.
+- **Pause:** two `item.suggestion_ignored` in a row on a list (no `item.suggestion_accepted` between, within
+  14 days) stop suggestions there (`pausedByIgnores`, via `EventRepository.ListByContainer`). Ignore is
+  written with `emitSync` (`analytics.SyncRecorder`) so the client's immediate refetch sees it.
 - **House setting:** `PUT /rooms/settings {suggestions_off}`; `GET /rooms/me` returns it.
 - Invariants: never add suggestion state that is not derivable from events and aggregates; an ignore must
   stay an event so the forecast sees it.

@@ -128,3 +128,36 @@ func TestMongoUpcomingKeysAndContainers(t *testing.T) {
 		t.Fatalf("other house: %+v", other)
 	}
 }
+
+func TestMongoListByContainerIsNewestFirstAndScoped(t *testing.T) {
+	c := connectOrSkip(t)
+	ctx := context.Background()
+	events := NewEventRepo(c)
+	_ = events.EnsureIndexes(ctx)
+	room := "r_cont_" + randHex(4)
+	now := time.Now().UTC().Truncate(time.Millisecond)
+	mk := func(id, name, list string, ago time.Duration) analytics.Event {
+		e := storedEvent(id+room, name, "u1", room, "milk", now.Add(-ago))
+		e.Container = &analytics.Ref{Type: "list", ID: list}
+		return e
+	}
+	if err := events.InsertMany(ctx, []analytics.Event{
+		mk("a", "item.suggestion_ignored", "l1", 3*time.Hour),
+		mk("b", "item.suggestion_accepted", "l1", 2*time.Hour),
+		mk("c", "item.suggestion_ignored", "l1", time.Hour),
+		mk("d", "item.suggestion_ignored", "l2", 30*time.Minute),
+		mk("e", "item.added", "l1", 10*time.Minute),
+		mk("f", "item.suggestion_ignored", "l1", 40*24*time.Hour),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	names := []string{"item.suggestion_ignored", "item.suggestion_accepted"}
+	got, err := events.ListByContainer(ctx, room, "list", "l1", names, now.Add(-14*24*time.Hour), 2)
+	if err != nil || len(got) != 2 || got[0].Name != "item.suggestion_ignored" || got[1].Name != "item.suggestion_accepted" {
+		t.Fatalf("newest two on l1 within the window: %+v %v", got, err)
+	}
+	all, _ := events.ListByContainer(ctx, room, "list", "l1", names, now.Add(-14*24*time.Hour), 10)
+	if len(all) != 3 {
+		t.Fatalf("other lists, other names and old events are excluded: %d", len(all))
+	}
+}

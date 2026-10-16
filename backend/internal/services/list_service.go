@@ -590,9 +590,14 @@ func (s *ListService) emitItem(ctx context.Context, name string, user *models.Us
 			props = map[string]any{"source": src}
 		}
 	}
-	s.emit(ctx, analytics.Event{
+	ev := analytics.Event{
 		Name: name, ActorID: user.UserID, RoomID: it.RoomID,
 		Subject: analytics.Ref{Type: "item", ID: it.ItemID}, Container: ref(listRef(it.ListID)),
 		Key: parse.NormalizeKey(it.Description), Category: it.Category, Props: props,
-	})
+	}
+	s.emit(ctx, ev)
+	if props != nil {
+		ev.Name, ev.Props = "item.suggestion_accepted", nil
+		s.emit(ctx, ev)
+	}
 }

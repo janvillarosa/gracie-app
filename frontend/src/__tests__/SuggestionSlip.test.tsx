@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { vi } from 'vitest'
-import { SuggestionSlip } from '@components/SuggestionSlip'
+import { SuggestionSlip, SuggestionStack } from '@components/SuggestionSlip'
 import type { ListSuggestion } from '@api/types'
 
 const milk: ListSuggestion = {
@@ -16,21 +16,20 @@ const milk: ListSuggestion = {
 describe('SuggestionSlip', () => {
   it('names the item and how often the house usually adds it', () => {
     render(<SuggestionSlip suggestion={milk} onAdd={vi.fn()} onIgnore={vi.fn()} />)
-    expect(screen.getByRole('region', { name: 'Suggested' })).toBeInTheDocument()
     expect(screen.getByText('Whole milk (2 l)')).toBeInTheDocument()
-    expect(screen.getByText('usually every week')).toBeInTheDocument()
+    expect(screen.getByText('You add it weekly')).toBeInTheDocument()
   })
 
   it('describes other rhythms in days', () => {
     render(
       <SuggestionSlip
-        suggestion={{ ...milk, quantity: undefined, unit: undefined, every_days: 21 }}
+        suggestion={{ ...milk, quantity: undefined, unit: undefined, every_days: 10 }}
         onAdd={vi.fn()}
         onIgnore={vi.fn()}
       />,
     )
     expect(screen.getByText('Whole milk')).toBeInTheDocument()
-    expect(screen.getByText('usually every 21 days')).toBeInTheDocument()
+    expect(screen.getByText('You add it every 10 days')).toBeInTheDocument()
   })
 
   it('adds and ignores through real, named buttons', async () => {
@@ -41,5 +40,21 @@ describe('SuggestionSlip', () => {
     expect(onAdd).toHaveBeenCalledWith(milk)
     await userEvent.click(screen.getByRole('button', { name: 'Ignore suggestion: Whole milk' }))
     expect(onIgnore).toHaveBeenCalledWith(milk)
+  })
+
+  it('stacks several slips in one labelled region, each with its own buttons', async () => {
+    const onAdd = vi.fn()
+    const eggs: ListSuggestion = { ...milk, key: 'eggs', description: 'Eggs', every_days: 14 }
+    render(<SuggestionStack suggestions={[milk, eggs]} onAdd={onAdd} onIgnore={vi.fn()} />)
+    const region = screen.getByRole('region', { name: 'Suggestion' })
+    expect(region).toHaveTextContent('Whole milk')
+    expect(region).toHaveTextContent('Eggs')
+    await userEvent.click(screen.getByRole('button', { name: 'Add Eggs' }))
+    expect(onAdd).toHaveBeenCalledWith(eggs)
+  })
+
+  it('renders nothing for an empty stack', () => {
+    render(<SuggestionStack suggestions={[]} onAdd={vi.fn()} onIgnore={vi.fn()} />)
+    expect(screen.queryByRole('region', { name: 'Suggestion' })).not.toBeInTheDocument()
   })
 })

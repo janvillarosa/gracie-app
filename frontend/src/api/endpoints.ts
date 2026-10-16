@@ -224,7 +224,7 @@ export async function getListSuggestions(
   listId: string,
 ): Promise<ListSuggestion[]> {
   const r = await apiFetch<{ suggestions: ListSuggestion[] }>(
-    `/rooms/${roomId}/lists/${listId}/suggestions`,
+    `/rooms/${roomId}/lists/${listId}/suggestions?limit=1`,
     { apiKey },
   )
   return r.suggestions

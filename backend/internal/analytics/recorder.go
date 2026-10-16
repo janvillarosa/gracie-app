@@ -15,6 +15,13 @@ type Recorder interface {
 	Record(ctx context.Context, ev Event)
 }
 
+// SyncRecorder is a Recorder that can also write one event before returning. It is for the rare
+// event a read must see at once (a turned-down suggestion), not for ordinary capture.
+type SyncRecorder interface {
+	Recorder
+	RecordSync(ctx context.Context, ev Event)
+}
+
 // Clock is injectable for tests.
 type Clock func() time.Time
 
@@ -117,6 +124,20 @@ func (r *BufferedRecorder) run() {
 		case <-t.C:
 			flush()
 		}
+	}
+}
+
+// RecordSync stamps ev and writes it before returning, so the very next read sees it. Like
+// Record it never fails the caller: a write error is logged and the event is lost.
+func (r *BufferedRecorder) RecordSync(ctx context.Context, ev Event) {
+	if _, ok := r.reg.Resolve(ev.Name); !ok {
+		return
+	}
+	Stamp(&ev, r.now(), TZFrom(ctx), r.retention)
+	wctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := r.repo.InsertMany(wctx, []Event{ev}); err != nil {
+		log.Printf("analytics: sync write of %s failed: %v", ev.Name, err)
 	}
 }
 

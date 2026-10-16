@@ -22,7 +22,7 @@ func (h *SuggestionsHandler) ForList(w http.ResponseWriter, r *http.Request) {
 		api.WriteJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
 		return
 	}
-	limit := intParam(r, "limit", 3, 1, 5)
+	limit := intParam(r, "limit", 1, 1, 5)
 	out, err := h.svc.ForList(r.Context(), u, chi.URLParam(r, "room_id"), chi.URLParam(r, "list_id"), limit)
 	if err != nil {
 		api.WriteJSON(w, statusFromErr(err), map[string]string{"error": err.Error()})

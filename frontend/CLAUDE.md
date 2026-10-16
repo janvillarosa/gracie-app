@@ -86,10 +86,18 @@ why the config forces a single fork.
 
 ## Smart suggestions
 
-`ListPage` asks `GET /rooms/{id}/lists/{list}/suggestions` and shows the **first** answer as one
-`SuggestionSlip` above the items (never inside the list or the add bar). Add goes through `onCreateItem`
-with `source: 'suggestion'`; Ignore posts the key. Both pop the slip optimistically and the next one shows;
-a failed call re-fetches. The server decides everything (confidence, home list, house setting), so a
+`ListPage` asks `GET /rooms/{id}/lists/{list}/suggestions?limit=1` and shows the answer as one
+`SuggestionStack` row above the items: a paper sheet with the item, "You add it weekly", a yellow Add (this
+page's one key) and a round "not now" X. Never inside the list or the add bar. Add goes through `onCreateItem`
+with `source: 'suggestion'`; Ignore posts the key. Both pop the slip at once and the server is asked for the
+next one; after two ignores in a row it answers with nothing (the list is paused).
+Motion: one authored arrival, then rest, nothing loops (`styles.css`, "Arrival"). The slip settles in while the list
+below glides down (`.suggestion-reveal` grid rows 0fr to 1fr, clipped only during the grow), its warm edge flashes and
+fades, and a beat later the plus on the key turns a quarter once and rests
+(it is symmetric, so it ends looking as it began). No gloss, no pulsing, no loop. A taken or ignored slip pops out but keeps its slot (`spent` phases leaving, held, collapsing), so going
+through suggestions swaps the card in place and the list never moves; the slot closes once, only when nothing follows.
+Every slip is the same height (`min-height: 68px`). Any new row, typed or suggested, pops in (`row-in`, with the highlighter swipe). Taking or ignoring the slip pops it out (150ms) while the list glides up; it stays mounted
+until then (`leavingSuggestion`, `SUGGESTION_EXIT_MS`). Any new row, typed or suggested, pops in (`row-in`, with the highlighter swipe). Reduced motion gets a plain fade. The server decides everything (confidence, home list, house setting), so a
 failure or an empty answer just shows nothing. Events: `nudge.shown|tapped|dismissed` with
 `kind: 'recurring'`. The House settings page has the on/off switch (`suggestions_off`).
 

@@ -886,16 +886,41 @@ h5.ant-typography {
   gap: 16px;
 }
 
-/* Smart suggestion: one slip above the items, never inside the list. */
-.suggestion-slip {
+/* Smart suggestions: one sheet of paper above the items. Its Add is the one yellow key, and a
+   warm edge hints at it; the sheet stays white so it reads as paper, not an alert. */
+.suggestion-sheet {
+  margin: 0 0 var(--space-3);
+  padding: var(--space-1) var(--space-3);
+  background: var(--panel);
+  border: 1px solid color-mix(in srgb, var(--brand-yellow-deep) 38%, var(--border));
+  border-radius: var(--radius-squircle);
+  box-shadow: var(--lift-0);
+}
+
+.suggestion-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.suggestion-row {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin: 0 0 12px;
-  padding: 8px 8px 8px 14px;
-  background: color-mix(in srgb, var(--brand-yellow) 14%, white);
-  border: 1px solid color-mix(in srgb, var(--brand-yellow-deep) 45%, var(--border));
-  border-radius: 14px;
+  gap: var(--space-2);
+  /* Tall enough for a wrapped rhythm line too, so every slip is the same height. */
+  min-height: 68px;
+  padding: var(--space-2) 0 var(--space-2) var(--space-1);
+}
+
+.suggestion-row + .suggestion-row::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: var(--space-1);
+  right: 0;
+  height: 1px;
+  background: var(--border);
 }
 
 .suggestion-text {
@@ -903,10 +928,13 @@ h5.ant-typography {
   min-width: 0;
   display: flex;
   flex-direction: column;
+  gap: 1px;
 }
 
 .suggestion-name {
   color: var(--ink);
+  font-weight: 500;
+  line-height: 1.35;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -915,42 +943,125 @@ h5.ant-typography {
 .suggestion-cadence {
   color: var(--muted);
   font-size: 13px;
-}
-
-.suggestion-add,
-.suggestion-ignore {
-  flex: none;
-  min-height: 44px;
-  padding: 0 14px;
-  border-radius: 10px;
-  font: inherit;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
+  line-height: 1.35;
 }
 
 .suggestion-add {
-  background: var(--brand-yellow);
-  border: 1px solid var(--brand-yellow-deep);
-  color: var(--ink);
-  font-weight: 600;
+  flex: none;
 }
 
-.suggestion-ignore {
-  background: transparent;
-  border: 1px solid transparent;
-  color: var(--muted);
+/* Arrival. The slip is the one thing here that wants a tap, so it gets one authored moment and then
+   rests: it settles in while the list below glides down (no jump), its warm edge flashes and fades, and
+   the plus on the key turns once. Nothing loops. */
+.suggestion-reveal {
+  display: grid;
+  grid-template-rows: 1fr;
 }
 
-@media (hover: hover) {
-  .suggestion-ignore:hover {
-    background: var(--panel-subtle);
+.suggestion-clip {
+  min-height: 0;
+}
+
+.suggestion-add {
+  position: relative;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .suggestion-reveal {
+    animation: suggestion-reveal 340ms var(--ease-out) both;
+  }
+  /* Clip only while the height grows, so the sheet's shadow and the ring are never cut at rest. */
+  .suggestion-clip {
+    animation: suggestion-clip 340ms steps(1, end) both;
+  }
+  .suggestion-sheet {
+    animation:
+      suggestion-arrive 380ms var(--ease-out) 60ms both,
+      suggestion-warm 1500ms ease-out 200ms both;
+  }
+  /* The plus turns a quarter once, a beat after the slip settles. It is symmetric, so it ends
+     looking exactly as it began: a nudge toward the key, then nothing. */
+  .suggestion-add svg {
+    animation: suggestion-plus 650ms var(--ease-out) 900ms 1;
+  }
+  .suggestion-add svg {
+    transition: transform var(--dur-base) var(--ease-out);
   }
 }
 
-.suggestion-add:focus-visible,
-.suggestion-ignore:focus-visible {
-  outline: none;
-  box-shadow: var(--focus-ring);
+/* Exit and hand-off. The slip pops out but keeps its slot, so the list does not move between
+   suggestions; the next slip pops in at the same height. Only when nothing follows does the slot
+   close, once. */
+@media (prefers-reduced-motion: no-preference) {
+  .suggestion-reveal.is-leaving .suggestion-sheet {
+    animation: suggestion-pop-out 150ms ease-in both;
+  }
+  .suggestion-reveal.is-collapsing {
+    animation: suggestion-collapse 220ms var(--ease-out) both;
+  }
+  .suggestion-reveal.is-collapsing .suggestion-clip {
+    animation: none;
+    overflow: hidden;
+  }
+}
+
+.suggestion-reveal.is-leaving,
+.suggestion-reveal.is-held,
+.suggestion-reveal.is-collapsing {
+  pointer-events: none;
+}
+
+.suggestion-reveal.is-held .suggestion-sheet,
+.suggestion-reveal.is-collapsing .suggestion-sheet {
+  visibility: hidden;
+  animation: none;
+}
+
+@media (prefers-reduced-motion: no-preference) and (hover: hover) {
+  .suggestion-add:hover svg {
+    transform: rotate(90deg);
+  }
+}
+
+/* Reduced motion keeps the arrival legible: a plain fade, no travel, no ring. */
+@media (prefers-reduced-motion: reduce) {
+  .suggestion-sheet {
+    animation: suggestion-fade 180ms ease-out both;
+  }
+}
+
+@keyframes suggestion-reveal {
+  from { grid-template-rows: 0fr; }
+}
+
+@keyframes suggestion-clip {
+  from { overflow: hidden; }
+  to { overflow: visible; }
+}
+
+@keyframes suggestion-arrive {
+  from { opacity: 0; transform: translateY(8px) scale(0.985); }
+}
+
+@keyframes suggestion-warm {
+  from { border-color: color-mix(in srgb, var(--brand-yellow-deep) 85%, var(--border)); }
+}
+
+@keyframes suggestion-plus {
+  55% { transform: rotate(90deg) scale(1.2); }
+  to { transform: rotate(90deg) scale(1); }
+}
+
+@keyframes suggestion-collapse {
+  to { grid-template-rows: 0fr; }
+}
+
+@keyframes suggestion-pop-out {
+  to { opacity: 0; transform: scale(0.96); }
+}
+
+@keyframes suggestion-fade {
+  from { opacity: 0; }
 }
 
 /* Pantry slips: suggestions stack up out of the sticky bar like paper slips, best match
@@ -1937,9 +2048,9 @@ h5.ant-typography {
 
 @media (prefers-reduced-motion: no-preference) {
 
-  /* New row: rises from the add bar it was typed into */
+  /* New row (typed, or taken from a suggestion): pops in, a touch of overshoot, then rests */
   .items-list .ant-list-item.is-entering {
-    animation: row-in 380ms var(--ease-out) both;
+    animation: row-in 340ms var(--ease-out) both;
   }
 
   /* ...and gets a highlighter swipe that fades like drying ink */
@@ -2050,12 +2161,17 @@ h5.ant-typography {
 }
 
 @keyframes row-in {
-  from {
+  0% {
     opacity: 0;
-    transform: translateY(14px);
+    transform: translateY(6px) scale(0.94);
   }
 
-  to {
+  60% {
+    opacity: 1;
+    transform: scale(1.012);
+  }
+
+  100% {
     opacity: 1;
     transform: none;
   }

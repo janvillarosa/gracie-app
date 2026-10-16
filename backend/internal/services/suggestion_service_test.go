@@ -316,11 +316,76 @@ func TestAddFromSuggestionIsTagged(t *testing.T) {
 	}
 	_, _ = r.lists.CreateItem(WithAddSource(context.Background(), "spoofed"), r.user, r.roomID, r.list, "Eggs", "", "", "")
 	evs, _ := r.m.Events.ListForKey(context.Background(), r.roomID, "item", "whole milk", 10)
-	if len(evs) != 1 || evs[0].Props["source"] != AddSourceSuggestion {
+	if len(evs) != 2 || evs[0].Name != "item.added" || evs[0].Props["source"] != AddSourceSuggestion || evs[1].Name != "item.suggestion_accepted" {
 		t.Fatalf("milk: %+v", evs)
 	}
 	evs, _ = r.m.Events.ListForKey(context.Background(), r.roomID, "item", "eggs", 10)
-	if len(evs) != 1 || evs[0].Props != nil {
+	if len(evs) != 1 || evs[0].Props != nil { // a plain add is not a reaction to a suggestion
 		t.Fatalf("eggs: %+v", evs)
+	}
+}
+
+// weeklyPair makes two items due now on the groceries list, so ignoring one still leaves another.
+func (r *suggestRig) twoDue() {
+	r.weekly("whole milk", r.list)
+	r.history("item.added", "eggs", r.list, 56, 49, 42, 35, 28, 21, 14, 7)
+	r.fold()
+}
+
+func (r *suggestRig) react(name string, ago time.Duration, listID string) {
+	e := analytics.Event{EventID: "r" + name + ago.String() + listID, Name: name, Source: analytics.SourceServer, ActorID: r.user.UserID, RoomID: r.roomID,
+		Key: "x", Subject: analytics.Ref{Type: "item", ID: "i"}, Container: &analytics.Ref{Type: "list", ID: listID}, OccurredAt: r.now.Add(-ago)}
+	analytics.Stamp(&e, e.OccurredAt, "UTC", 400*24*time.Hour)
+	_ = r.m.Events.InsertMany(context.Background(), []analytics.Event{e})
+}
+
+func TestTwoIgnoresInARowPauseSuggestions(t *testing.T) {
+	r := newSuggestRig(t, SuggestionsOn)
+	r.twoDue()
+	ctx := context.Background()
+	if err := r.svc.Ignore(ctx, r.user, r.roomID, r.list, "whole milk"); err != nil {
+		t.Fatal(err)
+	}
+	if got := r.suggest(); len(got) != 1 || got[0].Key != "eggs" {
+		t.Fatalf("one ignore only skips that item: %+v", got)
+	}
+	time.Sleep(2 * time.Millisecond) // the second ignore is strictly newer than the first
+	if err := r.svc.Ignore(ctx, r.user, r.roomID, r.list, "eggs"); err != nil {
+		t.Fatal(err)
+	}
+	if got := r.suggest(); len(got) != 0 {
+		t.Fatalf("two ignores in a row stop suggesting on the list: %+v", got)
+	}
+}
+
+func TestAnAcceptedSuggestionEndsTheStreak(t *testing.T) {
+	r := newSuggestRig(t, SuggestionsOn)
+	r.twoDue()
+	r.react("item.suggestion_ignored", 3*time.Hour, r.list)
+	r.react("item.suggestion_accepted", 2*time.Hour, r.list)
+	r.react("item.suggestion_ignored", time.Hour, r.list)
+	if got := r.suggest(); len(got) == 0 {
+		t.Fatal("ignore, accept, ignore is not two in a row")
+	}
+}
+
+func TestThePauseIsPerListAndLapses(t *testing.T) {
+	r := newSuggestRig(t, SuggestionsOn)
+	r.twoDue()
+	r.react("item.suggestion_ignored", 3*time.Hour, r.other)
+	r.react("item.suggestion_ignored", 2*time.Hour, r.other)
+	if got := r.suggest(); len(got) == 0 {
+		t.Fatal("ignores on the party list must not pause the groceries list")
+	}
+	r.react("item.suggestion_ignored", 20*24*time.Hour, r.list)
+	r.react("item.suggestion_ignored", 19*24*time.Hour, r.list)
+	if got := r.suggest(); len(got) == 0 {
+		t.Fatal("two old ignores (past the pause) no longer count")
+	}
+	// Just inside the 14 day pause both still count.
+	r.react("item.suggestion_ignored", 13*24*time.Hour+22*time.Hour, r.list)
+	r.react("item.suggestion_ignored", 13*24*time.Hour+20*time.Hour, r.list)
+	if got := r.suggest(); len(got) != 0 {
+		t.Fatalf("two recent ignores pause the list: %+v", got)
 	}
 }

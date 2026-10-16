@@ -62,6 +62,10 @@ const (
 	// upcomingScan bounds the candidates read per request (a point-indexed range).
 	upcomingScan = 20
 	maxKeyLen    = 128
+	// pauseAfterIgnores: this many ignores in a row on a list (none accepted in between) mean the house
+	// is not interested right now. Suggestions on that list pause for pauseFor, then try again.
+	pauseAfterIgnores = 2
+	pauseFor          = 14 * 24 * time.Hour
 )
 
 // Suggestion is one thing the house usually adds around now.
@@ -130,6 +134,9 @@ func (s *SuggestionService) ForList(ctx context.Context, user *models.User, room
 		return out, nil
 	}
 	now := s.now().UTC()
+	if paused, err := s.pausedByIgnores(ctx, roomID, listID, now); err != nil || paused {
+		return out, err
+	}
 	stats, err := s.reader.Upcoming(ctx, roomID, "item", now, upcomingScan)
 	if err != nil {
 		return nil, err
@@ -201,11 +208,29 @@ func (s *SuggestionService) Ignore(ctx context.Context, user *models.User, roomI
 	if _, ok := known[key]; !ok {
 		return derr.ErrNotFound
 	}
-	s.emit(ctx, analytics.Event{
+	// Synchronous: the client asks what comes next right away, and must not be offered this again.
+	s.emitSync(ctx, analytics.Event{
 		Name: "item.suggestion_ignored", ActorID: user.UserID, RoomID: roomID,
 		Subject: analytics.Ref{Type: "item"}, Container: ref(listRef(listID)), Key: key,
 	})
 	return nil
+}
+
+// pausedByIgnores reports whether the house's last pauseAfterIgnores reactions to suggestions on
+// this list were all ignores. It reads only events (ignores and accepted adds), so there is no
+// state to reset: an accepted suggestion ends the streak, and the pause lapses on its own.
+func (s *SuggestionService) pausedByIgnores(ctx context.Context, roomID, listID string, now time.Time) (bool, error) {
+	evs, err := s.events.ListByContainer(ctx, roomID, "list", listID,
+		[]string{"item.suggestion_ignored", "item.suggestion_accepted"}, now.Add(-pauseFor), pauseAfterIgnores)
+	if err != nil || len(evs) < pauseAfterIgnores {
+		return false, err
+	}
+	for _, e := range evs {
+		if e.Name != "item.suggestion_ignored" {
+			return false, nil
+		}
+	}
+	return true, nil
 }
 
 func (s *SuggestionService) keysOnList(ctx context.Context, listID string) (map[string]bool, error) {
