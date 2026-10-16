@@ -123,6 +123,11 @@ func (r *UserRepo) UpdateName(ctx context.Context, userID string, name string, u
 	return err
 }
 
+func (r *UserRepo) UpdateTZ(ctx context.Context, userID string, tz string) error {
+	_, err := r.col().UpdateOne(ctx, filterByUserID(userID), bson.D{{Key: "$set", Value: bson.D{{Key: "tz", Value: tz}}}})
+	return err
+}
+
 func (r *UserRepo) UpdatePreferences(ctx context.Context, userID string, prefs models.UserPreferences, updatedAt time.Time) error {
 	set := bson.D{{Key: "updated_at", Value: updatedAt.UTC()}}
 	if prefs.TripsShowNextStop != nil {

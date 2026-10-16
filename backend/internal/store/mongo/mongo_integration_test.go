@@ -192,7 +192,7 @@ func TestMongoListRepos(t *testing.T) {
 	if got, err := ir.ListByRoom(context.Background(), roomID); err != nil || len(got) != 1 {
 		t.Fatalf("list by room: %v %d", err, len(got))
 	}
-	if err := ir.UpdateCompletion(context.Background(), it.ItemID, true, time.Now().UTC()); err != nil {
+	if err := ir.UpdateCompletion(context.Background(), it.ItemID, true, "u1", time.Now().UTC()); err != nil {
 		t.Fatalf("upd completion: %v", err)
 	}
 	if err := ir.UpdateDescription(context.Background(), it.ItemID, "Bread", time.Now().UTC()); err != nil {

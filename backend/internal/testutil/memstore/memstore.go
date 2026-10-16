@@ -47,18 +47,19 @@ func (Tx) WithTransaction(ctx context.Context, fn func(ctx context.Context) erro
 
 // Repos bundles the in-memory repositories that share one Store.
 type Repos struct {
-	Tx    store.TxRunner
-	Users store.UserRepository
-	Rooms store.RoomRepository
-	Lists store.ListRepository
-	Items store.ListItemRepository
-	Trips store.TripRepository
+	Tx     store.TxRunner
+	Users  store.UserRepository
+	Rooms  store.RoomRepository
+	Lists  store.ListRepository
+	Items  store.ListItemRepository
+	Trips  store.TripRepository
+	Events *EventRepo
 }
 
 // Compose returns in-memory repos + a no-op Tx runner.
 func Compose() Repos {
 	st := NewStore()
-	return Repos{Tx: Tx{}, Users: &UserRepo{st}, Rooms: &RoomRepo{st}, Lists: &ListRepo{st}, Items: &ListItemRepo{st}, Trips: &TripRepo{st}}
+	return Repos{Tx: Tx{}, Users: &UserRepo{st}, Rooms: &RoomRepo{st}, Lists: &ListRepo{st}, Items: &ListItemRepo{st}, Trips: &TripRepo{st}, Events: NewEventRepo()}
 }
 
 // UserRepo
@@ -125,6 +126,17 @@ func (r *UserRepo) SetAPIKey(_ context.Context, userID string, hash, lookup stri
 	u.UpdatedAt = updatedAt
 	return nil
 }
+func (r *UserRepo) UpdateTZ(_ context.Context, userID string, tz string) error {
+	r.st.mu.Lock()
+	defer r.st.mu.Unlock()
+	u, ok := r.st.users[userID]
+	if !ok {
+		return derr.ErrNotFound
+	}
+	u.TZ = tz
+	return nil
+}
+
 func (r *UserRepo) UpdateName(_ context.Context, userID string, name string, updatedAt time.Time) error {
 	r.st.mu.Lock()
 	defer r.st.mu.Unlock()
@@ -518,7 +530,7 @@ func (r *ListItemRepo) ListByList(_ context.Context, listID string) ([]models.Li
 	})
 	return out, nil
 }
-func (r *ListItemRepo) UpdateCompletion(_ context.Context, itemID string, completed bool, updatedAt time.Time) error {
+func (r *ListItemRepo) UpdateCompletion(_ context.Context, itemID string, completed bool, actorID string, updatedAt time.Time) error {
 	r.st.mu.Lock()
 	defer r.st.mu.Unlock()
 	it, ok := r.st.items[itemID]
@@ -526,6 +538,12 @@ func (r *ListItemRepo) UpdateCompletion(_ context.Context, itemID string, comple
 		return derr.ErrNotFound
 	}
 	it.Completed = completed
+	if completed {
+		at := updatedAt
+		it.CompletedAt, it.CompletedBy = &at, actorID
+	} else {
+		it.CompletedAt, it.CompletedBy = nil, ""
+	}
 	it.UpdatedAt = updatedAt
 	return nil
 }
@@ -600,16 +618,18 @@ func (r *ListItemRepo) UpdateStarred(_ context.Context, itemID string, starred b
 	return nil
 }
 
-func (r *ListItemRepo) ArchiveCompletedByList(_ context.Context, listID string, updatedAt time.Time) error {
+func (r *ListItemRepo) ArchiveCompletedByList(_ context.Context, listID string, updatedAt time.Time) (int64, error) {
 	r.st.mu.Lock()
 	defer r.st.mu.Unlock()
+	var n int64
 	for _, it := range r.st.items {
 		if it.ListID == listID && it.Completed && !it.IsArchived {
 			it.IsArchived = true
 			it.UpdatedAt = updatedAt
+			n++
 		}
 	}
-	return nil
+	return n, nil
 }
 func (r *ListItemRepo) ListArchivedByRoom(_ context.Context, roomID string) ([]models.ListItem, error) {
 	r.st.mu.RLock()

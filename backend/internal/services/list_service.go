@@ -200,6 +200,7 @@ func (s *ListService) CreateItem(ctx context.Context, user *models.User, roomID,
 		Unit:        unit,
 		Category:    category,
 		Completed:   false,
+		CreatedBy:   user.UserID,
 		CreatedAt:   now,
 		UpdatedAt:   now,
 	}
@@ -282,7 +283,7 @@ func (s *ListService) UpdateItem(ctx context.Context, user *models.User, roomID,
 		}
 	}
 	if completed != nil {
-		if err := s.items.UpdateCompletion(ctx, itemID, *completed, now); err != nil {
+		if err := s.items.UpdateCompletion(ctx, itemID, *completed, user.UserID, now); err != nil {
 			return nil, err
 		}
 	}
@@ -322,7 +323,8 @@ func (s *ListService) ArchiveCompletedItems(ctx context.Context, user *models.Us
 		return derr.ErrForbidden
 	}
 	now := time.Now().UTC()
-	return s.items.ArchiveCompletedByList(ctx, listID, now)
+	_, err = s.items.ArchiveCompletedByList(ctx, listID, now)
+	return err
 }
 
 // PantryItem is one distinct thing a house has bought before; it powers add-bar

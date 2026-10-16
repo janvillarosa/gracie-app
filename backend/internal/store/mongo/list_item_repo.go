@@ -55,8 +55,16 @@ func (r *ListItemRepo) ListByList(ctx context.Context, listID string) ([]models.
 	return out, nil
 }
 
-func (r *ListItemRepo) UpdateCompletion(ctx context.Context, itemID string, completed bool, updatedAt time.Time) error {
-	_, err := r.col().UpdateOne(ctx, bson.D{{Key: "item_id", Value: itemID}}, bson.D{{Key: "$set", Value: bson.D{{Key: "completed", Value: completed}, {Key: "updated_at", Value: updatedAt.UTC()}}}})
+func (r *ListItemRepo) UpdateCompletion(ctx context.Context, itemID string, completed bool, actorID string, updatedAt time.Time) error {
+	set := bson.D{{Key: "completed", Value: completed}, {Key: "updated_at", Value: updatedAt.UTC()}}
+	update := bson.D{}
+	if completed {
+		set = append(set, bson.E{Key: "completed_at", Value: updatedAt.UTC()}, bson.E{Key: "completed_by", Value: actorID})
+		update = bson.D{{Key: "$set", Value: set}}
+	} else {
+		update = bson.D{{Key: "$set", Value: set}, {Key: "$unset", Value: bson.D{{Key: "completed_at", Value: ""}, {Key: "completed_by", Value: ""}}}}
+	}
+	_, err := r.col().UpdateOne(ctx, bson.D{{Key: "item_id", Value: itemID}}, update)
 	return err
 }
 
@@ -90,7 +98,7 @@ func (r *ListItemRepo) UpdateStarred(ctx context.Context, itemID string, starred
 	return err
 }
 
-func (r *ListItemRepo) ArchiveCompletedByList(ctx context.Context, listID string, updatedAt time.Time) error {
+func (r *ListItemRepo) ArchiveCompletedByList(ctx context.Context, listID string, updatedAt time.Time) (int64, error) {
 	filter := bson.D{
 		{Key: "list_id", Value: listID},
 		{Key: "completed", Value: true},
@@ -100,8 +108,11 @@ func (r *ListItemRepo) ArchiveCompletedByList(ctx context.Context, listID string
 		{Key: "is_archived", Value: true},
 		{Key: "updated_at", Value: updatedAt.UTC()},
 	}}}
-	_, err := r.col().UpdateMany(ctx, filter, update)
-	return err
+	res, err := r.col().UpdateMany(ctx, filter, update)
+	if err != nil {
+		return 0, err
+	}
+	return res.ModifiedCount, nil
 }
 
 func (r *ListItemRepo) ListArchivedByRoom(ctx context.Context, roomID string) ([]models.ListItem, error) {

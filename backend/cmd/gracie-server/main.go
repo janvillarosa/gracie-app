@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/janvillarosa/gracie-app/backend/internal/analytics"
 	"github.com/janvillarosa/gracie-app/backend/internal/config"
 	"github.com/janvillarosa/gracie-app/backend/internal/http/handlers"
 	"github.com/janvillarosa/gracie-app/backend/internal/http/router"
@@ -44,6 +45,21 @@ func main() {
 		log.Fatalf("trips: ensure indexes: %v", err)
 	}
 	tx := mongostore.NewTx(mcli)
+
+	// Behavior analytics: buffered, non-blocking event capture. Disabled -> NopRecorder.
+	analyticsReg := analytics.NewRegistry()
+	var recorder analytics.Recorder = analytics.NopRecorder{}
+	var bufRecorder *analytics.BufferedRecorder
+	if cfg.AnalyticsEnabled {
+		eventsRepo := mongostore.NewEventRepo(mcli)
+		if err := eventsRepo.EnsureIndexes(ctx); err != nil {
+			log.Printf("analytics: ensure indexes failed: %v (analytics disabled)", err)
+		} else {
+			bufRecorder = analytics.NewBufferedRecorder(eventsRepo, analyticsReg, cfg.AnalyticsBuffer, time.Duration(cfg.AnalyticsRetentionDays)*24*time.Hour)
+			recorder = bufRecorder
+		}
+	}
+	_ = recorder // injected into services in the instrumentation phase
 
 	var categoryIndex *mongostore.CategoryIndexRepo
 	if cfg.CategoryIndexEnabled {
@@ -124,6 +140,12 @@ func main() {
 	ctxTimeout, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	_ = srv.Shutdown(ctxTimeout)
+	// Drain analytics after the server stops accepting writes, so buffered events are not lost.
+	if bufRecorder != nil {
+		if err := bufRecorder.Close(ctxTimeout); err != nil {
+			log.Printf("analytics: drain on shutdown: %v", err)
+		}
+	}
 }
 
 // buildEmbedder loads the shared embedding model once, or returns nil when

@@ -23,6 +23,11 @@ type Config struct {
 	CategoryIndexEnabled bool
 	// Trips & places
 	TripsUserRPS float64
+	// Behavior analytics
+	AnalyticsEnabled       bool
+	AnalyticsBuffer        int
+	AnalyticsRetentionDays int
+	AnalyticsEventsRPS     float64
 }
 
 func getEnv(key, def string) string {
@@ -48,6 +53,10 @@ func Load() (*Config, error) {
 	cfg.EmbedTopK = getEnvInt("EMBED_TOPK", 5)
 	cfg.CategoryIndexEnabled = getEnv("CATEGORY_INDEX_ENABLED", "true") == "true"
 	cfg.TripsUserRPS = getEnvFloat("TRIPS_USER_RPS", 5)
+	cfg.AnalyticsEnabled = getEnv("ANALYTICS_ENABLED", "true") == "true"
+	cfg.AnalyticsBuffer = getEnvInt("ANALYTICS_BUFFER", 4096)
+	cfg.AnalyticsRetentionDays = getEnvInt("ANALYTICS_RETENTION_DAYS", 400)
+	cfg.AnalyticsEventsRPS = getEnvFloat("ANALYTICS_EVENTS_RPS", 2)
 
 	if cfg.MongoURI == "" || cfg.MongoDB == "" {
 		return nil, fmt.Errorf("missing Mongo configuration (MONGODB_URI, MONGODB_DB)")

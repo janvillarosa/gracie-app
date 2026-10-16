@@ -39,6 +39,7 @@ func NewRouter(userFinder authmw.UserFinder, h Handlers) http.Handler {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Compress(5, "application/json"))
+	r.Use(authmw.Timezone)
 
 	// CORS for production (Vercel frontend → Railway API). Control via CORS_ORIGIN env.
 	// If CORS_ORIGIN is set, allow only that origin and credentials; otherwise allow all without credentials.
@@ -52,7 +53,7 @@ func NewRouter(userFinder authmw.UserFinder, h Handlers) http.Handler {
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   allowedOrigins,
 		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-Requested-With"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-Requested-With", "X-Timezone"},
 		ExposedHeaders:   []string{"Link"},
 		AllowCredentials: allowCreds,
 		MaxAge:           300,
@@ -66,6 +67,9 @@ func NewRouter(userFinder authmw.UserFinder, h Handlers) http.Handler {
 	// Authenticated endpoints
 	r.Group(func(ar chi.Router) {
 		ar.Use(authmw.AuthMiddleware(userFinder))
+		if tzStore, ok := userFinder.(authmw.TZStore); ok {
+			ar.Use(authmw.SyncTimezone(tzStore))
+		}
 
 		ar.Get("/me", h.User.GetMe)
 		ar.Put("/me", h.User.UpdateMe)

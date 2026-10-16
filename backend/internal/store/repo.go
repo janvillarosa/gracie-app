@@ -19,6 +19,8 @@ type UserRepository interface {
 	GetByAPIKeyLookup(ctx context.Context, lookup string) (*models.User, error)
 	SetAPIKey(ctx context.Context, userID string, hash, lookup string, expiresAt *time.Time, updatedAt time.Time) error
 	UpdateName(ctx context.Context, userID string, name string, updatedAt time.Time) error
+	// UpdateTZ records the last-seen IANA zone without touching updated_at.
+	UpdateTZ(ctx context.Context, userID string, tz string) error
 	// UpdatePreferences sets only the non-nil preference fields (nested $set), leaving the rest untouched.
 	UpdatePreferences(ctx context.Context, userID string, prefs models.UserPreferences, updatedAt time.Time) error
 	SetRoomID(ctx context.Context, userID string, roomID *string, updatedAt time.Time) error
@@ -60,13 +62,15 @@ type ListItemRepository interface {
 	Put(ctx context.Context, it *models.ListItem) error
 	GetByID(ctx context.Context, id string) (*models.ListItem, error)
 	ListByList(ctx context.Context, listID string) ([]models.ListItem, error)
-	UpdateCompletion(ctx context.Context, itemID string, completed bool, updatedAt time.Time) error
+	// UpdateCompletion also stamps completed_at/completed_by (or clears them on uncheck).
+	UpdateCompletion(ctx context.Context, itemID string, completed bool, actorID string, updatedAt time.Time) error
 	UpdateDescription(ctx context.Context, itemID string, description string, updatedAt time.Time) error
 	UpdateQuantity(ctx context.Context, itemID string, quantity string, updatedAt time.Time) error
 	UpdateUnit(ctx context.Context, itemID string, unit string, updatedAt time.Time) error
 	UpdateCategory(ctx context.Context, itemID string, category string, updatedAt time.Time) error
 	UpdateStarred(ctx context.Context, itemID string, starred bool, updatedAt time.Time) error
-	ArchiveCompletedByList(ctx context.Context, listID string, updatedAt time.Time) error
+	// ArchiveCompletedByList returns how many items it archived.
+	ArchiveCompletedByList(ctx context.Context, listID string, updatedAt time.Time) (int64, error)
 	ListArchivedByRoom(ctx context.Context, roomID string) ([]models.ListItem, error)
 	// ListByRoom returns every item in the room (active and archived), newest first.
 	ListByRoom(ctx context.Context, roomID string) ([]models.ListItem, error)
