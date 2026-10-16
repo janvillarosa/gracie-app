@@ -67,6 +67,7 @@ import { useStableCallback } from '@lib/useStableCallback'
 import { useDocumentTitle } from '@lib/useDocumentTitle'
 import { ItemRow, reorderLock } from '@components/ItemRow'
 import { AddItemBar } from '@components/AddItemBar'
+import { track } from '@lib/analytics'
 import { TopNav } from '@components/TopNav'
 import { PillNav } from '@components/PillNav'
 import { HouseLoader } from '@components/HouseLoader'
@@ -467,6 +468,9 @@ export const ListPage: React.FC = () => {
   // once, the request is sent when the toast closes (or the page is left).
   const pendingDeletes = useRef(new Map<string, () => Promise<void>>())
   useEffect(() => {
+    if (listId) track('list.view', { subject: { type: 'list', id: listId } })
+  }, [listId])
+  useEffect(() => {
     const pending = pendingDeletes.current
     return () => {
       for (const commit of [...pending.values()]) void commit()
@@ -496,6 +500,10 @@ export const ListPage: React.FC = () => {
     }
     const undo = async () => {
       if (!pendingDeletes.current.delete(id)) return
+      track('item.delete_undone', {
+        subject: { type: 'item', id },
+        container: { type: 'list', id: listId },
+      })
       msgApi.destroy(id)
       await applyOptimistic((items) =>
         items.some((x) => x.item_id === id) ? items : [...items, it],
@@ -913,7 +921,11 @@ export const ListPage: React.FC = () => {
                       </button>
                       {/* Outside the Space wrapper so sticky pins to the whole tab pane,
                         keeping the bar on screen while scrolling a long list. */}
-                      <AddItemBar onCreate={onCreateItem} pantry={pantryQuery.data} />
+                      <AddItemBar
+                        onCreate={onCreateItem}
+                        pantry={pantryQuery.data}
+                        listId={listId}
+                      />
                     </>
                   ),
                 },

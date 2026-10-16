@@ -19,6 +19,10 @@ type Handlers struct {
 	Room *handlers.RoomHandler
 	List *handlers.ListHandler
 	Trip *handlers.TripHandler
+	// Events is optional: when nil, POST /events is not mounted.
+	Events *handlers.EventsHandler
+	// Insights is optional: when nil, the insights routes are not mounted.
+	Insights *handlers.InsightsHandler
 }
 
 // redactPlacesQuery keeps /places/* query strings (search text, exact coordinates) out of
@@ -39,6 +43,7 @@ func NewRouter(userFinder authmw.UserFinder, h Handlers) http.Handler {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Compress(5, "application/json"))
+	r.Use(authmw.Timezone)
 
 	// CORS for production (Vercel frontend → Railway API). Control via CORS_ORIGIN env.
 	// If CORS_ORIGIN is set, allow only that origin and credentials; otherwise allow all without credentials.
@@ -52,7 +57,7 @@ func NewRouter(userFinder authmw.UserFinder, h Handlers) http.Handler {
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   allowedOrigins,
 		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-Requested-With"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-Requested-With", "X-Timezone"},
 		ExposedHeaders:   []string{"Link"},
 		AllowCredentials: allowCreds,
 		MaxAge:           300,
@@ -66,6 +71,9 @@ func NewRouter(userFinder authmw.UserFinder, h Handlers) http.Handler {
 	// Authenticated endpoints
 	r.Group(func(ar chi.Router) {
 		ar.Use(authmw.AuthMiddleware(userFinder))
+		if tzStore, ok := userFinder.(authmw.TZStore); ok {
+			ar.Use(authmw.SyncTimezone(tzStore))
+		}
 
 		ar.Get("/me", h.User.GetMe)
 		ar.Put("/me", h.User.UpdateMe)
@@ -95,6 +103,14 @@ func NewRouter(userFinder authmw.UserFinder, h Handlers) http.Handler {
 		ar.Patch("/rooms/{room_id}/lists/{list_id}/items/{item_id}", h.List.UpdateItem)
 		ar.Patch("/rooms/{room_id}/lists/{list_id}/items/{item_id}/position", h.List.UpdateItemPosition)
 		ar.Delete("/rooms/{room_id}/lists/{list_id}/items/{item_id}", h.List.DeleteItem)
+		if h.Insights != nil {
+			ar.Get("/me/insights", h.Insights.Mine)
+			ar.Get("/rooms/{room_id}/insights", h.Insights.House)
+			ar.Get("/rooms/{room_id}/insights/periods/{period}", h.Insights.HousePeriod)
+		}
+		if h.Events != nil {
+			ar.Post("/events", h.Events.Ingest)
+		}
 		if h.Trip != nil {
 			ar.Post("/rooms/{room_id}/trips/sync", h.Trip.Sync)
 			ar.Post("/rooms/{room_id}/trips/ops", h.Trip.Ops)

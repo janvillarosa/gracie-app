@@ -2,8 +2,10 @@ package services
 
 import (
 	"context"
+	"log"
 	"time"
 
+	"github.com/janvillarosa/gracie-app/backend/internal/analytics"
 	derr "github.com/janvillarosa/gracie-app/backend/internal/errors"
 	"github.com/janvillarosa/gracie-app/backend/internal/models"
 	"github.com/janvillarosa/gracie-app/backend/internal/store"
@@ -17,6 +19,7 @@ type RoomService struct {
 	items store.ListItemRepository
 	trips store.TripRepository
 	tx    store.TxRunner
+	emitter
 }
 
 func NewRoomService(users store.UserRepository, rooms store.RoomRepository, tx store.TxRunner) *RoomService {
@@ -57,6 +60,7 @@ func (s *RoomService) CreateSoloRoom(ctx context.Context, user *models.User) (*m
 	}); err != nil {
 		return nil, err
 	}
+	s.emitHouse(ctx, "house.created", user, room.RoomID, nil)
 	return room, nil
 }
 
@@ -68,6 +72,7 @@ func (s *RoomService) RotateShareToken(ctx context.Context, user *models.User) (
 	if err := s.rooms.SetShareToken(ctx, *user.RoomID, user.UserID, token, time.Now().UTC()); err != nil {
 		return "", err
 	}
+	s.emitHouse(ctx, "house.invite_rotated", user, *user.RoomID, nil)
 	return token, nil
 }
 
@@ -122,6 +127,13 @@ func (s *RoomService) JoinRoom(ctx context.Context, joiner *models.User, roomID,
 	}); err != nil {
 		return nil, err
 	}
+	if deleteSolo != nil && s.purger != nil {
+		// The solo house is gone; the person's own events stay (their profile is built from them).
+		if err := s.purger.ForgetRoomAggregates(ctx, deleteSolo.RoomID); err != nil {
+			log.Printf("analytics: forget house %s: %v", deleteSolo.RoomID, err)
+		}
+	}
+	s.emitHouse(ctx, "house.joined", joiner, rm.RoomID, nil)
 	return s.rooms.GetByID(ctx, rm.RoomID)
 }
 
@@ -144,6 +156,7 @@ func (s *RoomService) VoteDeletion(ctx context.Context, voter *models.User) (boo
 	if err := s.rooms.VoteDeletion(ctx, *voter.RoomID, voter.UserID, now); err != nil {
 		return false, err
 	}
+	s.emitHouse(ctx, "house.delete_voted", voter, *voter.RoomID, nil)
 	rm, err := s.rooms.GetByID(ctx, *voter.RoomID)
 	if err != nil {
 		return false, err
@@ -172,6 +185,7 @@ func (s *RoomService) VoteDeletion(ctx context.Context, voter *models.User) (boo
 	}); err != nil {
 		return false, err
 	}
+	s.emitHouse(ctx, "house.deleted", voter, rm.RoomID, nil)
 	go s.cleanupRoomResources(context.Background(), rm.RoomID)
 	return true, nil
 }
@@ -180,7 +194,11 @@ func (s *RoomService) CancelDeletionVote(ctx context.Context, user *models.User)
 	if user.RoomID == nil || *user.RoomID == "" {
 		return derr.ErrNotFound
 	}
-	return s.rooms.RemoveDeletionVote(ctx, *user.RoomID, user.UserID)
+	if err := s.rooms.RemoveDeletionVote(ctx, *user.RoomID, user.UserID); err != nil {
+		return err
+	}
+	s.emitHouse(ctx, "house.delete_vote_cancelled", user, *user.RoomID, nil)
+	return nil
 }
 
 // UpdateRoomSettings updates display name and/or description.
@@ -189,20 +207,27 @@ func (s *RoomService) UpdateRoomSettings(ctx context.Context, user *models.User,
 		return derr.ErrNotFound
 	}
 	now := time.Now().UTC()
+	var changed []string
 	if displayName != nil {
+		changed = append(changed, "display_name")
 		if err := s.rooms.UpdateDisplayName(ctx, *user.RoomID, user.UserID, *displayName, now); err != nil {
 			return err
 		}
 	}
 	if description != nil {
+		changed = append(changed, "description")
 		if err := s.rooms.UpdateDescription(ctx, *user.RoomID, user.UserID, *description, now); err != nil {
 			return err
 		}
+	}
+	if len(changed) > 0 {
+		s.emitHouse(ctx, "house.settings_updated", user, *user.RoomID, fieldsProp(changed))
 	}
 	return nil
 }
 
 func (s *RoomService) cleanupRoomResources(ctx context.Context, roomID string) {
+	s.purgeRoom(ctx, roomID)
 	if s.trips != nil {
 		_ = s.trips.DeleteByRoom(ctx, roomID)
 	}
@@ -220,3 +245,8 @@ func (s *RoomService) cleanupRoomResources(ctx context.Context, roomID string) {
 
 // UseTripRepo injects the optional trip repository used to re-home and clean up trips.
 func (s *RoomService) UseTripRepo(trips store.TripRepository) { s.trips = trips }
+
+// emitHouse records a house event. The house is its own subject and carries no container.
+func (s *RoomService) emitHouse(ctx context.Context, name string, user *models.User, roomID string, props map[string]any) {
+	s.emit(ctx, analytics.Event{Name: name, ActorID: user.UserID, RoomID: roomID, Subject: analytics.Ref{Type: "house", ID: roomID}, Props: props})
+}

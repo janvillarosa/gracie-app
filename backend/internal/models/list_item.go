@@ -10,14 +10,18 @@ type ListItem struct {
 	RoomID string `bson:"room_id" json:"room_id"`
 	// Order controls the display order within a list. Lower comes first.
 	// Float64 allows midpoint insertion without immediate renumbering.
-	Order       float64   `bson:"order,omitempty" json:"order,omitempty"`
-	Description string    `bson:"description" json:"description"`
-	Quantity    string    `bson:"quantity,omitempty" json:"quantity,omitempty"`
-	Unit        string    `bson:"unit,omitempty" json:"unit,omitempty"`
-	Category    string    `bson:"category,omitempty" json:"category,omitempty"`
-	IsStarred   bool      `bson:"is_starred,omitempty" json:"is_starred"`
-	IsArchived  bool      `bson:"is_archived,omitempty" json:"is_archived"`
-	Completed   bool      `bson:"completed" json:"completed"`
-	CreatedAt   time.Time `bson:"created_at" json:"created_at"`
-	UpdatedAt   time.Time `bson:"updated_at" json:"updated_at"`
+	Order       float64 `bson:"order,omitempty" json:"order,omitempty"`
+	Description string  `bson:"description" json:"description"`
+	Quantity    string  `bson:"quantity,omitempty" json:"quantity,omitempty"`
+	Unit        string  `bson:"unit,omitempty" json:"unit,omitempty"`
+	Category    string  `bson:"category,omitempty" json:"category,omitempty"`
+	IsStarred   bool    `bson:"is_starred,omitempty" json:"is_starred"`
+	IsArchived  bool    `bson:"is_archived,omitempty" json:"is_archived"`
+	Completed   bool    `bson:"completed" json:"completed"`
+	// Actor and time stamps feed behavior analytics; absent on items that predate them.
+	CreatedBy   string     `bson:"created_by,omitempty" json:"-"`
+	CompletedAt *time.Time `bson:"completed_at,omitempty" json:"-"`
+	CompletedBy string     `bson:"completed_by,omitempty" json:"-"`
+	CreatedAt   time.Time  `bson:"created_at" json:"created_at"`
+	UpdatedAt   time.Time  `bson:"updated_at" json:"updated_at"`
 }

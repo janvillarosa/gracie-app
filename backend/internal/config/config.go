@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"time"
 )
 
 type Config struct {
@@ -23,6 +24,13 @@ type Config struct {
 	CategoryIndexEnabled bool
 	// Trips & places
 	TripsUserRPS float64
+	// Behavior analytics
+	AnalyticsEnabled       bool
+	AnalyticsBuffer        int
+	AnalyticsRetentionDays int
+	AnalyticsEventsRPS     float64
+	AnalyticsFoldEvery     time.Duration
+	AnalyticsProfileEvery  time.Duration
 }
 
 func getEnv(key, def string) string {
@@ -48,6 +56,12 @@ func Load() (*Config, error) {
 	cfg.EmbedTopK = getEnvInt("EMBED_TOPK", 5)
 	cfg.CategoryIndexEnabled = getEnv("CATEGORY_INDEX_ENABLED", "true") == "true"
 	cfg.TripsUserRPS = getEnvFloat("TRIPS_USER_RPS", 5)
+	cfg.AnalyticsEnabled = getEnv("ANALYTICS_ENABLED", "true") == "true"
+	cfg.AnalyticsBuffer = getEnvInt("ANALYTICS_BUFFER", 4096)
+	cfg.AnalyticsRetentionDays = getEnvInt("ANALYTICS_RETENTION_DAYS", 400)
+	cfg.AnalyticsEventsRPS = getEnvFloat("ANALYTICS_EVENTS_RPS", 2)
+	cfg.AnalyticsFoldEvery = getEnvDuration("ANALYTICS_FOLD_EVERY", 15*time.Minute)
+	cfg.AnalyticsProfileEvery = getEnvDuration("ANALYTICS_PROFILE_EVERY", time.Hour)
 
 	if cfg.MongoURI == "" || cfg.MongoDB == "" {
 		return nil, fmt.Errorf("missing Mongo configuration (MONGODB_URI, MONGODB_DB)")
@@ -71,6 +85,15 @@ func getEnvFloat(key string, def float64) float64 {
 		var f float64
 		if _, err := fmt.Sscanf(v, "%g", &f); err == nil && f > 0 {
 			return f
+		}
+	}
+	return def
+}
+
+func getEnvDuration(key string, def time.Duration) time.Duration {
+	if v := os.Getenv(key); v != "" {
+		if d, err := time.ParseDuration(v); err == nil && d > 0 {
+			return d
 		}
 	}
 	return def

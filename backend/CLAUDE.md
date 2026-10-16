@@ -135,6 +135,51 @@ Spec: `docs/superpowers/specs/2026-10-14-trips-api-persistence-design.md`.
   - Rate limiter burst is `ratelimit.Burst(rps)` (>= 1). All trip endpoints, including
     packing-list, share the per-user trips limiter.
 
+## Behavior analytics
+
+Spec: `docs/superpowers/specs/2026-10-16-behavior-analytics-design.md`. It records what people
+and houses do so Bauhouse can suggest, nudge and write a year review. Package
+`internal/analytics` knows no feature: lists, trips and any future feature **register** their
+own events.
+
+- **Event envelope:** `subject` (what was acted on), optional `container` (what it lives in:
+  item -> list, todo -> trip), `key` (stable identity across instances, the normalized text,
+  never raw text), `targets` (other people the event is about: assignees), `props` (schema
+  checked per event), and the actor's local time computed once at write time from
+  `X-Timezone`. Names are `<subject type>.<verb>`.
+- **Adding a feature:** register `analytics.EventDef`s (see `services/analytics_events.go`,
+  `trips/analytics_events.go`), set `Role` (`RoleRequest` / `RoleComplete`) on the verbs that
+  mean "asked for" and "done" and the generic projections give you per-period counts, per-key
+  rhythm and due dates, per-container run rhythm and per-member totals for free. A rename is an
+  `Alias`, never an edit of stored events.
+- **Capture:** services embed `emitter` (`UseRecorder`) and emit **after** the domain write
+  succeeded and only on a real state change. The recorder is buffered and non-blocking: a
+  full buffer drops events (counted), it never slows or fails a user write. Trip events are
+  derived per op in `trips.EventsFor` and emitted only once the compare-and-swap persists, so
+  replays and retries never double-count. Client events come through `POST /events` (allow-listed
+  names, `Client: true`); identity always comes from auth.
+- **Rollups:** `analytics.Worker`. `FoldOnce` (every `ANALYTICS_FOLD_EVERY`) takes a lease,
+  folds events with `ingested_at` in `[watermark, now-2m)` and applies the aggregates and the new
+  watermark in **one transaction**, so a window is applied exactly once. `ProfilePass` (every
+  `ANALYTICS_PROFILE_EVERY`) recomputes profiles for subjects the fold marked dirty. Both are safe
+  to run on every instance. **Standalone Mongo has no transactions** (the Tx runner falls back to
+  running without one), so exactly-once only holds on a replica set.
+- **Reads:** `analytics.Reader` and `GET /me/insights`, `GET /rooms/{id}/insights`,
+  `GET /rooms/{id}/insights/periods/{period}`. All point lookups; no endpoint returns raw events.
+  The house review includes per-member totals; nudges and profiles stay personal. A nil profile
+  means "nothing learned yet": callers fall back to non-personalized behavior.
+- **Freshness:** aggregates lag by up to ~15 minutes (+ the 2 minute ingest lag). Consumers must
+  filter suggestions against the live list they already hold (don't suggest what is on the list).
+- **Privacy:** no raw item text, notes, places, confirmation codes or IPs. Deleting an account
+  erases that person's events, personal stats and profile (`analytics.Purger`, with a second sweep
+  for events still buffered); deleting a house erases its events and house-level aggregates.
+  Joining a house dissolves the solo house's aggregates but keeps the person's own history.
+  Raw events expire by TTL after `ANALYTICS_RETENTION_DAYS`.
+- **Known limitations / follow-ups:** a user-facing opt-out; re-homing a solo house's key history
+  when its owner joins another house (suggestions start fresh there); packing-list item events
+  carry no trip link (the trip lead-time model uses `trip.packing_list_created` instead);
+  `GetPantry` still scans history and can move to `key_stats`.
+
 ## Testing
 
 The fast path is in-process and honest:

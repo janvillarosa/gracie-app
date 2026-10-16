@@ -84,6 +84,22 @@ why the config forces a single fork.
   (`onClearCompleted`) works the same way: rows leave at once, the `/clear` request waits for the
   toast to close, Undo cancels it.
 
+## Behavior tracking (`lib/analytics/`)
+
+- `tracker.ts` is a small injectable queue (`Tracker`); `index.ts` binds it to the API and `localStorage`.
+  `AuthProvider` turns it on for the signed-in key and off (queue cleared) on sign-out. It is best
+  effort: `track()` never throws, the queue is capped (200), mirrored to `localStorage` inside
+  try/catch, flushed every 10s, on `visibilitychange` -> hidden (`keepalive`) and when back online.
+  Event ids are client-made, so a retried batch is deduped by the server.
+- Events go to `POST /events` on **our** API (no third-party SDK). They carry no identity: the server
+  takes the user and house from the API key. Allowed names are the `Client: true` registrations in
+  the backend; the subject type must equal the name's prefix. Never put typed text in an event: `key`
+  is a normalized item name, nothing else is free text.
+- `apiFetch` sends `X-Timezone` on every call; the server buckets behavior in local time with it.
+- Call sites: `app.open` / `app.resume` (`startAppTracking`), `list.view` (`ListPage`),
+  `item.delete_undone`, `add_bar.suggestion_accepted` (`AddItemBar`, needs `listId`), `trip.view`.
+  Tests need the default `POST /api/events` handler in `testServer.ts` (MSW errors on unhandled requests).
+
 ## Trips (offline-first)
 
 - **Layout:** `lib/trips/` is the client: `db.ts` (IndexedDB `trips`/`outbox`/`meta`),

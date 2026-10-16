@@ -7,6 +7,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/janvillarosa/gracie-app/backend/internal/analytics"
 	derr "github.com/janvillarosa/gracie-app/backend/internal/errors"
 	"github.com/janvillarosa/gracie-app/backend/internal/models"
 	"github.com/janvillarosa/gracie-app/backend/internal/parse"
@@ -21,6 +22,7 @@ type ListService struct {
 	lists       store.ListRepository
 	items       store.ListItemRepository
 	categorizer categorization.Categorizer
+	emitter
 }
 
 func NewListService(users store.UserRepository, rooms store.RoomRepository, lists store.ListRepository, items store.ListItemRepository, categorizer categorization.Categorizer) *ListService {
@@ -58,6 +60,7 @@ func (s *ListService) CreateList(ctx context.Context, user *models.User, roomID,
 	if err := s.lists.Put(ctx, l); err != nil {
 		return nil, err
 	}
+	s.emitList(ctx, "list.created", user, roomID, l.ListID, nil)
 	return l, nil
 }
 
@@ -88,7 +91,15 @@ func (s *ListService) VoteListDeletion(ctx context.Context, user *models.User, r
 	if err != nil {
 		return false, err
 	}
-	return s.lists.FinalizeDeleteIfVotedByAll(ctx, listID, rm.MemberIDs, now)
+	deleted, err := s.lists.FinalizeDeleteIfVotedByAll(ctx, listID, rm.MemberIDs, now)
+	if err != nil {
+		return false, err
+	}
+	s.emitList(ctx, "list.delete_voted", user, roomID, listID, nil)
+	if deleted {
+		s.emitList(ctx, "list.deleted", user, roomID, listID, nil)
+	}
+	return deleted, nil
 }
 
 func (s *ListService) CancelListDeletionVote(ctx context.Context, user *models.User, roomID, listID string) error {
@@ -102,7 +113,11 @@ func (s *ListService) CancelListDeletionVote(ctx context.Context, user *models.U
 	if l.RoomID != roomID {
 		return derr.ErrForbidden
 	}
-	return s.lists.RemoveDeletionVote(ctx, listID, user.UserID)
+	if err := s.lists.RemoveDeletionVote(ctx, listID, user.UserID); err != nil {
+		return err
+	}
+	s.emitList(ctx, "list.delete_vote_cancelled", user, roomID, listID, nil)
+	return nil
 }
 
 // UpdateList updates the list's name and/or description.
@@ -121,7 +136,9 @@ func (s *ListService) UpdateList(ctx context.Context, user *models.User, roomID,
 		return l, nil
 	}
 	now := time.Now().UTC()
+	var changed []string
 	if name != nil {
+		changed = append(changed, "name")
 		if *name == "" {
 			return nil, derr.ErrBadRequest
 		}
@@ -130,11 +147,13 @@ func (s *ListService) UpdateList(ctx context.Context, user *models.User, roomID,
 		}
 	}
 	if description != nil {
+		changed = append(changed, "description")
 		if err := s.lists.UpdateDescription(ctx, listID, *description, now); err != nil {
 			return nil, err
 		}
 	}
 	if icon != nil {
+		changed = append(changed, "icon")
 		if *icon == "" {
 			if err := s.lists.UpdateIcon(ctx, listID, "", now); err != nil {
 				return nil, err
@@ -149,6 +168,7 @@ func (s *ListService) UpdateList(ctx context.Context, user *models.User, roomID,
 		}
 	}
 	if notes != nil {
+		changed = append(changed, "notes")
 		// Cap notes length to prevent abuse (64KB)
 		if len(*notes) > 65535 {
 			return nil, derr.ErrBadRequest
@@ -157,6 +177,7 @@ func (s *ListService) UpdateList(ctx context.Context, user *models.User, roomID,
 			return nil, err
 		}
 	}
+	s.emitList(ctx, "list.updated", user, roomID, listID, fieldsProp(changed))
 	return s.lists.GetByID(ctx, listID)
 }
 
@@ -200,6 +221,7 @@ func (s *ListService) CreateItem(ctx context.Context, user *models.User, roomID,
 		Unit:        unit,
 		Category:    category,
 		Completed:   false,
+		CreatedBy:   user.UserID,
 		CreatedAt:   now,
 		UpdatedAt:   now,
 	}
@@ -215,6 +237,7 @@ func (s *ListService) CreateItem(ctx context.Context, user *models.User, roomID,
 	if err := s.items.Put(ctx, it); err != nil {
 		return nil, err
 	}
+	s.emitItem(ctx, "item.added", user, it)
 	return it, nil
 }
 
@@ -276,27 +299,33 @@ func (s *ListService) UpdateItem(ctx context.Context, user *models.User, roomID,
 		return nil, derr.ErrForbidden
 	}
 	now := time.Now().UTC()
+	wasStarred := it.IsStarred
+	var edited []string
 	if description != nil {
+		edited = append(edited, "description")
 		if err := s.items.UpdateDescription(ctx, itemID, *description, now); err != nil {
 			return nil, err
 		}
 	}
 	if completed != nil {
-		if err := s.items.UpdateCompletion(ctx, itemID, *completed, now); err != nil {
+		if err := s.items.UpdateCompletion(ctx, itemID, *completed, user.UserID, now); err != nil {
 			return nil, err
 		}
 	}
 	if quantity != nil {
+		edited = append(edited, "quantity")
 		if err := s.items.UpdateQuantity(ctx, itemID, *quantity, now); err != nil {
 			return nil, err
 		}
 	}
 	if unit != nil {
+		edited = append(edited, "unit")
 		if err := s.items.UpdateUnit(ctx, itemID, *unit, now); err != nil {
 			return nil, err
 		}
 	}
 	if category != nil {
+		edited = append(edited, "category")
 		if err := s.items.UpdateCategory(ctx, itemID, *category, now); err != nil {
 			return nil, err
 		}
@@ -306,8 +335,33 @@ func (s *ListService) UpdateItem(ctx context.Context, user *models.User, roomID,
 			return nil, err
 		}
 	}
-	// return latest
-	return s.items.GetByID(ctx, itemID)
+	latest, err := s.items.GetByID(ctx, itemID)
+	if err != nil {
+		return nil, err
+	}
+	// Only a real state change is a behavior event: re-sending the same value is not.
+	if completed != nil && *completed != it.Completed {
+		name := "item.unchecked"
+		if *completed {
+			name = "item.checked"
+		}
+		s.emitItem(ctx, name, user, latest)
+	}
+	if starred != nil && *starred != wasStarred {
+		name := "item.unstarred"
+		if *starred {
+			name = "item.starred"
+		}
+		s.emitItem(ctx, name, user, latest)
+	}
+	if len(edited) > 0 {
+		s.emit(ctx, analytics.Event{
+			Name: "item.edited", ActorID: user.UserID, RoomID: roomID,
+			Subject: analytics.Ref{Type: "item", ID: itemID}, Container: ref(listRef(listID)),
+			Key: parse.NormalizeKey(latest.Description), Category: latest.Category, Props: fieldsProp(edited),
+		})
+	}
+	return latest, nil
 }
 
 func (s *ListService) ArchiveCompletedItems(ctx context.Context, user *models.User, roomID, listID string) error {
@@ -322,7 +376,14 @@ func (s *ListService) ArchiveCompletedItems(ctx context.Context, user *models.Us
 		return derr.ErrForbidden
 	}
 	now := time.Now().UTC()
-	return s.items.ArchiveCompletedByList(ctx, listID, now)
+	n, err := s.items.ArchiveCompletedByList(ctx, listID, now)
+	if err != nil {
+		return err
+	}
+	if n > 0 {
+		s.emitList(ctx, "list.cleared", user, roomID, listID, map[string]any{"count": n})
+	}
+	return nil
 }
 
 // PantryItem is one distinct thing a house has bought before; it powers add-bar
@@ -418,7 +479,11 @@ func (s *ListService) DeleteItem(ctx context.Context, user *models.User, roomID,
 	if it.RoomID != roomID || it.ListID != listID {
 		return derr.ErrForbidden
 	}
-	return s.items.Delete(ctx, itemID)
+	if err := s.items.Delete(ctx, itemID); err != nil {
+		return err
+	}
+	s.emitItem(ctx, "item.deleted", user, it)
+	return nil
 }
 
 // UpdateItemPosition repositions an item between prev and next neighbors.
@@ -501,5 +566,22 @@ func (s *ListService) UpdateItemPosition(ctx context.Context, user *models.User,
 	if err := s.items.UpdateOrder(ctx, itemID, newOrder, now); err != nil {
 		return nil, err
 	}
+	s.emitItem(ctx, "item.reordered", user, it)
 	return s.items.GetByID(ctx, itemID)
+}
+
+func listRef(listID string) analytics.Ref { return analytics.Ref{Type: "list", ID: listID} }
+
+func (s *ListService) emitList(ctx context.Context, name string, user *models.User, roomID, listID string, props map[string]any) {
+	s.emit(ctx, analytics.Event{Name: name, ActorID: user.UserID, RoomID: roomID, Subject: listRef(listID), Props: props})
+}
+
+// emitItem builds an item event: the container is its list and Key is the
+// normalized text (never the raw text).
+func (s *ListService) emitItem(ctx context.Context, name string, user *models.User, it *models.ListItem) {
+	s.emit(ctx, analytics.Event{
+		Name: name, ActorID: user.UserID, RoomID: it.RoomID,
+		Subject: analytics.Ref{Type: "item", ID: it.ItemID}, Container: ref(listRef(it.ListID)),
+		Key: parse.NormalizeKey(it.Description), Category: it.Category,
+	})
 }

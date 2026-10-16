@@ -8,6 +8,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/janvillarosa/gracie-app/backend/internal/analytics"
 	derr "github.com/janvillarosa/gracie-app/backend/internal/errors"
 	"github.com/janvillarosa/gracie-app/backend/internal/models"
 	"github.com/janvillarosa/gracie-app/backend/internal/store"
@@ -40,6 +41,7 @@ type TripService struct {
 	listRepo store.ListRepository
 	now      func() time.Time
 	tz       tzlookup.Resolver // optional: derives tz for Google places sent without one
+	emitter
 }
 
 func NewTripService(rooms store.RoomRepository, tripRepo store.TripRepository, lists *ListService, listRepo store.ListRepository) *TripService {
@@ -151,6 +153,7 @@ func (s *TripService) applyGroup(ctx context.Context, user *models.User, roomID 
 		base := t.Version
 		c := trips.Ctx{Actor: user.UserID, Now: now, NewV: base + 1, TZ: s.tzFunc()}
 		dirty, bump := false, false
+		var pending []analytics.Event // emitted only once this attempt is persisted
 		newClients := map[string]bool{}
 		for _, i := range idx {
 			if cid := ops[i].ClientID; !newClients[cid] {
@@ -165,6 +168,10 @@ func (s *TripService) applyGroup(ctx context.Context, user *models.User, roomID 
 			r, o := trips.ApplyOp(t, ops[i], c)
 			results[i] = r
 			dirty, bump = dirty || o.Dirty, bump || o.Bump
+			if s.rec != nil {
+				// derived per op, against the trip as that op left it
+				pending = append(pending, trips.EventsFor(t, ops[i], r, user.UserID, now, analytics.TZFrom(ctx))...)
+			}
 		}
 		if !dirty || (isNew && !bump) {
 			return nil, nil
@@ -188,6 +195,9 @@ func (s *TripService) applyGroup(ctx context.Context, user *models.User, roomID 
 			if !ok {
 				continue
 			}
+		}
+		for _, ev := range pending {
+			s.emit(ctx, ev)
 		}
 		if !bump {
 			return nil, nil
@@ -291,6 +301,11 @@ func (s *TripService) EnsurePackingList(ctx context.Context, user *models.User, 
 		return nil, err
 	}
 	if won {
+		props := map[string]any{}
+		if days, ok := trips.DaysToStart(t, analytics.LocalAt(s.now(), analytics.TZFrom(ctx)).Date); ok {
+			props["days_to_start"] = days
+		}
+		s.emit(ctx, analytics.Event{Name: "trip.packing_list_created", ActorID: user.UserID, RoomID: roomID, Subject: analytics.Ref{Type: "trip", ID: tripID}, Props: props})
 		return created, nil
 	}
 	_ = s.listRepo.Delete(ctx, created.ListID)

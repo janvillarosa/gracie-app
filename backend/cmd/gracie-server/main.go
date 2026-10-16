@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/janvillarosa/gracie-app/backend/internal/analytics"
 	"github.com/janvillarosa/gracie-app/backend/internal/config"
 	"github.com/janvillarosa/gracie-app/backend/internal/http/handlers"
 	"github.com/janvillarosa/gracie-app/backend/internal/http/router"
@@ -17,6 +18,7 @@ import (
 	"github.com/janvillarosa/gracie-app/backend/internal/services"
 	"github.com/janvillarosa/gracie-app/backend/internal/services/categorization"
 	mongostore "github.com/janvillarosa/gracie-app/backend/internal/store/mongo"
+	"github.com/janvillarosa/gracie-app/backend/internal/trips"
 	"github.com/janvillarosa/gracie-app/backend/internal/tzlookup"
 )
 
@@ -44,6 +46,33 @@ func main() {
 		log.Fatalf("trips: ensure indexes: %v", err)
 	}
 	tx := mongostore.NewTx(mcli)
+
+	// Behavior analytics: buffered, non-blocking event capture. Disabled -> NopRecorder.
+	analyticsReg := analytics.NewRegistry()
+	var recorder analytics.Recorder = analytics.NopRecorder{}
+	var bufRecorder *analytics.BufferedRecorder
+	var rollup *analytics.Worker
+	var purger *analytics.Purger
+	var insights *handlers.InsightsHandler
+	if cfg.AnalyticsEnabled {
+		eventsRepo := mongostore.NewEventRepo(mcli)
+		if err := eventsRepo.EnsureIndexes(ctx); err != nil {
+			log.Printf("analytics: ensure indexes failed: %v (analytics disabled)", err)
+		} else {
+			bufRecorder = analytics.NewBufferedRecorder(eventsRepo, analyticsReg, cfg.AnalyticsBuffer, time.Duration(cfg.AnalyticsRetentionDays)*24*time.Hour)
+			recorder = bufRecorder
+			aggRepo := mongostore.NewAggRepo(mcli, tx)
+			if err := aggRepo.EnsureIndexes(ctx); err != nil {
+				log.Printf("analytics: aggregate indexes failed: %v (rollups disabled)", err)
+			} else {
+				rollup = analytics.NewWorker(eventsRepo, aggRepo, analyticsReg)
+				purger = analytics.NewPurger(eventsRepo, aggRepo)
+				insights = handlers.NewInsightsHandler(services.NewInsightsService(roomsRepo, analytics.NewReader(aggRepo)))
+			}
+		}
+	}
+	services.RegisterAnalyticsEvents(analyticsReg)
+	trips.RegisterAnalyticsEvents(analyticsReg)
 
 	var categoryIndex *mongostore.CategoryIndexRepo
 	if cfg.CategoryIndexEnabled {
@@ -86,6 +115,14 @@ func main() {
 		log.Fatalf("auth service: %v", err)
 	}
 
+	for _, svc := range []interface{ UseRecorder(analytics.Recorder) }{userSvc, roomSvc, listSvc, tripSvc, authSvc} {
+		svc.UseRecorder(recorder)
+	}
+	if purger != nil {
+		userSvc.UsePurger(purger)
+		roomSvc.UsePurger(purger)
+	}
+
 	userHandler := handlers.NewUserHandler(userSvc, []byte(cfg.AvatarSalt))
 	authHandler := handlers.NewAuthHandler(authSvc)
 	roomHandler := handlers.NewRoomHandler(roomSvc, usersRepo, []byte(cfg.AvatarSalt))
@@ -93,13 +130,20 @@ func main() {
 
 	tripHandler := handlers.NewTripHandler(tripSvc, ratelimit.New(cfg.TripsUserRPS, ratelimit.Burst(cfg.TripsUserRPS)))
 
-	r := router.NewRouter(usersRepo, router.Handlers{Auth: authHandler, User: userHandler, Room: roomHandler, List: listHandler, Trip: tripHandler})
+	eventsHandler := handlers.NewEventsHandler(recorder, analyticsReg, ratelimit.New(cfg.AnalyticsEventsRPS, ratelimit.Burst(cfg.AnalyticsEventsRPS)))
+
+	r := router.NewRouter(usersRepo, router.Handlers{Auth: authHandler, User: userHandler, Room: roomHandler, List: listHandler, Trip: tripHandler, Events: eventsHandler, Insights: insights})
 
 	// Google Maps Platform allows storing coordinates for 30 days: purge stale ones at startup
 	// and daily (plus up to an hour of jitter so instances do not fire together).
 	purgeCtx, stopPurge := context.WithCancel(context.Background())
 	defer stopPurge()
 	go tripSvc.RunCoordsPurge(purgeCtx, 24*time.Hour, time.Hour)
+	if rollup != nil {
+		// Fold raw events into aggregates; the lease makes it safe on any number of instances.
+		go rollup.RunFold(purgeCtx, cfg.AnalyticsFoldEvery, cfg.AnalyticsFoldEvery/10)
+		go rollup.RunProfiles(purgeCtx, cfg.AnalyticsProfileEvery, cfg.AnalyticsProfileEvery/10)
+	}
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,
@@ -124,6 +168,12 @@ func main() {
 	ctxTimeout, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	_ = srv.Shutdown(ctxTimeout)
+	// Drain analytics after the server stops accepting writes, so buffered events are not lost.
+	if bufRecorder != nil {
+		if err := bufRecorder.Close(ctxTimeout); err != nil {
+			log.Printf("analytics: drain on shutdown: %v", err)
+		}
+	}
 }
 
 // buildEmbedder loads the shared embedding model once, or returns nil when
