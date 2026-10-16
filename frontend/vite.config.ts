@@ -1,7 +1,7 @@
-import { defineConfig, type Plugin } from 'vite'
 import fs from 'node:fs'
-import react from '@vitejs/plugin-react'
 import path from 'node:path'
+import react from '@vitejs/plugin-react'
+import { defineConfig, type Plugin } from 'vite'
 
 // Dev only: serves MSW's worker script for the opt-in mock trips backend (VITE_MOCK_TRIPS=1),
 // so there is nothing to copy into public/ and nothing to ship in a production build.
@@ -17,7 +17,7 @@ const mockWorker = (): Plugin => ({
 })
 
 // https://vitejs.dev/config/
-export default defineConfig({
+export default defineConfig(({ isSsrBuild }) => ({
   plugins: [react(), mockWorker()],
   resolve: {
     alias: {
@@ -32,15 +32,25 @@ export default defineConfig({
   },
   build: {
     target: ['es2020', 'safari15', 'chrome90'],
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          react: ['react', 'react-dom', 'react-router-dom', '@tanstack/react-query'],
-          antd: ['antd'],
-          dnd: ['@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/utilities', '@dnd-kit/modifiers'],
+    // The client build's manifest tells scripts/prerender.mjs which stylesheet the landing page
+    // needs; the SSR build (the landing page rendered at build time) has no vendor chunks.
+    manifest: !isSsrBuild,
+    rollupOptions: isSsrBuild
+      ? {}
+      : {
+          output: {
+            manualChunks: {
+              react: ['react', 'react-dom', 'react-router-dom', '@tanstack/react-query'],
+              antd: ['antd'],
+              dnd: [
+                '@dnd-kit/core',
+                '@dnd-kit/sortable',
+                '@dnd-kit/utilities',
+                '@dnd-kit/modifiers',
+              ],
+            },
+          },
         },
-      },
-    },
   },
   server: {
     port: 5173,
@@ -70,7 +80,7 @@ export default defineConfig({
       // Ratchet floor set just below the current baseline (statements 45.7%,
       // branches 76.8%, functions 75.0%, lines 45.7%). Vitest reads these as
       // percentages (0-100). Raise them as coverage grows; never lower.
-      thresholds: { lines: 92, branches: 90, functions: 84, statements: 92 },
+      thresholds: { lines: 92, branches: 90, functions: 85, statements: 92 },
     },
   },
-})
+}))

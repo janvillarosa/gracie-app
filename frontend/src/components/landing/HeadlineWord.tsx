@@ -1,4 +1,5 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useClientLayoutEffect } from '@lib/useClientLayoutEffect'
+import { useEffect, useRef, useState } from 'react'
 
 // "Manage your ___ together.": the blank cycles through what a House keeps, and the highlighter
 // swipes across each new word the way it marks a new line on a list.
@@ -16,6 +17,8 @@ export const HeadlineWord: React.FC<{ lead: React.RefObject<HTMLElement | null> 
   const [at, setAt] = useState(0)
   const [phase, setPhase] = useState<Phase>('in')
   const from = useRef<number | null>(null)
+  // After the first change every new word swaps in (the first one makes the entrance instead).
+  const [swapped, setSwapped] = useState(false)
 
   useEffect(() => {
     if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
@@ -26,6 +29,7 @@ export const HeadlineWord: React.FC<{ lead: React.RefObject<HTMLElement | null> 
       swap = window.setTimeout(() => {
         from.current = lead.current?.getBoundingClientRect().left ?? null
         setAt((n) => (n + 1) % HEADLINE_WORDS.length)
+        setSwapped(true)
         setPhase('in')
       }, OUT_MS)
     }, HOLD_MS)
@@ -36,8 +40,7 @@ export const HeadlineWord: React.FC<{ lead: React.RefObject<HTMLElement | null> 
   }, [lead])
 
   // FLIP: the new word changed the line's width; slide the lead words from their old place.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: runs once per word change
-  useLayoutEffect(() => {
+  useClientLayoutEffect(() => {
     const el = lead.current
     const before = from.current
     from.current = null
@@ -51,7 +54,11 @@ export const HeadlineWord: React.FC<{ lead: React.RefObject<HTMLElement | null> 
   }, [at])
 
   return (
-    <span key={HEADLINE_WORDS[at]} className={`ld-rotor is-${phase}`} aria-hidden="true">
+    <span
+      key={HEADLINE_WORDS[at]}
+      className={`ld-rotor is-${phase}${swapped ? ' is-swap' : ''}`}
+      aria-hidden="true"
+    >
       {HEADLINE_WORDS[at]}
     </span>
   )
