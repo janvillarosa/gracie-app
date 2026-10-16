@@ -25,7 +25,8 @@ Layered packages under `internal/`:
 - `pkg/ids` — ID/token/avatar-key generation.
 
 `cmd/gracie-server` is the entrypoint (wired to Mongo). `cmd/fetch-model` bakes the
-embedding model into the image at build time.
+embedding model into the image at build time. `cmd/analytics-backfill` is a one-off
+operator command (see Behavior analytics > Backfill); both Dockerfiles ship it next to the server.
 
 ## Core flows
 
@@ -175,6 +176,25 @@ own events.
   for events still buffered); deleting a house erases its events and house-level aggregates.
   Joining a house dissolves the solo house's aggregates but keeps the person's own history.
   Raw events expire by TTL after `ANALYTICS_RETENTION_DAYS`.
+- **Backfill:** `cmd/analytics-backfill` (spec `2026-10-16-analytics-backfill-design.md`) rebuilds
+  events for records that predate analytics (sign-ups, houses, lists, items, trips, done todos)
+  and lets the normal rollup fold them. Rules to keep:
+  - **Dry run by default**; writes need `--apply`, and `--fold` drains the rollup instead of
+    waiting for the next tick. Try one house first: `--room <id>`. The production entrypoint
+    starts the server, so run it with `--entrypoint /usr/local/bin/analytics-backfill`.
+  - Events have `source: "backfill"` and deterministic ids (`bf1:<name>:<subject id>`), so a
+    re-run inserts nothing. Raw ones can be removed with `deleteMany({source: "backfill"})`, but the
+    aggregates are `$inc` counters with no rebuild tool yet: that is why you trial one house first.
+  - Only things **before the cutoff** (default: the earliest live server event) and inside
+    retention (minus a day) are emitted. A record carrying `created_by` / `completed_at` was written by
+    instrumented code, so its live event already exists and it is skipped.
+  - Unrecorded actors: the house's only member, else `system:backfill` (house history, no one's
+    profile). `item.checked` uses `updated_at` as the check time (a clear reads as one run).
+  - Each source lives with its domain (`services/analytics_backfill.go`,
+    `trips/analytics_backfill.go`) and a parity test compares its output with what the live code
+    emits; change a live event's shape and that test tells you to change the backfill.
+  - Ingest time is stamped per insert batch, not at start, so a long run cannot land behind the
+    fold watermark.
 - **Known limitations / follow-ups:** a user-facing opt-out; re-homing a solo house's key history
   when its owner joins another house (suggestions start fresh there); packing-list item events
   carry no trip link (the trip lead-time model uses `trip.packing_list_created` instead);

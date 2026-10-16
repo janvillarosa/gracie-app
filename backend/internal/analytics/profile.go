@@ -120,7 +120,7 @@ func BuildProfile(reg *Registry, id string, events []Event, now time.Time) *Prof
 		occ := predict.Occurrence{At: e.OccurredAt, HOW: e.Local.HOW}
 		if IsAttention(verbOf(def.Name)) {
 			open = append(open, occ)
-		} else if e.Source == SourceServer && !def.Skip {
+		} else if e.Source != SourceClient && !def.Skip { // server and backfilled actions
 			act = append(act, occ)
 		}
 		if def.Role == RoleComplete && e.Container != nil {

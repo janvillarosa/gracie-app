@@ -106,3 +106,19 @@ type TripRepository interface {
 	// Google coordinates were due to expire before `before`. Served from an index on coords_expire_at.
 	ListCoordsExpired(ctx context.Context, before time.Time, limit int) ([]models.Trip, error)
 }
+
+// BackfillReader is a read-only walk over every domain document, used by the analytics
+// backfill. It is separate from the request-path repositories so they don't grow
+// "iterate everything" methods. An empty roomID means all houses; callbacks run in a
+// stable order and stop the walk by returning an error.
+type BackfillReader interface {
+	// EachUser omits credential fields. With a roomID it yields that house's current members.
+	EachUser(ctx context.Context, roomID string, fn func(models.User) error) error
+	EachRoom(ctx context.Context, roomID string, fn func(models.Room) error) error
+	// EachList includes soft-deleted lists.
+	EachList(ctx context.Context, roomID string, fn func(models.List) error) error
+	// EachItem includes completed and archived items.
+	EachItem(ctx context.Context, roomID string, fn func(models.ListItem) error) error
+	// EachTrip includes soft-deleted trips.
+	EachTrip(ctx context.Context, roomID string, fn func(models.Trip) error) error
+}
