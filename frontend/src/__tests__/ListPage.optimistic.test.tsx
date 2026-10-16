@@ -10,7 +10,7 @@ import { ListPage } from '@pages/ListPage'
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
 
-const setup = () => {
+const setup = (done: { item_id: string; description: string }[] = []) => {
   localStorage.setItem('gracie_api_key', 'test-key')
   const now = new Date().toISOString()
   const items = [
@@ -33,6 +33,14 @@ const setup = () => {
       updated_at: now,
     },
   ]
+  for (const d of done) {
+    items.push({
+      ...items[0],
+      item_id: d.item_id,
+      description: d.description,
+      completed: true,
+    })
+  }
   server.use(
     http.get('/api/me', () => json({ user_id: 'u1', name: 'Alice', room_id: 'r1' })),
     http.get('/api/rooms/r1/lists', () =>
@@ -49,7 +57,10 @@ const setup = () => {
         },
       ]),
     ),
-    http.get('/api/rooms/r1/lists/l1/items', () => json(items)),
+    http.get('/api/rooms/r1/lists/l1/items', ({ request }) => {
+      const withDone = new URL(request.url).searchParams.get('include_completed') === 'true'
+      return json(withDone ? items : items.filter((x) => !x.completed))
+    }),
   )
   render(
     <MemoryRouter initialEntries={['/app/lists/l1']}>
@@ -109,4 +120,40 @@ describe('ListPage optimistic updates', () => {
     await waitFor(() => expect(screen.queryByText('Milk')).not.toBeInTheDocument())
     release()
   })
+
+  it('lets Clear completed be undone without calling the API', async () => {
+    setup([{ item_id: 'c', description: 'Eggs' }])
+    const onClear = vi.fn()
+    server.use(
+      http.post('/api/rooms/r1/lists/l1/clear', () => {
+        onClear()
+        return json({})
+      }),
+    )
+    await screen.findByText('Milk')
+    await userEvent.click(screen.getByRole('button', { name: 'More list actions' }))
+    await userEvent.click(await screen.findByText('Clear completed'))
+    await userEvent.click(await screen.findByRole('button', { name: 'Undo' }))
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: 'Undo' })).not.toBeInTheDocument(),
+    )
+    expect(onClear).not.toHaveBeenCalled()
+  })
+
+  it('sends Clear completed once the undo window closes', async () => {
+    setup([{ item_id: 'c', description: 'Eggs' }])
+    const onClear = vi.fn()
+    server.use(
+      http.post('/api/rooms/r1/lists/l1/clear', () => {
+        onClear()
+        return json({})
+      }),
+    )
+    await screen.findByText('Milk')
+    await userEvent.click(screen.getByRole('button', { name: 'More list actions' }))
+    await userEvent.click(await screen.findByText('Clear completed'))
+    expect(await screen.findByRole('button', { name: 'Undo' })).toBeInTheDocument()
+    expect(onClear).not.toHaveBeenCalled()
+    await waitFor(() => expect(onClear).toHaveBeenCalledTimes(1), { timeout: 8000 })
+  }, 12000)
 })

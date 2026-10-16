@@ -72,6 +72,8 @@ import { PillNav } from '@components/PillNav'
 import { HouseLoader } from '@components/HouseLoader'
 import { RowSkeleton } from '@components/RowSkeleton'
 
+const CLEAR_TOAST_KEY = 'clear-completed'
+
 export const ListPage: React.FC = () => {
   const { apiKey } = useAuth()
   const navigate = useTransitionNavigate()
@@ -388,14 +390,50 @@ export const ListPage: React.FC = () => {
     }
   }
 
+  // Clear completed is deferred like a delete: the checked-off rows leave at once, the request
+  // is sent when the toast closes (or the page is left), and Undo cancels it.
+  const pendingClear = useRef<(() => Promise<void>) | null>(null)
+  useEffect(() => {
+    return () => void pendingClear.current?.()
+  }, [])
+
   const onClearCompleted = async () => {
-    try {
-      await clearListItems(apiKey!, roomId!, listId)
-      await qc.invalidateQueries({ queryKey: ['list-items', listId] })
-      msgApi.success('Completed items cleared to pantry')
-    } catch (e: any) {
-      msgApi.error(errorMessage(e, 'Couldn’t clear completed items. Try again.'))
+    if (pendingClear.current) return
+    inFlight.current += 1
+    await applyOptimistic((items) => items.filter((x) => !x.completed))
+
+    const commit = async () => {
+      if (!pendingClear.current) return
+      pendingClear.current = null
+      try {
+        await clearListItems(apiKey!, roomId!, listId)
+      } catch (e: any) {
+        msgApi.error(errorMessage(e, 'Couldn’t clear completed items. Try again.'))
+      } finally {
+        settle()
+      }
     }
+    const undo = () => {
+      if (!pendingClear.current) return
+      pendingClear.current = null
+      msgApi.destroy(CLEAR_TOAST_KEY)
+      settle()
+    }
+    pendingClear.current = commit
+    msgApi.open({
+      key: CLEAR_TOAST_KEY,
+      type: 'info',
+      duration: 5,
+      onClose: () => void commit(),
+      content: (
+        <span className="undo-toast">
+          Completed items cleared to pantry
+          <button type="button" className="undo-btn" onClick={undo}>
+            Undo
+          </button>
+        </span>
+      ),
+    })
   }
 
   const onToggleComplete = useStableCallback(async (it: ListItem) => {

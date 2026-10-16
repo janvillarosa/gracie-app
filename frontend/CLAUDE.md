@@ -80,7 +80,9 @@ why the config forces a single fork.
   slip the user explicitly arrowed to; otherwise it adds the typed text. `ListPage.bumpPantry`
   keeps the cached pantry current after each add.
 - **Rows:** swipe-left (touch) and the hover trash (desktop) both go through `onDeleteItem`,
-  which defers the request ~5s behind an Undo toast and flushes on unmount.
+  which defers the request ~5s behind an Undo toast and flushes on unmount. **Clear completed**
+  (`onClearCompleted`) works the same way: rows leave at once, the `/clear` request waits for the
+  toast to close, Undo cancels it.
 
 ## Trips (offline-first)
 
