@@ -55,6 +55,13 @@ func (h *RoomHandler) GetMyRoom(w http.ResponseWriter, r *http.Request) {
 			myVote = true
 		}
 	}
+	// Votes from current members only, so "1 of 2 so far" never counts someone who left.
+	voteCount := 0
+	for _, mid := range rm.MemberIDs {
+		if _, ok := rm.DeletionVotes[mid]; ok {
+			voteCount++
+		}
+	}
 	view := map[string]any{
 		"display_name":     rm.DisplayName,
 		"description":      rm.Description,
@@ -63,6 +70,7 @@ func (h *RoomHandler) GetMyRoom(w http.ResponseWriter, r *http.Request) {
 		"created_at":       rm.CreatedAt,
 		"updated_at":       rm.UpdatedAt,
 		"my_deletion_vote": myVote,
+		"deletion_votes":   voteCount,
 	}
 	api.WriteJSON(w, http.StatusOK, view)
 }
@@ -97,6 +105,21 @@ func (h *RoomHandler) ShareRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Do not expose internal room_id
+	api.WriteJSON(w, http.StatusOK, map[string]string{"token": token})
+}
+
+// GetShareToken returns the current invite code without replacing it.
+func (h *RoomHandler) GetShareToken(w http.ResponseWriter, r *http.Request) {
+	u, ok := api.UserFrom(r.Context())
+	if !ok {
+		api.WriteJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+		return
+	}
+	token, err := h.Rooms.CurrentShareToken(r.Context(), u)
+	if err != nil {
+		api.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
 	api.WriteJSON(w, http.StatusOK, map[string]string{"token": token})
 }
 

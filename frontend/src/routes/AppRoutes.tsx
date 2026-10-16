@@ -30,7 +30,6 @@ const RoomSettings = lazyPage(() => import('@pages/RoomSettings'), 'RoomSettings
 const UserSettings = lazyPage(() => import('@pages/UserSettings'), 'UserSettings')
 const ListPage = lazyPage(() => import('@pages/ListPage'), 'ListPage')
 const ListsIndex = lazyPage(() => import('@pages/ListsIndex'), 'ListsIndex')
-const TripsDashboard = lazyPage(() => import('@pages/Dashboard'), 'TripsDashboard')
 const TripPage = lazyPage(() => import('@pages/TripPage'), 'TripPage')
 const TripSettings = lazyPage(() => import('@pages/TripSettings'), 'TripSettings')
 // Dev only: the UI primitives gallery. `import.meta.env.DEV` is false in a production build, so
@@ -145,7 +144,8 @@ export const AppRoutes: React.FC = () => {
             path="/app/trips"
             element={
               <RequireAuth>
-                <TripsDashboard />
+                {/* The same element as /app: the House stays mounted across a pill switch. */}
+                <Dashboard />
               </RequireAuth>
             }
           />

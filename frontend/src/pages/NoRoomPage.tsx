@@ -1,4 +1,6 @@
-import React, { useMemo, useState } from 'react'
+import React, { useState } from 'react'
+import { Card, message } from 'antd'
+import { Plus } from '@phosphor-icons/react'
 import { errorMessage } from '@lib/errors'
 import { useAuth } from '@auth/AuthProvider'
 import {
@@ -8,44 +10,43 @@ import {
   isForbidden,
   joinRoomByToken,
 } from '@api/endpoints'
-import { Card, Typography, Form, Input, Button, Space, Grid, Divider, message } from 'antd'
-import { Plus, UsersThree } from '@phosphor-icons/react'
-import { CreateHouseModal } from '@components/CreateHouseModal'
+import { CreateHouseSheet } from '@components/CreateHouseSheet'
+import { Button } from '@components/ui'
 import { useTransitionNavigate } from '@lib/viewTransition'
 import { useDocumentTitle } from '@lib/useDocumentTitle'
 import { TopNav } from '@components/TopNav'
 
 const TOKEN_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ0123456789' // no I, O, L
+const CODE_LENGTH = 5
 
+/** Not in a House yet: start one (the one key), or join one with a housemate's code. */
 export const NoRoomPage: React.FC = () => {
   const { apiKey } = useAuth()
   const navigate = useTransitionNavigate()
-  useDocumentTitle('Join or create a house')
+  useDocumentTitle('Join or create a House')
   const [token, setToken] = useState('')
-
-  const [loading, setLoading] = useState(false)
+  const [joining, setJoining] = useState(false)
+  const [joinError, setJoinError] = useState('')
   const [createOpen, setCreateOpen] = useState(false)
   const [creating, setCreating] = useState(false)
 
-  const tokenValid = useMemo(
-    () => token.length === 5 && [...token].every((c) => TOKEN_ALPHABET.includes(c)),
-    [token],
-  )
+  const tokenValid =
+    token.length === CODE_LENGTH && [...token].every((c) => TOKEN_ALPHABET.includes(c))
 
-  const onCreateWithDetails = async (vals: { display_name?: string; description?: string }) => {
+  const onCreate = async (vals: { display_name?: string; description?: string }) => {
     setCreating(true)
     try {
-      await createRoom(apiKey!)
+      await createRoom(apiKey as string)
       if (vals.display_name || typeof vals.description === 'string') {
-        await updateRoomSettings(apiKey!, {
+        await updateRoomSettings(apiKey as string, {
           display_name: vals.display_name,
           description: vals.description ?? '',
         })
       }
       setCreateOpen(false)
       navigate('/app', { replace: true })
-    } catch (e: any) {
-      message.error(errorMessage(e, 'Couldn’t create your house. Try again.'))
+    } catch (e) {
+      message.error(errorMessage(e, 'Couldn’t create your House. Try again.'))
     } finally {
       setCreating(false)
     }
@@ -53,108 +54,81 @@ export const NoRoomPage: React.FC = () => {
 
   const onJoin = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
+    if (!tokenValid || joining) return
+    setJoining(true)
+    setJoinError('')
     try {
-      await joinRoomByToken(apiKey!, token.trim().toUpperCase())
+      await joinRoomByToken(apiKey as string, token)
       window.location.reload()
-    } catch (e: any) {
-      if (isForbidden(e)) message.error('That code doesn’t match a house. Check it and try again.')
-      else if (isConflict(e)) message.error('You’re already a member of this house.')
-      else message.error(errorMessage(e, 'Couldn’t join that house. Try again.'))
-    } finally {
-      setLoading(false)
+    } catch (err) {
+      if (isForbidden(err)) setJoinError('That code doesn’t match a House. Check it and try again.')
+      else if (isConflict(err)) setJoinError('You’re already in this House.')
+      else setJoinError(errorMessage(err, 'Couldn’t join that House. Try again.'))
+      setJoining(false)
     }
   }
-
-  const screens = Grid.useBreakpoint()
-  const isMobile = !screens.md
 
   return (
     <div className="container">
       <TopNav />
-      <Card className="no-room-card">
-        <Space direction="vertical" style={{ width: '100%' }} size="large">
-          {isMobile ? (
-            <Space direction="vertical" style={{ width: '100%' }} size="small">
-              <Typography.Title level={2} style={{ margin: 0 }}>
-                You are not in a house yet
-              </Typography.Title>
-            </Space>
-          ) : (
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography.Title level={2} style={{ margin: 0 }}>
-                You are not in a house yet
-              </Typography.Title>
-            </div>
-          )}
-          <div className="section">
-            <Typography.Title level={3} style={{ marginTop: 0 }}>
-              Create a new house
-            </Typography.Title>
-            <Typography.Text className="no-room-subtitle">
-              You’ll be the only member until someone joins with your share code.
-            </Typography.Text>
-            <Button
-              type="primary"
-              onClick={() => setCreateOpen(true)}
-              disabled={loading}
-              icon={<Plus />}
-              block
-            >
-              Create a house
+      <Card className="paper-card no-room">
+        <h1 className="no-room-title">You’re not in a House yet</h1>
+        <p className="no-room-lede">
+          A House is the people you live with, sharing the same lists and trips.
+        </p>
+
+        <section className="no-room-part" aria-labelledby="start-house">
+          <h2 id="start-house" className="no-room-heading">
+            Start a House
+          </h2>
+          <p className="no-room-text">
+            You’ll be the only member until someone joins with your code.
+          </p>
+          <Button kind="key" icon={<Plus aria-hidden />} onClick={() => setCreateOpen(true)}>
+            Create a House
+          </Button>
+        </section>
+
+        <section className="no-room-part" aria-labelledby="join-house">
+          <h2 id="join-house" className="no-room-heading">
+            Join a House
+          </h2>
+          <p className="no-room-text" id="join-hint">
+            Ask a housemate for the code. They’ll find it under Invite.
+          </p>
+          <form className="join-row" onSubmit={onJoin} noValidate>
+            <input
+              className={joinError ? 'join-code has-error' : 'join-code'}
+              aria-label="House code"
+              aria-describedby={joinError ? 'join-error' : 'join-hint'}
+              aria-invalid={!!joinError}
+              placeholder="K7M2Q"
+              value={token}
+              maxLength={CODE_LENGTH}
+              autoCapitalize="characters"
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
+              onChange={(e) => {
+                setJoinError('')
+                setToken(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))
+              }}
+            />
+            <Button kind="quiet" type="submit" disabled={!tokenValid || joining}>
+              {joining ? 'Joining…' : 'Join'}
             </Button>
-          </div>
+          </form>
+          {joinError && (
+            <p id="join-error" role="alert" className="ui-field-error">
+              {joinError}
+            </p>
+          )}
+        </section>
 
-          <Divider className="no-room-divider" />
-
-          <div className="section">
-            <Typography.Title level={3} style={{ marginTop: 0 }}>
-              Join an existing house
-            </Typography.Title>
-            <Form layout="vertical" onSubmitCapture={onJoin}>
-              <Form.Item
-                label="House code"
-                extra="Ask a housemate for it. They’ll find it under Share code."
-              >
-                <div className="join-row">
-                  <Input
-                    placeholder="e.g., K7M2Q"
-                    value={token}
-                    onChange={(e) =>
-                      setToken(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))
-                    }
-                    maxLength={5}
-                  />
-                  {!isMobile && (
-                    <Button
-                      type="primary"
-                      htmlType="submit"
-                      disabled={!tokenValid || loading}
-                      icon={<UsersThree />}
-                    >
-                      Join house
-                    </Button>
-                  )}
-                </div>
-              </Form.Item>
-              {isMobile && (
-                <Button
-                  type="primary"
-                  htmlType="submit"
-                  disabled={!tokenValid || loading}
-                  icon={<UsersThree />}
-                  block
-                >
-                  Join house
-                </Button>
-              )}
-            </Form>
-          </div>
-        </Space>
-        <CreateHouseModal
+        <CreateHouseSheet
           open={createOpen}
           onClose={() => setCreateOpen(false)}
-          onSubmit={onCreateWithDetails}
+          onSubmit={onCreate}
           submitting={creating}
         />
       </Card>

@@ -20,6 +20,8 @@ export type RoomView = {
   created_at: string
   updated_at: string
   my_deletion_vote?: boolean
+  // How many current members have voted to delete the House.
+  deletion_votes?: number
 }
 
 export type CreateUserResponse = {

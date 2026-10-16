@@ -7,7 +7,9 @@ import (
 )
 
 type roomView struct {
-	MembersMeta []struct {
+	DeletionVotes int  `json:"deletion_votes"`
+	MyVote        bool `json:"my_deletion_vote"`
+	MembersMeta   []struct {
 		UserID string `json:"user_id"`
 		Name   string `json:"name"`
 	} `json:"members_meta"`
@@ -73,5 +75,16 @@ func TestRoomViewMembersMetaIncludesUserIDsOnlyForOwnRoom(t *testing.T) {
 	}
 	if len(ids) != 2 || !ids[aliceID] || !ids[other.MembersMeta[0].UserID] {
 		t.Fatalf("shared view: %+v", shared)
+	}
+
+	// One of two members votes to delete: both see the count, only the voter sees their own vote.
+	if rec := f.do(http.MethodPost, "/rooms/deletion/vote", ``); rec.Code != http.StatusOK {
+		t.Fatalf("vote: %d %s", rec.Code, rec.Body)
+	}
+	if v := f.roomViewFor(t, f.apiKey); v.DeletionVotes != 1 || !v.MyVote {
+		t.Fatalf("voter view: %+v", v)
+	}
+	if v := f.roomViewFor(t, otherKey); v.DeletionVotes != 1 || v.MyVote {
+		t.Fatalf("other member view: %+v", v)
 	}
 }

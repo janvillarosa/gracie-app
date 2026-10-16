@@ -59,11 +59,22 @@ describe('overlays and form controls come from components/ui', () => {
     expect(offenders).toEqual([])
   })
 
-  it('the House New list / Edit list overlays are Sheets, not Ant Modals or Drawers', () => {
-    const names = antdImports(read(join(SRC, 'pages/RoomPage.tsx')))
-    expect(names).not.toContain('Modal')
-    expect(names).not.toContain('Drawer')
-    expect(names).not.toContain('Popover')
+  it('the House screens and their overlays are Sheets, not Ant Modals, Drawers or forms', () => {
+    const files = [
+      'pages/RoomPage.tsx',
+      'pages/RoomSettings.tsx',
+      'pages/NoRoomPage.tsx',
+      'components/ShareCodeSheet.tsx',
+      'components/CreateHouseSheet.tsx',
+      'components/DeleteVoteSheet.tsx',
+      'components/IconPicker.tsx',
+    ]
+    const offenders = files.flatMap((f) =>
+      antdImports(read(join(SRC, f)))
+        .filter((n) => ['Modal', 'Drawer', 'Popover', 'Form', 'Input'].includes(n))
+        .map((n) => `${f}: ${n}`),
+    )
+    expect(offenders).toEqual([])
   })
 
   it('only the ui Sheet imports Modal, Drawer or Popover among the ui primitives', () => {

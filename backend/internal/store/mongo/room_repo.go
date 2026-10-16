@@ -62,6 +62,32 @@ func (r *RoomRepo) SetShareToken(ctx context.Context, roomID string, userID stri
 	return err
 }
 
+func (r *RoomRepo) SetShareTokenIfAbsent(ctx context.Context, roomID string, userID string, token string, updatedAt time.Time) (string, error) {
+	member := bson.D{{Key: "room_id", Value: roomID}, {Key: "member_ids", Value: bson.D{{Key: "$in", Value: bson.A{userID}}}}}
+	// One conditional write: of two concurrent readers, one sets its token and both read it back.
+	absent := append(bson.D{}, member...)
+	absent = append(absent, bson.E{Key: "$or", Value: bson.A{
+		bson.D{{Key: "share_token", Value: bson.D{{Key: "$exists", Value: false}}}},
+		bson.D{{Key: "share_token", Value: ""}},
+	}})
+	if _, err := r.col().UpdateOne(ctx, absent,
+		bson.D{{Key: "$set", Value: bson.D{{Key: "share_token", Value: token}, {Key: "updated_at", Value: updatedAt.UTC()}}}},
+	); err != nil {
+		return "", err
+	}
+	var rm models.Room
+	if err := r.col().FindOne(ctx, member).Decode(&rm); err != nil {
+		if err == mgo.ErrNoDocuments {
+			return "", derr.ErrNotFound
+		}
+		return "", err
+	}
+	if rm.ShareToken == nil || *rm.ShareToken == "" {
+		return "", derr.ErrNotFound
+	}
+	return *rm.ShareToken, nil
+}
+
 func (r *RoomRepo) RemoveShareToken(ctx context.Context, roomID string, updatedAt time.Time) error {
 	_, err := r.col().UpdateOne(ctx,
 		bson.D{{Key: "room_id", Value: roomID}},

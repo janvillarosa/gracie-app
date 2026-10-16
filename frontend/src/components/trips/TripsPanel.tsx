@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import { Button } from '@components/ui'
+import { Button, EmptyState } from '@components/ui'
 import { Dropdown, List as AntList, Typography, message } from 'antd'
 import type { MenuProps } from 'antd'
 import { CaretRight, DotsThreeVertical } from '@phosphor-icons/react'
@@ -141,9 +141,11 @@ export const TripsPanel: React.FC<Props> = ({ trips, store, ready }) => {
   return (
     <>
       {total === 0 && groups.past.length === 0 ? (
-        <Typography.Text type="secondary">
-          {ready ? 'No trips yet. Where to first?' : 'Loading your trips…'}
-        </Typography.Text>
+        ready ? (
+          <EmptyState title="No trips yet">Where to first? Start one with New trip.</EmptyState>
+        ) : (
+          <Typography.Text type="secondary">Loading your trips…</Typography.Text>
+        )
       ) : (
         rows([...groups.now, ...groups.upcoming, ...groups.drafts])
       )}
@@ -166,6 +168,7 @@ export const TripsPanel: React.FC<Props> = ({ trips, store, ready }) => {
         <TripNameModal
           title="Rename trip"
           cta="Save"
+          context="The new name shows for everyone in the House."
           initial={renaming.title}
           onCancel={() => setRenaming(null)}
           onSubmit={(name) => {

@@ -6,7 +6,7 @@ import { http, HttpResponse } from 'msw'
 import { vi } from 'vitest'
 import { AuthProvider } from '@auth/AuthProvider'
 import { TripPage } from '@pages/TripPage'
-import { Dashboard, TripsDashboard } from '@pages/Dashboard'
+import { Dashboard } from '@pages/Dashboard'
 import { TripSettings } from '@pages/TripSettings'
 import { UserSettings } from '@pages/UserSettings'
 import type { Trip, TripTodo } from '@api/tripTypes'
@@ -102,7 +102,7 @@ export function renderTrips(path: string) {
           <Where />
           <Routes>
             <Route path="/app" element={<Dashboard />} />
-            <Route path="/app/trips" element={<TripsDashboard />} />
+            <Route path="/app/trips" element={<Dashboard />} />
             <Route path="/app/trips/:tripId/settings" element={<TripSettings />} />
             <Route path="/app/trips/:tripId" element={<TripPage />} />
             <Route path="/app/lists/:listId" element={<ListArrival />} />
