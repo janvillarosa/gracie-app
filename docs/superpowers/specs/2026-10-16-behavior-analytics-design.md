@@ -414,4 +414,5 @@ Written after implementation; where this contradicts the plan, this is what ship
 - Month/year "top things" closing job for the year-in-review.
 - Re-home a dissolved solo house's key history when its owner joins another house.
 - Move `GetPantry` onto `key_stats`, and use `Reader.Due` for add-bar suggestions and nudges.
+- ~~Backfill history from before analytics~~ done: see `2026-10-16-analytics-backfill-design.md`.
 - Link packing-list items to their trip so first-packing-check lead times can be learned.
