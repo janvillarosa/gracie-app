@@ -87,7 +87,7 @@ why the config forces a single fork.
 ## Smart suggestions
 
 `ListPage` asks `GET /rooms/{id}/lists/{list}/suggestions?limit=1` and shows the answer as one
-`SuggestionStack` row above the items: a paper sheet with the item, "You add it weekly", a yellow Add (this
+`SuggestionStack` row above the items: a paper slip (`--slip-rest`, not a lift: it lies on the list's sheet) with the item, "You add it weekly", a yellow Add (this
 page's one key) and a round "not now" X. Never inside the list or the add bar. Add goes through `onCreateItem`
 with `source: 'suggestion'`; Ignore posts the key. Both pop the slip at once and the server is asked for the
 next one; after two ignores in a row it answers with nothing (the list is paused).
@@ -249,7 +249,7 @@ failure or an empty answer just shows nothing. Events: `nudge.shown|tapped|dismi
 All values come from the one `:root` block at the top of `src/styles.css`, grouped by role: type
 (`--t-display`, `--t-title`, `--t-heading`, `--t-lead`, `--t-field`, `--t-body`, `--t-meta`, `--t-label`,
 `--t-stamp`, `--t-code`), weights (`--w-regular/medium/semibold/bold`), inks (`--ink`, `--text`,
-`--muted`), surfaces (`--bg`, `--panel`, `--panel-subtle`), edges, accents, status, space, controls,
+`--muted`), surfaces (`--bg`, `--desk-tone`, `--panel`, `--panel-subtle`; `--desk-tone` is the canvas colour and `theme-color`, see DESIGN.md), edges, accents, status, space, controls,
 corners, icons, depth (`--lift-0..3`, `--thick`, `--peek-*`, `--slip-*`, `--well`, `--shadow-key*`,
 `--key-travel`), texture (`--grain-paper`, `--grain-desk`: background layers with their strength baked
 in) and motion. **Fills:** paper is grained, so a flat white or tint inside a sheet shows as a patch.

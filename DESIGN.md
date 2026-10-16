@@ -343,6 +343,7 @@ A near-monochrome paper-and-ink palette with one saturated yellow, plus function
 - **Text** (`--text`): running text. There is no heading ink or 70% secondary text any more: titles are ink, secondary lines are muted.
 - **Muted** (`--muted`): context lines, labels, placeholders, times, empty values and icon buttons. It is a cool grey so it reads as pencil, not as faded ink. 5.3:1 on paper; it never sits on yellow (3.7:1).
 - **Desk** (`--bg`): the page background the paper sits on.
+- **Desk Tone** (`--desk-tone`): the desk as it reads from arm's length, its grain averaged over `--bg` (#EAEAEA). It is the canvas colour and `theme-color`, because browsers tint their own bars (iOS Safari's top and bottom, Android's status bar) and paint overscroll with the flat background colour, never the grain; the grained desk is a fixed layer over it.
 - **Paper** (`--panel`): every sheet, card, dialog, map pill and control face.
 - **Paper Tint** (`--panel-subtle`): detail groups, the add-bar input, the PillNav track, list icons and quiet hover fills.
 - **Hairline** (`--border`) and **Edge** (`--border-strong`): hairlines divide rows inside a sheet. The edge outlines a sheet of paper, a quiet button, the PillNav track, the composer and the dashed slot of an empty day. **The ream** (`--edge-soft`, `--edge-deep`) draws a sheet's thickness at its foot.
@@ -415,6 +416,8 @@ Depth is paper height, and paper has body. Every sheet has a 1px edge, a white t
 - `--lift-1`: the sheet on top of a stack.
 - `--lift-2`: bottom sheets, dialogs, the inspector, the composer and a dragged row.
 - `--lift-3`: popovers, menus, toasts, tooltips and suggestion slips.
+
+A lift is for paper on the desk or floating over it. Paper lying on a sheet (the smart-suggestion slip above a list's items) is not a new height: it rests a hair above the page with `--slip-rest`, the same as a quiet slip. A lift's ream and long drop inside a sheet would bleed over the rows below it.
 
 The desk has its own, coarser grain (`--grain-desk`), so paper and desk read as two materials. Because both are grained, nothing inside a sheet is filled with flat colour: an in-sheet fill is `--paper-fill` (or `--well-fill` for a tint), and anything that must cover the desk is `--desk-fill`; a flat fill would read as a patch stuck on the paper.
 

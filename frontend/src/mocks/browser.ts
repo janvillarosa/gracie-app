@@ -1,6 +1,6 @@
 // Dev-only: runs the trips contract in the browser so the app works without the Go backend.
 // Enabled by VITE_MOCK_TRIPS=1 (see main.tsx); never part of a production build.
-import { getResponse, http, HttpResponse } from 'msw'
+import { getResponse, HttpResponse, http } from 'msw'
 import { setupWorker } from 'msw/browser'
 import { wipeTripDatabase, wipeTripDatabases } from '../lib/trips/db'
 import { localDateKey } from '../lib/trips/schedule'
@@ -81,6 +81,7 @@ export async function startMockTrips() {
       updated_at: now,
     },
   ]
+  let ignored = false
   const handlers = [
     ...tripHandlers(srv, { latencyMs: 80 }),
     http.get('/api/me', () => HttpResponse.json(user())),
@@ -101,22 +102,44 @@ export async function startMockTrips() {
     ),
     http.get('/api/rooms/:roomId/lists', () => HttpResponse.json(lists)),
     http.get('/api/rooms/:roomId/pantry', () => HttpResponse.json([])),
-    http.get('/api/rooms/:roomId/lists/:listId/items', ({ params }) =>
-      HttpResponse.json(
-        params.listId === srv.listId
-          ? ['Passport', 'Charger', 'Sun cream', 'Walking shoes'].map((description, i) => ({
-              item_id: `item_pack_${i}`,
-              list_id: srv.listId,
-              room_id: ROOM,
-              description,
-              completed: false,
-              order: i + 1,
-              created_at: now,
-              updated_at: now,
-            }))
-          : [],
-      ),
+    http.get('/api/rooms/:roomId/lists/:listId/items', ({ params }) => {
+      const pack = params.listId === srv.listId
+      const names = pack
+        ? ['Passport', 'Charger', 'Sun cream', 'Walking shoes']
+        : ['Oregano', 'Dill plant']
+      return HttpResponse.json(
+        names.map((description, i) => ({
+          item_id: `item_${pack ? 'pack' : 'groc'}_${i}`,
+          list_id: params.listId,
+          room_id: ROOM,
+          description,
+          completed: false,
+          order: i + 1,
+          created_at: now,
+          updated_at: now,
+        })),
+      )
+    }),
+    // One smart suggestion on Groceries, so the slip above the items can be seen in dev.
+    http.get('/api/rooms/:roomId/lists/:listId/suggestions', ({ params }) =>
+      HttpResponse.json({
+        suggestions:
+          params.listId === 'list_groceries' && !ignored
+            ? [
+                {
+                  key: 'cherry tomatoes',
+                  description: 'Cherry tomatoes',
+                  every_days: 7,
+                  score: 0.9,
+                },
+              ]
+            : [],
+      }),
     ),
+    http.post('/api/rooms/:roomId/lists/:listId/suggestions/ignore', () => {
+      ignored = true
+      return new HttpResponse(null, { status: 204 })
+    }),
   ]
   try {
     await setupWorker(...handlers).start({ onUnhandledRequest: 'bypass', quiet: true })

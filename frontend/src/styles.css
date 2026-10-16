@@ -34,6 +34,7 @@
 
   /* ---- Surfaces: the desk and the paper on it ----------------------------------------- */
   --bg: #F7F7F7; /* the desk */
+  --desk-tone: #EAEAEA; /* the desk seen from arm's length: its grain averaged over --bg. Browser bars and overscroll */
   --panel: #FFFFFF; /* paper: every sheet, slip and control face */
   --panel-subtle: #FAFAFA; /* a well: detail groups, tracks, stamps, pressed fills */
   --sheet-scrim: rgba(0, 0, 0, 0.35);
@@ -128,6 +129,7 @@
   --paper-fill: var(--grain-paper), var(--panel); /* a white fill inside a sheet: the same paper, grain and all */
   --well-fill: var(--grain-paper), var(--panel-subtle); /* a tinted fill inside a sheet */
   --desk-fill: var(--grain-desk), var(--bg); /* the desk, where something must cover what scrolls under it */
+  --desk-fade: 40px; /* on touch screens the desk's grain dissolves into --desk-tone over this much at the top and foot */
   --grain-desk: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.2 0 0 0 0 0.2 0 0 0 0 0.2 0 0 0 0.21 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 
   /* ---- Motion ------------------------------------------------------------------------ */
@@ -233,18 +235,35 @@ body,
   height: 100%;
 }
 
-/* The desk's grain, behind everything and fixed, so it never repaints with a scroll. */
+/* Browsers tint their own bars (iOS Safari's top and bottom, Android's status bar) and paint
+   overscroll with the page's flat background colour, not its grain. So the canvas is the desk's
+   averaged tone, and the grained desk is a fixed layer over it: the bars read as the same desk.
+   On touch screens, where those bars sit right against the page, the grained layer also fades out
+   at its top and foot, so the texture dissolves into the flat tint instead of stopping at a line.
+   The tone is the grain's average, so the fade changes texture only, never brightness. */
+html {
+  background: var(--desk-tone);
+}
+
+/* The desk and its grain, behind everything and fixed, so it never repaints with a scroll. */
 body::before {
   content: '';
   position: fixed;
   inset: 0;
   z-index: -1;
-  background-image: var(--grain-desk);
+  background: var(--desk-fill);
   pointer-events: none;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  body::before {
+    --desk-mask: linear-gradient(transparent, black var(--desk-fade), black calc(100% - var(--desk-fade)), transparent);
+    -webkit-mask-image: var(--desk-mask);
+    mask-image: var(--desk-mask);
+  }
 }
 body {
   margin: 0;
-  background: var(--bg);
   color: var(--text);
   font-family: var(--font-body);
   font-size: var(--t-body);
@@ -295,8 +314,12 @@ a {
 /* Auth pages */
 /* The whole viewport turns yellow (including overscroll and the transition snapshot),
    not just the page box. */
-body:has(.login-page) {
+html:has(.login-page) {
   background: var(--brand-yellow);
+}
+
+body:has(.login-page)::before {
+  background: var(--grain-desk), var(--brand-yellow);
 }
 
 .login-page {
@@ -870,15 +893,17 @@ h5.ant-typography {
   color: transparent;
 }
 
-/* Smart suggestions: one sheet of paper above the items. Its Add is the one yellow key, and a
-   warm edge hints at it; the sheet stays white so it reads as paper, not an alert. */
+/* Smart suggestions: one slip of paper above the items. Its Add is the one yellow key, and a
+   warm edge hints at it; the slip stays white so it reads as paper, not an alert. It lies on the
+   list's sheet, not the desk, so it rests a hair above the page (a slip), never a paper height:
+   a lift's ream and long drop would bleed over the rows below. */
 .suggestion-sheet {
   margin: 0 0 var(--space-3);
   padding: var(--space-1) var(--space-3);
   background: var(--paper-fill);
   border: 1px solid color-mix(in srgb, var(--brand-yellow-deep) 38%, var(--border));
   border-radius: var(--radius-lg);
-  box-shadow: var(--lift-0);
+  box-shadow: var(--slip-rest);
 }
 
 .suggestion-rows {
