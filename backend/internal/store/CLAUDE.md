@@ -35,6 +35,10 @@ is the only implementation (uses `go.mongodb.org/mongo-driver`). See
   (`.` and `$` become `_`). `ApplyBatch` writes aggregates, the dirty set and the watermark in one
   transaction; the watermark compares `ingested_at`, which Mongo keeps to the millisecond.
 
+- `store.BackfillReader` (`store/mongo/backfill_reader.go`) is a read-only, batched walk over users,
+  rooms, lists, items and trips for the analytics backfill. It uses **allow-list projections**, so
+  credential fields and trip text (titles, notes, places) are never loaded; keep it that way when adding fields.
+
 ## Rules & pitfalls (learned the hard way)
 
 - **Transactions require a replica set.** Signup, join, and finalize-deletion run in

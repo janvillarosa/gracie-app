@@ -8,6 +8,8 @@ import "time"
 const (
 	SourceServer = "server"
 	SourceClient = "client"
+	// SourceBackfill marks events rebuilt from domain documents that predate analytics.
+	SourceBackfill = "backfill"
 
 	// EnvelopeVersion is bumped only on a breaking envelope change.
 	EnvelopeVersion = 1

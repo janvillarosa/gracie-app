@@ -281,3 +281,17 @@ func TestReaderDueAndPeriods(t *testing.T) {
 		t.Fatal("unknown scope should be rejected")
 	}
 }
+
+func TestProfileActHourCountsBackfilledActionsButNotClientOnes(t *testing.T) {
+	sat := time.Date(2026, 9, 19, 10, 0, 0, 0, ny)
+	now := sat.AddDate(0, 0, 2)
+	backfilled := localEv("bf", "item.checked", "mia", sat, func(e *analytics.Event) { e.Source = analytics.SourceBackfill })
+	client := localEv("cl", "item.delete_undone", "mia", sat.Add(-6*time.Hour), func(e *analytics.Event) { e.Source = analytics.SourceClient })
+	p := analytics.BuildProfile(fullRegistry(), "u:mia", []analytics.Event{backfilled, client}, now)
+	if p.ActHOW[6*24+10] == 0 {
+		t.Fatal("a backfilled check must count toward act_how")
+	}
+	if p.ActHOW[6*24+4] != 0 {
+		t.Fatal("client events must not count toward act_how")
+	}
+}
