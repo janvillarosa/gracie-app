@@ -3147,13 +3147,15 @@ p.ld-done-toggle {
   display: grid;
   grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
   gap: 48px;
-  align-items: center;
+  align-items: start;
 }
 
+/* The phone is sized by the window's height as well as its width (its frame is 428 by 868), so
+   on a short laptop screen it never pushes the headline and its button below the fold. */
 .ld-hero-phone {
   justify-self: end;
   width: 100%;
-  max-width: 360px;
+  max-width: min(360px, calc((100svh - 150px) * 428 / 868));
 }
 
 .ld-hero-phone .ld-stack {
@@ -3212,6 +3214,7 @@ p.ld-done-toggle {
 
   .ld-hero-phone {
     justify-self: center;
+    max-width: 360px;
     margin-top: 32px;
   }
 }
@@ -3272,6 +3275,12 @@ p.ld-done-toggle {
 
 .ld-h1 {
   line-height: 0.88;
+}
+
+/* "Manage your" is one line at every size; at the largest it may run into the gap before the
+   phone rather than break the headline into four lines. */
+.ld-lead {
+  white-space: nowrap;
 }
 
 .ld-h1-end {
