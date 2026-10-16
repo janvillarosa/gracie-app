@@ -182,7 +182,11 @@ func (r *AggRepo) UpcomingKeys(_ context.Context, roomID, subjectType string, no
 			continue
 		}
 		a := ks.Intervals.Add
-		if !a.OpensAt.After(now) && !a.ClosesAt.Before(now) && a.Score >= minScore && a.CV <= maxCV {
+		open := !a.OpensAt.After(now) && !a.ClosesAt.Before(now)
+		for _, w := range a.Windows {
+			open = open || (!w.Opens.After(now) && !w.Closes.Before(now))
+		}
+		if open && a.Score >= minScore && a.CV <= maxCV {
 			out = append(out, ks)
 		}
 	}

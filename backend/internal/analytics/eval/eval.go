@@ -66,6 +66,15 @@ type Report struct {
 	TooLate      int // the add came before the window opened: we would have been late
 	TooEarly     int // the add came after the window closed: we would have nagged
 	ScoreBuckets [5]int
+	WindowDays   float64 // total days the shown suggestions' windows were open (the nagging cost)
+}
+
+// AvgWindowDays is how long a shown suggestion stays up, on average.
+func (r Report) AvgWindowDays() float64 {
+	if r.Predictions == 0 {
+		return 0
+	}
+	return r.WindowDays / float64(r.Predictions)
 }
 
 // Precision is hits over predictions, or 0 with none.
@@ -107,16 +116,24 @@ func Replay(all []Series, p predict.Params) Report {
 				continue
 			}
 			qualified = true
-			rep.Predictions++
 			rep.ScoreBuckets[min(4, int(f.Score*5))]++
-			actual := times[i]
+			ws := f.Windows
+			if len(ws) == 0 {
+				ws = []predict.Span{{Opens: f.OpensAt, Closes: f.ClosesAt}}
+			}
+			shown, hit, late := p.Judge(ws, times[i])
+			rep.Predictions += shown
+			for k := 0; k < shown && k < len(ws); k++ {
+				rep.WindowDays += ws[k].Closes.Sub(ws[k].Opens).Hours() / 24
+			}
 			switch {
-			case actual.Before(f.OpensAt):
-				rep.TooLate++
-			case actual.After(f.ClosesAt):
-				rep.TooEarly++
-			default:
+			case hit:
 				rep.Hits++
+				rep.TooEarly += shown - 1
+			case late:
+				rep.TooLate++
+			default:
+				rep.TooEarly += shown
 			}
 		}
 		if replayed {

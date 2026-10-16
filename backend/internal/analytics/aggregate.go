@@ -62,7 +62,7 @@ func (k KeyRef) ID() string { return k.RoomID + ":" + k.SubjectType + ":" + k.Ke
 // ForecastVersion is the version of the logic that builds KeyIntervals (rhythm and add forecast).
 // Bump it whenever that logic changes: the worker then rebuilds every older forecast from the
 // stored history, so a change takes effect without waiting for each key's next event.
-const ForecastVersion = 1
+const ForecastVersion = 2 // 2: skip-aware, recent-cycle forecasts with repeating windows
 
 // KeyIntervals is the recomputed rhythm of one key.
 type KeyIntervals struct {
@@ -98,6 +98,15 @@ type AddForecast struct {
 	// was this exact name (or a plural or spacing of it), lower when look-alike names were merged
 	// in ("yoghurt" for "yogurt"). Score already includes it.
 	NameCertainty float64 `bson:"name_certainty,omitempty" json:"name_certainty,omitempty"`
+	// Windows are every window the forecast may show: the first (OpensAt..ClosesAt) and one per
+	// skipped cycle it rides through. A suggestion is shown while now is inside any of them.
+	Windows []ForecastWindow `bson:"windows,omitempty" json:"windows,omitempty"`
+}
+
+// ForecastWindow is one suggestion window.
+type ForecastWindow struct {
+	Opens  time.Time `bson:"opens" json:"opens"`
+	Closes time.Time `bson:"closes" json:"closes"`
 }
 
 // KeyStat is what is known about one thing in a house ("whole milk"): how often it was

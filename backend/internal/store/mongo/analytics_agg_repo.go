@@ -329,11 +329,16 @@ func (r *AggRepo) DueKeys(ctx context.Context, roomID, subjectType string, befor
 }
 
 func (r *AggRepo) UpcomingKeys(ctx context.Context, roomID, subjectType string, now time.Time, minScore, maxCV float64, limit int) ([]analytics.KeyStat, error) {
+	open := bson.D{{Key: "$lte", Value: now.UTC()}}
+	notClosed := bson.D{{Key: "$gte", Value: now.UTC()}}
 	filter := bson.D{{Key: "room_id", Value: roomID}, {Key: "subject_type", Value: subjectType},
-		{Key: "intervals.add.opens_at", Value: bson.D{{Key: "$lte", Value: now.UTC()}}},
-		{Key: "intervals.add.closes_at", Value: bson.D{{Key: "$gte", Value: now.UTC()}}},
 		{Key: "intervals.add.score", Value: bson.D{{Key: "$gte", Value: minScore}}},
-		{Key: "intervals.add.cv", Value: bson.D{{Key: "$lte", Value: maxCV}}}}
+		{Key: "intervals.add.cv", Value: bson.D{{Key: "$lte", Value: maxCV}}},
+		// The first window, or any later one (a forecast that rides through skipped cycles).
+		{Key: "$or", Value: bson.A{
+			bson.D{{Key: "intervals.add.opens_at", Value: open}, {Key: "intervals.add.closes_at", Value: notClosed}},
+			bson.D{{Key: "intervals.add.windows", Value: bson.D{{Key: "$elemMatch", Value: bson.D{{Key: "opens", Value: open}, {Key: "closes", Value: notClosed}}}}}},
+		}}}
 	cur, err := r.keys().Find(ctx, filter, options.Find().SetSort(bson.D{{Key: "intervals.add.score", Value: -1}, {Key: "key", Value: 1}}).SetLimit(int64(limit)))
 	if err != nil {
 		return nil, err

@@ -51,7 +51,7 @@ func TestWindowClampsLeadAndGrace(t *testing.T) {
 		{60, 48 * time.Hour, 24 * time.Hour}, // long rhythms are capped
 	}
 	for _, c := range cases {
-		opens, closes := DefaultParams.Window(due, c.ewma, 0)
+		opens, closes := ClassicParams.Window(due, c.ewma, 0)
 		if d := due.Sub(opens) - c.lead; d > time.Second || d < -time.Second {
 			t.Errorf("ewma %v: lead %v want %v", c.ewma, due.Sub(opens), c.lead)
 		}
@@ -115,8 +115,13 @@ func TestPredictPerfectWeeklyIsConfident(t *testing.T) {
 	if !f.DueAt.Equal(at(56)) || !f.LastAt.Equal(at(49)) || f.Trials != 5 || f.Hits != 5 {
 		t.Fatalf("got %+v", f)
 	}
-	if !f.OpenAt(at(55)) || f.OpenAt(at(53)) || f.OpenAt(at(57)) {
-		t.Fatal("window should cover just before and just after the due day")
+	// Opens three days early, steps aside under two days late, and after a skipped week comes
+	// back a week later (up to four skipped cycles).
+	if !f.OpenAt(at(53)) || !f.OpenAt(at(57.5)) || f.OpenAt(at(52.5)) || f.OpenAt(at(58.5)) {
+		t.Fatal("first window should cover three days before to under two days after the due day")
+	}
+	if !f.OpenAt(at(62)) || len(f.Windows) != DefaultParams.Skips+1 {
+		t.Fatalf("a skipped week should open the next one: %+v", f.Windows)
 	}
 }
 
@@ -190,11 +195,56 @@ func TestWeekendHabitIsConfidentAndOpensTheDayBefore(t *testing.T) {
 
 func TestSteadyRhythmKeepsItsTightWindow(t *testing.T) {
 	// No wobble, no extra width: a perfectly weekly item keeps the 1.4 day lead and 0.7 day grace.
-	opens, closes := DefaultParams.Window(at(21), 7, 0)
+	opens, closes := ClassicParams.Window(at(21), 7, 0)
 	if d := at(21).Sub(opens); d < 33*time.Hour || d > 34*time.Hour {
 		t.Fatalf("lead %v", d)
 	}
 	if d := closes.Sub(at(21)); d < 16*time.Hour || d > 17*time.Hour {
 		t.Fatalf("grace %v", d)
+	}
+}
+
+// A weekend shopper who skips some weeks: gaps of 7, 14 and 21 days. Every add lands in one of
+// the repeating windows, so the habit is confident even though weeks are skipped.
+func TestMostWeeksHabitWithSkipsIsConfident(t *testing.T) {
+	adds := days(0, 7, 21, 28, 35, 49, 56, 63, 84, 91, 98, 112, 119)
+	if f, ok := ClassicParams.Predict(adds, nil, nil); ok && f.Confident(ClassicParams) {
+		t.Fatalf("the single-window model could not see this habit: %+v", f)
+	}
+	f, ok := DefaultParams.Predict(adds, nil, nil)
+	if !ok || !f.Confident(DefaultParams) || f.EWMADays != 7 {
+		t.Fatalf("most-weeks habit: %+v", f)
+	}
+}
+
+// A habit that changed: fortnightly for half a year, weekly since. Confidence follows the latest
+// cycles, so the new weekly habit is suggested once it has held for a while.
+func TestAChangedHabitIsJudgedOnHowItIsNow(t *testing.T) {
+	var adds []time.Time
+	for d := 0.0; d < 182; d += 14 {
+		adds = append(adds, at(d))
+	}
+	for d := 189.0; d <= 189+7*16; d += 7 { // weekly for four months
+		adds = append(adds, at(d))
+	}
+	f, ok := DefaultParams.Predict(adds, nil, nil)
+	if !ok || !f.Confident(DefaultParams) || f.EWMADays != 7 {
+		t.Fatalf("weekly now: %+v", f)
+	}
+}
+
+func TestStrictSkipsCountsEveryEmptyWindow(t *testing.T) {
+	p := DefaultParams
+	p.StrictSkips = true
+	ws := []Span{{at(5), at(9)}, {at(12), at(16)}, {at(19), at(23)}}
+	if shown, hit, _ := p.Judge(ws, at(20)); shown != 3 || !hit {
+		t.Fatalf("two empty windows then a hit: shown %d hit %v", shown, hit)
+	}
+	if shown, hit, late := p.Judge(ws, at(2)); shown != 1 || hit || !late {
+		t.Fatalf("added before the first window: %d %v %v", shown, hit, late)
+	}
+	p.StrictSkips = false
+	if shown, hit, _ := p.Judge(ws, at(20)); shown != 1 || !hit {
+		t.Fatalf("lenient: one trial per cycle: %d %v", shown, hit)
 	}
 }

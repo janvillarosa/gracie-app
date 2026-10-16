@@ -55,6 +55,31 @@ The fold stores the result as `KeyIntervals.Add` (`AddForecast`) on `key_stats`,
 on `(room_id, subject_type, intervals.add.opens_at)`. The request path is a cheap indexed read
 (`Reader.Upcoming` -> `UpcomingKeys`).
 
+## Tuned on a real household (2026-10-16, forecast version 2)
+
+`suggest-eval tune` replayed a real house's year of history (~1,100 adds) at the unchanged bar
+(MinScore 0.65, MaxCV 0.5). Under the first model nothing qualified. The household shops at weekends,
+buys staples most weeks and skips some (gaps of 7, 14, 21, 28 days), and its habits changed during the
+year (cherry tomatoes went from fortnightly to weekly). The defaults are now:
+
+- **Rhythm:** the median of the latest 12 gaps (a skipped week does not stretch it), and regularity
+  measured after folding skipped cycles (a 14 day gap on a 7 day rhythm is two clean cycles).
+- **Windows repeat** for up to four skipped cycles: after a weekend without an add, the next weekend
+  opens again. Each window opens up to 3 days early (0.5 of the rhythm) and closes up to 2 days late
+  (0.25). All windows are stored (`AddForecast.Windows`) and `UpcomingKeys` matches any of them.
+- **Confidence is judged on the latest 8 cycles,** so it reflects how the house shops now.
+- **Scoring is per cycle (lenient):** a cycle is a hit when the add landed in any of its windows. A
+  weekend the slip showed without an add is not counted as a miss. Under the strict reading
+  (`StrictSkips`, every empty window a miss) nothing qualifies for this house, because it genuinely skips
+  about a third of weekends; Ignore and the two-ignores pause handle those weekends instead.
+- **On the list** now means unchecked: houses that never clear keep every checked row, which blocked
+  every suggestion. Only the event type the forecast learned from (adds) closes a cycle, so checking off
+  Saturday's add on Sunday does not hide next week's slip.
+
+Result on that house's data, run through the real fold and `ForList`: cherry tomatoes (0.83), butter
+beans (0.83), eggs (0.66) and feta (0.66) suggested on the Groceries list. `predict.ClassicParams`
+keeps the first model for comparison.
+
 ## Look-alike names (added 2026-10-16)
 
 "orange" and "oranges", or "butterbeans" and "butter beans", are one thing to a household.

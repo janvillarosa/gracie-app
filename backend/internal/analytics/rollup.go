@@ -242,6 +242,9 @@ func (w *Worker) recomputeKey(ctx context.Context, ref KeyRef) ([]KeyRef, error)
 		iv.Add = &AddForecast{Series: f.Series, N: f.N, EWMADays: f.EWMADays, CV: f.CV, LastAt: f.LastAt,
 			DueAt: f.DueAt, OpensAt: f.OpensAt, ClosesAt: f.ClosesAt, Trials: f.Trials, Hits: f.Hits,
 			Score: f.Score * certainty, NameCertainty: certainty}
+		for _, w := range f.Windows {
+			iv.Add.Windows = append(iv.Add.Windows, ForecastWindow{Opens: w.Opens.UTC(), Closes: w.Closes.UTC()})
+		}
 	}
 	return sibs, w.aggs.SetKeyIntervals(ctx, ref.ID(), iv)
 }
