@@ -149,3 +149,26 @@ func TestMongoRollupIsExactlyOnceAndLeased(t *testing.T) {
 		t.Fatal("DeleteByRoom left key_stats behind")
 	}
 }
+
+func TestEventRepoEarliestOccurredBySource(t *testing.T) {
+	c := connectOrSkip(t)
+	repo := NewEventRepo(c)
+	ctx := context.Background()
+	if _, ok, err := repo.EarliestOccurred(ctx, analytics.SourceServer); err != nil || ok {
+		t.Fatalf("empty store: ok=%v err=%v", ok, err)
+	}
+	early := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
+	older := storedEvent("ev_old", "item.added", "u1", "r1", "milk", early.Add(-time.Hour))
+	older.Source = analytics.SourceBackfill
+	if err := repo.InsertMany(ctx, []analytics.Event{
+		storedEvent("ev_b", "item.added", "u1", "r1", "milk", early.Add(time.Hour)),
+		storedEvent("ev_a", "item.added", "u1", "r1", "milk", early),
+		older,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	got, ok, err := repo.EarliestOccurred(ctx, analytics.SourceServer)
+	if err != nil || !ok || !got.Equal(early) {
+		t.Fatalf("got %v ok=%v err=%v, want %v (backfill events ignored)", got, ok, err, early)
+	}
+}

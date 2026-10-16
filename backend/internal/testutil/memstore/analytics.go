@@ -93,4 +93,19 @@ func (r *EventRepo) All() []analytics.Event {
 	return append([]analytics.Event(nil), r.evs...)
 }
 
-var _ analytics.EventRepository = (*EventRepo)(nil)
+func (r *EventRepo) EarliestOccurred(_ context.Context, source string) (time.Time, bool, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	var first time.Time
+	for _, e := range r.evs {
+		if e.Source == source && (first.IsZero() || e.OccurredAt.Before(first)) {
+			first = e.OccurredAt
+		}
+	}
+	return first, !first.IsZero(), nil
+}
+
+var (
+	_ analytics.EventRepository = (*EventRepo)(nil)
+	_ analytics.BackfillEvents  = (*EventRepo)(nil)
+)
