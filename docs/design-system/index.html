@@ -1,0 +1,586 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Bauhouse design system</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;650;700&family=Outfit:wght@600;700;720&display=swap" rel="stylesheet" />
+<!-- The app's tokens, copied from frontend/src/styles.css by `pnpm design:sync` (do not edit here). -->
+<style id="design-tokens">
+/* ===========================================================================================
+   Design tokens: the one source of every value the app draws with.
+   The living reference is docs/design-system/index.html (it shows every token below, in use).
+   Never write a raw colour, size, weight, radius or shadow outside this block: add or reuse a
+   token, and keep the reference page in step (__tests__/designTokens.test.ts checks it).
+   =========================================================================================== */
+:root {
+  /* ---- Type: two families, eight roles ------------------------------------------------ */
+  --font-headings: 'Outfit Variable', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+  --font-body: 'Figtree Variable', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  --t-display: clamp(36px, 4.4vw, 48px); /* Outfit 700: the page title */
+  --t-title: 28px; /* Outfit 700: a sheet or settings title */
+  --t-heading: 22px; /* Outfit 600: a section head, an empty state */
+  --t-lead: 17px; /* Figtree 400: the composer */
+  --t-field: 16px; /* Figtree 400: every input (never smaller: iOS zooms) */
+  --t-body: 15px; /* Figtree 400/500: running text, rows, buttons */
+  --t-meta: 13px; /* Figtree 400/600: times, notes, secondary lines, text buttons */
+  --t-label: 12px; /* Figtree 700 caps 0.08em: section labels */
+  --t-stamp: 11px; /* Figtree 700 caps 0.08em: stamps, kickers */
+  --t-code: 32px; /* Outfit 700 0.12em tabular: a confirmation or invite code */
+
+  /* ---- Weights: four ----------------------------------------------------------------- */
+  --w-regular: 400;
+  --w-medium: 500;
+  --w-semibold: 600;
+  --w-bold: 700;
+
+  /* ---- Ink: three greys for text ----------------------------------------------------- */
+  --ink: #1A1A1A; /* titles, values, controls (17.4:1 on paper) */
+  --text: #3B3B3B; /* running text (11.2:1) */
+  --muted: #656C78; /* meta, labels, placeholders (5.3:1); never on yellow */
+
+  /* ---- Surfaces: the desk and the paper on it ----------------------------------------- */
+  --bg: #F7F7F7; /* the desk */
+  --panel: #FFFFFF; /* paper: every sheet, slip and control face */
+  --panel-subtle: #FAFAFA; /* a well: detail groups, tracks, stamps, pressed fills */
+  --sheet-scrim: rgba(0, 0, 0, 0.35);
+
+  /* ---- Edges ------------------------------------------------------------------------- */
+  --border: #E6E6E6; /* a hairline inside a sheet */
+  --border-strong: #D2D2D2; /* the edge of a sheet, a slip, a track */
+  --edge-deep: #D9D9D6; /* the ream: the second step of a sheet's thickness */
+  --edge-soft: #E2E2E0; /* the ream: the first step */
+
+  /* ---- Accents: one key, red means gone, blue says you are here ----------------------- */
+  --brand-yellow: #FFD417; /* the key, selected, done */
+  --brand-yellow-deep: #E6BE00; /* the key's edge, selected borders */
+  --brand-red: #BE1E2D; /* delete and blocking errors only */
+  --brand-blue: #2348A6; /* focus ring, caret, links */
+  --on-red: #FFFFFF;
+  --on-pin: #FFFFFF;
+  --highlighter: color-mix(in srgb, var(--brand-yellow) 70%, transparent);
+  --focus-ring: 0 0 0 2px var(--panel), 0 0 0 4px color-mix(in srgb, var(--brand-blue) 70%, transparent);
+
+  /* ---- Status ------------------------------------------------------------------------ */
+  --warn-bg: #FFF4D6;
+  --warn-ink: #7A4B00; /* 6.8:1 on its ground; never red, an overlap is not an error */
+  --ok-ink: #2E6B32;
+
+  /* ---- Space: a 4px scale ------------------------------------------------------------ */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+
+  /* ---- Controls and rows ------------------------------------------------------------- */
+  --control-sm: 32px; /* a target chip, a small round slip */
+  --control-md: 36px; /* chips, quiet slips, segments */
+  --control-lg: 44px; /* keys, text actions, tracks, the touch target */
+  --row-h: 52px; /* a detail or list row */
+  --composer-h: 56px; /* the desk's add bar */
+
+  /* ---- Corners ----------------------------------------------------------------------- */
+  --radius-xs: 6px; /* stamps, small tags */
+  --radius-sm: 8px; /* focus rings, text buttons */
+  --radius-md: 12px; /* tiles, menus, slips, segments */
+  --radius-lg: 16px; /* paper */
+  --radius-sheet: 20px; /* the top of a bottom sheet */
+  --radius-pill: 999px; /* keys, quiet buttons, chips, tracks */
+
+  /* ---- Icons ------------------------------------------------------------------------- */
+  --icon-xs: 12px; /* a glyph inside a chip */
+  --icon-sm: 16px;
+  --icon-md: 18px;
+  --icon-lg: 20px;
+  --icon-xl: 24px; /* an emoji on a 44px sticker */
+  --icon-2xl: 28px; /* an emoji on a 52px tile */
+
+  /* ---- Depth: paper heights, the ream, slips, wells, the key ------------------------- */
+  --paper-edge: inset 0 1px 0 rgba(255, 255, 255, 0.9); /* the white top highlight */
+  /* Thickness: a sheet is a few leaves deep, so its foot shows a stepped edge. */
+  --thick: inset 0 -1px 0 rgba(0, 0, 0, 0.06), 0 1px 0 var(--edge-soft), 0 2px 0 var(--edge-deep), 0 3px 0 var(--edge-soft);
+  --lift-0: var(--thick), 0 4px 6px -2px rgba(40, 30, 10, 0.1), 0 18px 34px -14px rgba(40, 30, 10, 0.22); /* resting */
+  --lift-1: var(--thick), 0 6px 10px -4px rgba(40, 30, 10, 0.14), 0 34px 64px -22px rgba(40, 30, 10, 0.36); /* on top */
+  --lift-2: var(--thick), 0 8px 14px -6px rgba(40, 30, 10, 0.18), 0 36px 68px -22px rgba(40, 30, 10, 0.38); /* overlay */
+  --lift-3: var(--thick), 0 8px 14px -6px rgba(40, 30, 10, 0.2), 0 40px 70px -24px rgba(40, 30, 10, 0.4); /* popover */
+  --peek-shadow: 0 1px 0 var(--edge-deep), 0 10px 16px -8px rgba(40, 30, 10, 0.26);
+  --peek-tilt-1: -0.6deg; /* the sheets beneath sit a little off true, like a real pile */
+  --peek-tilt-2: 0.9deg;
+  --slip-rest: var(--paper-edge), 0 1px 0 var(--border-strong), 0 2px 4px -2px rgba(40, 30, 10, 0.12);
+  --slip-hover: var(--paper-edge), 0 1px 0 var(--border-strong), 0 6px 12px -6px rgba(40, 30, 10, 0.2);
+  --slip-press: inset 0 1px 2px rgba(40, 30, 10, 0.14);
+  --well: inset 0 2px 3px rgba(40, 30, 10, 0.09); /* pressed into the sheet */
+  --shadow-key: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 2px 0 var(--brand-yellow-deep), 0 3px 2px -1px rgba(120, 90, 0, 0.25), 0 10px 18px -8px rgba(150, 115, 0, 0.45);
+  --shadow-key-hover: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 2px 0 var(--brand-yellow-deep), 0 3px 2px -1px rgba(120, 90, 0, 0.25), 0 14px 24px -8px rgba(150, 115, 0, 0.5);
+  --shadow-key-press: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 1px 2px rgba(120, 90, 0, 0.25);
+  --shadow-key-danger: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 2px 0 color-mix(in srgb, var(--brand-red) 62%, black), 0 10px 18px -8px color-mix(in srgb, var(--brand-red) 45%, transparent);
+  --shadow-key-danger-hover: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 2px 0 color-mix(in srgb, var(--brand-red) 62%, black), 0 14px 24px -8px color-mix(in srgb, var(--brand-red) 50%, transparent);
+  --key-travel: 2px; /* how far a key sinks when pressed: its whole underside */
+  --avatar-edge: color-mix(in srgb, var(--ink) 12%, transparent);
+  --wash: color-mix(in srgb, var(--ink) 6%, transparent); /* a hover or open fill on paper */
+  --wash-danger: color-mix(in srgb, var(--brand-red) 7%, transparent);
+  --panel-veil: rgba(255, 255, 255, 0.9); /* paper over the map */
+  --shadow-up: 0 -10px 16px -14px rgba(40, 30, 10, 0.2); /* a bar pinned to the foot of a sheet */
+  --tab-lift: 0 1px 0 var(--border-strong), 0 1px 2px rgba(0, 0, 0, 0.08), 0 3px 8px -2px rgba(40, 30, 10, 0.14); /* the selected tab on its track */
+  --swipe-shadow: 1px 0 0 rgba(0, 0, 0, 0.08), 12px 0 16px -6px rgba(50, 0, 6, 0.55);
+  --tray-inset: inset 0 2px 4px rgba(0, 0, 0, 0.22), inset 0 -1px 2px rgba(0, 0, 0, 0.12);
+  --pin-shadow: 0 2px 8px rgba(0, 0, 0, 0.12); /* map pins: the one exception to the paper heights */
+
+  /* ---- Texture: a fine grain on paper, a coarser one on the desk. Each is a background layer
+     with its strength baked in: `background: var(--grain-paper), var(--panel)`. --------------- */
+  --grain-paper: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.25 0 0 0 0 0.22 0 0 0 0 0.18 0 0 0 0.077 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --paper-fill: var(--grain-paper), var(--panel); /* a white fill inside a sheet: the same paper, grain and all */
+  --well-fill: var(--grain-paper), var(--panel-subtle); /* a tinted fill inside a sheet */
+  --desk-fill: var(--grain-desk), var(--bg); /* the desk, where something must cover what scrolls under it */
+  --grain-desk: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.2 0 0 0 0 0.2 0 0 0 0 0.2 0 0 0 0.21 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+
+  /* ---- Motion ------------------------------------------------------------------------ */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-press: 90ms;
+  --dur-fast: 160ms;
+  --dur-base: 240ms;
+  --dur-slow: 420ms;
+
+  /* ---- Layout: sheets and the row grid ----------------------------------------------- */
+  --sheet-inset: 20px;
+  --sheet-max-h: 90dvh;
+  --detail-inset: 16px;
+  --detail-label-w: 96px;
+  --tier-identity-actions: 18px;
+  --tier-actions-details: 26px;
+  --tier-details-footer: 22px;
+  /* The row grid: [lead] 12 [time] 12 [title] [trail]. A day without times sets --tcol to 0. */
+  --lead: 24px;
+  --gap: 12px;
+  --lead-col: calc(var(--lead) + var(--gap));
+  --time-w: 48px;
+
+  /* ---- Functional palettes (unchanged): grocery categories ---------------------------- */
+  --cat-produce: #4CAF50;
+  --cat-dairy: #2196F3;
+  --cat-bakery: #FF9800;
+  --cat-meat: #F44336;
+  --cat-frozen: #00BCD4;
+  --cat-plant: #9C27B0;
+  --cat-grains: #795548;
+  --cat-pantry: #607D8B;
+  --cat-beverages: #E91E63;
+  --cat-household: #78909C;
+  --cat-general: #9E9E9E;
+
+  /* ---- Functional palettes: trip days (each 3:1 on the map ground; day 7 reuses day 1) */
+  --trip-day-0: #2348A6;
+  --trip-day-1: #BE1E2D;
+  --trip-day-2: #946D00;
+  --trip-day-3: #1E7B3C;
+  --trip-day-4: #0E7C86;
+  --trip-day-5: #6A3FB5;
+
+  /* ---- Functional palettes: trip category stamps (ink 4.5:1 on its tint) and map pips */
+  --trip-cat-food-bg: #FDE7D2;
+  --trip-cat-food-fg: #8A4209;
+  --trip-cat-sight-bg: #DCE5FA;
+  --trip-cat-sight-fg: #1D3F93;
+  --trip-cat-activity-bg: #DDF0E2;
+  --trip-cat-activity-fg: #17602F;
+  --trip-cat-transport-bg: #E8E8E8;
+  --trip-cat-transport-fg: #333333;
+  --trip-cat-stay-bg: #FFF1B3;
+  --trip-cat-stay-fg: #6B5000;
+  --trip-cat-shopping-bg: #E8DFF6;
+  --trip-cat-shopping-fg: #55308F;
+  --trip-cat-other-bg: #EFEFEF;
+  --trip-cat-other-fg: #4A4A4A;
+  --pip-food: #C4560C;
+  --pip-sight: #2348A6;
+  --pip-activity: #1E7B3C;
+  --pip-transport: #5A6470;
+  --pip-stay: #946D00;
+  --pip-shopping: #8A3FB5;
+  --pip-other: #767676;
+  --pip-done: #A9ADA6;
+
+  /* ---- Map pins: our paper pills on Google's map. The one exception to the paper heights:
+     they sit on a photograph-like ground, so they carry their own small shadows. ------------ */
+  --pin-ink: var(--ink);
+  --pin-halo: var(--panel);
+  --pin-muted: #5D635C;
+  --pin-edge: rgba(0, 0, 0, 0.08);
+  --pin-next-edge: var(--brand-yellow-deep);
+  --pin-next-ink: #5B4A00;
+  --pin-done-bg: #F3F3F3;
+  --pin-done-ink: #6B7079;
+  --pin-preview: rgba(255, 255, 255, 0.4);
+  --pin-anchor-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
+  --pin-edge-deep: rgba(0, 0, 0, 0.28);
+  --pin-shadow-rest: 0 1px 2px rgba(0, 0, 0, 0.08), 0 6px 14px -6px rgba(0, 0, 0, 0.28);
+  --pin-shadow-next: 0 1px 0 var(--brand-yellow-deep), 0 8px 16px -6px rgba(150, 115, 0, 0.45);
+  --pin-shadow-done: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --pin-shadow-stub: 0 1px 2px rgba(0, 0, 0, 0.18);
+  --pin-shadow-hot: 0 2px 3px rgba(0, 0, 0, 0.1), 0 12px 18px -8px rgba(0, 0, 0, 0.36);
+  --pin-shadow-cluster: 0 4px 10px -4px rgba(0, 0, 0, 0.4);
+  --trip-transport: #4B5563; /* the dotted leg to a train, flight or car stop */
+
+  /* ---- Functional palettes: the plain map preview ------------------------------------ */
+  --trip-map-ground: #E9EEE6;
+  --trip-map-earth: #EEF0E9;
+  --trip-map-water: #CFDDE3;
+}
+</style><!-- /design-tokens -->
+<style>
+  /* Reference-page only: the app self-hosts the variable faces; this page loads the same families
+     from Google Fonts, so it names them as Google does. */
+  :root {
+    --font-headings: 'Outfit', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+    --font-body: 'Figtree', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: var(--w-regular) var(--t-body)/1.5 var(--font-body); -webkit-font-smoothing: antialiased; }
+  body::before { content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none; background-image: var(--grain-desk); }
+  main { position: relative; max-width: 1120px; margin: 0 auto; padding: 40px 24px 96px; }
+  h1, h2, h3 { font-family: var(--font-headings); color: var(--ink); margin: 0; letter-spacing: -0.02em; }
+  .intro { max-width: 62ch; margin: 0 0 40px; }
+  .intro h1 { font-size: var(--t-display); font-weight: var(--w-bold); line-height: 1.05; margin-bottom: 10px; }
+  .intro p { margin: 0; color: var(--muted); }
+  section.part { margin: 0 0 64px; }
+  .part-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin: 0 0 20px; padding-top: 18px; border-top: 1px solid var(--border-strong); }
+  .part-head h2 { font-size: var(--t-heading); font-weight: var(--w-bold); }
+  .part-head p { margin: 4px 0 0; color: var(--muted); max-width: 60ch; }
+  .label { font: var(--w-bold) var(--t-label) var(--font-body); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+
+  /* Paper and PaperStack: the two functions */
+  .paper { position: relative; background: var(--grain-paper), var(--panel); border: 1px solid var(--border-strong); border-radius: var(--radius-lg); box-shadow: var(--paper-edge), var(--lift-0); }
+  .paper .body { position: relative; padding: 24px; }
+  .paper.l1 { box-shadow: var(--paper-edge), var(--lift-1); }
+  .paper.l2 { box-shadow: var(--paper-edge), var(--lift-2); }
+  .paper.l3 { box-shadow: var(--paper-edge), var(--lift-3); }
+  .stack { position: relative; isolation: isolate; }
+  .stack > .paper { z-index: 1; }
+  .stack > .paper:not(:last-child) { padding-bottom: 10px; border-bottom: 0; border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+  .stack > .paper + .paper { z-index: 2; margin-top: -20px; box-shadow: var(--paper-edge), var(--lift-1); }
+  .stack.p1::after, .stack.p2::after, .stack.p2::before { content: ''; position: absolute; z-index: 0; left: 14px; right: 14px; bottom: -10px; height: 40px; background: var(--grain-paper), var(--panel); border: 1px solid var(--border-strong); border-radius: 0 0 var(--radius-lg) var(--radius-lg); box-shadow: var(--peek-shadow); transform: rotate(var(--peek-tilt-1)); transform-origin: 50% 0; }
+  .stack.p2::before { z-index: -1; left: 28px; right: 28px; bottom: -18px; transform: rotate(var(--peek-tilt-2)); }
+  .stack.arrive > .paper:first-child { animation: sheet-in 420ms var(--ease-out) both; }
+  .stack.arrive > .paper + .paper { animation: sheet-settle 560ms var(--ease-out) 60ms both; }
+  .stack.arrive::after { animation: sheet-peek 520ms var(--ease-out) 180ms both; }
+  .stack.arrive::before { animation: sheet-peek 520ms var(--ease-out) 240ms both; }
+  @keyframes sheet-in { from { transform: translateY(6px); } }
+  @keyframes sheet-settle { from { transform: translateY(28px); } }
+  @keyframes sheet-peek { from { transform: translateY(-10px) rotate(0deg); } }
+  @media (prefers-reduced-motion: reduce) { .stack.arrive > *, .stack.arrive::before, .stack.arrive::after { animation: none !important; } }
+
+  /* Buttons */
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; margin: 0; background: none; color: var(--ink); font: var(--w-semibold) var(--t-body) var(--font-body); cursor: pointer; transition: transform 90ms var(--ease-out), box-shadow 160ms ease, background-color 160ms ease; }
+  .btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+  .btn svg { width: 18px; height: 18px; }
+  .key { min-height: var(--control-lg); padding: 0 20px; border-radius: var(--radius-pill); background: var(--brand-yellow); box-shadow: var(--shadow-key); }
+  .key:hover:not(:disabled) { box-shadow: var(--shadow-key-hover); }
+  .key:active:not(:disabled) { transform: translateY(var(--key-travel)); box-shadow: var(--shadow-key-press); }
+  .key:disabled { cursor: default; color: var(--muted); background: color-mix(in srgb, var(--brand-yellow) 38%, var(--panel)); box-shadow: none; }
+  .key.danger { background: var(--brand-red); color: #fff; box-shadow: var(--shadow-key-danger); }
+  .key.round { width: 44px; min-width: 44px; padding: 0; border-radius: 50%; }
+  .key.round:disabled { background: var(--panel); border: 1px solid var(--border); color: var(--border-strong); }
+  .quiet { position: relative; min-height: var(--control-md); padding: 0 16px; border-radius: var(--radius-pill); background: var(--grain-paper), var(--panel); border: 1px solid var(--border-strong); box-shadow: var(--slip-rest); }
+  .quiet:hover:not(:disabled):not(:active) { box-shadow: var(--slip-hover); }
+  .quiet:active:not(:disabled) { background: var(--panel-subtle); box-shadow: var(--slip-press); transform: translateY(1px); }
+  .quiet:hover:not(:disabled):not(:active) { transform: translateY(-1px); }
+  .quiet:disabled { cursor: default; color: var(--muted); border-color: var(--border); box-shadow: none; }
+  .quiet.round { width: 36px; min-width: 36px; padding: 0; border-radius: 50%; }
+  .text { min-height: var(--control-lg); padding: 0 8px; border-radius: var(--radius-sm); font-size: var(--t-meta); font-weight: var(--w-semibold); }
+  .text:hover { background: var(--panel-subtle); }
+  .text.danger { color: var(--brand-red); }
+  .btn-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 0; }
+  .btn-cell { display: grid; align-content: start; gap: 12px; padding: 20px 16px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  .btn-cell > :first-child { justify-self: start; }
+  .btn-cell .meta { font-size: var(--t-meta); color: var(--muted); }
+  .btn-cell .meta b { color: var(--ink); font-weight: 600; }
+
+  /* Page content inside the mocks */
+  .row { display: flex; align-items: center; gap: 14px; padding: 14px 0; border-bottom: 1px solid var(--border); }
+  .row:last-child { border-bottom: 0; }
+  .sticker { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: var(--panel-subtle); border: 1px solid var(--border); font-size: 20px; flex: none; }
+  .row b { display: block; color: var(--ink); font-weight: var(--w-medium); }
+  .row span.s { font-size: var(--t-meta); color: var(--muted); }
+  .pill-track { display: inline-flex; padding: 3px; border-radius: 999px; background: var(--panel-subtle); border: 1px solid var(--border-strong); box-shadow: var(--well); }
+  .pill-track span { padding: 8px 16px; border-radius: var(--radius-pill); font: var(--w-semibold) var(--t-body) var(--font-body); color: var(--muted); }
+  .pill-track span.on { background: var(--panel); color: var(--ink); box-shadow: 0 1px 0 var(--border-strong), 0 1px 2px rgba(0,0,0,0.08), 0 3px 8px -2px rgba(40,30,10,0.14); }
+  .faces { display: inline-flex; }
+  .faces i { width: 36px; height: 36px; border-radius: 50%; box-shadow: 0 0 0 2px var(--panel), inset 0 0 0 1px rgba(26,26,26,0.12); display: grid; place-items: center; font: 700 15px var(--font-headings); font-style: normal; color: rgba(26,26,26,0.55); }
+  .faces i + i { margin-left: -9px; }
+  .group { background: var(--panel-subtle); border-radius: 16px; box-shadow: var(--well); }
+  .group .gr { display: grid; grid-template-columns: 96px 1fr 18px; align-items: center; gap: 12px; min-height: 52px; padding: 0 16px; position: relative; }
+  .group .gr + .gr::before { content: ''; position: absolute; left: 16px; right: 0; top: 0; height: 1px; background: var(--border); }
+  .group .gr .k { font-size: var(--t-meta); color: var(--muted); }
+  .group .gr .v { color: var(--ink); font-weight: 500; }
+  .chev { color: var(--brand-yellow-deep); }
+
+  .two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 40px; align-items: start; }
+  .desk { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 20px; align-items: start; }
+  .caption { margin: 22px 0 0; font-size: var(--t-meta); color: var(--muted); max-width: 52ch; }
+  .floating { position: relative; padding: 24px; border-radius: 16px; background: var(--bg); border: 1px dashed var(--border-strong); }
+  .menu { width: 220px; border-radius: 12px; padding: 6px; }
+  .menu div { padding: 9px 12px; border-radius: var(--radius-sm); font-size: var(--t-body); color: var(--ink); }
+  .menu div:hover { background: var(--panel-subtle); }
+  .menu div.danger { color: var(--brand-red); }
+  .toast { display: inline-flex; align-items: center; gap: 12px; padding: 10px 10px 10px 16px; border-radius: 12px; }
+  .tip { display: inline-block; padding: 8px 12px; border-radius: var(--radius-sm); font-size: var(--t-meta); color: var(--ink); }
+  .spec { display: grid; gap: 28px; }
+  .spec-block > .label { display: block; margin: 0 0 12px; }
+  .type-row { display: grid; grid-template-columns: 120px minmax(0, 1fr) 190px; align-items: baseline; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .type-row:last-child { border-bottom: 0; }
+  .type-row .name { font: var(--w-semibold) var(--t-meta) var(--font-body); color: var(--ink); }
+  .type-row .spec-v { font: var(--w-regular) var(--t-meta) var(--font-body); color: var(--muted); font-variant-numeric: tabular-nums; }
+  .type-row .sample { min-width: 0; overflow-wrap: anywhere; color: var(--ink); }
+  .weights { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+  .weights div { padding: 14px 16px; border-radius: var(--radius-md); background: var(--panel-subtle); box-shadow: var(--well); }
+  .weights b { display: block; font-size: 22px; color: var(--ink); }
+  .weights span { font-size: var(--t-meta); color: var(--muted); }
+  .swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
+  .sw { border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--border-strong); background: var(--panel); box-shadow: var(--slip-rest); }
+  .sw .chip { height: 56px; display: flex; align-items: flex-end; padding: 8px 10px; font: var(--w-semibold) var(--t-meta) var(--font-body); }
+  .sw .info { padding: 8px 10px 10px; font-size: var(--t-meta); color: var(--muted); line-height: 1.35; }
+  .sw .info b { display: block; color: var(--ink); font-weight: var(--w-semibold); }
+  .ladder { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px; }
+  .ladder .bar { display: grid; justify-items: center; gap: 6px; font-size: var(--t-meta); color: var(--muted); font-variant-numeric: tabular-nums; }
+  .ladder .bar i { display: block; width: 56px; border-radius: var(--radius-sm); background: var(--grain-paper), var(--panel); border: 1px solid var(--border-strong); box-shadow: var(--slip-rest); }
+  .ladder .bar i.round { width: 56px; height: 56px; background: var(--panel-subtle); }
+  .ladder .bar i.space { width: auto; height: 12px; border-radius: 0; background: var(--brand-yellow); border: 0; box-shadow: inset 0 -2px 0 var(--brand-yellow-deep); }
+  .spec-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 28px; }
+  @media (max-width: 860px) { .type-row { grid-template-columns: 1fr; gap: 4px; } .weights { grid-template-columns: 1fr 1fr; } .spec-cols { grid-template-columns: 1fr; } .swatches { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 860px) { .two, .desk { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<main>
+  <header class="intro">
+    <h1>Every surface is paper</h1>
+    <p>The living reference for Bauhouse's design system. Its tokens are the app's own (copied from <code>frontend/src/styles.css</code> by <code>pnpm design:sync</code>), and every pattern here is a component in <code>frontend/src/components/ui/</code>. Before adding a value or a component, find it here; if it isn't here, add it to the system first.</p>
+  </header>
+
+  <!-- 0. The system -->
+  <section class="part">
+    <div class="part-head">
+      <div>
+        <h2>The system underneath</h2>
+        <p>Every value the app draws with is a token in this block: nine type roles, four weights, three inks, two edges, named control heights, corners, icons, the paper heights and the grain. Nothing outside it uses a raw colour or size.</p>
+      </div>
+    </div>
+    <div class="paper"><div class="body spec">
+      <div class="spec-block">
+        <span class="label">Type roles</span>
+        <div class="type-row"><span class="name">Display</span><span class="sample" style="font: var(--w-bold) var(--t-display)/1.05 var(--font-headings); letter-spacing: -0.03em">Elm Street</span><span class="spec-v">Outfit 700 · 36–48 · page title</span></div>
+        <div class="type-row"><span class="name">Title</span><span class="sample" style="font: var(--w-bold) var(--t-title)/1.15 var(--font-headings); letter-spacing: -0.02em">Porto weekend</span><span class="spec-v">Outfit 700 · 28 · sheet title</span></div>
+        <div class="type-row"><span class="name">Heading</span><span class="sample" style="font: var(--w-semibold) var(--t-heading)/1.2 var(--font-headings); letter-spacing: -0.015em">No lists yet</span><span class="spec-v">Outfit 600 · 22 · section, empty</span></div>
+        <div class="type-row"><span class="name">Code</span><span class="sample" style="font: var(--w-bold) var(--t-code)/1.1 var(--font-headings); letter-spacing: 0.12em; font-variant-numeric: tabular-nums">K7M2Q</span><span class="spec-v">Outfit 700 · 32 · 0.12em · codes</span></div>
+        <div class="type-row"><span class="name">Lead</span><span class="sample" style="font: var(--w-regular) var(--t-lead)/1.45 var(--font-body)">Add a place, plan or idea</span><span class="spec-v">Figtree 400 · 17 · composer</span></div>
+        <div class="type-row"><span class="name">Body</span><span class="sample" style="font: var(--w-regular) var(--t-body)/1.5 var(--font-body); color: var(--text)">Give this code to someone you live with. They enter it under Join a House.</span><span class="spec-v">Figtree 400 / 500 · 15 · text, rows</span></div>
+        <div class="type-row"><span class="name">Field</span><span class="sample" style="font: var(--w-regular) var(--t-field)/1.4 var(--font-body)">mia@example.com</span><span class="spec-v">Figtree 400 · 16 · every input</span></div>
+        <div class="type-row"><span class="name">Meta</span><span class="sample" style="font: var(--w-regular) var(--t-meta)/1.35 var(--font-body); color: var(--muted)">Added by Mia · Tue 14:00</span><span class="spec-v">Figtree 400 / 600 · 13 · times, notes</span></div>
+        <div class="type-row"><span class="name">Label</span><span class="sample" style="font: var(--w-bold) var(--t-label) var(--font-body); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted)">2 members</span><span class="spec-v">Figtree 700 caps · 12 · sections</span></div>
+        <div class="type-row"><span class="name">Stamp</span><span class="sample"><span style="font: var(--w-bold) var(--t-stamp) var(--font-body); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); background: var(--panel-subtle); padding: 3px 7px; border-radius: var(--radius-xs); box-shadow: var(--well)">Produce</span></span><span class="spec-v">Figtree 700 caps · 11 · tags</span></div>
+      </div>
+
+      <div class="spec-block">
+        <span class="label">Weights</span>
+        <div class="weights">
+          <div><b style="font: var(--w-regular) 22px var(--font-body)">Regular</b><span>400 · text, fields</span></div>
+          <div><b style="font: var(--w-medium) 22px var(--font-body)">Medium</b><span>500 · row text, values</span></div>
+          <div><b style="font: var(--w-semibold) 22px var(--font-body)">Semibold</b><span>600 · buttons, tabs, headings</span></div>
+          <div><b style="font: var(--w-bold) 22px var(--font-headings)">Bold</b><span>700 · titles, labels, stamps</span></div>
+        </div>
+      </div>
+
+      <div class="spec-block">
+        <span class="label">Colour roles</span>
+        <div class="swatches">
+          <div class="sw"><div class="chip" style="background: var(--ink); color: #fff">Ink</div><div class="info"><b>#1A1A1A</b>titles, values, controls · 17.4 on paper</div></div>
+          <div class="sw"><div class="chip" style="background: var(--text); color: #fff">Text</div><div class="info"><b>#3B3B3B</b>running text · 11.2</div></div>
+          <div class="sw"><div class="chip" style="background: var(--muted); color: #fff">Muted</div><div class="info"><b>#656C78</b>meta, labels, placeholders · 5.3; never on yellow</div></div>
+          <div class="sw"><div class="chip" style="background: var(--bg); color: var(--ink)">Desk</div><div class="info"><b>#F7F7F7 + grain</b>the page under the paper</div></div>
+          <div class="sw"><div class="chip" style="background: var(--panel); color: var(--ink)">Paper</div><div class="info"><b>#FFFFFF + grain</b>every sheet, slip, control</div></div>
+          <div class="sw"><div class="chip" style="background: var(--panel-subtle); color: var(--ink); box-shadow: var(--well)">Well</div><div class="info"><b>#FAFAFA, pressed in</b>detail groups, tracks, stamps</div></div>
+          <div class="sw"><div class="chip" style="background: var(--panel); color: var(--ink); box-shadow: inset 0 -1px 0 var(--border), inset 0 -2px 0 var(--border-strong)">Edges</div><div class="info"><b>#E6E6E6 / #D2D2D2</b>hairline in a sheet / edge of a sheet</div></div>
+          <div class="sw"><div class="chip" style="background: var(--brand-yellow); color: var(--ink); box-shadow: inset 0 -2px 0 var(--brand-yellow-deep)">Key</div><div class="info"><b>#FFD417 / #E6BE00</b>the one key, selected, done · ink 12.2</div></div>
+          <div class="sw"><div class="chip" style="background: var(--brand-red); color: #fff">Danger</div><div class="info"><b>#BE1E2D</b>delete and blocking errors only · 6.2</div></div>
+          <div class="sw"><div class="chip" style="background: var(--brand-blue); color: #fff">Focus</div><div class="info"><b>#2348A6</b>focus ring, caret, links · 8.2</div></div>
+          <div class="sw"><div class="chip" style="background: #FFF4D6; color: #7A4B00">Warn</div><div class="info"><b>#7A4B00 on #FFF4D6</b>overlaps, never red · 6.8</div></div>
+          <div class="sw"><div class="chip" style="background: var(--panel); color: #2E6B32">OK</div><div class="info"><b>#2E6B32</b>a ready line · 6.4</div></div>
+        </div>
+        <p class="caption" style="margin-top:12px">Retired as duplicates: <code>--ink-heading</code> (into ink), <code>--text-secondary</code> (into muted, it was only 4.5:1), <code>--color-primary</code> / <code>-deep</code> / <code>-secondary</code> / <code>-danger</code> / <code>-warning</code> (aliases of the brand colours). Day, category and map palettes are unchanged.</p>
+      </div>
+
+      <div class="spec-cols">
+        <div class="spec-block">
+          <span class="label">Control heights</span>
+          <div class="ladder">
+            <span class="bar"><i style="height: var(--control-sm)"></i>32 chip</span>
+            <span class="bar"><i style="height: var(--control-md)"></i>36 quiet</span>
+            <span class="bar"><i style="height: var(--control-lg)"></i>44 key</span>
+            <span class="bar"><i style="height: var(--row-h)"></i>52 row</span>
+            <span class="bar"><i style="height: var(--composer-h)"></i>56 composer</span>
+          </div>
+        </div>
+        <div class="spec-block">
+          <span class="label">Corners</span>
+          <div class="ladder">
+            <span class="bar"><i class="round" style="border-radius: var(--radius-xs)"></i>6 stamp</span>
+            <span class="bar"><i class="round" style="border-radius: var(--radius-sm)"></i>8 focus, text</span>
+            <span class="bar"><i class="round" style="border-radius: var(--radius-md)"></i>12 tile, slip</span>
+            <span class="bar"><i class="round" style="border-radius: var(--radius-lg)"></i>16 paper</span>
+            <span class="bar"><i class="round" style="border-radius: var(--radius-sheet) var(--radius-sheet) 0 0"></i>20 sheet top</span>
+          </div>
+        </div>
+      </div>
+      <div class="spec-block">
+        <span class="label">Space</span>
+        <div class="ladder" style="align-items:center">
+          <span class="bar"><i class="space" style="width:4px"></i>4</span>
+          <span class="bar"><i class="space" style="width:8px"></i>8</span>
+          <span class="bar"><i class="space" style="width:12px"></i>12</span>
+          <span class="bar"><i class="space" style="width:16px"></i>16</span>
+          <span class="bar"><i class="space" style="width:20px"></i>20</span>
+          <span class="bar"><i class="space" style="width:24px"></i>24</span>
+          <span class="bar"><i class="space" style="width:32px"></i>32</span>
+          <span class="bar" style="margin-left:16px;color:var(--muted)">icons 12 · 16 · 18 · 20 · 24 · 28</span>
+        </div>
+      </div>
+    </div></div>
+  </section>
+
+  <!-- 1. Pages are stacks -->
+  <section class="part">
+    <div class="part-head">
+      <div>
+        <h2>A page is a stack</h2>
+        <p><code>PaperStack</code> does the 20px overlap, the lift on the top sheet, the sheets peeking out beneath and the bottom-up arrival. Pages just hand it sheets.</p>
+      </div>
+      <button class="btn quiet" id="replay" type="button">Replay arrival</button>
+    </div>
+    <div class="two">
+      <div>
+        <div class="stack p1 arrive" data-replay>
+          <div class="paper"><div class="body">
+            <h2 style="font-size:var(--t-display)">Elm Street</h2>
+            <p style="margin:6px 0 18px;color:var(--muted)">Mia, Sam and the cat</p>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+              <span style="display:flex;align-items:center;gap:12px"><span class="faces"><i style="background:#E8D9A8">M</i><i style="background:#A9DCE3">S</i></span><span style="color:var(--muted)">Mia and Sam</span></span>
+              <button class="btn quiet" type="button">Invite</button>
+            </div>
+          </div></div>
+          <div class="paper"><div class="body">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <span class="pill-track"><span class="on">Lists</span><span>Trips</span></span>
+              <button class="btn key" type="button">+ New list</button>
+            </div>
+            <div class="row"><span class="sticker">🥦</span><span><b>Groceries</b><span class="s">Weekly shop</span></span></div>
+            <div class="row"><span class="sticker">🏠</span><span><b>Chores</b></span></div>
+          </div></div>
+        </div>
+        <p class="caption">The House: two sheets, one peeking edge. List and Trip pages are the same call with their own sheets.</p>
+      </div>
+      <div>
+        <div class="stack p1 arrive" data-replay>
+          <div class="paper"><div class="body">
+            <h2 style="font-size:var(--t-title)">Elm Street</h2>
+            <p style="margin:4px 0 22px;color:var(--muted)">House settings</p>
+            <div class="label" style="margin-bottom:8px">About</div>
+            <div class="group"><div class="gr"><span class="k">Description</span><span class="v">Mia, Sam and the cat</span><span></span></div></div>
+            <div class="label" style="margin:22px 0 8px">2 members</div>
+            <div class="group">
+              <div class="gr"><span class="k">Mia</span><span class="v" style="color:var(--muted);font-weight:400">You</span><span></span></div>
+              <div class="gr"><span class="k">Invite</span><span class="v">Get a code</span><span class="chev">›</span></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:18px">
+              <span style="font-size:13px;color:var(--muted)">Deleting takes everyone’s vote.</span>
+              <button class="btn text danger" type="button">Vote to delete</button>
+            </div>
+          </div></div>
+        </div>
+        <p class="caption">Settings, Account, no-House and sign-in become one-sheet stacks: a sheet with paper under it, never a lone card floating on the desk.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. Buttons -->
+  <section class="part">
+    <div class="part-head">
+      <div>
+        <h2>Buttons are paper at known heights</h2>
+        <p>One family. Hover and press them: the key is the only lifted control, a quiet slip lifts a hair and presses into the page, text is ink on the sheet. Disabled is paper with faded ink.</p>
+      </div>
+    </div>
+    <div class="paper"><div class="btn-grid">
+      <div class="btn-cell"><button class="btn key" type="button">Create list</button><span class="meta"><b>Key</b> · the one per sheet, lifted, settles 1px when pressed</span></div>
+      <div class="btn-cell"><button class="btn key" type="button" disabled>Create list</button><span class="meta"><b>Key, not yet</b> · yellow soaked into the paper, flat</span></div>
+      <div class="btn-cell"><button class="btn quiet" type="button">Share…</button><span class="meta"><b>Quiet slip</b> · rests a hair above, lifts on hover, presses in</span></div>
+      <div class="btn-cell"><button class="btn quiet" type="button" disabled>Join</button><span class="meta"><b>Quiet, not yet</b> · paper with faded ink and edge</span></div>
+      <div class="btn-cell"><span style="display:flex;gap:4px"><button class="btn text" type="button">Get new code</button><button class="btn text danger" type="button">Delete</button></span><span class="meta"><b>Text</b> · ink on the sheet; red means gone</span></div>
+      <div class="btn-cell"><button class="btn key danger" type="button">Delete</button><span class="meta"><b>Danger key</b> · confirmations only, red-tinted shadow</span></div>
+      <div class="btn-cell"><span style="display:flex;gap:12px;align-items:center"><button class="btn key round" type="button" aria-label="Add"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button><button class="btn key round" type="button" aria-label="Add" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button></span><span class="meta"><b>Round key</b> · the add bar's plus; empty field shows a paper disc</span></div>
+      <div class="btn-cell"><button class="btn quiet round" type="button" aria-label="Group by category"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="5" width="16" height="5" rx="1.5"/><rect x="4" y="14" width="16" height="5" rx="1.5"/></svg></button><span class="meta"><b>Round slip</b> · an icon on paper (the list's category toggle)</span></div>
+    </div></div>
+  </section>
+
+  <!-- 3. Desk -->
+  <section class="part">
+    <div class="part-head">
+      <div>
+        <h2>The desk is sheets laid side by side</h2>
+        <p>On a wide screen the trip's Ideas column becomes a one-sheet stack with the same top edge, lift and peek as the Days stack beside it, instead of a flat card.</p>
+      </div>
+    </div>
+    <div class="desk">
+      <div class="stack p1">
+        <div class="paper"><div class="body" style="padding:16px">
+          <div style="display:flex;justify-content:space-between"><span class="label">Ideas · 3</span><span style="font-size:13px;color:var(--muted)">Drag onto a day</span></div>
+          <div class="row" style="padding:12px 0"><span>Livraria Lello</span></div>
+          <div class="row" style="padding:12px 0"><span>Port tasting in Gaia</span></div>
+          <div class="row" style="padding:12px 0"><span>Tram 1 to Foz</span></div>
+        </div></div>
+      </div>
+      <div class="stack p1">
+        <div class="paper"><div class="body">
+          <h2 style="font-size:var(--t-title)">Porto weekend</h2>
+          <p style="margin:4px 0 0;color:var(--muted)">Fri 14 – Sun 16 · in 9 days</p>
+        </div></div>
+        <div class="paper"><div class="body">
+          <span class="pill-track"><span class="on">Plan</span><span>Bookings</span></span>
+          <div class="row" style="margin-top:8px"><span style="width:48px;font-size:12.5px;color:var(--muted)">11:00</span><span><b>São Bento station</b><span class="s">Azulejos in the hall</span></span></div>
+          <div class="row"><span style="width:48px;font-size:12.5px;color:var(--muted)">13:30</span><span><b>Lunch at Mercado do Bolhão</b></span></div>
+        </div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. Floating paper -->
+  <section class="part">
+    <div class="part-head">
+      <div>
+        <h2>Floating things are slips</h2>
+        <p>Menus, toasts and tooltips keep Ant's behaviour but are drawn once as paper at popover height, with the same edge, corners and type.</p>
+      </div>
+    </div>
+    <div class="floating">
+      <div style="display:flex;flex-wrap:wrap;gap:32px;align-items:flex-start">
+        <div class="paper l3 menu"><div>Edit details</div><div>Trip settings</div><div class="danger">Vote to delete</div></div>
+        <div style="display:grid;gap:20px;justify-items:start">
+          <div class="paper l3 toast"><span style="color:var(--ink)">Deleted Groceries.</span><button class="btn text" type="button">Undo</button></div>
+          <div class="paper l3 tip">Sam</div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+<script>
+  document.getElementById('replay').addEventListener('click', () => {
+    document.querySelectorAll('[data-replay]').forEach((el) => {
+      el.classList.remove('arrive'); void el.offsetWidth; el.classList.add('arrive')
+    })
+  })
+</script>
+</body>
+</html>

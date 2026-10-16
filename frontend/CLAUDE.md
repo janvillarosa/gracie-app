@@ -244,6 +244,24 @@ failure or an empty answer just shows nothing. Events: `nudge.shown|tapped|dismi
 - **Install:** `lib/installPrompt.ts` keeps the `beforeinstallprompt` event (listener registered in `main.tsx`, no `preventDefault`), and `useInstallWay()` returns `prompt` / `ios` / `installed` / `browser`; the receipt section shows an install button, Safari's step, or nothing accordingly.
 - **Prerender:** `pnpm build` also runs `vite build --ssr src/landing.server.tsx` and `scripts/prerender.mjs`, which writes the landing HTML into `#prerender` in `dist/index.html` and links the landing stylesheet. An inline script drops it before paint on other routes and for signed-in members; `Landing` removes it in a layout effect. Keep the landing page free of `window`/`document` access outside effects and handlers (use `useClientLayoutEffect` for layout effects). An optional `SITE_URL` at build time makes `og:url`/`og:image` absolute. The Dockerfile copies `scripts/` and `public/`.
 
+## Design tokens (`src/styles.css`, top) and the living reference
+
+All values come from the one `:root` block at the top of `src/styles.css`, grouped by role: type
+(`--t-display`, `--t-title`, `--t-heading`, `--t-lead`, `--t-field`, `--t-body`, `--t-meta`, `--t-label`,
+`--t-stamp`, `--t-code`), weights (`--w-regular/medium/semibold/bold`), inks (`--ink`, `--text`,
+`--muted`), surfaces (`--bg`, `--panel`, `--panel-subtle`), edges, accents, status, space, controls,
+corners, icons, depth (`--lift-0..3`, `--thick`, `--peek-*`, `--slip-*`, `--well`, `--shadow-key*`,
+`--key-travel`), texture (`--grain-paper`, `--grain-desk`: background layers with their strength baked
+in) and motion. **Fills:** paper is grained, so a flat white or tint inside a sheet shows as a patch.
+Inside a sheet use `background: var(--paper-fill)` (or `var(--well-fill)` for a tint); where something
+covers the desk use `var(--desk-fill)`. Never `background: var(--panel)` / `var(--bg)` on an element.
+**Round keys** (`Button kind="key" iconOnly`) take their size from `--key-size` (default 44px) and stay
+circles; their glyph is half the diameter. `docs/design-system/index.html` is the living reference: it carries a byte-for-byte
+copy of that block. **After changing a token run `pnpm design:sync`**; `__tests__/designTokens.test.ts`
+fails while the two differ, and also fails on any raw colour, px font size or numeric weight in
+`styles.css`, `trips.css`, `ui.css` or `gmap.css` outside the block. The landing page (`landing.css`)
+keeps its own poster scale.
+
 ## UI primitives (`src/components/ui/`)
 
 Every trip overlay (and the House's New list / Edit list) is a composition of these, one file
@@ -253,12 +271,14 @@ each, styled by `ui/ui.css` from tokens on `:root` in `styles.css` (`--space-*`,
 
 | Primitive | File | Is |
 |---|---|---|
+| `Paper` | `Paper.tsx` | One sheet: edge, white top highlight, grain, 16px corners and one of four heights (`lift` 0 resting, 1 on top, 2 overlay, 3 popover). `tone="tint"` for a well, `inset="flush"` to lay out its own padding, `as` for the element. Every panel is one (no Ant `Card`). |
+| `PaperStack` | `PaperStack.tsx` | Sheets bottom-up: each next one slides 20px over the last and lifts, the ones beneath lose their foot edge, `peek` (0/1/2) sheets show beneath a little off true, and the stack assembles bottom-up on arrival (`arrive={false}` for the next-stop deck, which deals its own cards). Used by House, List, Trip, the desk's Ideas column, settings, Account, no-House and sign-in. |
 | `Sheet` | `Sheet.tsx` | The one overlay. Variants `sheet`, `panel` (docked over the map), `slip`, `confirm`, `chips` (popover on wide, small sheet elsewhere, hangs from `anchor`). Header: phone drag handle + close key; closes with the key, Esc (innermost only), scrim and swipe-down; `dirty` asks "Discard this?"; focus trap and return. Slots `identity`, `actions`, `details`, `footer` always lay out in that order. |
 | `SheetIdentity`, `SheetTitle` | `SheetIdentity.tsx`, `SheetTitle.tsx` | Tier 1: leading mark, Outfit title (inline-editable, with the server's title limit), one muted context line. |
 | `SheetActions` | `SheetActions.tsx` | Tier 2: the one yellow key and at most one quiet button. |
 | `DetailGroup`, `NavRow` | `DetailGroup.tsx`, `NavRow.tsx` | Tier 3: a tinted group of 52px rows (label, value, chevron); a row is a button, link or opens a picker (`Sheet variant="chips"`). |
 | `SheetFooter` | `SheetFooter.tsx` | Tier 4: "Added by Mia" and a red Delete. |
-| `Button` | `Button.tsx` | `key`, `quiet`, `text` (`danger`); `href` makes it a link. |
+| `Button` | `Button.tsx` | Paper at known heights: `key` (the one lifted control, one per sheet; sinks `--key-travel` when pressed; "not yet" is yellow soaked into the paper), `quiet` (a slip: rests a hair up, lifts on hover, presses in), `text` (ink on the sheet; `danger` is red). `iconOnly` makes a round one (the add bar's `kind="key" iconOnly` plus shows a paper disc while there's nothing to add). No `loading` spinner: the label says what is happening ("Saving…"). `href` makes it a link. |
 | `Chip`, `ChipGroup` | `Chip.tsx`, `ChipGroup.tsx` | A pill that opens a picker; the large toggle choices (kinds, categories, times). |
 | `Field`, `Switch` | `Field.tsx`, `Switch.tsx` | Borderless text field (with inline problem text); the yellow switch. |
 | `Combobox` | `Combobox.tsx` | The one ARIA combobox: slips rise above an add bar, ↑/↓, Esc, Tab takes the ghost, polite count, `visualViewport` fit. Enter only picks a highlighted option, else `onSubmitText`. `AddItemBar` (pantry) and the trip `QuickAdd` (places) both use it; the draft stays in the bar. |
@@ -273,7 +293,7 @@ new code"), `CreateHouseSheet`, `DeleteVoteSheet` (says what a delete vote does 
 the last vote deletes) and `IconPicker` (`ChipGroup` tiles). House settings mirrors Trip settings and
 autosaves; so does Edit list.
 
-Rules, enforced by `__tests__/ui.enforcement.test.ts`: trip files and `RoomPage` import no Ant
+Rules, enforced by `__tests__/ui.enforcement.test.ts`: no file outside the landing page imports Ant `Card` or `Button`; trip files and `RoomPage` import no Ant
 `Modal`/`Drawer`/`Popover` (trip files also no `Input`/`Select`/`Button`/`Switch`/`DatePicker`);
 `trips.css` and `ui.css` contain no hex colours outside `:root` and no side-stripe accent borders;
 every token `ui.css` uses is defined. A sheet has at most one `key` Button (`ui.helpers.ts`).

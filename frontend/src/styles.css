@@ -1,81 +1,157 @@
 @import "tailwindcss";
 
-/* Theme tokens via CSS variables (Adobe UI/UX palette) */
+/* ===========================================================================================
+   Design tokens: the one source of every value the app draws with.
+   The living reference is docs/design-system/index.html (it shows every token below, in use).
+   Never write a raw colour, size, weight, radius or shadow outside this block: add or reuse a
+   token, and keep the reference page in step (__tests__/designTokens.test.ts checks it).
+   =========================================================================================== */
 :root {
-  /* Light pastel theme (default) */
-  --bg: #F7F7F7;
-  /* slightly softer page background */
-  --panel: #FFFFFF;
-  /* container background */
-  --text: #3B3B3B;
-  /* non-black primary text */
-  --text-secondary: rgba(59, 59, 59, 0.70);
-  --muted: #656C78;
-  /* Ink: the darkest text, and the heading ink a step lighter */
-  --ink: #1A1A1A;
-  --ink-heading: #2B2B2B;
-  /* supplemental muted */
-  /* Brand palette */
-  --brand-yellow: #FFD417;
-  /* primary actions */
-  --brand-yellow-deep: #E6BE00;
-  /* hover/active shade */
-  --brand-red: #BE1E2D;
-  /* danger */
-  --brand-blue: #2348A6;
-  /* primary links */
-
-  /* Mapped theme tokens for compatibility */
-  --color-primary: var(--brand-yellow);
-  --color-primary-deep: var(--brand-yellow-deep);
-  --color-secondary: #C7B090;
-  /* pastel tan */
-  --color-warning: #FFE766;
-  /* soft light yellow */
-  --color-danger: var(--brand-red);
-  /* brand danger */
-  --border: #E6E6E6;
-  /* lighter borders */
-  --border-strong: #D2D2D2;
-  /* stronger border for list items */
-  --panel-subtle: #FAFAFA;
-  /* soft panel background for inline sections */
+  /* ---- Type: two families, eight roles ------------------------------------------------ */
   --font-headings: 'Outfit Variable', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
   --font-body: 'Figtree Variable', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
-  /* Focus ring: brand blue, visible on white and on yellow */
+  --t-display: clamp(36px, 4.4vw, 48px); /* Outfit 700: the page title */
+  --t-title: 28px; /* Outfit 700: a sheet or settings title */
+  --t-heading: 22px; /* Outfit 600: a section head, an empty state */
+  --t-lead: 17px; /* Figtree 400: the composer */
+  --t-field: 16px; /* Figtree 400: every input (never smaller: iOS zooms) */
+  --t-body: 15px; /* Figtree 400/500: running text, rows, buttons */
+  --t-meta: 13px; /* Figtree 400/600: times, notes, secondary lines, text buttons */
+  --t-label: 12px; /* Figtree 700 caps 0.08em: section labels */
+  --t-stamp: 11px; /* Figtree 700 caps 0.08em: stamps, kickers */
+  --t-code: 32px; /* Outfit 700 0.12em tabular: a confirmation or invite code */
+
+  /* ---- Weights: four ----------------------------------------------------------------- */
+  --w-regular: 400;
+  --w-medium: 500;
+  --w-semibold: 600;
+  --w-bold: 700;
+
+  /* ---- Ink: three greys for text ----------------------------------------------------- */
+  --ink: #1A1A1A; /* titles, values, controls (17.4:1 on paper) */
+  --text: #3B3B3B; /* running text (11.2:1) */
+  --muted: #656C78; /* meta, labels, placeholders (5.3:1); never on yellow */
+
+  /* ---- Surfaces: the desk and the paper on it ----------------------------------------- */
+  --bg: #F7F7F7; /* the desk */
+  --panel: #FFFFFF; /* paper: every sheet, slip and control face */
+  --panel-subtle: #FAFAFA; /* a well: detail groups, tracks, stamps, pressed fills */
+  --sheet-scrim: rgba(0, 0, 0, 0.35);
+
+  /* ---- Edges ------------------------------------------------------------------------- */
+  --border: #E6E6E6; /* a hairline inside a sheet */
+  --border-strong: #D2D2D2; /* the edge of a sheet, a slip, a track */
+  --edge-deep: #D9D9D6; /* the ream: the second step of a sheet's thickness */
+  --edge-soft: #E2E2E0; /* the ream: the first step */
+
+  /* ---- Accents: one key, red means gone, blue says you are here ----------------------- */
+  --brand-yellow: #FFD417; /* the key, selected, done */
+  --brand-yellow-deep: #E6BE00; /* the key's edge, selected borders */
+  --brand-red: #BE1E2D; /* delete and blocking errors only */
+  --brand-blue: #2348A6; /* focus ring, caret, links */
+  --on-red: #FFFFFF;
+  --on-pin: #FFFFFF;
+  --highlighter: color-mix(in srgb, var(--brand-yellow) 70%, transparent);
   --focus-ring: 0 0 0 2px var(--panel), 0 0 0 4px color-mix(in srgb, var(--brand-blue) 70%, transparent);
-  /* Motion: exponential ease-out for arrivals, quick settle for presses */
+
+  /* ---- Status ------------------------------------------------------------------------ */
+  --warn-bg: #FFF4D6;
+  --warn-ink: #7A4B00; /* 6.8:1 on its ground; never red, an overlap is not an error */
+  --ok-ink: #2E6B32;
+
+  /* ---- Space: a 4px scale ------------------------------------------------------------ */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+
+  /* ---- Controls and rows ------------------------------------------------------------- */
+  --control-sm: 32px; /* a target chip, a small round slip */
+  --control-md: 36px; /* chips, quiet slips, segments */
+  --control-lg: 44px; /* keys, text actions, tracks, the touch target */
+  --row-h: 52px; /* a detail or list row */
+  --composer-h: 56px; /* the desk's add bar */
+
+  /* ---- Corners ----------------------------------------------------------------------- */
+  --radius-xs: 6px; /* stamps, small tags */
+  --radius-sm: 8px; /* focus rings, text buttons */
+  --radius-md: 12px; /* tiles, menus, slips, segments */
+  --radius-lg: 16px; /* paper */
+  --radius-sheet: 20px; /* the top of a bottom sheet */
+  --radius-pill: 999px; /* keys, quiet buttons, chips, tracks */
+
+  /* ---- Icons ------------------------------------------------------------------------- */
+  --icon-xs: 12px; /* a glyph inside a chip */
+  --icon-sm: 16px;
+  --icon-md: 18px;
+  --icon-lg: 20px;
+  --icon-xl: 24px; /* an emoji on a 44px sticker */
+  --icon-2xl: 28px; /* an emoji on a 52px tile */
+
+  /* ---- Depth: paper heights, the ream, slips, wells, the key ------------------------- */
+  --paper-edge: inset 0 1px 0 rgba(255, 255, 255, 0.9); /* the white top highlight */
+  /* Thickness: a sheet is a few leaves deep, so its foot shows a stepped edge. */
+  --thick: inset 0 -1px 0 rgba(0, 0, 0, 0.06), 0 1px 0 var(--edge-soft), 0 2px 0 var(--edge-deep), 0 3px 0 var(--edge-soft);
+  --lift-0: var(--thick), 0 4px 6px -2px rgba(40, 30, 10, 0.1), 0 18px 34px -14px rgba(40, 30, 10, 0.22); /* resting */
+  --lift-1: var(--thick), 0 6px 10px -4px rgba(40, 30, 10, 0.14), 0 34px 64px -22px rgba(40, 30, 10, 0.36); /* on top */
+  --lift-2: var(--thick), 0 8px 14px -6px rgba(40, 30, 10, 0.18), 0 36px 68px -22px rgba(40, 30, 10, 0.38); /* overlay */
+  --lift-3: var(--thick), 0 8px 14px -6px rgba(40, 30, 10, 0.2), 0 40px 70px -24px rgba(40, 30, 10, 0.4); /* popover */
+  --peek-shadow: 0 1px 0 var(--edge-deep), 0 10px 16px -8px rgba(40, 30, 10, 0.26);
+  --peek-tilt-1: -0.6deg; /* the sheets beneath sit a little off true, like a real pile */
+  --peek-tilt-2: 0.9deg;
+  --slip-rest: var(--paper-edge), 0 1px 0 var(--border-strong), 0 2px 4px -2px rgba(40, 30, 10, 0.12);
+  --slip-hover: var(--paper-edge), 0 1px 0 var(--border-strong), 0 6px 12px -6px rgba(40, 30, 10, 0.2);
+  --slip-press: inset 0 1px 2px rgba(40, 30, 10, 0.14);
+  --well: inset 0 2px 3px rgba(40, 30, 10, 0.09); /* pressed into the sheet */
+  --shadow-key: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 2px 0 var(--brand-yellow-deep), 0 3px 2px -1px rgba(120, 90, 0, 0.25), 0 10px 18px -8px rgba(150, 115, 0, 0.45);
+  --shadow-key-hover: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 2px 0 var(--brand-yellow-deep), 0 3px 2px -1px rgba(120, 90, 0, 0.25), 0 14px 24px -8px rgba(150, 115, 0, 0.5);
+  --shadow-key-press: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 1px 2px rgba(120, 90, 0, 0.25);
+  --shadow-key-danger: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 2px 0 color-mix(in srgb, var(--brand-red) 62%, black), 0 10px 18px -8px color-mix(in srgb, var(--brand-red) 45%, transparent);
+  --shadow-key-danger-hover: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 2px 0 color-mix(in srgb, var(--brand-red) 62%, black), 0 14px 24px -8px color-mix(in srgb, var(--brand-red) 50%, transparent);
+  --key-travel: 2px; /* how far a key sinks when pressed: its whole underside */
+  --avatar-edge: color-mix(in srgb, var(--ink) 12%, transparent);
+  --wash: color-mix(in srgb, var(--ink) 6%, transparent); /* a hover or open fill on paper */
+  --wash-danger: color-mix(in srgb, var(--brand-red) 7%, transparent);
+  --panel-veil: rgba(255, 255, 255, 0.9); /* paper over the map */
+  --shadow-up: 0 -10px 16px -14px rgba(40, 30, 10, 0.2); /* a bar pinned to the foot of a sheet */
+  --tab-lift: 0 1px 0 var(--border-strong), 0 1px 2px rgba(0, 0, 0, 0.08), 0 3px 8px -2px rgba(40, 30, 10, 0.14); /* the selected tab on its track */
+  --swipe-shadow: 1px 0 0 rgba(0, 0, 0, 0.08), 12px 0 16px -6px rgba(50, 0, 6, 0.55);
+  --tray-inset: inset 0 2px 4px rgba(0, 0, 0, 0.22), inset 0 -1px 2px rgba(0, 0, 0, 0.12);
+  --pin-shadow: 0 2px 8px rgba(0, 0, 0, 0.12); /* map pins: the one exception to the paper heights */
+
+  /* ---- Texture: a fine grain on paper, a coarser one on the desk. Each is a background layer
+     with its strength baked in: `background: var(--grain-paper), var(--panel)`. --------------- */
+  --grain-paper: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.25 0 0 0 0 0.22 0 0 0 0 0.18 0 0 0 0.077 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --paper-fill: var(--grain-paper), var(--panel); /* a white fill inside a sheet: the same paper, grain and all */
+  --well-fill: var(--grain-paper), var(--panel-subtle); /* a tinted fill inside a sheet */
+  --desk-fill: var(--grain-desk), var(--bg); /* the desk, where something must cover what scrolls under it */
+  --grain-desk: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.2 0 0 0 0 0.2 0 0 0 0 0.2 0 0 0 0.21 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+
+  /* ---- Motion ------------------------------------------------------------------------ */
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --dur-press: 90ms;
   --dur-fast: 160ms;
-  /* One height for every control in the list toolbar and add bar */
-  --control-h: 44px;
   --dur-base: 240ms;
   --dur-slow: 420ms;
-  /* Yellow key: shadow tinted from the deep yellow instead of grey */
-  --shadow-key: inset 0 1px 0 rgba(255, 255, 255, 0.55), 0 1px 0 var(--brand-yellow-deep), 0 2px 6px -1px rgba(150, 115, 0, 0.28);
-  --shadow-key-hover: inset 0 1px 0 rgba(255, 255, 255, 0.55), 0 1px 0 var(--brand-yellow-deep), 0 6px 14px -4px rgba(150, 115, 0, 0.38);
-  /* The red key's own edge and drop, tinted from the red (never the yellow key's warm glow). */
-  /* The edge of a face: a hairline of ink drawn just inside an avatar, so a pale picture
-     still has a rim on white paper and on the pale desk. */
-  --avatar-edge: color-mix(in srgb, var(--ink) 12%, transparent);
-  --shadow-key-danger: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 1px 0 color-mix(in srgb, var(--brand-red) 70%, black), 0 2px 6px -1px color-mix(in srgb, var(--brand-red) 30%, transparent);
-  --shadow-key-danger-hover: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 1px 0 color-mix(in srgb, var(--brand-red) 70%, black), 0 6px 14px -4px color-mix(in srgb, var(--brand-red) 40%, transparent);
-  --shadow-soft: 0 1px 2px rgba(20, 20, 20, 0.05);
-  /* Paper elevation: every surface is a sheet at one of these heights.
-     Each step = a tight contact shadow + a soft ambient one. */
-  --paper-edge: inset 0 1px 0 rgba(255, 255, 255, 0.9);
-  --lift-0: 0 1px 2px rgba(0, 0, 0, 0.04), 0 6px 18px -6px rgba(0, 0, 0, 0.08);
-  --lift-1: 0 -1px 0 rgba(0, 0, 0, 0.02), 0 12px 28px -8px rgba(0, 0, 0, 0.12);
-  --lift-2: 0 2px 4px rgba(0, 0, 0, 0.06), 0 18px 36px -10px rgba(0, 0, 0, 0.22);
-  --lift-3: 0 1px 2px rgba(0, 0, 0, 0.05), 0 12px 32px -8px rgba(0, 0, 0, 0.18);
-  --highlighter: color-mix(in srgb, var(--brand-yellow) 70%, transparent);
-  --radius-squircle: 16px;
-  /* unified rounded shape */
-  --ant-modal-footer-margin-top: 25px;
-  /* app-wide modal footer spacing */
 
-  /* Category Colors */
+  /* ---- Layout: sheets and the row grid ----------------------------------------------- */
+  --sheet-inset: 20px;
+  --sheet-max-h: 90dvh;
+  --detail-inset: 16px;
+  --detail-label-w: 96px;
+  --tier-identity-actions: 18px;
+  --tier-actions-details: 26px;
+  --tier-details-footer: 22px;
+  /* The row grid: [lead] 12 [time] 12 [title] [trail]. A day without times sets --tcol to 0. */
+  --lead: 24px;
+  --gap: 12px;
+  --lead-col: calc(var(--lead) + var(--gap));
+  --time-w: 48px;
+
+  /* ---- Functional palettes (unchanged): grocery categories ---------------------------- */
   --cat-produce: #4CAF50;
   --cat-dairy: #2196F3;
   --cat-bakery: #FF9800;
@@ -87,20 +163,64 @@
   --cat-beverages: #E91E63;
   --cat-household: #78909C;
   --cat-general: #9E9E9E;
-}
 
-/* Optional dark theme hook if needed later */
-.theme-dark {
-  --bg: #0b0d0f;
-  --panel: #13161a;
-  --text: #f5f7fa;
-  --text-secondary: rgba(245, 247, 250, 0.65);
-  --muted: #b8c1cc;
-  --color-primary: var(--brand-yellow);
-  --color-secondary: #BFA07A;
-  --color-warning: #FFE766;
-  --color-danger: var(--brand-red);
-  --border: #22303c;
+  /* ---- Functional palettes: trip days (each 3:1 on the map ground; day 7 reuses day 1) */
+  --trip-day-0: #2348A6;
+  --trip-day-1: #BE1E2D;
+  --trip-day-2: #946D00;
+  --trip-day-3: #1E7B3C;
+  --trip-day-4: #0E7C86;
+  --trip-day-5: #6A3FB5;
+
+  /* ---- Functional palettes: trip category stamps (ink 4.5:1 on its tint) and map pips */
+  --trip-cat-food-bg: #FDE7D2;
+  --trip-cat-food-fg: #8A4209;
+  --trip-cat-sight-bg: #DCE5FA;
+  --trip-cat-sight-fg: #1D3F93;
+  --trip-cat-activity-bg: #DDF0E2;
+  --trip-cat-activity-fg: #17602F;
+  --trip-cat-transport-bg: #E8E8E8;
+  --trip-cat-transport-fg: #333333;
+  --trip-cat-stay-bg: #FFF1B3;
+  --trip-cat-stay-fg: #6B5000;
+  --trip-cat-shopping-bg: #E8DFF6;
+  --trip-cat-shopping-fg: #55308F;
+  --trip-cat-other-bg: #EFEFEF;
+  --trip-cat-other-fg: #4A4A4A;
+  --pip-food: #C4560C;
+  --pip-sight: #2348A6;
+  --pip-activity: #1E7B3C;
+  --pip-transport: #5A6470;
+  --pip-stay: #946D00;
+  --pip-shopping: #8A3FB5;
+  --pip-other: #767676;
+  --pip-done: #A9ADA6;
+
+  /* ---- Map pins: our paper pills on Google's map. The one exception to the paper heights:
+     they sit on a photograph-like ground, so they carry their own small shadows. ------------ */
+  --pin-ink: var(--ink);
+  --pin-halo: var(--panel);
+  --pin-muted: #5D635C;
+  --pin-edge: rgba(0, 0, 0, 0.08);
+  --pin-next-edge: var(--brand-yellow-deep);
+  --pin-next-ink: #5B4A00;
+  --pin-done-bg: #F3F3F3;
+  --pin-done-ink: #6B7079;
+  --pin-preview: rgba(255, 255, 255, 0.4);
+  --pin-anchor-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
+  --pin-edge-deep: rgba(0, 0, 0, 0.28);
+  --pin-shadow-rest: 0 1px 2px rgba(0, 0, 0, 0.08), 0 6px 14px -6px rgba(0, 0, 0, 0.28);
+  --pin-shadow-next: 0 1px 0 var(--brand-yellow-deep), 0 8px 16px -6px rgba(150, 115, 0, 0.45);
+  --pin-shadow-done: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --pin-shadow-stub: 0 1px 2px rgba(0, 0, 0, 0.18);
+  --pin-shadow-hot: 0 2px 3px rgba(0, 0, 0, 0.1), 0 12px 18px -8px rgba(0, 0, 0, 0.36);
+  --pin-shadow-cluster: 0 4px 10px -4px rgba(0, 0, 0, 0.4);
+  --trip-transport: #4B5563; /* the dotted leg to a train, flight or car stop */
+
+  /* ---- Functional palettes: the plain map preview ------------------------------------ */
+  --trip-map-ground: #E9EEE6;
+  --trip-map-earth: #EEF0E9;
+  --trip-map-water: #CFDDE3;
 }
 
 * {
@@ -113,12 +233,21 @@ body,
   height: 100%;
 }
 
+/* The desk's grain, behind everything and fixed, so it never repaints with a scroll. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image: var(--grain-desk);
+  pointer-events: none;
+}
 body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-body);
-  font-size: 15px;
+  font-size: var(--t-body);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -139,8 +268,7 @@ body {
 a:focus-visible,
 button:focus-visible,
 [role='button']:focus-visible,
-[tabindex]:focus-visible,
-.ant-btn:focus-visible {
+[tabindex]:focus-visible {
   box-shadow: var(--focus-ring) !important;
   outline: none !important;
 }
@@ -152,7 +280,7 @@ select,
 .ant-input,
 .ant-select-selection-item,
 .ant-input-affix-wrapper input {
-  font-size: 16px !important;
+  font-size: var(--t-field) !important;
 }
 
 /* Improve tap responsiveness on interactive elements */
@@ -188,11 +316,11 @@ body:has(.login-page) {
   padding-inline: 20px;
 }
 
-.login-page .paper-card {
-  box-shadow: var(--paper-edge), 0 2px 4px rgba(120, 90, 0, 0.12), 0 18px 40px -12px rgba(120, 90, 0, 0.35);
+.login-page .paper {
+  box-shadow: var(--paper-edge), var(--lift-1);
 }
 
-.auth-card.ant-card .ant-card-body {
+.auth-card > .paper-body {
   padding: 28px 28px 0;
 }
 
@@ -205,9 +333,9 @@ body:has(.login-page) {
 }
 
 .auth-card .ant-form-item-label > label {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--ink-heading);
+  font-size: var(--t-meta);
+  font-weight: var(--w-semibold);
+  color: var(--ink);
 }
 
 .auth-card .ant-input-outlined,
@@ -219,23 +347,19 @@ body:has(.login-page) {
   min-height: 0;
 }
 
-.auth-card .ant-btn-primary {
-  margin-top: 6px;
-}
-
 /* Footer sits on its own strip under a hairline, centered, so the form ends cleanly */
 .auth-footer {
   margin: 24px -28px 0;
   padding: 16px 28px 18px;
   border-top: 1px solid var(--border);
-  background: var(--panel-subtle);
-  border-radius: 0 0 var(--radius-squircle) var(--radius-squircle);
+  background: var(--well-fill);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
   text-align: center;
-  font-size: 14px;
+  font-size: var(--t-meta);
 }
 
 .auth-footer .link-primary {
-  font-weight: 600;
+  font-weight: var(--w-semibold);
 }
 
 /* The form arrives like paper set down on the yellow */
@@ -273,42 +397,42 @@ h5.ant-typography {
   line-height: 1.15;
   letter-spacing: -0.015em;
   text-wrap: balance;
-  color: var(--ink-heading);
+  color: var(--ink);
 }
 
 /* Responsive, slightly larger titles (mobile-first with clamp) */
 h1,
 h1.ant-typography {
-  font-size: clamp(32px, 4.2vw, 45px);
-  font-weight: 720;
+  font-size: var(--t-display);
+  font-weight: var(--w-bold);
   letter-spacing: -0.03em;
   line-height: 1.05;
 }
 
 h2,
 h2.ant-typography {
-  font-size: clamp(26px, 3.2vw, 38px);
-  font-weight: 700;
+  font-size: var(--t-title);
+  font-weight: var(--w-bold);
   letter-spacing: -0.025em;
   line-height: 1.08;
 }
 
 h3,
 h3.ant-typography {
-  font-size: clamp(18px, 2.6vw, 26px);
-  font-weight: 620;
+  font-size: var(--t-heading);
+  font-weight: var(--w-semibold);
 }
 
 h4,
 h4.ant-typography {
-  font-size: clamp(16px, 2.2vw, 22px);
-  font-weight: 600;
+  font-size: var(--t-lead);
+  font-weight: var(--w-semibold);
 }
 
 h5,
 h5.ant-typography {
-  font-size: clamp(14px, 2.0vw, 18px);
-  font-weight: 600;
+  font-size: var(--t-body);
+  font-weight: var(--w-semibold);
 }
 
 /* On mobile, bump main headers ~15%, subheadings (~h3) ~10% */
@@ -316,172 +440,30 @@ h5.ant-typography {
 
   h1,
   h1.ant-typography {
-    font-size: clamp(42px, 4.8vw, 56px);
+    font-size: var(--t-display);
   }
 
   h2,
   h2.ant-typography {
-    font-size: clamp(35px, 3.68vw, 46px);
+    font-size: var(--t-title);
   }
 
   /* Subheadings */
   h3,
   h3.ant-typography {
-    font-size: clamp(20px, 2.86vw, 28px);
+    font-size: var(--t-heading);
   }
 
   h4,
   h4.ant-typography {
-    font-size: clamp(18px, 2.53vw, 25px);
+    font-size: var(--t-lead);
   }
 
   h5,
   h5.ant-typography {
-    font-size: clamp(16px, 2.30vw, 21px);
+    font-size: var(--t-body);
   }
 }
-
-/* Ensure Ant overlays inherit the light palette */
-.ant-dropdown,
-.ant-popover,
-.ant-tooltip,
-.ant-modal .ant-modal-content,
-.ant-drawer .ant-drawer-content {
-  background: var(--panel);
-  color: var(--text);
-}
-
-.ant-modal .ant-modal-header,
-.ant-popover .ant-popover-inner,
-.ant-dropdown-menu,
-.ant-drawer .ant-drawer-header {
-  background: var(--panel);
-}
-
-/* Hard override: ensure modal footer spacing applies */
-.ant-modal .ant-modal-footer {
-  margin-top: 25px !important;
-}
-
-/* Buttons: tactile pill keys. Lift on hover (pointer devices only), settle on press. */
-.ant-btn {
-  font-weight: 600;
-  letter-spacing: -0.005em;
-  border-radius: 999px !important;
-  transition: transform var(--dur-fast) var(--ease-out),
-    background-color var(--dur-fast) ease,
-    color var(--dur-fast) ease,
-    border-color var(--dur-fast) ease,
-    box-shadow var(--dur-base) var(--ease-out),
-    opacity var(--dur-fast) ease;
-}
-
-.ant-btn:active:not(:disabled) {
-  transform: scale(0.96);
-  transition-duration: var(--dur-press);
-}
-
-/* Default (outlined) buttons: white key with a hairline lift */
-.ant-btn-default:not(.ant-btn-dangerous) {
-  border-color: var(--border-strong) !important;
-  color: var(--text) !important;
-  box-shadow: var(--shadow-soft);
-}
-
-/* Text/icon buttons: quiet circle that fills on hover */
-.ant-btn-text:not(.ant-btn-dangerous) {
-  color: var(--muted);
-}
-
-/* Primary buttons: brand yellow */
-.ant-btn-primary {
-  border-color: var(--brand-yellow-deep) !important;
-  background: var(--brand-yellow) !important;
-  background-image: none !important;
-  color: var(--ink) !important;
-  box-shadow: var(--shadow-key);
-}
-
-@media (hover: hover) {
-  .ant-btn-default:not(.ant-btn-dangerous):not(:disabled):hover {
-    background: var(--panel-subtle) !important;
-    border-color: color-mix(in srgb, var(--border-strong) 70%, var(--text)) !important;
-    color: var(--ink) !important;
-  }
-
-  .ant-btn-text:not(.ant-btn-dangerous):not(:disabled):hover {
-    background: rgba(26, 26, 26, 0.06) !important;
-    color: var(--text) !important;
-  }
-
-  .ant-btn-primary:not(:disabled):not(.ant-btn-dangerous):hover {
-    background: color-mix(in srgb, var(--brand-yellow) 94%, black) !important;
-    box-shadow: var(--shadow-key-hover);
-    transform: translateY(-1px);
-  }
-}
-
-.ant-btn-primary:not(.ant-btn-dangerous):active:not(:disabled) {
-  background: color-mix(in srgb, var(--brand-yellow) 86%, black) !important;
-  box-shadow: inset 0 1px 2px rgba(120, 90, 0, 0.25);
-  transform: translateY(0) scale(0.96);
-}
-
-/* Ensure danger primary buttons use brand red */
-.ant-btn-primary.ant-btn-dangerous {
-  background: var(--brand-red) !important;
-  border-color: color-mix(in srgb, var(--brand-red) 85%, black) !important;
-  color: #fff !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 2px 6px -1px rgba(120, 15, 25, 0.35);
-}
-
-.ant-btn-primary.ant-btn-dangerous:hover,
-.ant-btn-primary.ant-btn-dangerous:focus,
-.ant-btn-primary.ant-btn-dangerous:active {
-  background: color-mix(in srgb, var(--brand-red) 90%, black) !important;
-  border-color: color-mix(in srgb, var(--brand-red) 80%, black) !important;
-}
-
-/* Default (non-primary) danger buttons */
-.ant-btn-dangerous:not(.ant-btn-primary):not(.ant-btn-text):not(.ant-btn-link) {
-  color: var(--brand-red) !important;
-  border-color: color-mix(in srgb, var(--brand-red) 45%, white) !important;
-}
-
-.ant-btn-dangerous:not(.ant-btn-primary):not(.ant-btn-text):not(.ant-btn-link):not(:disabled):hover,
-.ant-btn-dangerous:not(.ant-btn-primary):not(.ant-btn-text):not(.ant-btn-link):not(:disabled):active {
-  color: var(--brand-red) !important;
-  border-color: var(--brand-red) !important;
-  background: rgba(190, 30, 45, 0.06) !important;
-}
-
-/* Disabled buttons: flat and quiet, no lift */
-.ant-btn[disabled],
-.ant-btn:disabled,
-.ant-btn.ant-btn-disabled,
-.ant-btn[aria-disabled='true'] {
-  background: #F2F2F2 !important;
-  border-color: var(--border) !important;
-  color: #9A9A9A !important;
-  box-shadow: none !important;
-  background-image: none !important;
-  transform: none !important;
-}
-
-.ant-btn-text[disabled],
-.ant-btn-text:disabled {
-  background: transparent !important;
-}
-
-@media (prefers-reduced-motion: reduce) {
-
-  .ant-btn,
-  .ant-btn:active,
-  .ant-btn-primary:hover {
-    transform: none !important;
-  }
-
-  }
 
 .container {
   max-width: 720px;
@@ -495,12 +477,12 @@ h5.ant-typography {
   view-transition-name: brand-logo;
   display: block;
   /* Offset to start after the card's curved corner */
-  margin: 0 0 10px var(--radius-squircle);
+  margin: 0 0 10px var(--radius-lg);
 }
 
 .brand-logo a {
   display: block;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
 }
 
 .brand-logo a:focus {
@@ -538,7 +520,7 @@ h5.ant-typography {
   align-items: center;
   justify-content: center;
   border: none;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: transparent;
   padding: 0;
   cursor: pointer;
@@ -562,13 +544,13 @@ h5.ant-typography {
 
 @media (hover: hover) {
   .avatar-button:hover:not(.ant-dropdown-open) {
-    box-shadow: 0 0 0 3px rgba(26, 26, 26, 0.08);
+    box-shadow: 0 0 0 3px var(--wash);
   }
 }
 
 /* Wordmark next to logo on auth screen */
 .brand-banner {
-  margin: 0 0 14px var(--radius-squircle);
+  margin: 0 0 14px var(--radius-lg);
 }
 
 /* Auth lockup: the house's ink starts where the card's text starts (28px padding minus
@@ -595,11 +577,11 @@ h5.ant-typography {
   position: relative;
   top: 4px;
   font-family: var(--font-headings) !important;
-  font-weight: 860;
-  font-size: 44px;
+  font-weight: var(--w-bold);
+  font-size: var(--t-display);
   line-height: 1;
   letter-spacing: -0.035em;
-  color: #111;
+  color: var(--ink);
 }
 
 /* Keep legacy layout wrappers; inner content now uses Ant components */
@@ -620,13 +602,13 @@ h5.ant-typography {
 }
 
 .title {
-  font-size: 20px;
-  font-weight: 600;
+  font-size: var(--t-heading);
+  font-weight: var(--w-semibold);
 }
 
 .error {
-  color: var(--color-danger);
-  font-size: 14px;
+  color: var(--brand-red);
+  font-size: var(--t-meta);
 }
 
 /* Stronger borders for list items within list page */
@@ -634,7 +616,7 @@ h5.ant-typography {
   border-bottom: 1px solid var(--border) !important;
   display: block !important;
   padding: 0 !important;
-  font-weight: 400;
+  font-weight: var(--w-regular);
 }
 
 .items-list .ant-list-item:last-child {
@@ -662,7 +644,7 @@ h5.ant-typography {
   align-items: center;
   margin-inline: -12px;
   padding: 14px 12px !important;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   transition: background-color var(--dur-fast) ease;
 }
 
@@ -712,7 +694,7 @@ h5.ant-typography {
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   overflow: hidden;
-  font-size: 14px;
+  font-size: var(--t-meta);
   line-height: 1.4;
 }
 
@@ -726,7 +708,7 @@ h5.ant-typography {
 }
 
 .lists-list .list-row-menu.ant-dropdown-open {
-  background: rgba(26, 26, 26, 0.06) !important;
+  background: var(--wash) !important;
   color: var(--ink) !important;
 }
 
@@ -747,13 +729,13 @@ h5.ant-typography {
 }
 
 .lists-list .ant-list-item .ant-typography-secondary {
-  font-weight: 400;
+  font-weight: var(--w-regular);
 }
 
 .lists-list .list-row-name {
-  font-weight: 620;
-  font-size: 16px;
-  color: var(--ink-heading);
+  font-weight: var(--w-semibold);
+  font-size: var(--t-body);
+  color: var(--ink);
   letter-spacing: -0.005em;
 }
 
@@ -765,14 +747,13 @@ h5.ant-typography {
 
 @media (hover: hover) {
   .lists-list .ant-list-item:hover {
-    background: var(--panel-subtle);
+    background: var(--well-fill);
   }
 
   .lists-list .ant-list-item:hover .list-row-caret {
     transform: translateX(3px);
   }
 }
-
 
 /* List page header */
 .list-header-grid {
@@ -798,13 +779,13 @@ h5.ant-typography {
 }
 
 .list-meta {
-  color: var(--text-secondary);
-  font-size: 14px;
+  color: var(--muted);
+  font-size: var(--t-meta);
   font-variant-numeric: tabular-nums;
 }
 
 .list-description {
-  color: var(--text-secondary);
+  color: var(--muted);
   margin-top: 4px;
 }
 
@@ -814,12 +795,12 @@ h5.ant-typography {
 .add-bar {
   position: sticky;
   bottom: 0;
-  background: var(--panel);
+  background: var(--paper-fill);
   margin: 16px -24px -24px;
   padding: 12px 24px calc(12px + env(safe-area-inset-bottom, 0px));
   border-top: 1px solid var(--border);
-  border-radius: 0 0 calc(var(--radius-squircle) - 1px) calc(var(--radius-squircle) - 1px);
-  box-shadow: 0 -10px 16px -14px rgba(0, 0, 0, 0.18);
+  border-radius: 0 0 calc(var(--radius-lg) - 1px) calc(var(--radius-lg) - 1px);
+  box-shadow: var(--shadow-up);
   z-index: 3;
 }
 
@@ -835,13 +816,13 @@ h5.ant-typography {
   padding: 10px 16px !important;
   border-radius: 22px !important;
   line-height: 22px !important;
-  background: var(--panel-subtle);
+  background: var(--well-fill);
   transition: background-color var(--dur-fast) ease, border-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease;
 }
 
 .add-bar .add-input.ant-input:focus,
 .add-bar textarea.add-input:focus {
-  background: var(--panel);
+  background: var(--paper-fill);
 }
 
 .add-field.has-qty textarea.add-input {
@@ -859,11 +840,11 @@ h5.ant-typography {
   text-overflow: ellipsis;
   white-space: nowrap;
   padding: 1px 8px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: color-mix(in srgb, var(--brand-yellow) 45%, white);
   color: var(--ink);
-  font-size: 12px;
-  font-weight: 650;
+  font-size: var(--t-label);
+  font-weight: var(--w-semibold);
   line-height: 22px;
   font-variant-numeric: tabular-nums;
   pointer-events: none;
@@ -894,9 +875,9 @@ h5.ant-typography {
 .suggestion-sheet {
   margin: 0 0 var(--space-3);
   padding: var(--space-1) var(--space-3);
-  background: var(--panel);
+  background: var(--paper-fill);
   border: 1px solid color-mix(in srgb, var(--brand-yellow-deep) 38%, var(--border));
-  border-radius: var(--radius-squircle);
+  border-radius: var(--radius-lg);
   box-shadow: var(--lift-0);
 }
 
@@ -936,7 +917,7 @@ h5.ant-typography {
 
 .suggestion-name {
   color: var(--ink);
-  font-weight: 500;
+  font-weight: var(--w-medium);
   line-height: 1.35;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -945,7 +926,7 @@ h5.ant-typography {
 
 .suggestion-cadence {
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--t-meta);
   line-height: 1.35;
 }
 
@@ -1078,7 +1059,7 @@ h5.ant-typography {
   flex-direction: column-reverse;
   margin: 0;
   padding: 4px;
-  background: var(--panel);
+  background: var(--paper-fill);
   border: 1px solid var(--border);
   border-radius: 18px;
   box-shadow: var(--lift-3);
@@ -1090,7 +1071,7 @@ h5.ant-typography {
   gap: 10px;
   min-height: 44px;
   padding: 6px 12px;
-  border-radius: 14px;
+  border-radius: var(--radius-md);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
@@ -1118,7 +1099,7 @@ h5.ant-typography {
 
 @media (hover: hover) {
   .pantry-slip:hover {
-    background: var(--panel-subtle);
+    background: var(--well-fill);
   }
   .pantry-slip.is-active:hover {
     background: color-mix(in srgb, var(--brand-yellow) 22%, white);
@@ -1145,7 +1126,7 @@ h5.ant-typography {
 .slip-usual {
   flex: none;
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--t-meta);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1175,10 +1156,6 @@ h5.ant-typography {
   from { opacity: 0; transform: translateY(4px); }
 }
 
-.add-btn .ant-btn-icon {
-  font-size: 22px !important;
-}
-
 /* Add row layout: input expands; button stays on right */
 .add-row {
   display: flex;
@@ -1187,25 +1164,9 @@ h5.ant-typography {
   flex-wrap: nowrap;
 }
 
+/* The add bar's round key is the Button primitive (kind="key" iconOnly); it only keeps its place. */
 .add-btn {
   flex: none;
-  width: 44px !important;
-  height: 44px !important;
-  min-width: 44px !important;
-  padding: 0 !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  border-radius: 50% !important;
-  /* ensure perfect circle over primary radius */
-  aspect-ratio: 1 / 1 !important;
-  line-height: 1 !important;
-}
-
-/* Ensure any Ant circle buttons remain perfectly circular despite global primary radius */
-.ant-btn-circle,
-.ant-btn-icon-only.ant-btn-round {
-  border-radius: 50% !important;
 }
 
 @media (min-width: 768px) {
@@ -1220,7 +1181,7 @@ h5.ant-typography {
   }
 
   .add-bar {
-    background: var(--panel);
+    background: var(--paper-fill);
   }
 }
 
@@ -1233,8 +1194,8 @@ h5.ant-typography {
   padding-top: 12px;
   border-top: 1px solid var(--border);
   color: var(--muted);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--t-meta);
+  font-weight: var(--w-semibold);
   letter-spacing: 0.01em;
   font-variant-numeric: tabular-nums;
 }
@@ -1253,8 +1214,10 @@ h5.ant-typography {
   gap: 14px;
 }
 
+/* The item's words win the row: they keep at least a readable width, and the stamp gives way
+   (shrinks with an ellipsis) before they do. */
 .item-row .item-text {
-  flex: 1;
+  flex: 1 1 auto;
   min-width: 0;
   white-space: normal;
   overflow-wrap: anywhere;
@@ -1269,11 +1232,11 @@ h5.ant-typography {
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  font-size: 22px;
+  font-size: var(--icon-xl);
   line-height: 1;
-  background: var(--panel-subtle);
+  background: var(--well-fill);
   border: 1px solid var(--border);
-  box-shadow: var(--paper-edge), 0 1px 2px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--slip-rest);
 }
 
 .list-icon-title {
@@ -1282,9 +1245,9 @@ h5.ant-typography {
 
 /* Item text */
 .item-desc {
-  font-size: 15px;
-  font-weight: 500;
-  color: var(--ink-heading);
+  font-size: var(--t-body);
+  font-weight: var(--w-medium);
+  color: var(--ink);
   line-height: 1.35;
   /* Strike-through draws across instead of snapping on */
   background-image: linear-gradient(currentColor, currentColor);
@@ -1361,7 +1324,7 @@ h5.ant-typography {
 
 /* Delete: hidden until the row is engaged on desktop (red on hover); on touch screens the
    row swipes instead and the button stays reachable only by screen readers / keyboard. */
-.items-list .item-delete.ant-btn {
+.items-list .item-delete {
   flex: none;
   color: var(--muted);
   opacity: 0;
@@ -1369,36 +1332,36 @@ h5.ant-typography {
   transition: opacity var(--dur-fast) ease, color var(--dur-fast) ease, background-color var(--dur-fast) ease;
 }
 
-.items-list .item-delete.ant-btn:focus-visible {
+.items-list .item-delete:focus-visible {
   opacity: 1;
 }
 
 @media (hover: hover) {
-  .items-list .ant-list-item:hover .item-delete.ant-btn {
+  .items-list .ant-list-item:hover .item-delete {
     opacity: 1;
   }
 
-  .items-list .item-delete.ant-btn:not(:disabled):hover {
+  .items-list .item-delete:not(:disabled):hover {
     color: var(--brand-red);
-    background: rgba(190, 30, 45, 0.07) !important;
+    background: var(--wash-danger) !important;
   }
 
-  .items-list .item-delete.ant-btn:not(:disabled):hover .anticon,
-  .items-list .item-delete.ant-btn:not(:disabled):hover svg {
+  .items-list .item-delete:not(:disabled):hover .anticon,
+  .items-list .item-delete:not(:disabled):hover svg {
     transform: rotate(-8deg) scale(1.08);
   }
 }
 
-.items-list .item-delete.ant-btn svg {
+.items-list .item-delete svg {
   transition: transform var(--dur-fast) var(--ease-out);
 }
 
-.items-list .item-delete.ant-btn:not(:disabled):active svg {
+.items-list .item-delete:not(:disabled):active svg {
   transform: scale(0.88);
 }
 
 @media (hover: none) {
-  .items-list .item-delete.ant-btn:not(:focus-visible),
+  .items-list .item-delete:not(:focus-visible),
   .items-list .drag-handle:not(:focus-visible) {
     position: absolute;
     width: 1px;
@@ -1428,7 +1391,7 @@ h5.ant-typography {
   align-items: center;
   justify-content: center;
   color: color-mix(in srgb, var(--muted) 70%, white);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   transition: color var(--dur-fast) ease, background-color var(--dur-fast) ease;
   padding: 10px 6px;
   /* larger tap target */
@@ -1437,7 +1400,7 @@ h5.ant-typography {
   min-width: 36px;
   min-height: 36px;
   /* modestly larger icon by default */
-  font-size: 18px;
+  font-size: var(--icon-md);
   user-select: none;
   -webkit-user-select: none;
   /* Allow native scrolling and gestures to pass through */
@@ -1462,7 +1425,7 @@ h5.ant-typography {
 @media (hover: hover) {
   .drag-handle:hover {
     color: var(--text);
-    background: rgba(26, 26, 26, 0.05);
+    background: var(--wash);
   }
 }
 
@@ -1494,16 +1457,11 @@ h5.ant-typography {
   gap: 10px;
   padding: 16px;
   border: 1.5px dashed var(--border-strong);
-  border-radius: 14px;
-  background: var(--panel-subtle);
+  border-radius: var(--radius-md);
+  background: var(--well-fill);
 }
 
 /* Card/page border color adjustments */
-.ant-card-bordered,
-.ant-card {
-  border-color: var(--border-strong) !important;
-  border-radius: var(--radius-squircle) !important;
-}
 
 .settings-divider {
   border-block-start: 1px solid var(--border-strong) !important;
@@ -1513,20 +1471,20 @@ h5.ant-typography {
 /* ---- No House yet: start one, or join with a code ----------------------------------------- */
 .no-room .no-room-title {
   margin: 0;
-  font-size: clamp(26px, 3.2vw, 38px);
-  font-weight: 700;
+  font-size: var(--t-display);
+  font-weight: var(--w-bold);
   letter-spacing: -0.025em;
   line-height: 1.08;
 }
 @media (max-width: 767px) {
   .no-room .no-room-title {
-    font-size: clamp(32px, 3.68vw, 46px);
+    font-size: var(--t-display);
   }
 }
 .no-room-lede {
   margin: var(--space-2) 0 0;
-  color: var(--text-secondary);
-  font-size: var(--size-body);
+  color: var(--muted);
+  font-size: var(--t-body);
   line-height: 1.5;
 }
 .no-room-part {
@@ -1538,14 +1496,14 @@ h5.ant-typography {
 }
 .no-room .no-room-heading {
   margin: 0;
-  font-size: clamp(20px, 2.4vw, 24px);
-  font-weight: 650;
+  font-size: var(--t-heading);
+  font-weight: var(--w-semibold);
   letter-spacing: -0.015em;
 }
 .no-room-text {
   margin: var(--space-1) 0 var(--space-4);
   color: var(--muted);
-  font-size: var(--size-body);
+  font-size: var(--t-body);
   line-height: 1.5;
 }
 .join-row {
@@ -1562,11 +1520,11 @@ h5.ant-typography {
   padding: 0 var(--space-3);
   border: 0;
   border-radius: var(--radius-md);
-  background: var(--panel-subtle);
+  background: var(--well-fill);
   color: var(--ink);
   font-family: var(--font-headings);
-  font-size: 24px !important;
-  font-weight: 700;
+  font-size: var(--t-heading) !important;
+  font-weight: var(--w-bold);
   letter-spacing: 0.16em;
   font-variant-numeric: tabular-nums;
   text-transform: uppercase;
@@ -1574,76 +1532,14 @@ h5.ant-typography {
 }
 .join-code::placeholder {
   color: var(--muted);
-  font-weight: 500;
+  font-weight: var(--w-medium);
 }
 .join-code:focus-visible {
-  background: var(--panel);
+  background: var(--paper-fill);
   box-shadow: var(--focus-ring);
 }
 .join-code.has-error {
   box-shadow: 0 0 0 2px var(--brand-red);
-}
-
-/* Paper stack layout for ListPage */
-.paper-stack {
-  position: relative;
-}
-
-.paper-card {
-  background: var(--panel);
-  border: 1px solid var(--border-strong) !important;
-  border-radius: var(--radius-squircle) !important;
-  box-shadow: var(--paper-edge), var(--lift-0);
-}
-
-.paper-card.paper-meta {
-  /* Extend downward so side edges flow behind the top sheet */
-  padding-bottom: 10px;
-  /* Visually continue: hide its own bottom edge */
-  border-bottom: none !important;
-  border-bottom-left-radius: 0 !important;
-  border-bottom-right-radius: 0 !important;
-}
-
-.paper-card.paper-list {
-  position: relative;
-  z-index: 2;
-  margin-top: -20px;
-  /* ~5px overlap */
-  box-shadow: var(--paper-edge), var(--lift-1);
-}
-
-/* The stack: a third sheet's edge peeks out beneath the top sheet. It hangs off the
-   stack container (not the top card) so it paints genuinely underneath the top sheet,
-   which sits at z-index 2; only its bottom 8px ever shows. */
-.paper-stack::after {
-  content: '';
-  position: absolute;
-  z-index: 1;
-  left: 14px;
-  right: 14px;
-  bottom: -8px;
-  height: 40px;
-  background: var(--panel);
-  border: 1px solid var(--border-strong);
-  border-radius: 0 0 var(--radius-squircle) var(--radius-squircle);
-  box-shadow: 0 4px 10px -4px rgba(0, 0, 0, 0.1);
-}
-
-/* Arrival: the top sheet slides onto the stack, like paper set down on a desk */
-@media (prefers-reduced-motion: no-preference) {
-  .paper-stack .paper-meta {
-    animation: sheet-in var(--dur-slow) var(--ease-out) both;
-  }
-
-  .paper-stack .paper-list {
-    animation: sheet-settle 560ms var(--ease-out) 60ms both;
-  }
-
-  /* The peeking sheet arrives a beat later, so the stack assembles bottom-up */
-  .paper-stack::after {
-    animation: sheet-peek 520ms var(--ease-out) 180ms both;
-  }
 }
 
 @keyframes sheet-in {
@@ -1658,11 +1554,7 @@ h5.ant-typography {
 
 @keyframes sheet-peek {
   from {
-    transform: translateY(-10px);
-  }
-
-  to {
-    transform: none;
+    transform: translateY(-10px) rotate(0deg);
   }
 }
 
@@ -1678,17 +1570,7 @@ h5.ant-typography {
 
 /* Centered, pill-styled tabs for ListPage */
 
-
-
-
-
-
 /* Sliding pill indicator */
-
-
-
-
-
 
 /* Notes textarea: fixed height to avoid Android autoSize repaint bug */
 .notes-textarea,
@@ -1707,36 +1589,33 @@ h5.ant-typography {
   gap: 8px;
 }
 
-.notes-actions .notes-clear.ant-btn {
+.notes-actions .notes-clear {
   margin-left: -8px;
   color: var(--muted);
-  font-weight: 600;
+  font-weight: var(--w-semibold);
 }
 
-.notes-actions .notes-clear.ant-btn:disabled {
+.notes-actions .notes-clear:disabled {
   color: color-mix(in srgb, var(--muted) 45%, transparent);
   background: transparent !important;
   border-color: transparent !important;
 }
 
-.notes-actions .notes-clear.is-undo.ant-btn {
+.notes-actions .notes-clear.is-undo {
   color: var(--brand-blue);
 }
 
 @media (hover: hover) {
-  .notes-actions .notes-clear.ant-btn:not(:disabled):not(.is-undo):hover {
+  .notes-actions .notes-clear:not(:disabled):not(.is-undo):hover {
     color: var(--brand-red);
     background: color-mix(in srgb, var(--brand-red) 7%, transparent);
   }
 }
 
 /* "Saved" holds the button's shape in a settled yellow instead of the grey disabled look */
-.notes-actions .notes-save.is-saved.ant-btn:disabled {
-  background: color-mix(in srgb, var(--brand-yellow) 35%, white) !important;
-  border-color: color-mix(in srgb, var(--brand-yellow-deep) 70%, white) !important;
-  color: var(--ink) !important;
-  box-shadow: none !important;
-  cursor: default;
+/* "Saved" is the key soaked into the paper, with ink (not muted): it is a result, not a block. */
+.notes-actions .notes-save.is-saved:disabled {
+  color: var(--ink);
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -1749,114 +1628,24 @@ h5.ant-typography {
   }
 }
 
-/* Items list action buttons: keep trash red and borderless, even when disabled */
-.items-list .ant-btn.ant-btn-text {
-  border: none !important;
-  background: transparent !important;
-  box-shadow: none !important;
-}
-
-.items-list .ant-btn.ant-btn-text.ant-btn-dangerous {
-  color: var(--brand-red) !important;
-}
-
-.items-list .ant-btn.ant-btn-text.ant-btn-dangerous:hover,
-.items-list .ant-btn.ant-btn-text.ant-btn-dangerous:focus,
-.items-list .ant-btn.ant-btn-text.ant-btn-dangerous:active {
-  color: var(--brand-red) !important;
-  background: transparent !important;
-}
-
-.items-list .ant-btn.ant-btn-text.ant-btn-dangerous[disabled],
-.items-list .ant-btn.ant-btn-text.ant-btn-dangerous[aria-disabled='true'] {
-  color: var(--brand-red) !important;
-  background: transparent !important;
-  border: none !important;
-  opacity: 1 !important;
-}
-
-.items-list .ant-btn.ant-btn-text.ant-btn-dangerous[disabled] .ant-btn-icon,
-.items-list .ant-btn.ant-btn-text.ant-btn-dangerous[disabled] .anticon,
-.items-list .ant-btn.ant-btn-text.ant-btn-dangerous[aria-disabled='true'] .ant-btn-icon,
-.items-list .ant-btn.ant-btn-text.ant-btn-dangerous[aria-disabled='true'] .anticon {
-  color: var(--brand-red) !important;
-}
-
-.items-list .ant-btn.ant-btn-text.ant-btn-dangerous[disabled] .ant-btn-icon svg,
-.items-list .ant-btn.ant-btn-text.ant-btn-dangerous[aria-disabled='true'] .ant-btn-icon svg {
-  color: var(--brand-red) !important;
-  fill: currentColor !important;
-  stroke: currentColor !important;
-}
-
-
-@media (min-width: 768px) {
-  .paper-card.paper-list {
-    margin-top: -20px;
-  }
-}
-
 /* Inputs and other controls: unified squircle radius */
 .ant-input,
 .ant-input-affix-wrapper,
 .ant-select-selector,
-.ant-input-number,
-.ant-modal .ant-modal-content,
-.ant-popover .ant-popover-inner,
-.ant-dropdown-menu,
-.ant-drawer .ant-drawer-content,
-.ant-message-notice-content {
-  border-radius: var(--radius-squircle) !important;
-}
-
-/* Ensure non-Ant icon components (e.g., Phosphor) render correctly inside Ant buttons */
-.ant-btn .ant-btn-icon {
-  font-size: 18px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.ant-btn-lg .ant-btn-icon {
-  font-size: 20px;
-}
-
-.ant-btn .ant-btn-icon svg {
-  width: 1em;
-  height: 1em;
+.ant-input-number {
+  border-radius: var(--radius-lg) !important;
 }
 
 /* Pantry autocomplete dropdown styles */
 .ant-select-dropdown .ant-select-item-option-content {
-  font-weight: 500;
+  font-weight: var(--w-medium);
 }
 
 /* Search bar refinement */
 .ant-input-affix-wrapper .ant-input-prefix {
   margin-right: 8px;
   color: var(--muted);
-  font-size: 16px;
-}
-
-/* Dropdown menus: roomier rows, same squircle family */
-.ant-dropdown-menu {
-  padding: 6px !important;
-  box-shadow: var(--lift-3) !important;
-}
-
-.ant-modal .ant-modal-content,
-.ant-popover .ant-popover-inner {
-  box-shadow: var(--paper-edge), var(--lift-3) !important;
-}
-
-.ant-dropdown-menu .ant-dropdown-menu-item {
-  border-radius: 10px !important;
-  padding: 8px 12px !important;
-  font-weight: 500;
-}
-
-.ant-dropdown-menu .ant-dropdown-menu-item-danger:not(:hover) {
-  color: var(--brand-red) !important;
+  font-size: var(--icon-sm);
 }
 
 /* Inputs: calm focus that matches the button ring */
@@ -1870,7 +1659,7 @@ h5.ant-typography {
 
 .ant-input::placeholder,
 .ant-input-affix-wrapper input::placeholder {
-  color: #767676;
+  color: var(--muted);
 }
 
 /* Progress bar transition */
@@ -1881,11 +1670,11 @@ h5.ant-typography {
 /* Category Tag Refinement */
 .category-tag {
   border: none !important;
-  font-weight: 700 !important;
-  font-size: 10px !important;
+  font-weight: var(--w-bold) !important;
+  font-size: var(--t-stamp) !important;
   line-height: 16px !important;
   padding: 1px 7px !important;
-  border-radius: 6px !important;
+  border-radius: var(--radius-xs) !important;
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -1941,23 +1730,46 @@ h5.ant-typography {
 }
 
 .cat-general {
-  background: #f0f0f0 !important;
-  color: #666 !important;
+  background: var(--trip-cat-other-bg) !important;
+  color: var(--trip-cat-other-fg) !important;
 }
 
 /* Quantity/Unit Badge */
 .item-qty {
   margin-left: 8px;
   color: var(--muted);
-  font-size: 14px;
-  font-weight: 500;
+  font-size: var(--t-meta);
+  font-weight: var(--w-medium);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
 .item-cat {
   flex: none;
-  margin-inline: 4px 0 !important;
+  white-space: nowrap;
+  margin-inline: var(--space-1) 0 !important;
+}
+/* On a narrow list the stamp drops under the item's words, aligned with them, instead of
+   squeezing them: the words keep the row and the stamp stays whole. */
+.items-list {
+  container-type: inline-size;
+}
+@container (max-width: 440px) {
+  .items-list .item-row:has(.item-cat) {
+    flex-wrap: wrap;
+    row-gap: 0;
+  }
+  /* A zero-height break after the first line, so the stamp always starts the second one. */
+  .items-list .item-row:has(.item-cat)::after {
+    content: '';
+    order: 3;
+    flex-basis: 100%;
+    height: 0;
+  }
+  .items-list .item-row .item-cat {
+    order: 4;
+    margin: -8px 0 12px calc(22px + 14px) !important;
+  }
 }
 
 /* Swipe-to-delete: the row slides over a red tray */
@@ -1972,17 +1784,15 @@ h5.ant-typography {
   position: relative;
   z-index: 1;
   padding-inline: 12px;
-  background: var(--panel);
+  background: var(--paper-fill);
   touch-action: pan-y;
   transition: box-shadow var(--dur-fast) ease;
 }
 
 /* Mid-swipe the paper sits on top of the tray: its edge casts onto the red */
 .item-slide[data-swiping='true'] {
-  border-radius: 12px;
-  box-shadow:
-    1px 0 0 rgba(0, 0, 0, 0.08),
-    12px 0 16px -6px rgba(50, 0, 6, 0.55);
+  border-radius: var(--radius-md);
+  box-shadow: var(--swipe-shadow);
 }
 
 .swipe-tray {
@@ -1995,14 +1805,12 @@ h5.ant-typography {
   justify-content: flex-end;
   padding-right: 28px;
   /* Same 12px corners as a row's hover fill and a lifted row */
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   /* Recessed: a channel under the sheet rather than a red block beside it */
-  box-shadow:
-    inset 0 2px 4px rgba(0, 0, 0, 0.22),
-    inset 0 -1px 2px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--tray-inset);
   background: var(--brand-red);
-  color: #fff;
-  font-size: 22px;
+  color: var(--on-red);
+  font-size: var(--icon-xl);
   opacity: 0;
 }
 
@@ -2015,8 +1823,8 @@ h5.ant-typography {
 }
 
 .qty-unit-line {
-  font-size: 13px;
-  color: var(--text-secondary);
+  font-size: var(--t-meta);
+  color: var(--muted);
   margin-top: 1px;
   display: flex;
   align-items: center;
@@ -2025,9 +1833,9 @@ h5.ant-typography {
 }
 
 .qty-label {
-  font-weight: 500;
+  font-weight: var(--w-medium);
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--t-meta);
 }
 
 /* Confetti animation */
@@ -2065,8 +1873,8 @@ h5.ant-typography {
 .sortable-row.is-dragging {
   position: relative;
   z-index: 5;
-  background: var(--panel);
-  border-radius: 12px;
+  background: var(--paper-fill);
+  border-radius: var(--radius-md);
   box-shadow: var(--lift-2);
   scale: 1.02;
   rotate: -0.6deg;
@@ -2324,19 +2132,6 @@ textarea.notes-textarea {
 
 /* ---------- Touch: 44px hit areas without changing what you see ---------- */
 @media (pointer: coarse) {
-  .ant-btn {
-    position: relative;
-  }
-
-  .ant-btn::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: max(100%, 44px);
-    height: max(100%, 44px);
-    transform: translate(-50%, -50%);
-  }
 
   .items-list .ant-checkbox-wrapper {
     position: relative;
@@ -2397,8 +2192,6 @@ textarea.notes-textarea {
 
 /* Switching to Notes: the page gets ruled. The margin line is drawn first, then the
    blue rules sweep down, as if a pen ran down the sheet. */
-@media (prefers-reduced-motion: no-preference) {
-  }
 
 @keyframes notes-margin {
   from {
@@ -2726,7 +2519,7 @@ textarea.notes-textarea {
 /* ---------- Loading states that hold the final shape ---------- */
 .avatar-button {
   /* The disc sits behind the avatar image too, so a slow image never leaves a hole */
-  background: var(--panel-subtle);
+  background: var(--well-fill);
 }
 
 /* Before we know who you are: an empty disc on the paper tint, the avatar's exact size. */
@@ -2737,7 +2530,7 @@ textarea.notes-textarea {
   height: var(--control-lg);
   border-radius: 50%;
   border: 1px solid var(--border);
-  background: var(--panel-subtle);
+  background: var(--well-fill);
 }
 
 /* Skeleton rows match the real rows: list rows on the house page, item rows on a list */
@@ -2784,7 +2577,7 @@ textarea.notes-textarea {
 .row-skeleton-item .sk-lead {
   width: 20px;
   height: 20px;
-  border-radius: 6px;
+  border-radius: var(--radius-xs);
 }
 
 .row-skeleton .sk-lines {
@@ -2798,7 +2591,7 @@ textarea.notes-textarea {
 .row-skeleton .sk-bar {
   width: var(--sk-w, 60%);
   height: 12px;
-  border-radius: 6px;
+  border-radius: var(--radius-xs);
 }
 
 .row-skeleton .sk-bar-sub {
@@ -2809,7 +2602,7 @@ textarea.notes-textarea {
 .row-skeleton .sk-tag {
   width: 58px;
   height: 20px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -2857,8 +2650,8 @@ textarea.notes-textarea {
   justify-content: center;
   height: 220px;
   margin-top: 0;
-  border-radius: var(--radius-squircle);
-  background: var(--panel);
+  border-radius: var(--radius-lg);
+  background: var(--paper-fill);
   border: 1px solid var(--border-strong);
   box-shadow: var(--paper-edge), var(--lift-0);
 }
@@ -2875,11 +2668,11 @@ textarea.notes-textarea {
   padding: 0 10px;
   margin-right: -6px;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--ink);
   font: inherit;
-  font-weight: 700;
+  font-weight: var(--w-bold);
   text-decoration: underline;
   text-decoration-color: var(--brand-yellow-deep);
   text-decoration-thickness: 2px;
@@ -2896,10 +2689,10 @@ textarea.notes-textarea {
   min-width: 0;
   margin-left: -8px;
   padding: 0 12px 0 6px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   color: var(--ink);
-  font-weight: 650;
-  font-size: 16px;
+  font-weight: var(--w-semibold);
+  font-size: var(--t-body);
   text-decoration: none;
   transition: background-color var(--dur-fast) ease;
 }
@@ -2921,15 +2714,15 @@ textarea.notes-textarea {
 
 @media (hover: hover) {
   .topnav-back:hover {
-    background: rgba(26, 26, 26, 0.06);
+    background: var(--wash);
   }
 }
 
 /* Tab adornments: unchecked count and a dot when the list has notes */
 .tab-count {
   margin-left: 6px;
-  font-size: 12px;
-  font-weight: 700;
+  font-size: var(--t-label);
+  font-weight: var(--w-bold);
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
@@ -2952,12 +2745,12 @@ textarea.notes-textarea {
   justify-content: center;
   flex: none;
   box-sizing: border-box;
-  width: var(--control-h);
-  height: var(--control-h);
+  width: var(--control-lg);
+  height: var(--control-lg);
   padding: 0;
   border: 1px solid var(--border-strong);
   border-radius: 50%;
-  background: var(--panel-subtle);
+  background: var(--well-fill);
   color: var(--muted);
   cursor: pointer;
   transition: background-color var(--dur-fast) ease, border-color var(--dur-fast) ease, color var(--dur-fast) ease;
@@ -3042,8 +2835,8 @@ textarea.notes-textarea {
   background: transparent;
   color: var(--muted);
   font: inherit;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--t-meta);
+  font-weight: var(--w-semibold);
   cursor: pointer;
 }
 
@@ -3053,99 +2846,10 @@ textarea.notes-textarea {
   }
 }
 
-@media (max-width: 480px) {
-  }
-
 /* Trips: day colours and category stamps.
    The day cycle is brand blue, red and a deep yellow plus green, teal and violet. Each is at
    least 3:1 against the map ground (--trip-map-ground), so a route reads on the map. Day 7
    reuses day 1. */
-:root {
-  --trip-map-ground: #E9EEE6;
-  --trip-map-earth: #EEF0E9;
-  --trip-map-water: #CFDDE3;
-  --trip-day-0: #2348A6;
-  --trip-day-1: #BE1E2D;
-  --trip-day-2: #946D00;
-  --trip-day-3: #1E7B3C;
-  --trip-day-4: #0E7C86;
-  --trip-day-5: #6A3FB5;
-
-  /* Map pips, by category: the stamp hues, a little stronger, each at least 3:1 against the map
-     ground. A finished stop is a muted grey. */
-  --pip-food: #C4560C;
-  --pip-sight: #2348A6;
-  --pip-activity: #1E7B3C;
-  --pip-transport: #5A6470;
-  --pip-stay: #946D00;
-  --pip-shopping: #8A3FB5;
-  --pip-other: #767676;
-  --pip-done: #A9ADA6;
-
-  /* UI primitives (components/ui): the scale every trip screen and sheet is drawn from. */
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 20px;
-  --space-6: 24px;
-  --space-7: 32px;
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-sheet: 20px;
-  --radius-pill: 999px;
-  /* Control heights: chip and quiet button, text action and key, a detail row. */
-  --control-md: 36px;
-  --control-lg: 44px;
-  --row-h: 52px;
-  /* Type */
-  --size-body: 15px;
-  --size-context: 15px;
-  --size-meta: 13px;
-  --size-label: 12px;
-  --title-sheet: 26px;
-  --title-page: 28px;
-  /* The row grid: [lead] 12 [time] 12 [title] [trail]. A day without times sets --tcol to 0. */
-  --lead: 24px;
-  --gap: 12px;
-  --lead-col: calc(var(--lead) + var(--gap));
-  --time-w: 48px;
-  --detail-label-w: 96px;
-  --stamp-fg: var(--ink);
-  --stamp-bg: var(--panel-subtle);
-  --detail-inset: 16px;
-  /* Sheets: side inset, scrim, tallest content, and the space between the four tiers. */
-  --sheet-inset: 20px;
-  --sheet-scrim: rgba(0, 0, 0, 0.35);
-  --sheet-max-h: 90dvh;
-  --tier-identity-actions: 18px;
-  --tier-actions-details: 26px;
-  --tier-details-footer: 22px;
-  /* Warn (an overlap): amber, 6.8:1 for the text on its ground. Not red: it is not an error. */
-  --warn-bg: #FFF4D6;
-  --warn-ink: #7A4B00;
-  --warn-rule: var(--brand-yellow-deep);
-  --on-red: #FFFFFF;
-  --on-pin: #FFFFFF;
-  --ok-ink: #2E6B32;
-
-  /* Category stamps: tinted ground, darker ink of the same hue (4.5:1 on the tint). */
-  --trip-cat-food-bg: #FDE7D2;
-  --trip-cat-food-fg: #8A4209;
-  --trip-cat-sight-bg: #DCE5FA;
-  --trip-cat-sight-fg: #1D3F93;
-  --trip-cat-activity-bg: #DDF0E2;
-  --trip-cat-activity-fg: #17602F;
-  --trip-cat-transport-bg: #E8E8E8;
-  --trip-cat-transport-fg: #333333;
-  --trip-cat-stay-bg: #FFF1B3;
-  --trip-cat-stay-fg: #6B5000;
-  --trip-cat-shopping-bg: #E8DFF6;
-  --trip-cat-shopping-fg: #55308F;
-  --trip-cat-other-bg: #EFEFEF;
-  --trip-cat-other-fg: #4A4A4A;
-}
 
 .trip-cat {
   text-transform: uppercase;
@@ -3157,7 +2861,6 @@ textarea.notes-textarea {
 .trip-cat-stay { background: var(--trip-cat-stay-bg) !important; color: var(--trip-cat-stay-fg) !important; }
 .trip-cat-shopping { background: var(--trip-cat-shopping-bg) !important; color: var(--trip-cat-shopping-fg) !important; }
 .trip-cat-other { background: var(--trip-cat-other-bg) !important; color: var(--trip-cat-other-fg) !important; }
-
 
 /* ---- the pill nav: one segmented control for House, List and Trip ------------------------ */
 .pill-nav-bar {
@@ -3171,13 +2874,15 @@ textarea.notes-textarea {
   position: relative;
   display: flex;
   box-sizing: border-box;
-  height: var(--control-h);
+  height: var(--control-lg);
   align-items: stretch;
-  background: var(--panel-subtle);
+  background: var(--well-fill);
   border: 1px solid var(--border-strong);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: 3px;
   gap: 2px;
+  /* The track is pressed into the sheet; the selected tab is a slip on it. */
+  box-shadow: var(--well);
 }
 .pill-nav-list::after {
   content: '';
@@ -3186,9 +2891,9 @@ textarea.notes-textarea {
   left: var(--tab-x, 3px);
   width: var(--tab-w, 60px);
   height: calc(100% - 6px);
-  border-radius: 999px;
-  background: var(--panel);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.06);
+  border-radius: var(--radius-pill);
+  background: var(--paper-fill);
+  box-shadow: var(--tab-lift);
   z-index: 0;
 }
 .pill-nav-tab {
@@ -3200,12 +2905,12 @@ textarea.notes-textarea {
   margin: 0;
   padding: 0 16px;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: transparent;
   color: var(--muted);
   font: inherit;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--t-body);
+  font-weight: var(--w-semibold);
   cursor: pointer;
 }
 .pill-nav-tab[aria-selected='true'] {
@@ -3247,32 +2952,6 @@ textarea.notes-textarea {
   }
 }
 
-/* ---- the app's paper modal: Outfit title, a squircle sheet, a full-width key on phones ----- */
-.paper-modal .ant-modal-content {
-  padding: 24px;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-squircle);
-  box-shadow: var(--paper-edge), var(--lift-2);
-}
-.paper-modal .ant-modal-title {
-  font-family: var(--font-headings);
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--ink);
-}
-.paper-modal .ant-modal-header {
-  margin-bottom: 12px;
-}
-@media (max-width: 640px) {
-  .paper-modal .ant-modal-footer > .ant-btn-primary,
-  .paper-modal .ant-modal-footer > .ant-space,
-  .paper-modal .ant-modal-footer > .ant-space > .ant-space-item {
-    width: 100%;
-  }
-  .paper-modal .ant-modal-footer .ant-btn-primary {
-    width: 100%;
-  }
-}
 /* The live-trip dot sits at the label's top-right on the Trips pill. */
 .pill-label {
   position: relative;
@@ -3297,20 +2976,20 @@ textarea.notes-textarea {
 
 /* ---- trip settings: a 28px heading you can type into, yellow chevrons, a yellow switch ---- */
 .settings-identity .trip-sheet-title {
-  font-size: 28px;
-  font-weight: 700;
+  font-size: var(--t-title);
+  font-weight: var(--w-bold);
   line-height: 1.15;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   padding: 2px 6px;
   margin: 0 -6px;
 }
 @media (hover: hover) {
   .settings-identity .trip-sheet-title:hover {
-    background: var(--panel-subtle);
+    background: var(--well-fill);
   }
 }
 .settings-identity .trip-sheet-title:focus-visible {
-  background: var(--panel);
+  background: var(--paper-fill);
 }
 .settings-row .list-row-caret,
 .settings-row .list-row-caret.is-inline {
@@ -3356,12 +3035,12 @@ textarea.notes-textarea {
 .dev-frames iframe {
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-lg);
-  background: var(--bg);
+  background: var(--desk-fill);
 }
 .dev-frames figcaption {
   margin-bottom: var(--space-2);
   color: var(--muted);
-  font-size: var(--size-meta);
+  font-size: var(--t-meta);
 }
 .dev-gallery {
   display: grid;
@@ -3378,21 +3057,21 @@ textarea.notes-textarea {
 /* ---- House page: the meta sheet ------------------------------------------------------------ */
 .house-meta .house-title {
   margin: 0;
-  font-size: clamp(26px, 3.2vw, 38px);
-  font-weight: 700;
+  font-size: var(--t-display);
+  font-weight: var(--w-bold);
   letter-spacing: -0.025em;
   line-height: 1.08;
   overflow-wrap: anywhere;
 }
 @media (max-width: 767px) {
   .house-meta .house-title {
-    font-size: clamp(35px, 3.68vw, 46px);
+    font-size: var(--t-display);
   }
 }
 .house-desc {
   margin: var(--space-2) 0 0;
-  color: var(--text-secondary);
-  font-size: var(--size-body);
+  color: var(--muted);
+  font-size: var(--t-body);
   line-height: 1.5;
   overflow-wrap: anywhere;
 }
@@ -3414,7 +3093,7 @@ textarea.notes-textarea {
 }
 .house-members-line {
   color: var(--muted);
-  font-size: var(--size-body);
+  font-size: var(--t-body);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -3436,10 +3115,10 @@ textarea.notes-textarea {
 /* A list without an icon keeps the icon's place, so every title starts on one line. */
 .list-icon.is-blank {
   color: var(--muted);
-  font-size: 18px;
+  font-size: var(--icon-md);
 }
 .lists-list .list-row-desc {
-  color: var(--text-secondary);
+  color: var(--muted);
 }
 .list-row-vote {
   display: block;
@@ -3456,8 +3135,8 @@ textarea.notes-textarea {
 .share-code {
   margin: 0;
   font-family: var(--font-headings);
-  font-size: 40px;
-  font-weight: 700;
+  font-size: var(--t-code);
+  font-weight: var(--w-bold);
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.16em;
   /* The tracking adds space after the last letter too; give it back so the code is centred. */
@@ -3472,7 +3151,7 @@ textarea.notes-textarea {
 .share-note {
   margin: var(--space-2) 0 0;
   color: var(--ok-ink);
-  font-size: var(--size-meta);
+  font-size: var(--t-meta);
 }
 /* The key sits under the code, centred like the ticket slip's. */
 .share-slip + .ui-sheet-actions {
@@ -3489,11 +3168,11 @@ textarea.notes-textarea {
 /* ---- House settings: the Trip settings page, for the House --------------------------------- */
 .house-settings .ui-sheet-title,
 .account-settings .ui-sheet-title {
-  font-size: var(--title-page);
+  font-size: var(--t-title);
 }
 .house-settings input.ui-sheet-title,
 .account-settings input.ui-sheet-title {
-  font-size: var(--title-page) !important;
+  font-size: var(--t-title) !important;
 }
 .house-settings .ui-section-label,
 .account-settings .ui-section-label {
@@ -3509,14 +3188,14 @@ textarea.notes-textarea {
 }
 .house-member-name {
   overflow: hidden;
-  font-weight: 500;
+  font-weight: var(--w-medium);
   color: var(--ink);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .house-member-you {
   color: var(--muted);
-  font-size: var(--size-meta);
+  font-size: var(--t-meta);
 }
 .house-settings-footer,
 .account-settings-footer {
@@ -3526,7 +3205,7 @@ textarea.notes-textarea {
 /* A row answers a tap on touch screens (hover covers the pointer case). */
 @media (hover: none) {
   .lists-list .ant-list-item:has(.list-row-link:active) {
-    background: var(--panel-subtle);
+    background: var(--well-fill);
   }
 }
 @media (hover: none) and (prefers-reduced-motion: no-preference) {
@@ -3548,13 +3227,13 @@ textarea.notes-textarea {
   gap: var(--space-3);
 }
 .pref-label {
-  font-weight: 500;
+  font-weight: var(--w-medium);
   color: var(--ink);
 }
 .pref-help {
   margin: 0;
   color: var(--muted);
-  font-size: var(--size-meta);
+  font-size: var(--t-meta);
 }
 
 /* ---- Avatar: the person's colour and initial first, the picture fades in over them ---------- */
@@ -3590,7 +3269,7 @@ textarea.notes-textarea {
 }
 .avatar-initial {
   font-family: var(--font-headings);
-  font-weight: 700;
+  font-weight: var(--w-bold);
   line-height: 1;
   /* Ink at 55% on the pastel: a placeholder, not a name tag. */
   color: color-mix(in srgb, var(--ink) 55%, transparent);
@@ -3635,13 +3314,13 @@ textarea.notes-textarea {
   align-items: center;
   width: var(--face, 36px);
   height: var(--face, 36px);
-  background: var(--panel-subtle);
+  background: var(--well-fill);
   box-shadow:
     0 0 0 2px var(--panel),
     inset 0 0 0 1px var(--avatar-edge);
   color: var(--muted);
   font-size: calc(var(--face, 36px) * 0.42);
-  font-weight: 700;
+  font-weight: var(--w-bold);
   font-variant-numeric: tabular-nums;
 }
 /* The deal: each face slides out from under the one before it and settles, one after another.
@@ -3662,4 +3341,48 @@ textarea.notes-textarea {
     opacity: 1;
     transform: none;
   }
+}
+
+/* ---- Floating paper: menus, toasts, tooltips -------------------------------------------------
+   Ant keeps the behaviour (position, focus, dismissal); these are drawn once, as slips of paper at
+   popover height. The Sheet styles its own dialog, drawer and popover in ui.css. */
+.ant-dropdown-menu,
+.ant-message-notice-content,
+.ant-tooltip .ant-tooltip-inner {
+  background: var(--grain-paper), var(--panel) !important;
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--paper-edge), var(--lift-3) !important;
+  color: var(--ink) !important;
+  font-family: var(--font-body);
+}
+.ant-dropdown-menu {
+  padding: 6px !important;
+  border-radius: var(--radius-md) !important;
+}
+.ant-dropdown-menu .ant-dropdown-menu-item {
+  border-radius: var(--radius-sm) !important;
+  padding: 9px var(--space-3) !important;
+  font-size: var(--t-body);
+  font-weight: var(--w-medium);
+}
+.ant-dropdown-menu .ant-dropdown-menu-item:hover,
+.ant-dropdown-menu .ant-dropdown-menu-item-active {
+  background: var(--wash) !important;
+}
+.ant-dropdown-menu .ant-dropdown-menu-item-danger:not(:hover) {
+  color: var(--brand-red) !important;
+}
+.ant-message-notice-content {
+  border-radius: var(--radius-md) !important;
+  padding: 10px 10px 10px var(--space-4) !important;
+  font-size: var(--t-body);
+}
+.ant-tooltip {
+  --antd-arrow-background-color: var(--panel);
+}
+.ant-tooltip .ant-tooltip-inner {
+  min-height: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: var(--t-meta);
 }

@@ -10,7 +10,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from '@dnd-kit/core'
-import { Card, message } from 'antd'
+import { message } from 'antd'
 import { CaretRight, Check, MapTrifold } from '@phosphor-icons/react'
 import { useAuth } from '@auth/AuthProvider'
 import { TopNav } from '@components/TopNav'
@@ -52,7 +52,16 @@ import { IdeasPanel } from '@components/trips/IdeasPanel'
 import type { TabId } from '@components/trips/tabs'
 import { NotePick } from '@components/trips/pickers'
 import { LIMITS as TRIP_LIMITS } from '@lib/trips/limits'
-import { Button, DetailGroup, NavRow, SectionLabel, Sheet, SheetIdentity } from '@components/ui'
+import {
+  Button,
+  DetailGroup,
+  NavRow,
+  SectionLabel,
+  Sheet,
+  SheetIdentity,
+  Paper,
+  PaperStack,
+} from '@components/ui'
 import { NextStopDeck, type Stop, type Tomorrow } from '@components/trips/NextStop'
 import { useMedia } from '@components/trips/Phone'
 import { AddBar, type QuickAddItem } from '@components/trips/QuickAdd'
@@ -1141,20 +1150,23 @@ const TripScreen: React.FC<{
     </aside>
   )
   const ideasColumn = (
-    <aside className="trip-ideas-col" aria-label="Ideas">
-      <header className="trip-ideas-head">
-        <SectionLabel>Ideas · {schedule.ideas.length}</SectionLabel>
-        <span className="trip-ideas-hint">Drag onto a day</span>
-      </header>
-      <IdeasPanel
-        hint={false}
-        ideas={schedule.ideas}
-        shared={shared}
-        moveOpenId={moveOpenId}
-        selectedId={selected}
-        enteringId={enteringId}
-      />
-    </aside>
+    // Ideas on the desk: its own small stack of paper, beside the Days stack.
+    <PaperStack className="trip-ideas-stack">
+      <Paper as="aside" className="trip-ideas-col" aria-label="Ideas">
+        <header className="trip-ideas-head">
+          <SectionLabel>Ideas · {schedule.ideas.length}</SectionLabel>
+          <span className="trip-ideas-hint">Drag onto a day</span>
+        </header>
+        <IdeasPanel
+          hint={false}
+          ideas={schedule.ideas}
+          shared={shared}
+          moveOpenId={moveOpenId}
+          selectedId={selected}
+          enteringId={enteringId}
+        />
+      </Paper>
+    </PaperStack>
   )
   return (
     <DndContext
@@ -1187,12 +1199,12 @@ const TripScreen: React.FC<{
                     onJump={(d) => scrollToEl(document.getElementById(`day-${d}`), false)}
                   />
                 )}
-                <div className="paper-stack">
+                <PaperStack>
                   {headerNode}
-                  <Card className="paper-card paper-list">
+                  <Paper className="paper-list">
                     <div>{pillNode}</div>
-                  </Card>
-                </div>
+                  </Paper>
+                </PaperStack>
               </div>
               {asideOpen && sideNode}
             </div>
@@ -1227,13 +1239,13 @@ const TripScreen: React.FC<{
           <div className="trip-shell">
             <div className="trip-col">
               <TopNav back={{ to: '/app/trips', label: roomName }} />
-              <div className="paper-stack">
+              <PaperStack>
                 {headerNode}
-                <Card className="paper-card paper-list">
+                <Paper className="paper-list">
                   <div>{pillNode}</div>
                   {addBarNode}
-                </Card>
-              </div>
+                </Paper>
+              </PaperStack>
             </div>
           </div>
         )}

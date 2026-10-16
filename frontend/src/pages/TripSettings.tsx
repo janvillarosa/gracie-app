@@ -1,6 +1,5 @@
 import React, { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { Card } from 'antd'
 import { useAuth } from '@auth/AuthProvider'
 import { HouseLoader } from '@components/HouseLoader'
 import { TopNav } from '@components/TopNav'
@@ -17,6 +16,8 @@ import {
   SheetActions,
   SheetFooter,
   SheetIdentity,
+  Paper,
+  PaperStack,
 } from '@components/ui'
 import { createPackingList } from '@api/tripEndpoints'
 import type { Place } from '@api/tripTypes'
@@ -116,70 +117,72 @@ export const TripSettings: React.FC = () => {
   return (
     <div className="container">
       <TopNav back={{ to: `/app/trips/${trip.trip_id}`, label: trip.title }} />
-      <Card className="trip-settings">
-        <SheetIdentity
-          tile
-          editHint
-          leading={
-            <button
-              type="button"
-              className="list-icon"
-              aria-label="Change icon"
-              onClick={() => setSheet('icon')}
-            >
-              {toTripEmoji(trip.icon)}
-            </button>
-          }
-          title={trip.title}
-          onTitle={(v) => patch({ title: v })}
-          titleLabel="Trip name"
-        />
+      <PaperStack>
+        <Paper className="trip-settings">
+          <SheetIdentity
+            tile
+            editHint
+            leading={
+              <button
+                type="button"
+                className="list-icon"
+                aria-label="Change icon"
+                onClick={() => setSheet('icon')}
+              >
+                {toTripEmoji(trip.icon)}
+              </button>
+            }
+            title={trip.title}
+            onTitle={(v) => patch({ title: v })}
+            titleLabel="Trip name"
+          />
 
-        <SectionLabel>This trip</SectionLabel>
-        <DetailGroup label="This trip">
-          <NavRow
-            label="Where"
-            value={route || 'Add a place'}
-            empty={!route}
-            onClick={() => setSheet('where')}
-          />
-          <NavRow
-            label="When"
-            value={when}
-            empty={!trip.start_date}
-            onClick={() => setSheet('when')}
-          />
-          {pack.listId ? (
+          <SectionLabel>This trip</SectionLabel>
+          <DetailGroup label="This trip">
             <NavRow
-              label="Packing list"
-              value={pack.text || 'Open the list'}
-              to={`/app/lists/${pack.listId}`}
+              label="Where"
+              value={route || 'Add a place'}
+              empty={!route}
+              onClick={() => setSheet('where')}
             />
-          ) : (
             <NavRow
-              label="Packing list"
-              value={
-                online ? (packBusy ? 'Making it…' : 'Make a packing list') : 'Connect to make one'
-              }
-              empty
-              onClick={makePacking}
-              disabled={!online || packBusy}
+              label="When"
+              value={when}
+              empty={!trip.start_date}
+              onClick={() => setSheet('when')}
             />
+            {pack.listId ? (
+              <NavRow
+                label="Packing list"
+                value={pack.text || 'Open the list'}
+                to={`/app/lists/${pack.listId}`}
+              />
+            ) : (
+              <NavRow
+                label="Packing list"
+                value={
+                  online ? (packBusy ? 'Making it…' : 'Make a packing list') : 'Connect to make one'
+                }
+                empty
+                onClick={makePacking}
+                disabled={!online || packBusy}
+              />
+            )}
+          </DetailGroup>
+          {packError && (
+            <Note role="alert" tone="warn">
+              {packError}
+            </Note>
           )}
-        </DetailGroup>
-        {packError && (
-          <Note role="alert" tone="warn">
-            {packError}
-          </Note>
-        )}
 
-        <SectionLabel>Just for you</SectionLabel>
-        <DetailGroup label="Just for you">
-          <TripsPreference />
-        </DetailGroup>
+          <SectionLabel>Just for you</SectionLabel>
+          <DetailGroup label="Just for you">
+            <TripsPreference />
+          </DetailGroup>
 
-        <SheetFooter onDelete={() => setConfirming(true)} deleteLabel="Delete trip" />
-      </Card>
+          <SheetFooter onDelete={() => setConfirming(true)} deleteLabel="Delete trip" />
+        </Paper>
+      </PaperStack>
 
       <Sheet
         open={sheet === 'icon'}

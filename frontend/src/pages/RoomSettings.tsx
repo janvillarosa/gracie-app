@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Card, message } from 'antd'
+import { message } from 'antd'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { errorMessage } from '@lib/errors'
 import { useTransitionNavigate } from '@lib/viewTransition'
@@ -19,6 +19,8 @@ import {
   SectionLabel,
   SheetIdentity,
   Switch,
+  Paper,
+  PaperStack,
 } from '@components/ui'
 import type { RoomView } from '@api/types'
 import { useDocumentTitle } from '@lib/useDocumentTitle'
@@ -131,80 +133,82 @@ export const RoomSettings: React.FC = () => {
   return (
     <div className="container">
       <TopNav back={{ to: '/app', label: houseName }} />
-      <Card className="paper-card house-settings">
-        <SheetIdentity
-          title={houseName}
-          onTitle={(v) => void save({ display_name: v }, 'Name saved.')}
-          titleLabel="House name"
-          validate={nameProblem}
-          editHint
-          context="House settings"
-        />
+      <PaperStack>
+        <Paper className="house-settings">
+          <SheetIdentity
+            title={houseName}
+            onTitle={(v) => void save({ display_name: v }, 'Name saved.')}
+            titleLabel="House name"
+            validate={nameProblem}
+            editHint
+            context="House settings"
+          />
 
-        <SectionLabel>About</SectionLabel>
-        <DetailGroup label="About">
-          <div className="ui-fieldrow">
-            <span className="ui-navrow-label">Description</span>
-            <Field
-              aria-label="Description"
-              placeholder="Optional"
-              value={description}
-              error={descError || undefined}
-              onChange={(e) => setDescription(e.target.value)}
-              onBlur={commitDescription}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') e.currentTarget.blur()
-              }}
-            />
-          </div>
-        </DetailGroup>
-
-        <SectionLabel>{memberCount === 1 ? 'Just you' : `${memberCount} members`}</SectionLabel>
-        <DetailGroup label="Members">
-          {members.map((m, idx) => (
-            <div className="house-member-row" key={m.user_id ?? idx}>
-              {/* The name is right beside it: the face is decoration. */}
-              <Avatar seed={m.avatar_key} name={m.name} size={AVATAR_SIZE.row} alt="" eager />
-              <span className="house-member-name">{m.name}</span>
-              {m.user_id && m.user_id === me && <span className="house-member-you">You</span>}
-            </div>
-          ))}
-          <NavRow label="Invite" value="Get a code" onClick={() => setShareOpen(true)} />
-        </DetailGroup>
-
-        <SectionLabel>Lists</SectionLabel>
-        <DetailGroup label="Lists">
-          <div className="pref">
-            <div className="pref-row">
-              <label htmlFor="smart-suggestions" className="pref-label">
-                Smart suggestions
-              </label>
-              <Switch
-                id="smart-suggestions"
-                checked={suggestionsOn}
-                onChange={(on) => void onToggleSuggestions(on)}
-                aria-describedby="smart-suggestions-help"
+          <SectionLabel>About</SectionLabel>
+          <DetailGroup label="About">
+            <div className="ui-fieldrow">
+              <span className="ui-navrow-label">Description</span>
+              <Field
+                aria-label="Description"
+                placeholder="Optional"
+                value={description}
+                error={descError || undefined}
+                onChange={(e) => setDescription(e.target.value)}
+                onBlur={commitDescription}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') e.currentTarget.blur()
+                }}
               />
             </div>
-            <p className="pref-help" id="smart-suggestions-help">
-              Suggest things your House usually adds, a little before they’re due.
-            </p>
-          </div>
-        </DetailGroup>
+          </DetailGroup>
 
-        <footer className="ui-sheet-footer house-settings-footer">
-          <span className="ui-sheet-who">{voteLine}</span>
-          {room.my_deletion_vote ? (
-            <Button kind="text" onClick={() => void onCancelVote()}>
-              Cancel my vote
-            </Button>
-          ) : (
-            <Button kind="text" danger onClick={() => setConfirming(true)}>
-              {othersVoted + 1 >= memberCount ? 'Delete House' : 'Vote to delete'}
-            </Button>
-          )}
-        </footer>
-      </Card>
+          <SectionLabel>{memberCount === 1 ? 'Just you' : `${memberCount} members`}</SectionLabel>
+          <DetailGroup label="Members">
+            {members.map((m, idx) => (
+              <div className="house-member-row" key={m.user_id ?? idx}>
+                {/* The name is right beside it: the face is decoration. */}
+                <Avatar seed={m.avatar_key} name={m.name} size={AVATAR_SIZE.row} alt="" eager />
+                <span className="house-member-name">{m.name}</span>
+                {m.user_id && m.user_id === me && <span className="house-member-you">You</span>}
+              </div>
+            ))}
+            <NavRow label="Invite" value="Get a code" onClick={() => setShareOpen(true)} />
+          </DetailGroup>
+
+          <SectionLabel>Lists</SectionLabel>
+          <DetailGroup label="Lists">
+            <div className="pref">
+              <div className="pref-row">
+                <label htmlFor="smart-suggestions" className="pref-label">
+                  Smart suggestions
+                </label>
+                <Switch
+                  id="smart-suggestions"
+                  checked={suggestionsOn}
+                  onChange={(on) => void onToggleSuggestions(on)}
+                  aria-describedby="smart-suggestions-help"
+                />
+              </div>
+              <p className="pref-help" id="smart-suggestions-help">
+                Suggest things your House usually adds, a little before they’re due.
+              </p>
+            </div>
+          </DetailGroup>
+
+          <footer className="ui-sheet-footer house-settings-footer">
+            <span className="ui-sheet-who">{voteLine}</span>
+            {room.my_deletion_vote ? (
+              <Button kind="text" onClick={() => void onCancelVote()}>
+                Cancel my vote
+              </Button>
+            ) : (
+              <Button kind="text" danger onClick={() => setConfirming(true)}>
+                {othersVoted + 1 >= memberCount ? 'Delete House' : 'Vote to delete'}
+              </Button>
+            )}
+          </footer>
+        </Paper>
+      </PaperStack>
 
       <ShareCodeSheet open={shareOpen} onClose={() => setShareOpen(false)} houseName={houseName} />
       <DeleteVoteSheet

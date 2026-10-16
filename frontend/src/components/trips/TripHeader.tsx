@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
-import { Button, Note, Sheet } from '@components/ui'
-import { Card, Dropdown, Typography } from 'antd'
+import { Button, Note, Sheet, Paper } from '@components/ui'
+import { Dropdown, Typography } from 'antd'
 import type { MenuProps } from 'antd'
 import { CaretDown, DotsThreeVertical } from '@phosphor-icons/react'
 import type { Trip } from '@api/tripTypes'
@@ -191,7 +191,7 @@ export const TripHeader: React.FC<HeaderProps> = ({
   // band (Ready to go?, or the Next stop card) at its foot.
   if (desk)
     return (
-      <Card className="paper-card paper-meta is-desk">
+      <Paper className="paper-meta is-desk">
         {banner}
         <div className="trip-desk-head">
           <span className="list-icon trip-desk-icon" aria-hidden>
@@ -209,11 +209,11 @@ export const TripHeader: React.FC<HeaderProps> = ({
         {noteNodes}
         {status}
         {band && <div className="trip-head-band">{band}</div>}
-      </Card>
+      </Paper>
     )
 
   return (
-    <Card className="paper-card paper-meta">
+    <Paper className="paper-meta">
       {banner}
       <div className="list-header-grid">
         <div className="list-header-title">
@@ -235,6 +235,6 @@ export const TripHeader: React.FC<HeaderProps> = ({
       </div>
       {noteNodes}
       {status}
-    </Card>
+    </Paper>
   )
 }

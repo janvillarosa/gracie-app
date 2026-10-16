@@ -7,15 +7,15 @@ colors:
   stamp-red: "#BE1E2D"
   ink-blue: "#2348A6"
   ink: "#1A1A1A"
-  ink-heading: "#2B2B2B"
   text: "#3B3B3B"
-  text-secondary: "rgba(59, 59, 59, 0.70)"
   muted: "#656C78"
   desk: "#F7F7F7"
   paper: "#FFFFFF"
   paper-tint: "#FAFAFA"
   hairline: "#E6E6E6"
   edge: "#D2D2D2"
+  edge-soft: "#E2E2E0"
+  edge-deep: "#D9D9D6"
   warn-ground: "#FFF4D6"
   warn-ink: "#7A4B00"
   ok-ink: "#2E6B32"
@@ -68,51 +68,43 @@ colors:
 typography:
   display:
     fontFamily: "'Outfit Variable', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial"
-    fontSize: "clamp(32px, 4.2vw, 45px)"
-    fontWeight: 720
+    fontSize: "clamp(36px, 4.4vw, 48px)"
+    fontWeight: 700
     lineHeight: 1.05
     letterSpacing: "-0.03em"
-  headline:
-    fontFamily: "'Outfit Variable', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial"
-    fontSize: "clamp(26px, 3.2vw, 38px)"
-    fontWeight: 700
-    lineHeight: 1.08
-    letterSpacing: "-0.025em"
-  title-desk:
-    fontFamily: "'Outfit Variable', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial"
-    fontSize: "32px"
-    fontWeight: 700
-    lineHeight: 1.1
-  title-page:
+  title:
     fontFamily: "'Outfit Variable', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial"
     fontSize: "28px"
     fontWeight: 700
     lineHeight: 1.15
-  title-sheet:
+    letterSpacing: "-0.02em"
+  heading:
     fontFamily: "'Outfit Variable', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial"
-    fontSize: "26px"
-    fontWeight: 700
-    lineHeight: 1.15
-  title:
-    fontFamily: "'Outfit Variable', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial"
-    fontSize: "clamp(18px, 2.6vw, 26px)"
-    fontWeight: 620
-    lineHeight: 1.15
+    fontSize: "22px"
+    fontWeight: 600
+    lineHeight: 1.2
     letterSpacing: "-0.015em"
-  composer:
+  code:
+    fontFamily: "'Outfit Variable', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial"
+    fontSize: "32px"
+    fontWeight: 700
+    lineHeight: 1.1
+    letterSpacing: "0.12em"
+  lead:
     fontFamily: "'Figtree Variable', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial"
     fontSize: "17px"
     fontWeight: 400
+    lineHeight: 1.45
+  field:
+    fontFamily: "'Figtree Variable', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial"
+    fontSize: "16px"
+    fontWeight: 400
+    lineHeight: 1.4
   body:
     fontFamily: "'Figtree Variable', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial"
     fontSize: "15px"
     fontWeight: 400
     lineHeight: 1.5
-  item:
-    fontFamily: "'Figtree Variable', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial"
-    fontSize: "15px"
-    fontWeight: 500
-    lineHeight: 1.35
   map-pill:
     fontFamily: "'Figtree Variable', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial"
     fontSize: "14px"
@@ -134,10 +126,10 @@ typography:
     fontWeight: 700
     letterSpacing: "0.08em"
 rounded:
+  xs: "6px"
   sm: "8px"
   md: "12px"
   lg: "16px"
-  squircle: "16px"
   sheet: "20px"
   pill: "999px"
 spacing:
@@ -148,6 +140,7 @@ spacing:
   space-5: "20px"
   space-6: "24px"
   space-7: "32px"
+  control-sm: "32px"
   control-md: "36px"
   control-lg: "44px"
   row-h: "52px"
@@ -236,7 +229,7 @@ components:
   composer:
     backgroundColor: "{colors.paper}"
     textColor: "{colors.ink}"
-    typography: "{typography.composer}"
+    typography: "{typography.lead}"
     rounded: "{rounded.pill}"
     height: "56px"
   detail-group:
@@ -265,14 +258,14 @@ components:
     textColor: "{colors.ink}"
   paper-card:
     backgroundColor: "{colors.paper}"
-    rounded: "{rounded.squircle}"
+    rounded: "{rounded.lg}"
   sheet:
     backgroundColor: "{colors.paper}"
     rounded: "{rounded.sheet}"
     padding: "0 20px 24px"
   inspector:
     backgroundColor: "{colors.paper}"
-    rounded: "{rounded.squircle}"
+    rounded: "{rounded.lg}"
     width: "440px"
   list-icon:
     backgroundColor: "{colors.paper-tint}"
@@ -301,6 +294,11 @@ components:
 
 # Design System: Bauhouse
 
+> **Living reference:** [docs/design-system/index.html](docs/design-system/index.html) shows every token
+> in use (copied from `frontend/src/styles.css` by `pnpm design:sync`) and every pattern below. This file
+> is the rules and the reasons; the reference page is what they look like. Agents: read both before any
+> UI change, and extend the system rather than inventing a one-off (see CLAUDE.md, "Design system").
+
 ## Overview
 
 **Creative North Star: "The Kitchen-Table Notebook"**
@@ -312,7 +310,7 @@ The system is quiet by construction. Text fields have no boxes. Detail rows sit 
 Density is phone-first. Every control is 44px tall or reaches 44px through an invisible hit area. Inputs are at least 16px so iOS never zooms, and hover effects exist only behind `(hover: hover)`. A wide screen gets the same paper with more of it side by side, not a different product. The map is the one surface that is not ours: a Google map with a quiet light style, on which our own paper pills and day-coloured routes carry the colour.
 
 **Key Characteristics:**
-- White paper on a pale desk, with 1px edges and a two-part contact and ambient shadow.
+- White paper on a pale desk. Paper has a fine grain, the desk a coarser one; a sheet shows its thickness as a stepped edge at its foot (the ream), and its shadow is warm and long.
 - One yellow key per sheet. Red is for destructive actions only. Blue is the focus ring, the caret and links.
 - Outfit for titles, Figtree for everything else. Small-caps labels at 12px / 0.08em.
 - 16px squircle corners on paper, pills on controls, 20px on the top of a bottom sheet.
@@ -342,13 +340,12 @@ A near-monochrome paper-and-ink palette with one saturated yellow, plus function
 
 ### Neutral
 - **Ink** (`--ink`): the darkest text. It is used for sheet titles, button labels, field text and row values, and as the fill of a map cluster.
-- **Heading Ink** (`--ink-heading`): page headings and list item text, one step lighter than ink.
-- **Body Text** (`--text`) and **Secondary Text** (`--text-secondary`, 70%): running text and list meta.
-- **Muted** (`--muted`): context lines, labels, placeholders, times, empty values and icon buttons. It is a cool grey so it reads as pencil, not as faded ink.
+- **Text** (`--text`): running text. There is no heading ink or 70% secondary text any more: titles are ink, secondary lines are muted.
+- **Muted** (`--muted`): context lines, labels, placeholders, times, empty values and icon buttons. It is a cool grey so it reads as pencil, not as faded ink. 5.3:1 on paper; it never sits on yellow (3.7:1).
 - **Desk** (`--bg`): the page background the paper sits on.
 - **Paper** (`--panel`): every sheet, card, dialog, map pill and control face.
 - **Paper Tint** (`--panel-subtle`): detail groups, the add-bar input, the PillNav track, list icons and quiet hover fills.
-- **Hairline** (`--border`) and **Edge** (`--border-strong`): hairlines divide rows inside a sheet. The edge outlines a sheet of paper, a quiet button, the PillNav track, the composer and the dashed slot of an empty day.
+- **Hairline** (`--border`) and **Edge** (`--border-strong`): hairlines divide rows inside a sheet. The edge outlines a sheet of paper, a quiet button, the PillNav track, the composer and the dashed slot of an empty day. **The ream** (`--edge-soft`, `--edge-deep`) draws a sheet's thickness at its foot.
 - **Warn Ground / Warn Ink** (`--warn-bg`, `--warn-ink`): the amber of an overlap or a ticket slip. The amber text is 6.8:1, and never red, because an overlap is not an error. **OK Ink** (`--ok-ink`) is its quiet green counterpart (a ready line in "Ready to go?").
 - **On Red / On Pin** (`--on-red`, `--on-pin`): white text on a red key or a coloured pin.
 
@@ -367,19 +364,19 @@ A near-monochrome paper-and-ink palette with one saturated yellow, plus function
 **Character:** Outfit is round and geometric, a little friendly, and is used only for titles. Figtree is a warm, open grotesque that does all the reading, every control and every map pill. Both are self-hosted variable faces (latin subset, `src/fonts.css`), so weights like 620, 650 and 720 are real. No font comes from a third-party origin; Google's own map UI brings its own fonts from `maps.gstatic.com`.
 
 ### Hierarchy
-- **Display** (720, `clamp(32px, 4.2vw, 45px)`, 1.05, -0.03em): `h1` page headings. Below 768px it grows to `clamp(42px, 4.8vw, 56px)` so a phone's page title is confident.
-- **Headline** (700, `clamp(26px, 3.2vw, 38px)`, 1.08, -0.025em): `h2`.
-- **Desk title** (700, 32px, 1.1): the trip title in the desk header, on one line with an ellipsis.
-- **Page title** (700, 28px, 1.15): the inline-editable title of a list or trip in its settings (`--title-page`).
-- **Sheet title** (700, 26px, 1.15): Tier 1 of every sheet (`--title-sheet`), inline-editable where the object can be renamed. It is 18px in a popover.
-- **Title** (620, `clamp(18px, 2.6vw, 26px)`): `h3` and section heads. The empty-state line is 22px.
-- **Composer** (400, 17px): the text of the desk's floating add bar.
-- **Body** (400, 15px, 1.5): everything else (`--size-body`). Context lines under a title are also 15px, muted.
-- **Item** (500, 15px, 1.35): a list item's text, in heading ink, so the thing itself outweighs its metadata.
-- **Map pill** (600, 14px; 13px on the phone): the name on a map pill, with the time at 12.5px in tabular numerals.
-- **Meta** (400–600, 13px): times, "Added by", notes and text buttons (`--size-meta`). Times and counts use tabular numerals; a row's time is 12.5px.
-- **Label** (700, 12px, 0.08em, UPPERCASE): section labels (`SectionLabel`), muted.
-- **Stamp** (700, 11px, 0.08em, UPPERCASE): category and state stamps, and the NEXT kicker on a map pill.
+Ten roles (tokens `--t-*`) and four weights (`--w-regular` 400, `--w-medium` 500, `--w-semibold` 600, `--w-bold` 700). Every size in the app is one of these; nothing else exists.
+- **Display** (Outfit 700, `clamp(36px, 4.4vw, 48px)`, 1.05, -0.03em): the page title (`h1`: the House, the no-House page).
+- **Title** (Outfit 700, 28px, 1.15): a sheet's, a list's, a trip's or a settings page's title (`h2`).
+- **Heading** (Outfit 600, 22px, 1.2): section heads and the empty-state line (`h3`).
+- **Code** (Outfit 700, 32px, 0.12em, tabular): a confirmation or invite code.
+- **Lead** (Figtree 400, 17px): the composer.
+- **Field** (Figtree 400, 16px): every input. Never smaller, or iOS zooms on focus.
+- **Body** (Figtree 400, 15px, 1.5; 500 for row text and values, 600 for buttons and tabs): everything you read.
+- **Meta** (Figtree 400/600, 13px): times, notes, secondary lines, short labels, text buttons. Times and counts in tabular numerals.
+- **Label** (Figtree 700, 12px, 0.08em, uppercase, muted): section labels.
+- **Stamp** (Figtree 700, 11px, 0.08em, uppercase): stamps and kickers.
+
+Icons and emoji have their own scale (`--icon-xs` 12 … `--icon-2xl` 28), never a type size.
 
 ### Named Rules
 **The Outfit Is For Titles Rule.** Outfit appears only on headings, sheet and page titles, the empty-state line, modal titles and a ticket's confirmation code. Buttons, rows, chips, labels and map pills are Figtree.
@@ -413,33 +410,39 @@ Breakpoints are `480px` (tighter PillNav tabs), `640px` (paper-modal keys go ful
 
 ## Elevation & Depth
 
-Depth is paper height. Surfaces are flat white sheets with a 1px edge, a white top highlight (`--paper-edge`) and a two-part shadow: a tight contact shadow plus a soft ambient one. There are four heights:
-- `--lift-0`: a sheet resting on the desk (the list header, a trip day, the Ideas column).
-- `--lift-1`: the sheet on top of the stack, and small floating controls on the map (the +/− stack, the "off the map" chip).
+Depth is paper height, and paper has body. Every sheet has a 1px edge, a white top highlight (`--paper-edge`), a fine grain (`--grain-paper`, a background layer with its strength baked in) and a stepped foot: two or three leaves of the ream showing beneath it (`--thick`, in every lift). Its shadow is warm (tinted from the desk's brown, not grey) and long. There are four heights:
+- `--lift-0`: a sheet resting on the desk (the base of a stack, the Ideas column, a settings page).
+- `--lift-1`: the sheet on top of a stack.
 - `--lift-2`: bottom sheets, dialogs, the inspector, the composer and a dragged row.
-- `--lift-3`: popovers, dropdown menus and suggestion slips.
+- `--lift-3`: popovers, menus, toasts, tooltips and suggestion slips.
 
-The stacked look comes from overlap, not from heavier shadows. The list sheet is pulled up 20px over the header sheet, and the bottom 8px of a third sheet peeks out beneath it (14px inset each side). The Days column uses exactly this stack, and the Ideas and Map columns share its radius, lift and top and bottom edges. The next-stop deck shows one or two further edges at 14px and 28px insets.
+The desk has its own, coarser grain (`--grain-desk`), so paper and desk read as two materials. Because both are grained, nothing inside a sheet is filled with flat colour: an in-sheet fill is `--paper-fill` (or `--well-fill` for a tint), and anything that must cover the desk is `--desk-fill`; a flat fill would read as a patch stuck on the paper.
 
-The yellow key is the only control with its own shadow, and its shadow is tinted from the deep yellow, not grey. It has a white inner highlight, a 1px deep-yellow bottom edge and a warm 6px drop that grows to 14px on hover. Pressing settles it 1px down.
+The stacked look comes from overlap (`PaperStack`): each sheet after the first is slid 20px over the one before and lifted; the sheets beneath lose their foot edge under it; one or two more sheets peek out at the foot (10px and 18px, at 14px and 28px insets), each a fraction of a degree off true (`--peek-tilt-1`, `--peek-tilt-2`), like a real pile. On arrival the stack assembles bottom-up.
 
-Map pills are paper too, but they sit on a photograph-like ground, so they carry their own small shadow (`0 1px 2px` plus a `0 6px 14px -6px` drop). A pill whose row is hovered lifts 3px with a deeper drop. The Next pill takes the key's warm yellow drop.
+Things pressed **into** the paper are wells (`--well`, a soft inner shadow along the top): detail groups, the PillNav track, stamps. A well is never a card on the sheet.
+
+The yellow key is the one control with real lift: a 2px deep-yellow underside, a warm drop that grows on hover, and when pressed it sinks its whole underside (`--key-travel`). Quiet buttons are slips of paper: a hair above the page (`--slip-rest`), a hair higher under the pointer (`--slip-hover`), pressed into the page when pressed (`--slip-press`).
+
+Map pills are paper too, but they sit on a photograph-like ground, so they carry their own small shadows (`--pin-*`).
 
 ### Shadow Vocabulary
 - **Paper edge** (`--paper-edge`): the white top-edge highlight on every sheet and card.
+- **Thickness** (`--thick`): the ream at a sheet's foot, part of every lift.
+- **Well** (`--well`): pressed into the sheet.
+- **Slip** (`--slip-rest`, `--slip-hover`, `--slip-press`): a quiet button's three heights.
 - **Lift 0–3** (`--lift-0` … `--lift-3`): the four paper heights above.
 - **Key** (`--shadow-key`, `--shadow-key-hover`): the yellow key, selected chips and pressed choice tiles.
-- **Soft** (`--shadow-soft`): a 1px hairline lift under outlined Ant buttons.
 - **Focus ring** (`--focus-ring`): a 2px paper gap, then a 2px Ink Blue ring at 70%. It is visible on white and on yellow.
 
 ### Named Rules
 **The Paper Heights Rule.** A surface takes one of the four lifts, chosen by what it is (resting, on top, overlay, popover), never a bespoke shadow. Map pills are the one exception, because they sit on the map, not on the desk.
 
-**The Only Lifted Control Rule.** Controls are flat. Only the yellow key (and yellow-selected chips and choices) carries a shadow.
+**The Only Lifted Control Rule.** Only the yellow key (and yellow-selected chips and choices) is lifted. Quiet slips rest a hair above the page and press into it; text buttons and everything else are flat on the sheet.
 
 ## Shapes
 
-Paper has soft squircle corners (16px, `--radius-squircle` / `--radius-lg`). The top corners of a bottom sheet are 20px (`--radius-sheet`). Controls you press are pills (`--radius-pill`): keys, quiet buttons, chips, the PillNav track and its sliding tab, the add-bar input (22px on a 44px field), the composer and map pills. Choice tiles, segments, empty-day slots and the dashed drag placeholder use 12px (`--radius-md`). Focus rings and text buttons use 8px (`--radius-sm`). Icon buttons, list icons and pips are circles. Stamps are nearly square at 5px (6px in the inspector's stamp select). List checkboxes are 7px at 22px. Hairlines between rows are inset to the row's text start, so they never bend around a rounded hover fill.
+Paper has soft squircle corners (16px, `--radius-lg`). The corner scale is `--radius-xs` 6, `sm` 8, `md` 12, `lg` 16, `sheet` 20 and `pill`; nothing else. The top corners of a bottom sheet are 20px (`--radius-sheet`). Controls you press are pills (`--radius-pill`): keys, quiet buttons, chips, the PillNav track and its sliding tab, the add-bar input (22px on a 44px field), the composer and map pills. Choice tiles, segments, empty-day slots and the dashed drag placeholder use 12px (`--radius-md`). Focus rings and text buttons use 8px (`--radius-sm`). Icon buttons, list icons and pips are circles. Stamps are nearly square at 6px (`--radius-xs`). List checkboxes are 7px at 22px. Hairlines between rows are inset to the row's text start, so they never bend around a rounded hover fill.
 
 A map pill has a pointer tail (a 10px square turned 45°) and a 10px anchor ring on the exact coordinate. A collapsed pill keeps only the anchor and the dot.
 
@@ -450,14 +453,15 @@ There are no side-stripe accent borders anywhere (enforced by test). Emphasis is
 All overlays and form controls in trip screens come from `src/components/ui/`, styled by `ui.css` from `:root` tokens. The dev-only gallery at `/dev/ui` shows every primitive and state.
 
 ### Buttons
-Quiet paper, one tactile key.
-- **Shape:** pills (999px). Icon-only buttons are 36px circles whose hit area reaches 44px.
-- **Key** (`Button kind="key"`): Key Yellow, an ink label at weight 650, 44px tall, 20px side padding and the key shadow. One per sheet. A round 44px key is the add bar's plus; it is 48px in the composer.
-- **Key, danger:** the same shape in Stamp Red with white text, for a confirm-delete.
-- **Quiet:** a white pill, 36px, with a 1px edge border and an ink label. It fills with Paper Tint on hover.
-- **Text:** a 44px-tall, 13px weight-600 label with no fill. Danger turns it Stamp Red (the footer's Delete).
-- **States:** hover only on `(hover: hover)` devices. The key's shadow grows; quiet and text buttons fill with Paper Tint. Pressing the key moves it down 1px over 90ms, only when motion is allowed. Focus is the shared focus ring. Disabled is 50% opacity.
-- **Ant buttons** (outside trip files) are styled to match: a pill, a yellow primary with the key shadow, and an outlined default with a soft lift.
+One family (`Button`), each kind paper at a known height.
+- **Key** (`kind="key"`): Key Yellow, ink label 600, 44px, 20px side padding, a 2px deep-yellow underside and a warm drop (`--shadow-key`). One per sheet. Pressed, it sinks 2px (`--key-travel`). Not yet pressable: yellow soaked into the paper (38% on paper), flat, muted ink.
+- **Round key** (`kind="key" iconOnly`): the add bar's plus (44px) and the composer's (48px). With nothing to add it is a plain paper disc.
+- **Danger key**: the key in Stamp Red with white text and a red-tinted shadow, for a confirmation only.
+- **Quiet** (`kind="quiet"`): a paper slip, 36px, 1px edge, grain, resting a hair above the page; lifts 1px on hover; presses in when pressed. Disabled: paper with faded ink and edge, never grey, never see-through.
+- **Text** (`kind="text"`): 44px tall, 13px 600, ink on the sheet; a wash on hover. Danger is red ink.
+- **Icon** (`iconOnly`): round, 36px, with a 44px hit area; a text icon is bare, a quiet icon is a round slip.
+- **No spinners:** a button that is working says so in its label ("Saving…", "Logging in…").
+- There are no Ant buttons in the app (enforced).
 
 ### Chips, choices and segments
 - **Chip:** a white 36px pill with a 1px hairline border, 15px text and a small muted glyph. It opens a picker. An empty chip shows muted text ("+ Time").
@@ -467,8 +471,9 @@ Quiet paper, one tactile key.
 - **Stamp select** (the inspector's category): every stamp outlined 1.5px in its own ink at 78% opacity. Only the chosen one is filled with its tint.
 
 ### Cards / Containers
-- **Paper card:** white, a 1px edge, 16px corners, the paper-edge highlight plus `--lift-0`. The top sheet of a stack uses `--lift-1`.
-- **Detail group** (`DetailGroup`): a Paper Tint group with 16px corners, holding 52px nav rows separated by hairlines inset 16px. No borders, no shadow.
+- **Paper** (`Paper`): white with grain, a 1px edge, 16px corners, the paper-edge highlight and one of the four lifts. Every panel is one; there are no Ant cards (enforced).
+- **Stack** (`PaperStack`): the only way sheets are piled; see Elevation. Every page is a stack, even a one-sheet one (settings, Account, no-House, sign-in), so nothing is a lone card floating on the desk.
+- **Detail group** (`DetailGroup`): a well (Paper Tint, pressed in) with 16px corners, holding 52px nav rows separated by hairlines inset 16px. No border; never a card.
 - **Internal padding:** sheets 20px at the sides and 24px at the bottom; list cards 24px; the Ideas column 16px.
 
 ### Inputs / Fields
@@ -628,7 +633,8 @@ lacks in a mockup. The sidecar `.impeccable/design.json` does not yet carry the 
 - **Do** build every overlay from `Sheet` and its four tiers: identity, actions, details, footer, separated by 18px, 26px and 22px.
 - **Do** give a sheet at most one Key Yellow button. A second action is a quiet button or a text button.
 - **Do** place every line of a plan on the row grid `[24] 12 [48] 12 [title] [trail]`, dropping the time column to 0 when there are no times.
-- **Do** use the paper heights `--lift-0` … `--lift-3` with `--paper-edge`, chosen by what the surface is.
+- **Do** use the paper heights `--lift-0` … `--lift-3` with `--paper-edge`, chosen by what the surface is, through `Paper` and `PaperStack`.
+- **Do** take every value from a token, and run `pnpm design:sync` after changing one so the reference page shows it.
 - **Do** keep every control 44px tall or give it a 44px invisible hit area (`ui.css` widens targets under `pointer: coarse`), and keep inputs at 16px or more.
 - **Do** put hover effects behind `@media (hover: hover)` and animations behind `prefers-reduced-motion: no-preference`, with a reduced version that keeps the meaning.
 - **Do** use PillNav for every tab group.
@@ -638,7 +644,8 @@ lacks in a mockup. The sidecar `.impeccable/design.json` does not yet carry the 
 
 ### Don't:
 - **Don't** import Ant `Modal`, `Drawer` or `Popover` in trip files, `RoomPage` or any `components/ui` file other than `Sheet.tsx`, or Ant `Input`, `Select`, `Button`, `Switch` or `DatePicker` in trip files. Use the `components/ui` primitives.
-- **Don't** write hex colours in `ui.css` or `trips.css` outside `:root`. Add a token to `:root` in `styles.css`, and don't use a `var(--…)` in `ui.css` that is not defined there.
+- **Don't** write a raw colour, a px font size or a numeric weight in `styles.css`, `trips.css`, `ui.css` or `gmap.css` outside the token block. Add a token, and don't use a `var(--…)` that is not defined.
+- **Don't** import Ant `Card` or `Button` anywhere outside the landing page.
 - **Don't** use a side-stripe accent border (`border-left` or `border-right` of 2px or more) to mark a row, note or card.
 - **Don't** add a second tab style, a bordered text field or a card inside a sheet. Group with tints, hairlines and spacing.
 - **Don't** use Outfit for buttons, rows, chips, labels or map pills.

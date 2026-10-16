@@ -1,5 +1,6 @@
 import React from 'react'
-import { Button, Checkbox, List as AntList, Tag } from 'antd'
+import { Button } from '@components/ui'
+import { Checkbox, List as AntList, Tag } from 'antd'
 import { DotsSixVertical, Trash } from '@phosphor-icons/react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -243,7 +244,8 @@ export const ItemRow = React.memo<Props>(function ItemRow({
         </Tag>
       )}
       <Button
-        type="text"
+        kind="text"
+        iconOnly
         className="item-delete"
         icon={<Trash />}
         aria-label="Delete item"

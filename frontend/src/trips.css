@@ -9,9 +9,9 @@
 .trip-group h3 {
   margin: 0 0 4px;
   font-family: var(--font-headings);
-  font-size: 15px;
+  font-size: var(--t-body);
   color: var(--muted);
-  font-weight: 600;
+  font-weight: var(--w-semibold);
 }
 
 /* ---- form controls ----------------------------------------------------------------- */
@@ -22,25 +22,25 @@
 }
 .trip-error {
   color: var(--brand-red);
-  font-size: 13px;
+  font-size: var(--t-meta);
 }
 .trip-help,
 .trip-hint {
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--t-meta);
   margin: 4px 0 0;
 }
 .trip-link,
 .trip-inline-link {
   color: var(--brand-blue);
-  font-weight: 600;
+  font-weight: var(--w-semibold);
   text-decoration: underline;
   text-underline-offset: 2px;
   background: none;
   border: 0;
   padding: 0;
   font: inherit;
-  font-weight: 600;
+  font-weight: var(--w-semibold);
   cursor: pointer;
 }
 
@@ -57,19 +57,19 @@
   right: 0;
   top: calc(100% + 4px);
   padding: 4px;
-  background: var(--panel);
+  background: var(--paper-fill);
   border: 1px solid var(--border);
   border-radius: 18px;
   box-shadow: var(--lift-3);
 }
 .place-attrib {
   padding: 4px 12px 2px;
-  font-size: 11px;
+  font-size: var(--t-stamp);
   color: var(--muted);
 }
 .place-help {
   min-height: 0;
-  font-size: 13px;
+  font-size: var(--t-meta);
   color: var(--muted);
 }
 .place-help:empty {
@@ -81,8 +81,8 @@
   gap: 8px;
   padding: 6px 8px 6px 12px;
   border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--panel-subtle);
+  border-radius: var(--radius-md);
+  background: var(--well-fill);
 }
 .place-chosen-text {
   flex: 1;
@@ -92,11 +92,11 @@
 }
 .place-chosen-name {
   color: var(--ink);
-  font-weight: 600;
+  font-weight: var(--w-semibold);
 }
 .place-chosen-sub {
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--t-label);
 }
 
 /* ---- page frame -------------------------------------------------------------------- */
@@ -119,8 +119,8 @@
 }
 /* The stack itself is AvatarStack (styles.css); a trip only places it. */
 .trip-offline {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--t-meta);
+  font-weight: var(--w-semibold);
   color: var(--muted);
 }
 .trip-banner {
@@ -130,10 +130,10 @@
   gap: 12px;
   margin-bottom: 12px;
   padding: 10px 14px;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--brand-yellow) 30%, white);
   color: var(--ink);
-  font-weight: 600;
+  font-weight: var(--w-semibold);
 }
 .trip-stops {
   margin: 0;
@@ -150,7 +150,7 @@
 }
 .trip-stop-name {
   flex: 1;
-  font-weight: 600;
+  font-weight: var(--w-semibold);
 }
 .trip-missing {
   max-width: 480px;
@@ -166,9 +166,9 @@
 }
 .trip-day {
   position: relative;
-  background: var(--panel);
+  background: var(--paper-fill);
   border: 1px solid var(--border-strong);
-  border-radius: var(--radius-squircle);
+  border-radius: var(--radius-lg);
   box-shadow: var(--paper-edge), var(--lift-0);
 }
 /* Long trips: days far from the viewport skip layout and paint until they are near. */
@@ -181,8 +181,8 @@
   top: var(--trip-sticky);
   z-index: 3;
   padding: 14px 14px 8px;
-  background: var(--panel);
-  border-radius: var(--radius-squircle) var(--radius-squircle) 0 0;
+  background: var(--paper-fill);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
 .trip-day-title {
   display: flex;
@@ -193,14 +193,14 @@
 .trip-day-head h2 {
   margin: 0;
   font-family: var(--font-headings);
-  font-size: 22px;
+  font-size: var(--t-heading);
   line-height: 1.2;
   color: var(--ink);
 }
 .trip-day-head h2:focus-visible {
   outline: none;
   box-shadow: var(--focus-ring);
-  border-radius: 6px;
+  border-radius: var(--radius-xs);
 }
 .trip-day-fold {
   margin-left: auto;
@@ -249,10 +249,10 @@
   right: 14px;
   padding: 2px 10px;
   border: 2px solid var(--ok-ink);
-  border-radius: 6px;
+  border-radius: var(--radius-xs);
   color: var(--ok-ink);
-  font-weight: 700;
-  font-size: 12px;
+  font-weight: var(--w-bold);
+  font-size: var(--t-label);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   rotate: -4deg;
@@ -264,21 +264,21 @@
   padding: 0 4px;
   background: none;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--radius-xs);
   font: inherit;
-  font-size: 15px;
-  font-weight: 600;
+  font-size: var(--t-body);
+  font-weight: var(--w-semibold);
   color: var(--ink);
   cursor: pointer;
 }
 .trip-daylabel.is-suggested {
   color: var(--muted);
-  font-weight: 500;
+  font-weight: var(--w-medium);
 }
 .trip-daylabel.is-empty {
   color: var(--muted);
-  font-weight: 400;
-  font-size: 13px;
+  font-weight: var(--w-regular);
+  font-size: var(--t-meta);
   opacity: 0;
 }
 .trip-day-head:focus-within .trip-daylabel.is-empty {
@@ -289,7 +289,7 @@
     opacity: 1;
   }
   .trip-daylabel:hover {
-    background: var(--panel-subtle);
+    background: var(--well-fill);
   }
 }
 @media (hover: none) {
@@ -301,9 +301,9 @@
   min-height: 32px;
   padding: 2px 8px;
   font: inherit;
-  font-size: 16px;
+  font-size: var(--t-field);
   border: 1px solid var(--border-strong);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   width: 12em;
   max-width: 100%;
 }
@@ -311,7 +311,7 @@
   margin: 4px 0 10px;
   padding: 14px;
   border: 1.5px dashed var(--border-strong);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   color: var(--muted);
   text-align: center;
 }
@@ -371,7 +371,7 @@
 }
 .trip-time {
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--t-meta);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -385,7 +385,7 @@
   padding: 2px 6px;
   background: none;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   text-align: left;
   font: inherit;
   color: var(--ink);
@@ -394,8 +394,8 @@
 .trip-title {
   position: relative;
   isolation: isolate;
-  font-size: 15.5px;
-  font-weight: 600;
+  font-size: var(--t-body);
+  font-weight: var(--w-semibold);
   line-height: 1.3;
   color: var(--ink);
   max-width: 100%;
@@ -403,7 +403,7 @@
 }
 .trip-sub {
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--t-meta);
   line-height: 1.3;
 }
 .trip-row.is-done .trip-title {
@@ -413,7 +413,7 @@
 }
 .trip-row.is-overdue .trip-time {
   color: var(--brand-red);
-  font-weight: 650;
+  font-weight: var(--w-semibold);
 }
 .trip-row.is-selected {
   background: color-mix(in srgb, var(--brand-yellow) 14%, white);
@@ -437,11 +437,11 @@
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: var(--panel-subtle);
+  background: var(--well-fill);
   border: 1px solid var(--border-strong);
   color: var(--muted);
-  font-size: 10px;
-  font-weight: 700;
+  font-size: var(--icon-xs);
+  font-weight: var(--w-bold);
 }
 .trip-acts {
   display: none;
@@ -456,7 +456,7 @@
     opacity: 1;
   }
   .trip-main:hover {
-    background: var(--panel-subtle);
+    background: var(--well-fill);
   }
 }
 .trip-row.is-dragging {
@@ -464,10 +464,10 @@
 }
 .trip-drag-chip {
   padding: 8px 14px;
-  background: var(--panel);
-  border-radius: 12px;
+  background: var(--paper-fill);
+  border-radius: var(--radius-md);
   box-shadow: var(--lift-2);
-  font-weight: 600;
+  font-weight: var(--w-semibold);
   color: var(--ink);
 }
 .trip-note {
@@ -477,10 +477,10 @@
   gap: 8px;
   margin: 0 0 8px 46px;
   padding: 6px 10px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--brand-yellow) 25%, white);
   color: var(--ink);
-  font-size: 13px;
+  font-size: var(--t-meta);
 }
 .item-swipe {
   margin-inline: -12px;
@@ -513,9 +513,9 @@
   max-height: 280px;
   overflow-y: auto;
   padding: 4px;
-  background: var(--panel);
+  background: var(--paper-fill);
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: var(--radius-md);
   box-shadow: var(--lift-3);
 }
 .move-item {
@@ -525,7 +525,7 @@
   padding: 6px 12px;
   background: none;
   border: 0;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   text-align: left;
   font: inherit;
   color: var(--ink);
@@ -541,7 +541,7 @@
 }
 @media (hover: hover) {
   .move-item:hover {
-    background: var(--panel-subtle);
+    background: var(--well-fill);
   }
 }
 
@@ -553,8 +553,8 @@
   list-style: none;
   padding: 4px 0;
   color: var(--day-colour);
-  font-size: 12px;
-  font-weight: 700;
+  font-size: var(--t-label);
+  font-weight: var(--w-bold);
   letter-spacing: 0.04em;
 }
 .trip-now::before,
@@ -582,7 +582,7 @@
   padding: 0 0 0 14px;
   background: none;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   font: inherit;
   color: var(--ink);
   text-align: left;
@@ -592,11 +592,11 @@
   display: grid;
   place-items: center;
   color: var(--muted);
-  font-size: 17px;
+  font-size: var(--icon-sm);
 }
 .trip-stub-title {
-  font-size: 14px;
-  font-weight: 500;
+  font-size: var(--t-body);
+  font-weight: var(--w-medium);
   color: var(--muted);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -615,10 +615,10 @@
 .trip-used {
   padding: 0 8px;
   border: 1px solid var(--border-strong);
-  border-radius: 6px;
+  border-radius: var(--radius-xs);
   color: var(--muted);
-  font-size: 11px;
-  font-weight: 700;
+  font-size: var(--t-stamp);
+  font-weight: var(--w-bold);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -660,7 +660,7 @@
 
 /* ---- the one add bar ---------------------------------------------------------------- */
 .trip-add-status {
-  font-size: 13px;
+  font-size: var(--t-meta);
   color: var(--muted);
 }
 .trip-add-status:empty {
@@ -674,9 +674,9 @@
   flex-direction: column;
   min-width: 0;
   margin-top: 16px;
-  background: var(--panel);
+  background: var(--paper-fill);
   border: 1px solid var(--border-strong);
-  border-radius: var(--radius-squircle);
+  border-radius: var(--radius-lg);
   box-shadow: var(--paper-edge), var(--lift-0);
   overflow: hidden;
 }
@@ -699,7 +699,7 @@
 }
 .trip-pane-body h3 {
   margin: 8px 0 0;
-  font-size: 13px;
+  font-size: var(--t-meta);
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--muted);
@@ -825,7 +825,7 @@
 }
 .map-pin text {
   fill: var(--on-pin);
-  font: 700 13px var(--font-body);
+  font: var(--w-bold) var(--t-meta) var(--font-body);
   pointer-events: none;
 }
 .map-pin.is-hot .map-pin-disc {
@@ -852,11 +852,11 @@
   left: 12px;
   bottom: 12px;
   padding: 2px 10px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.9);
+  border-radius: var(--radius-pill);
+  background: var(--panel-veil);
   color: var(--ink);
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--t-label);
+  font-weight: var(--w-semibold);
 }
 .map-attrib {
   position: absolute;
@@ -864,9 +864,9 @@
   bottom: 8px;
   padding: 1px 6px;
   border-radius: 4px;
-  background: rgba(255, 255, 255, 0.85);
+  background: var(--panel-veil);
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--t-stamp);
 }
 .trip-map-bar {
   position: absolute;
@@ -882,13 +882,13 @@
 .trip-pill {
   padding: 8px 14px;
   border: 0;
-  border-radius: 999px;
-  background: var(--panel);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  border-radius: var(--radius-pill);
+  background: var(--paper-fill);
+  box-shadow: var(--pin-shadow);
   color: var(--ink);
   font: inherit;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--t-meta);
+  font-weight: var(--w-semibold);
   pointer-events: auto;
 }
 .trip-pill.is-button {
@@ -926,7 +926,6 @@
 .trip-ideas .trip-time {
   display: none;
 }
-
 
 /* ---- stacked papers: the trip is a stack like a list ----------------------------------- */
 .trip-col {
@@ -985,7 +984,7 @@
 .trip-day-head h3 {
   margin: 0;
   font-family: var(--font-headings);
-  font-size: 20px;
+  font-size: var(--t-heading);
   line-height: 1.2;
   color: var(--ink);
 }
@@ -993,7 +992,7 @@
 .trip-day-head h3:focus-visible {
   outline: none;
   box-shadow: var(--focus-ring);
-  border-radius: 6px;
+  border-radius: var(--radius-xs);
 }
 .trip-day.is-over {
   background: color-mix(in srgb, var(--brand-yellow) 14%, white);
@@ -1023,7 +1022,7 @@
 .trip-nextup {
   margin: 0 0 8px;
   padding: 10px 14px;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--brand-yellow) 22%, white);
   color: var(--ink);
 }
@@ -1042,7 +1041,7 @@
 .trip-empty-sheet h3 {
   margin: 0;
   font-family: var(--font-headings);
-  font-size: 22px;
+  font-size: var(--t-heading);
   color: var(--ink);
 }
 .trip-empty-sheet p {
@@ -1054,8 +1053,9 @@
 .trip-add-field {
   position: relative;
 }
+/* The text starts 12px after the chip, however wide its label is (QuickAdd measures it). */
 .trip-add-field.has-target textarea.add-input {
-  padding-left: calc(var(--chip-w, 92px) + 16px) !important;
+  padding-left: calc(8px + var(--chip-w, 92px) + var(--space-3)) !important;
 }
 .trip-target-chip {
   position: absolute;
@@ -1070,17 +1070,17 @@
   min-height: 32px;
   padding: 0 10px;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: color-mix(in srgb, var(--brand-yellow) 45%, white);
   color: var(--ink);
   font: inherit;
-  font-size: 13px;
-  font-weight: 650;
+  font-size: var(--t-meta);
+  font-weight: var(--w-semibold);
   cursor: pointer;
   white-space: nowrap;
 }
 .trip-add-status {
-  font-size: 13px;
+  font-size: var(--t-meta);
   color: var(--muted);
 }
 .trip-add-status:empty {
@@ -1120,27 +1120,6 @@
 .trip-deck-wrap + .paper-list {
   margin-top: 0;
 }
-/* Sheet edges peek out under the card: one or two more are still to come. */
-.trip-deck-wrap.has-1::after,
-.trip-deck-wrap.has-2::after,
-.trip-deck-wrap.has-2::before {
-  content: '';
-  position: absolute;
-  z-index: -1;
-  left: 14px;
-  right: 14px;
-  bottom: -8px;
-  height: 36px;
-  background: var(--panel);
-  border: 1px solid var(--border-strong);
-  border-radius: 0 0 var(--radius-squircle) var(--radius-squircle);
-  box-shadow: 0 4px 10px -4px rgba(0, 0, 0, 0.1);
-}
-.trip-deck-wrap.has-2::before {
-  left: 28px;
-  right: 28px;
-  bottom: -16px;
-}
 .trip-deck-card {
   position: relative;
   outline: none;
@@ -1150,13 +1129,13 @@
 }
 .trip-deck-card:focus-visible {
   box-shadow: var(--focus-ring);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
 }
 .trip-kicker {
   margin: 0;
   color: var(--muted);
-  font-size: 13px;
-  font-weight: 650;
+  font-size: var(--t-meta);
+  font-weight: var(--w-semibold);
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -1165,7 +1144,7 @@
   isolation: isolate;
   margin: 0;
   font-family: var(--font-headings);
-  font-size: 30px;
+  font-size: var(--t-title);
   line-height: 1.15;
   color: var(--ink);
   text-wrap: balance;
@@ -1173,18 +1152,18 @@
 .trip-deck-line {
   margin: 0;
   color: var(--muted);
-  font-size: 15px;
+  font-size: var(--t-body);
 }
 .trip-deck-note {
   margin: 0;
   color: var(--muted);
-  font-size: 14px;
+  font-size: var(--t-meta);
 }
 .trip-deck-code {
   margin: 4px 0 0;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 32px;
-  font-weight: 700;
+  font-size: var(--t-code);
+  font-weight: var(--w-bold);
   letter-spacing: 0.1em;
   color: var(--ink);
   overflow-wrap: anywhere;
@@ -1248,13 +1227,13 @@
 }
 .trip-deck-titlebtn:focus-visible {
   box-shadow: var(--focus-ring);
-  border-radius: 6px;
+  border-radius: var(--radius-xs);
   outline: none;
 }
 
 /* The next-stop card: the place is the hero; the tick sits beside it like a list row's. */
 .trip-kicker {
-  font-size: 12px;
+  font-size: var(--t-label);
 }
 .trip-deck-head {
   display: flex;
@@ -1266,13 +1245,13 @@
   margin-top: 6px;
 }
 .trip-deck-title {
-  font-size: 36px;
+  font-size: var(--t-display);
   line-height: 1.12;
 }
 .trip-deck-sub {
   margin: 0 0 0 36px;
   color: var(--muted);
-  font-size: 15px;
+  font-size: var(--t-body);
 }
 .trip-deck-note {
   margin-left: 36px;
@@ -1282,7 +1261,7 @@
 }
 @media (max-width: 480px) {
   .trip-deck-title {
-    font-size: 30px;
+    font-size: var(--t-title);
   }
 }
 
@@ -1310,15 +1289,15 @@
   min-width: 260px;
   padding: 16px 20px 8px;
   text-align: center;
-  background: var(--panel);
+  background: var(--paper-fill);
   /* The tear edge is at the top, like the stub of a ticket. */
   border-top: 2px dashed var(--border-strong);
 }
 .trip-slip-code {
   margin: 10px 0 6px;
   font-family: var(--font-headings);
-  font-size: 32px;
-  font-weight: 600;
+  font-size: var(--t-code);
+  font-weight: var(--w-semibold);
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.12em;
   color: var(--ink);
@@ -1331,18 +1310,18 @@
 }
 .trip-time {
   flex: 0 0 38px;
-  font-size: 12.5px;
+  font-size: var(--t-meta);
 }
 /* ---- trip settings: grouped rows on paper, no boxed inputs ------------------------------ */
 .settings-icon {
   width: 56px;
   height: 56px;
-  font-size: 28px;
+  font-size: var(--icon-2xl);
   cursor: pointer;
 }
 .list-row-desc.is-now {
   color: var(--ink);
-  font-weight: 600;
+  font-weight: var(--w-semibold);
 }
 .trips-pref {
   display: grid;
@@ -1356,7 +1335,7 @@
   min-height: 48px;
 }
 .trips-pref-label {
-  font-weight: 600;
+  font-weight: var(--w-semibold);
   color: var(--ink);
 }
 
@@ -1407,20 +1386,20 @@
 .trip-cal-wd {
   text-align: center;
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--t-label);
 }
 .trip-cal-day {
   min-height: 44px;
   background: none;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   font: inherit;
   font-variant-numeric: tabular-nums;
   color: var(--ink);
   cursor: pointer;
 }
 .trip-cal-day.is-today {
-  font-weight: 700;
+  font-weight: var(--w-bold);
   text-decoration: underline;
   text-underline-offset: 4px;
 }
@@ -1431,7 +1410,7 @@
 .trip-cal-day.is-start,
 .trip-cal-day.is-end {
   background: var(--brand-yellow);
-  font-weight: 700;
+  font-weight: var(--w-bold);
 }
 .trip-cal-day:focus-visible {
   box-shadow: var(--focus-ring);
@@ -1454,7 +1433,7 @@
 .trip-stub.is-clash .trip-time {
   position: relative;
   color: var(--warn-ink);
-  font-weight: 700;
+  font-weight: var(--w-bold);
 }
 .trip-time-flag {
   position: absolute;
@@ -1467,7 +1446,7 @@
 }
 .trip-outside-note {
   margin: 0 0 8px;
-  font-size: 13px;
+  font-size: var(--t-meta);
 }
 
 /* ---- the one bottom sheet: handle bar, optional Outfit title, no divider ------------------- */
@@ -1506,16 +1485,16 @@
 }
 @media (max-width: 767px) {
   .paper-meta h2.ant-typography {
-    font-size: 28px;
+    font-size: var(--t-title);
     line-height: 1.15 !important;
   }
 }
 
 /* ---- the deck lives inside Plan: a flat sheet, no second paper stack ------------------- */
-.trip-deck.ant-card {
+.trip-deck.paper {
   border: 1px solid var(--border-strong);
-  border-radius: var(--radius-squircle);
-  background: var(--panel);
+  border-radius: var(--radius-lg);
+  background: var(--paper-fill);
   box-shadow: var(--paper-edge), var(--lift-0);
 }
 .trip-deck-wrap {
@@ -1524,7 +1503,7 @@
 }
 .trip-deck-title:focus-visible {
   box-shadow: var(--focus-ring);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   outline: none;
 }
 .trip-deck-card:focus-visible {
@@ -1657,7 +1636,7 @@
   justify-self: start;
   width: var(--time-w);
   flex: none;
-  font-size: 12.5px;
+  font-size: var(--t-meta);
   font-variant-numeric: tabular-nums;
 }
 .trip-row-line > .trip-main {
@@ -1756,7 +1735,7 @@
   .pill-nav-pane .trip-deck-wrap {
     margin-inline: -12px;
   }
-  .trip-deck.ant-card .ant-card-body {
+  .trip-deck.paper > .paper-body {
     padding: 16px;
   }
   .trip-deck-actions {
@@ -1786,8 +1765,8 @@
   border: 0;
   color: var(--muted);
   font: inherit;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--t-meta);
+  font-weight: var(--w-semibold);
   text-align: left;
   cursor: pointer;
 }
@@ -1797,7 +1776,7 @@
 .trip-packline:focus-visible {
   box-shadow: var(--focus-ring);
   outline: none;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
 }
 
 /* Notes on the stub line and in the header sit in the title column / full width. */
@@ -1814,7 +1793,7 @@
 }
 .trip-sub.is-strong {
   color: var(--ink);
-  font-weight: 600;
+  font-weight: var(--w-semibold);
 }
 .trip-kinds {
   display: grid;
@@ -1830,11 +1809,11 @@
   padding: 6px 2px;
   background: none;
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: var(--radius-md);
   color: var(--muted);
   font: inherit;
-  font-size: 11.5px;
-  font-weight: 600;
+  font-size: var(--t-stamp);
+  font-weight: var(--w-semibold);
   cursor: pointer;
 }
 .trip-kind[aria-pressed="true"] {
@@ -1873,13 +1852,13 @@
 }
 /* The menu button ends at the card's content edge, like the avatar stack: its hit area reaches
    past the glyph with a pseudo-element instead of padding. */
-.paper-meta .list-actions .ant-btn {
+.paper-meta .list-actions .ui-btn {
   position: relative;
   width: 24px;
   min-width: 24px;
   padding: 0;
 }
-.paper-meta .list-actions .ant-btn::after {
+.paper-meta .list-actions .ui-btn::after {
   content: '';
   position: absolute;
   inset: -10px -8px;
@@ -1906,7 +1885,7 @@
 }
 .map-label {
   fill: var(--ink);
-  font: 600 12.5px var(--font-body);
+  font: var(--w-semibold) var(--t-meta) var(--font-body);
   paint-order: stroke;
   stroke: var(--on-pin);
   stroke-width: 2px;
@@ -1928,10 +1907,10 @@
   top: 0;
   max-width: 220px;
   padding: 2px 9px;
-  border-radius: 999px;
-  background: var(--panel);
+  border-radius: var(--radius-pill);
+  background: var(--paper-fill);
   box-shadow: var(--lift-1);
-  font: 600 12.5px var(--font-body);
+  font: var(--w-semibold) var(--t-meta) var(--font-body);
   color: var(--ink);
   pointer-events: none;
   white-space: nowrap;
@@ -1948,8 +1927,8 @@
   box-shadow: var(--shadow-key);
 }
 .maplibregl-ctrl-group {
-  border-radius: 14px;
-  background: var(--panel);
+  border-radius: var(--radius-md);
+  background: var(--paper-fill);
   box-shadow: var(--lift-1);
   border: 1px solid var(--border-strong);
   overflow: hidden;
@@ -1962,15 +1941,15 @@
   border-top: 1px solid var(--border);
 }
 .maplibregl-ctrl-attrib.maplibregl-compact {
-  border-radius: 999px;
-  font-size: 11px;
+  border-radius: var(--radius-pill);
+  font-size: var(--t-stamp);
 }
 
 /* No connection: the map pane goes and the plan widens; one quiet line says why. */
 .trip-map-off {
   margin: 0 0 12px;
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--t-meta);
 }
 @media (min-width: 768px) {
   .trip-shell.is-mapless {
@@ -1986,7 +1965,7 @@
   inset: 0;
   display: flex;
   flex-direction: column;
-  background: var(--panel);
+  background: var(--paper-fill);
 }
 @media (prefers-reduced-motion: no-preference) {
   .map-screen {
@@ -2011,7 +1990,7 @@
   box-sizing: border-box;
   height: calc(56px + env(safe-area-inset-top, 0px));
   padding: env(safe-area-inset-top, 0px) 8px 0;
-  background: var(--panel);
+  background: var(--paper-fill);
   border-bottom: 1px solid var(--border);
   touch-action: none;
 }
@@ -2031,8 +2010,8 @@
   padding: 0 4px;
   overflow: hidden;
   font-family: var(--font-headings);
-  font-size: 17px;
-  font-weight: 650;
+  font-size: var(--t-lead);
+  font-weight: var(--w-semibold);
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--ink);
@@ -2056,9 +2035,9 @@
   display: grid;
   gap: 10px;
   padding: 16px 20px;
-  background: var(--panel);
+  background: var(--paper-fill);
   border: 1px solid var(--border-strong);
-  border-radius: var(--radius-squircle);
+  border-radius: var(--radius-lg);
   box-shadow: var(--paper-edge), var(--lift-2);
 }
 .map-screen-text {
@@ -2073,13 +2052,13 @@
 }
 .map-screen-name {
   font-family: var(--font-headings);
-  font-size: 20px;
-  font-weight: 650;
+  font-size: var(--t-heading);
+  font-weight: var(--w-semibold);
   color: var(--ink);
 }
 .map-screen-meta {
   color: var(--muted);
-  font-size: 14px;
+  font-size: var(--t-meta);
 }
 .map-screen-card .trip-go {
   justify-self: stretch;
@@ -2098,8 +2077,8 @@
   min-height: var(--control-md);
   padding: 0;
   flex-direction: row;
-  font-weight: 500;
-  font-size: var(--size-meta);
+  font-weight: var(--w-medium);
+  font-size: var(--t-meta);
   font-variant-numeric: tabular-nums;
 }
 .trip-custom-length {
@@ -2125,9 +2104,9 @@
   padding: 0;
   border: 0;
   border-radius: var(--radius-sm);
-  background: var(--panel-subtle);
+  background: var(--well-fill);
   color: var(--ink);
-  font-size: 16px;
+  font-size: var(--icon-sm);
   cursor: pointer;
 }
 .trip-kind-tile:focus-visible {
@@ -2145,8 +2124,8 @@
 .trip-slip-code {
   margin: var(--space-2) 0;
   font-family: var(--font-headings);
-  font-size: 30px;
-  font-weight: 700;
+  font-size: var(--t-code);
+  font-weight: var(--w-bold);
   letter-spacing: 0.12em;
   color: var(--ink);
   overflow-wrap: anywhere;
@@ -2159,14 +2138,14 @@
 .trip-note-line {
   margin: 0 0 var(--space-2);
   color: var(--muted);
-  font-size: var(--size-meta);
+  font-size: var(--t-meta);
 }
 .trip-settings-identity {
   position: relative;
   margin-bottom: var(--space-6);
 }
 .trip-settings-identity .ui-sheet-title {
-  font-size: var(--title-page);
+  font-size: var(--t-title);
 }
 .trip-settings .ui-section-label {
   margin-top: var(--space-6);
@@ -2183,13 +2162,13 @@
   gap: var(--space-3);
 }
 .trips-pref-label {
-  font-weight: 500;
+  font-weight: var(--w-medium);
   color: var(--ink);
 }
 .trips-pref-help {
   margin: 0;
   color: var(--muted);
-  font-size: var(--size-meta);
+  font-size: var(--t-meta);
 }
 
 /* ---- the planning desk (1024px and wider): Ideas | Days | Map ------------------------------- */
@@ -2225,7 +2204,7 @@
 }
 
 /* The header, on a desk: one row, [icon] [title over the day line] ... [avatars] [menu]. */
-.paper-meta.is-desk .ant-card-body {
+.paper-meta.is-desk > .paper-body {
   padding-block: var(--space-4);
 }
 .trip-desk-head {
@@ -2237,7 +2216,7 @@
 .trip-desk-icon {
   width: 52px;
   height: 52px;
-  font-size: 26px;
+  font-size: var(--icon-2xl);
 }
 .trip-desk-text {
   flex: 1 1 auto;
@@ -2245,7 +2224,7 @@
 }
 .paper-meta.is-desk h2.trip-desk-title.ant-typography {
   margin: 0;
-  font-size: 32px;
+  font-size: var(--t-title);
   line-height: 1.1 !important;
 }
 .paper-meta.is-desk .trip-title-text {
@@ -2273,19 +2252,22 @@
 }
 
 /* The Ideas column: its own paper sheet; the rows are flat row-grid rows, no cards. */
-.trip-ideas-col {
+/* Ideas on the desk: a one-sheet stack (PaperStack + Paper). The stack is what sticks, so the
+   sheet peeking beneath travels with it; the paper's body is the column that scrolls. */
+.trip-ideas-stack {
   position: sticky;
   top: 16px;
+  align-self: start;
+}
+.trip-ideas-col {
+  overflow: hidden;
+}
+.trip-ideas-col > .paper-body {
   display: flex;
   flex-direction: column;
-  max-height: calc(100dvh - 32px);
+  max-height: calc(100dvh - 42px);
   min-height: 160px;
-  overflow: hidden;
   padding: var(--space-4) var(--space-4) var(--space-3);
-  background: var(--panel);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-squircle);
-  box-shadow: var(--paper-edge), var(--lift-0);
 }
 .trip-ideas-head {
   display: flex;
@@ -2299,7 +2281,7 @@
 }
 .trip-ideas-hint {
   color: var(--muted);
-  font-size: var(--size-meta);
+  font-size: var(--t-meta);
 }
 .trip-ideas-col .trip-ideas {
   flex: 1;
@@ -2366,7 +2348,7 @@
   margin-top: calc(var(--row-first-line) - 8px);
   color: var(--muted);
   opacity: 0.8;
-  font-size: 12px;
+  font-size: var(--icon-xs);
 }
 .trip-ideas-col .trip-row-line > .trip-idea-dot {
   grid-column: 2;
@@ -2404,7 +2386,7 @@
 }
 @media (hover: hover) and (pointer: fine) {
   .trip-ideas-col .trip-row:hover .trip-row-line {
-    background: var(--panel);
+    background: var(--paper-fill);
     box-shadow: var(--lift-0);
     border-radius: var(--radius-md);
   }
@@ -2443,7 +2425,7 @@
   visibility: hidden;
 }
 .trip-drag-chip {
-  box-shadow: var(--paper-edge), var(--lift-2, 0 14px 32px -8px rgba(0, 0, 0, 0.28));
+  box-shadow: var(--paper-edge), var(--lift-2);
   transform: scale(1.02);
 }
 .trip-row {
@@ -2477,19 +2459,16 @@
 }
 
 /* The first hover on an idea says how it works, once. */
+/* A quiet line pressed into the column, above the ideas: it never covers the thing it explains. */
 .trip-ideas-tip {
-  position: absolute;
-  top: 44px;
-  left: var(--space-4);
-  right: var(--space-4);
-  z-index: 6;
+  margin: 0 0 var(--space-2);
   padding: var(--space-2) var(--space-3);
-  background: var(--ink);
-  color: var(--on-red);
+  background: var(--well-fill);
+  box-shadow: var(--well);
+  color: var(--muted);
   border-radius: var(--radius-md);
-  font-size: var(--size-meta);
+  font-size: var(--t-meta);
   line-height: 1.35;
-  pointer-events: none;
 }
 
 /* Empty days on a desk are dashed slots; they turn yellow while something is being dragged. */
@@ -2499,7 +2478,7 @@
   border: 1.5px dashed var(--border-strong);
   border-radius: var(--radius-md);
   color: var(--muted);
-  font-size: var(--size-meta);
+  font-size: var(--t-meta);
   text-align: center;
 }
 .trip-page.is-dragging .trip-shell.is-desk .trip-day .trip-empty-row {
@@ -2513,7 +2492,7 @@
 .trip-map-note {
   margin: var(--space-4) 0 var(--space-2);
   color: var(--muted);
-  font-size: var(--size-meta);
+  font-size: var(--t-meta);
 }
 
 /* Ready to go?, in the header sheet's band: no card of its own, just two groups. */
@@ -2552,12 +2531,12 @@
   align-items: flex-start;
   gap: var(--space-2);
   margin: 0;
-  font-size: var(--size-body-sm, 14px);
+  font-size: var(--t-meta);
   line-height: 1.5;
 }
 .trip-ready-all {
   align-items: center;
-  font-weight: 600;
+  font-weight: var(--w-semibold);
   color: var(--ok-ink);
 }
 /* The mark sits on the first line's centre: (line height - mark) / 2. */
@@ -2637,9 +2616,9 @@
   right: var(--space-2);
   z-index: 5;
   padding: 0 var(--space-2);
-  background: var(--panel);
+  background: var(--paper-fill);
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--t-stamp);
   line-height: 14px;
   pointer-events: none;
 }
@@ -2667,9 +2646,9 @@
   gap: var(--space-1);
   padding: var(--space-1);
   overflow-x: auto;
-  background: var(--panel);
+  background: var(--paper-fill);
   border: 1px solid var(--border-strong);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   box-shadow: var(--lift-1);
   scrollbar-width: none;
 }
@@ -2677,7 +2656,7 @@
   flex: none;
   min-height: var(--control-sm, 28px);
   padding-inline: var(--space-3);
-  font-size: var(--size-meta);
+  font-size: var(--t-meta);
   user-select: none;
 }
 .trip-rail-chip.is-over {
@@ -2699,7 +2678,7 @@
   width: 10px;
   height: 12px;
   margin-top: calc(var(--idea-mark-y) - 6px);
-  font-size: 12px;
+  font-size: var(--icon-xs);
 }
 .trip-ideas-col .trip-row-line > .trip-idea-dot {
   grid-column: 3;
@@ -2757,9 +2736,9 @@
   padding: 0 var(--space-2) 0 var(--space-2);
   display: flex;
   align-items: center;
-  background: var(--panel);
+  background: var(--paper-fill);
   border: 1px solid var(--border-strong);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   box-shadow: var(--paper-edge), var(--lift-2);
 }
 .trip-composer .add-bar:focus-within {
@@ -2776,7 +2755,7 @@
 .trip-composer .add-bar .add-input.ant-input,
 .trip-composer .add-bar textarea.add-input {
   min-height: 44px !important;
-  font-size: 17px !important;
+  font-size: var(--t-lead) !important;
   background: transparent;
   border: 0 !important;
   box-shadow: none !important;
@@ -2784,11 +2763,9 @@
 .trip-composer .trip-target-chip {
   min-height: 32px;
 }
+/* The composer's round key is a size up from the add bar's. */
 .trip-composer .add-btn {
-  width: 48px;
-  height: 48px;
-  min-width: 48px;
-  box-shadow: var(--shadow-key);
+  --key-size: 48px;
 }
 /* A muted "/" at the right of an empty, unfocused field (a keyboard in hand). */
 @media (hover: hover) and (pointer: fine) {
@@ -2801,17 +2778,27 @@
     min-width: 22px;
     padding: 1px 0;
     border: 1px solid var(--border-strong);
-    border-radius: 6px;
+    border-radius: var(--radius-xs);
     color: var(--muted);
-    font-size: 12px;
+    font-size: var(--t-field);
     line-height: 18px;
     text-align: center;
     pointer-events: none;
   }
 }
 /* The plan sheet leaves room under its last row for the composer. */
-.trip-days-col .paper-list .ant-card-body {
+.trip-days-col .paper-list > .paper-body {
   padding-bottom: calc(var(--composer-h) + 48px);
+}
+/* On the desk the Days stack fills its column, so the floating composer always rests on the
+   plan sheet instead of straddling its foot. */
+.trip-shell.is-desk .trip-days-col > .paper-stack {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100% - 18px);
+}
+.trip-shell.is-desk .trip-days-col > .paper-stack > .paper-list {
+  flex: 1 0 auto;
 }
 /* While a drag is held the composer steps back and lets drops through. */
 .trip-page.is-dragging .trip-composer {
@@ -2832,10 +2819,10 @@
   height: 22px;
   margin-left: 1px;
   border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--panel-subtle);
+  border-radius: var(--radius-xs);
+  background: var(--well-fill);
   color: var(--muted);
-  font-size: 14px;
+  font-size: var(--icon-sm);
   line-height: 1;
 }
 /* An optical nudge for glyphs whose mass is not in the middle of their box. */
@@ -2931,7 +2918,9 @@
     flex-direction: column;
     box-sizing: border-box;
     height: 100dvh;
-    padding-bottom: var(--space-4);
+    /* The columns run to the window's edge: what scrolls under the floating composer continues
+       off the bottom like paper beyond the desk, instead of being cut 16px short. */
+    padding-bottom: 0;
     overflow: hidden;
   }
   .trip-page.is-desk-shell > .trip-desk-frame {
@@ -2984,7 +2973,7 @@
     padding: 0 0 calc(var(--composer-h) + 48px);
     scrollbar-gutter: stable;
   }
-  .trip-days-col .paper-list .ant-card-body {
+  .trip-days-col .paper-list > .paper-body {
     padding-bottom: 24px;
   }
   /* Day headers stay under the top edge of their pane, so you always see which day you are in. */
@@ -2992,7 +2981,7 @@
     position: sticky;
     top: 0;
     z-index: 3;
-    background: var(--panel);
+    background: var(--paper-fill);
   }
   .trip-days-col .trip-day {
     scroll-margin-top: 4px;
@@ -3019,9 +3008,9 @@
   bottom: var(--space-4);
   width: min(440px, calc(100vw - 32px));
   overflow: hidden;
-  background: var(--panel);
+  background: var(--paper-fill);
   border: 1px solid var(--border-strong);
-  border-radius: var(--radius-squircle);
+  border-radius: var(--radius-lg);
   box-shadow: var(--paper-edge), var(--lift-2);
 }
 .trip-inspector-overlay .ui-sheet-panel {

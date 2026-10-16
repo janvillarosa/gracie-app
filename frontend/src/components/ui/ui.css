@@ -10,7 +10,7 @@
   box-sizing: border-box;
   margin: 0;
   font: inherit;
-  font-weight: 650;
+  font-weight: var(--w-semibold);
   text-decoration: none;
   cursor: pointer;
   border: 0;
@@ -22,9 +22,10 @@
     transition: transform var(--dur-press) var(--ease-out), box-shadow var(--dur-fast) ease;
   }
 }
+/* Disabled is paper with faded ink, never a grey pill and never see-through. */
 .ui-btn:disabled {
   cursor: default;
-  opacity: 0.5;
+  color: var(--muted);
 }
 .ui-btn:focus-visible {
   box-shadow: var(--focus-ring);
@@ -41,26 +42,54 @@
   background: var(--brand-yellow);
   box-shadow: var(--shadow-key);
 }
+/* Pressed, the key sinks its whole underside into the sheet. */
 .ui-btn.is-key:active:not(:disabled) {
-  transform: translateY(1px);
+  transform: translateY(var(--key-travel));
+  box-shadow: var(--shadow-key-press);
+}
+/* A key that can't be pressed yet: yellow ink soaked into the paper, flat. */
+.ui-btn.is-key:disabled {
+  background: color-mix(in srgb, var(--brand-yellow) 38%, var(--panel));
+  box-shadow: none;
 }
 .ui-btn.is-key.is-danger {
   background: var(--brand-red);
   color: var(--on-red);
   box-shadow: var(--shadow-key-danger);
 }
+/* Quiet: a slip of paper on the sheet. It rests a hair above the page, lifts under the
+   pointer and presses into the page when pressed. */
 .ui-btn.is-quiet {
   min-height: var(--control-md);
   padding: 0 var(--space-4);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-pill);
-  background: var(--panel);
+  background: var(--grain-paper), var(--panel);
+  box-shadow: var(--slip-rest);
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .ui-btn.is-quiet:hover:not(:disabled):not(:active) {
+    transform: translateY(-1px);
+  }
+}
+.ui-btn.is-quiet:active:not(:disabled) {
+  background: var(--well-fill);
+  box-shadow: var(--slip-press);
+  transform: translateY(1px);
+}
+.ui-btn.is-quiet:disabled {
+  border-color: var(--border);
+  box-shadow: none;
+}
+/* A round slip (an icon on paper): the same paper as the quiet pill. */
+.ui-btn.is-quiet.is-icon {
+  color: var(--ink);
 }
 .ui-btn.is-text {
   min-height: var(--control-lg);
   padding: 0 var(--space-2);
-  font-weight: 600;
-  font-size: var(--size-meta);
+  font-weight: var(--w-semibold);
+  font-size: var(--t-meta);
   border-radius: var(--radius-sm);
 }
 .ui-btn.is-text.is-danger {
@@ -81,14 +110,34 @@
   position: absolute;
   inset: -4px;
 }
-/* A round key (the add bar's plus). */
+/* A round key (the add bar's plus, the composer's). A place can size it with --key-size and it
+   stays a circle. */
 .ui-btn.is-key.is-icon {
-  width: var(--control-lg);
-  min-width: var(--control-lg);
-  min-height: var(--control-lg);
+  width: var(--key-size, var(--control-lg));
+  min-width: var(--key-size, var(--control-lg));
+  height: var(--key-size, var(--control-lg));
+  min-height: var(--key-size, var(--control-lg));
   padding: 0;
   border-radius: 50%;
   color: var(--ink);
+}
+/* Glyphs are sized by the control, not by the text around it: 20px in a 36px icon button, half
+   the diameter in a round key (22 in the add bar's, 24 in the composer's). */
+.ui-btn.is-icon svg {
+  flex: none;
+  width: var(--icon-lg);
+  height: var(--icon-lg);
+}
+.ui-btn.is-key.is-icon svg {
+  width: calc(var(--key-size, var(--control-lg)) / 2);
+  height: calc(var(--key-size, var(--control-lg)) / 2);
+}
+/* Nothing to add yet: a plain paper disc, not a faded key. */
+.ui-btn.is-key.is-icon:disabled {
+  background: var(--paper-fill);
+  border: 1px solid var(--border);
+  color: var(--border-strong);
+  box-shadow: none;
 }
 @media (hover: hover) {
   .ui-btn.is-key:hover:not(:disabled) {
@@ -97,9 +146,11 @@
   .ui-btn.is-key.is-danger:hover:not(:disabled) {
     box-shadow: var(--shadow-key-danger-hover);
   }
-  .ui-btn.is-quiet:hover:not(:disabled),
+  .ui-btn.is-quiet:hover:not(:disabled):not(:active) {
+    box-shadow: var(--slip-hover);
+  }
   .ui-btn.is-text:hover:not(:disabled) {
-    background: var(--panel-subtle);
+    background: var(--well-fill);
   }
 }
 
@@ -110,7 +161,7 @@
   box-sizing: border-box;
   padding: var(--space-3) 0;
   font: inherit;
-  font-size: var(--size-body);
+  font-size: var(--t-body);
   color: var(--ink);
   background: none;
   border: 0;
@@ -130,7 +181,7 @@
 .ui-field-error {
   margin: var(--space-1) 0 0;
   color: var(--brand-red);
-  font-size: var(--size-meta);
+  font-size: var(--t-meta);
 }
 
 /* ---- Switch -------------------------------------------------------------------------------- */
@@ -145,7 +196,7 @@
 .ui-section-label {
   margin: 0 0 var(--space-2);
   color: var(--muted);
-  font: 700 var(--size-label) var(--font-body);
+  font: var(--w-bold) var(--t-label) var(--font-body);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -165,7 +216,7 @@
   border-radius: var(--radius-sm);
   background: none;
   font: inherit;
-  font-size: var(--size-meta);
+  font-size: var(--t-meta);
   line-height: 1.35;
   text-align: left;
 }
@@ -179,8 +230,8 @@
   padding-inline: 0;
   background: none;
   color: var(--warn-ink);
-  font-size: var(--size-meta);
-  font-weight: 600;
+  font-size: var(--t-meta);
+  font-weight: var(--w-semibold);
 }
 .ui-note-flag {
   flex: none;
@@ -209,7 +260,7 @@ button.ui-note:focus-visible {
 .ui-empty h3 {
   margin: 0;
   font-family: var(--font-headings);
-  font-size: 22px;
+  font-size: var(--t-heading);
   color: var(--ink);
 }
 .ui-empty p {
@@ -226,7 +277,7 @@ button.ui-note:focus-visible {
   background: var(--pip);
 }
 .ui-pip.is-hollow {
-  background: var(--panel);
+  background: var(--paper-fill);
   box-shadow: inset 0 0 0 2px var(--pip);
 }
 
@@ -234,13 +285,14 @@ button.ui-note:focus-visible {
 .ui-stamp {
   display: inline-block;
   padding: 3px 7px;
-  border-radius: 5px;
-  font: 700 11px var(--font-body);
+  border-radius: var(--radius-xs);
+  font: var(--w-bold) var(--t-stamp) var(--font-body);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   vertical-align: 2px;
-  background: var(--panel-subtle);
+  background: var(--well-fill);
   color: var(--muted);
+  box-shadow: var(--well);
 }
 .ui-stamp.is-used {
   border: 1px solid var(--border-strong);
@@ -267,7 +319,7 @@ button.ui-note:focus-visible {
   grid-column: 2;
   grid-row: 1;
   width: var(--time-w);
-  font-size: 12.5px;
+  font-size: var(--t-meta);
   font-variant-numeric: tabular-nums;
   color: var(--muted);
   white-space: nowrap;
@@ -286,11 +338,13 @@ button.ui-note:focus-visible {
 }
 
 /* ---- NavRow and DetailGroup ----------------------------------------------------------------- */
+/* A well: pressed a little into the sheet, never a card on it. */
 .ui-detail-group {
   display: grid;
-  background: var(--panel-subtle);
+  background: var(--well-fill);
   border-radius: var(--radius-lg);
   padding: 2px 0;
+  box-shadow: var(--well);
 }
 .ui-navrow {
   position: relative;
@@ -335,18 +389,18 @@ button.ui-note:focus-visible {
 }
 .ui-navrow-label {
   color: var(--muted);
-  font-size: 14px;
+  font-size: var(--t-meta);
 }
 .ui-navrow-value {
   min-width: 0;
   overflow: hidden;
-  font-weight: 500;
+  font-weight: var(--w-medium);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .ui-navrow-value.is-empty {
   color: var(--muted);
-  font-weight: 400;
+  font-weight: var(--w-regular);
 }
 .ui-navrow-chev {
   color: var(--brand-yellow-deep);
@@ -356,7 +410,7 @@ button.ui-note:focus-visible {
   place-items: center;
   width: var(--lead);
   color: var(--muted);
-  font-size: 18px;
+  font-size: var(--icon-md);
 }
 /* List layout (days, settings): the label is the text; the value is a muted note. */
 .ui-navrow.is-list {
@@ -369,16 +423,16 @@ button.ui-note:focus-visible {
 }
 .ui-navrow.is-list .ui-navrow-label {
   color: var(--ink);
-  font-size: var(--size-body);
-  font-weight: 600;
+  font-size: var(--t-body);
+  font-weight: var(--w-semibold);
 }
 .ui-navrow.is-list .ui-navrow-value {
   color: var(--muted);
-  font-weight: 400;
-  font-size: var(--size-meta);
+  font-weight: var(--w-regular);
+  font-size: var(--t-meta);
 }
 .ui-navrow.is-current .ui-navrow-label {
-  font-weight: 700;
+  font-weight: var(--w-bold);
 }
 
 /* A label and a field in one row of a group (a description, a time zone). */
@@ -405,16 +459,16 @@ button.ui-note:focus-visible {
   padding: 0 var(--space-4);
   border: 1px solid var(--border);
   border-radius: var(--radius-pill);
-  background: var(--panel);
+  background: var(--paper-fill);
   font: inherit;
-  font-size: var(--size-body);
+  font-size: var(--t-body);
   color: var(--ink);
   white-space: nowrap;
   cursor: pointer;
 }
 .ui-chip svg {
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--icon-xs);
 }
 .ui-chip.is-empty {
   color: var(--muted);
@@ -449,17 +503,17 @@ button.ui-note:focus-visible {
   padding: var(--space-2) 2px;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  background: var(--panel);
+  background: var(--paper-fill);
   color: var(--muted);
   font: inherit;
-  font-size: var(--size-label);
-  font-weight: 600;
+  font-size: var(--t-label);
+  font-weight: var(--w-semibold);
   cursor: pointer;
 }
 .ui-choice-icon {
   display: grid;
   place-items: center;
-  font-size: 22px;
+  font-size: var(--icon-xl);
 }
 .ui-choice[aria-pressed='true'] {
   border-color: var(--brand-yellow-deep);
@@ -478,7 +532,7 @@ button.ui-note:focus-visible {
   flex-direction: column;
   min-height: 0;
   max-height: var(--sheet-max-h);
-  background: var(--panel);
+  background: var(--paper-fill);
 }
 .ui-sheet-header {
   position: relative;
@@ -506,7 +560,7 @@ button.ui-note:focus-visible {
   padding: 0;
   border-radius: 50%;
   color: var(--muted);
-  font-size: 18px;
+  font-size: var(--icon-md);
 }
 .ui-sheet-scroll {
   min-height: 0;
@@ -537,15 +591,15 @@ button.ui-note:focus-visible {
   margin: 0;
   padding: 0;
   font-family: var(--font-headings);
-  font-size: var(--title-sheet);
-  font-weight: 700;
+  font-size: var(--t-title);
+  font-weight: var(--w-bold);
   line-height: 1.15;
   color: var(--ink);
 }
 input.ui-sheet-title {
   /* The global "no iOS zoom" rule forces inputs to 16px with !important; a 26px title is
      bigger than that, so it can say so too. */
-  font-size: var(--title-sheet) !important;
+  font-size: var(--t-title) !important;
   box-sizing: border-box;
   /* A little room inside, taken back from the left, so the focus ring is inset and the text
      keeps its column and the 20px right inset. */
@@ -599,15 +653,15 @@ input.ui-sheet-title.has-error:focus-visible {
 .ui-sheet-identity.has-tile .list-icon {
   width: var(--control-lg);
   height: var(--control-lg);
-  font-size: 22px;
+  font-size: var(--icon-xl);
 }
 .ui-sheet-identity.has-tile input.ui-sheet-title {
-  font-size: var(--title-page) !important;
+  font-size: var(--t-title) !important;
 }
 .ui-sheet-context {
   margin: var(--space-2) 0 0;
   color: var(--muted);
-  font-size: var(--size-context);
+  font-size: var(--t-body);
   line-height: 1.4;
 }
 /* Tier 2: do */
@@ -634,19 +688,31 @@ input.ui-sheet-title.has-error:focus-visible {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: var(--space-3);
   margin-top: var(--tier-details-footer);
   padding: 0 var(--space-1);
 }
+/* The action keeps its one line; the explanation beside it is what wraps. */
+.ui-sheet-footer > .ui-btn {
+  flex: none;
+  white-space: nowrap;
+}
+.ui-sheet-footer > .ui-sheet-who {
+  flex: 1 1 auto;
+  min-width: 0;
+}
 .ui-sheet-who {
   color: var(--muted);
-  font-size: var(--size-meta);
+  font-size: var(--t-meta);
 }
 
 /* Where the sheet appears */
+/* Every overlay is paper too: the same grain, edge and heights as the sheets underneath. */
 .ui-drawer.ant-drawer-content,
 .ui-drawer .ant-drawer-content {
   border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
-  box-shadow: var(--lift-2);
+  background: var(--grain-paper), var(--panel);
+  box-shadow: var(--paper-edge), var(--lift-2);
 }
 .ui-drawer.ant-drawer-content {
   max-height: var(--sheet-max-h);
@@ -659,6 +725,7 @@ input.ui-sheet-title.has-error:focus-visible {
   padding: 0;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-lg);
+  background: var(--grain-paper), var(--panel);
   box-shadow: var(--paper-edge), var(--lift-2);
   overflow: hidden;
 }
@@ -674,8 +741,8 @@ input.ui-sheet-title.has-error:focus-visible {
   width: min(420px, 100%);
   display: flex;
   flex-direction: column;
-  background: var(--panel);
-  box-shadow: var(--lift-2);
+  background: var(--grain-paper), var(--panel);
+  box-shadow: var(--paper-edge), var(--lift-2);
 }
 .ui-sheet-panel .ui-sheet {
   flex: 1;
@@ -685,12 +752,14 @@ input.ui-sheet-title.has-error:focus-visible {
   padding: 0;
   min-width: 260px;
   max-width: 360px;
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-lg);
-  box-shadow: var(--lift-3);
+  background: var(--grain-paper), var(--panel);
+  box-shadow: var(--paper-edge), var(--lift-3);
   overflow: hidden;
 }
 .ui-popover .ui-sheet-title {
-  font-size: 18px;
+  font-size: var(--t-heading);
 }
 .ui-popover .ui-sheet-scroll {
   max-height: 60dvh;
@@ -808,14 +877,14 @@ input.ui-sheet-title.has-error:focus-visible {
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--ink);
-  font-weight: 600;
+  font-weight: var(--w-semibold);
 }
 .ui-inline-place-sub {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--muted);
-  font-size: var(--size-meta);
+  font-size: var(--t-meta);
 }
 .ui-inline-place-value > button.ui-inline-place-text {
   padding: 0;
@@ -839,7 +908,7 @@ input.ui-sheet-title.has-error:focus-visible {
 .ui-inline-place-attrib {
   padding: 6px 12px 2px;
   color: var(--muted);
-  font-size: var(--size-meta);
+  font-size: var(--t-meta);
 }
 
 /* ---- The inline inspector: rows that need no picker (desktop) ---------------------------------- */
@@ -863,7 +932,7 @@ input.ui-sheet-title.has-error:focus-visible {
   margin: 0;
   padding: 0 var(--detail-inset) var(--space-2) calc(var(--detail-label-w) + var(--detail-inset) + var(--space-3));
   color: var(--brand-red);
-  font-size: var(--size-meta);
+  font-size: var(--t-meta);
 }
 .ui-inlinewhen {
   display: flex;
@@ -890,10 +959,10 @@ input.ui-sheet-title.has-error:focus-visible {
   padding: 0 28px 0 var(--space-3);
   box-sizing: border-box;
   font: inherit;
-  font-size: var(--size-body);
-  font-weight: 500;
+  font-size: var(--t-body);
+  font-weight: var(--w-medium);
   color: var(--ink);
-  background: var(--panel);
+  background: var(--paper-fill);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   cursor: pointer;
@@ -920,17 +989,17 @@ input.ui-sheet-title.has-error:focus-visible {
   padding: 0 var(--space-3);
   box-sizing: border-box;
   font: inherit;
-  font-size: var(--size-body);
-  font-weight: 600;
+  font-size: var(--t-body);
+  font-weight: var(--w-semibold);
   font-variant-numeric: tabular-nums;
   color: var(--ink);
-  background: var(--panel);
+  background: var(--paper-fill);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
 }
 .ui-timefield::placeholder {
   color: var(--muted);
-  font-weight: 400;
+  font-weight: var(--w-regular);
 }
 .ui-timefield:focus-visible {
   outline: none;
@@ -941,19 +1010,20 @@ input.ui-sheet-title.has-error:focus-visible {
 }
 
 /* Length: a row of segments, one pressed. */
+/* Segments share a row evenly; when they must wrap, they wrap into equal cells, never a ragged tail. */
 .ui-segments {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(64px, 1fr));
   gap: var(--space-1);
 }
 .ui-segment {
   min-height: var(--control-md);
   padding: 0 10px;
   font: inherit;
-  font-size: var(--size-meta);
-  font-weight: 600;
+  font-size: var(--t-meta);
+  font-weight: var(--w-semibold);
   color: var(--muted);
-  background: var(--panel);
+  background: var(--paper-fill);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   cursor: pointer;
@@ -980,18 +1050,18 @@ input.ui-sheet-title.has-error:focus-visible {
 }
 .ui-stampselect-btn {
   padding: 6px 10px;
-  font: 700 11px var(--font-body);
+  font: var(--w-bold) var(--t-stamp) var(--font-body);
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--stamp-fg);
+  color: var(--ink);
   background: none;
-  border: 1.5px solid var(--stamp-fg);
-  border-radius: 6px;
+  border: 1.5px solid var(--ink);
+  border-radius: var(--radius-xs);
   cursor: pointer;
   opacity: 0.78;
 }
 .ui-stampselect-btn[aria-pressed='true'] {
-  background: var(--stamp-bg);
+  background: var(--well-fill);
   opacity: 1;
 }
 .ui-stampselect-btn:focus-visible {
@@ -1005,7 +1075,7 @@ input.ui-sheet-title.has-error:focus-visible {
 }
 @media (hover: hover) {
   .ui-stampselect-btn:hover:not(:disabled):not([aria-pressed='true']) {
-    background: var(--stamp-bg);
+    background: var(--well-fill);
     opacity: 1;
   }
 }
@@ -1017,7 +1087,7 @@ input.ui-sheet-title.has-error:focus-visible {
 .ui-inline-note .ui-field {
   min-height: 84px;
   padding: var(--space-2) var(--space-3);
-  background: var(--panel);
+  background: var(--paper-fill);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
 }
@@ -1038,4 +1108,100 @@ input.ui-sheet-title.has-error:focus-visible {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* ---- Paper: one sheet at one of the four heights ------------------------------------------ */
+.paper {
+  position: relative;
+  box-sizing: border-box;
+  background: var(--grain-paper), var(--panel);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--paper-edge), var(--lift-0);
+  color: var(--text);
+}
+.paper.is-lift-1 {
+  box-shadow: var(--paper-edge), var(--lift-1);
+}
+.paper.is-lift-2 {
+  box-shadow: var(--paper-edge), var(--lift-2);
+}
+.paper.is-lift-3 {
+  box-shadow: var(--paper-edge), var(--lift-3);
+}
+.paper.is-tint {
+  background: var(--grain-paper), var(--panel-subtle);
+}
+.paper-body {
+  padding: var(--space-6);
+}
+.paper.is-flush > .paper-body {
+  padding: 0;
+}
+
+/* ---- PaperStack: sheets slid over each other, more peeking out beneath --------------------- */
+.paper-stack {
+  position: relative;
+  /* The peeking edges paint under the sheets, never under the page. */
+  isolation: isolate;
+}
+.paper-stack > .paper {
+  z-index: 1;
+}
+/* A sheet with another on top of it runs on under that sheet: no bottom edge of its own. */
+.paper-stack > .paper:not(:last-child) {
+  padding-bottom: 10px;
+  border-bottom: 0;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+/* Every next sheet is slid 20px over the one before and sits on top of the stack. */
+.paper-stack > .paper + .paper {
+  z-index: 2;
+  margin-top: -20px;
+  box-shadow: var(--paper-edge), var(--lift-1);
+}
+/* The sheets beneath: only their bottom 8px (and 16px for the second) ever shows. */
+.paper-stack.has-peek-1::after,
+.paper-stack.has-peek-2::after,
+.paper-stack.has-peek-2::before {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  left: 14px;
+  right: 14px;
+  bottom: -10px;
+  height: 40px;
+  background: var(--grain-paper), var(--panel);
+  border: 1px solid var(--border-strong);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  box-shadow: var(--peek-shadow);
+  /* A real pile is never square: each sheet beneath sits a little off true. */
+  transform: rotate(var(--peek-tilt-1));
+  transform-origin: 50% 0;
+}
+.paper-stack.has-peek-2::before {
+  z-index: -1;
+  left: 28px;
+  right: 28px;
+  bottom: -18px;
+  transform: rotate(var(--peek-tilt-2));
+}
+/* Arrival: the stack assembles bottom-up, like paper set down on a desk. */
+@media (prefers-reduced-motion: no-preference) {
+  .paper-stack:not(.is-still) > .paper:first-child {
+    animation: sheet-in var(--dur-slow) var(--ease-out) both;
+  }
+  .paper-stack:not(.is-still) > .paper + .paper {
+    animation: sheet-settle 560ms var(--ease-out) 60ms both;
+  }
+  .paper-stack:not(.is-still) > .paper + .paper + .paper {
+    animation-delay: 120ms;
+  }
+  .paper-stack:not(.is-still)::after {
+    animation: sheet-peek 520ms var(--ease-out) 180ms both;
+  }
+  .paper-stack:not(.is-still)::before {
+    animation: sheet-peek 520ms var(--ease-out) 240ms both;
+  }
 }

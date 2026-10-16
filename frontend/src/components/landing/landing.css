@@ -169,7 +169,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: var(--control-h);
+  min-height: var(--control-lg);
   padding: 0 20px;
   border-radius: var(--ld-control-radius);
   background: var(--brand-yellow);
@@ -282,7 +282,7 @@
   position: relative;
   background: var(--panel);
   border: 1px solid var(--border-strong); /* taste-skill-ignore: data-ui app card */
-  border-radius: var(--radius-squircle);
+  border-radius: var(--radius-lg);
   box-shadow: var(--paper-edge), 0 1px 2px rgba(20, 20, 20, 0.05); /* taste-skill-ignore: data-ui app card */
 }
 
@@ -310,7 +310,7 @@
   height: 40px;
   background: var(--panel);
   border: 1px solid var(--border-strong); /* taste-skill-ignore: data-ui app card */
-  border-radius: 0 0 var(--radius-squircle) var(--radius-squircle);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
 }
 
 .ld-app-card.is-flat {
@@ -496,7 +496,7 @@
   font-weight: 500;
   font-size: var(--ld-text);
   line-height: 1.35;
-  color: var(--ink-heading);
+  color: var(--ink);
 }
 
 .ld-qty {
@@ -813,7 +813,7 @@ p.ld-done-toggle {
 .ld-plate-sheet {
   width: 100%;
   background: var(--panel);
-  border-radius: var(--radius-squircle);
+  border-radius: var(--radius-lg);
   padding: 20px 22px 0;
 }
 
@@ -2413,7 +2413,7 @@ p.ld-done-toggle {
   margin: 0;
   font: 800 22px / 1.1 var(--font-headings);
   letter-spacing: -0.02em;
-  color: var(--ink-heading);
+  color: var(--ink);
 }
 
 .ld-trip-head .ld-app-meta {
@@ -2921,7 +2921,7 @@ p.ld-done-toggle {
   height: 40px;
   background: var(--panel);
   border: 1px solid var(--border-strong); /* taste-skill-ignore: data-ui app card */
-  border-radius: 0 0 var(--radius-squircle) var(--radius-squircle);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
   box-shadow: 0 4px 10px -4px rgba(0, 0, 0, 0.1); /* taste-skill-ignore: data-ui app card */
 }
 
@@ -2930,7 +2930,7 @@ p.ld-done-toggle {
   padding: 16px 16px 30px;
   border: 1px solid var(--border-strong); /* taste-skill-ignore: data-ui app card */
   border-bottom: 0;
-  border-radius: var(--radius-squircle) var(--radius-squircle) 0 0;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   background: var(--panel);
   box-shadow: var(--paper-edge), var(--lift-0); /* taste-skill-ignore: data-ui app card */
 }
@@ -2951,7 +2951,7 @@ p.ld-done-toggle {
   margin: 0;
   font: 800 30px / 1.05 var(--font-headings);
   letter-spacing: -0.02em;
-  color: var(--ink-heading);
+  color: var(--ink);
   text-wrap: balance;
 }
 
@@ -2977,7 +2977,7 @@ p.ld-done-toggle {
   margin-top: -20px;
   padding: 14px 14px 4px;
   border: 1px solid var(--border-strong); /* taste-skill-ignore: data-ui app card */
-  border-radius: var(--radius-squircle);
+  border-radius: var(--radius-lg);
   background: var(--panel);
   box-shadow: var(--paper-edge), var(--lift-1); /* taste-skill-ignore: data-ui app card */
 }

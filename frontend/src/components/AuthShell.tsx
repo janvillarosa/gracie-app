@@ -1,5 +1,6 @@
 import React from 'react'
-import { Card, Typography } from 'antd'
+import { Paper, PaperStack } from '@components/ui'
+import { Typography } from 'antd'
 import { BrandLogo } from '@components/BrandLogo'
 
 type Props = {
@@ -22,13 +23,15 @@ export const AuthShell: React.FC<Props> = ({ title, logoTo = '/', footer, childr
           <span className="brand-wordmark">Bauhouse</span>
         </div>
       </div>
-      <Card className="paper-card auth-card">
-        <Typography.Title level={2} className="auth-title">
-          {title}
-        </Typography.Title>
-        {children}
-        <div className="auth-footer">{footer}</div>
-      </Card>
+      <PaperStack>
+        <Paper className="auth-card">
+          <Typography.Title level={2} className="auth-title">
+            {title}
+          </Typography.Title>
+          {children}
+          <div className="auth-footer">{footer}</div>
+        </Paper>
+      </PaperStack>
     </div>
   </div>
 )

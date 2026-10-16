@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Card, message } from 'antd'
+import { message } from 'antd'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { errorMessage } from '@lib/errors'
 import { useAuth } from '@auth/AuthProvider'
@@ -27,6 +27,8 @@ import {
   Sheet,
   SheetActions,
   SheetIdentity,
+  Paper,
+  PaperStack,
 } from '@components/ui'
 import { useDocumentTitle } from '@lib/useDocumentTitle'
 
@@ -108,68 +110,70 @@ export const UserSettings: React.FC = () => {
   return (
     <div className="container">
       <TopNav back={back} />
-      <Card className="paper-card account-settings">
-        <SheetIdentity
-          tile
-          editHint
-          leading={
-            <Avatar
-              seed={me.avatar_key || me.name || me.user_id}
-              size={AVATAR_SIZE.tile}
-              name={me.name}
-              eager
-              alt=""
-            />
-          }
-          title={me.name}
-          onTitle={(v) => void saveProfile({ name: v }, 'Name saved.')}
-          titleLabel="Your name"
-          context={
-            roomQuery.data
-              ? `In ${roomQuery.data.display_name || 'your House'}`
-              : 'Account settings'
-          }
-        />
+      <PaperStack>
+        <Paper className="account-settings">
+          <SheetIdentity
+            tile
+            editHint
+            leading={
+              <Avatar
+                seed={me.avatar_key || me.name || me.user_id}
+                size={AVATAR_SIZE.tile}
+                name={me.name}
+                eager
+                alt=""
+              />
+            }
+            title={me.name}
+            onTitle={(v) => void saveProfile({ name: v }, 'Name saved.')}
+            titleLabel="Your name"
+            context={
+              roomQuery.data
+                ? `In ${roomQuery.data.display_name || 'your House'}`
+                : 'Account settings'
+            }
+          />
 
-        <SectionLabel>Signing in</SectionLabel>
-        <DetailGroup label="Signing in">
-          <div className="ui-fieldrow">
-            <span className="ui-navrow-label">Email</span>
-            <Field
-              aria-label="Email"
-              type="email"
-              inputMode="email"
-              autoComplete="email"
-              autoCapitalize="none"
-              spellCheck={false}
-              placeholder="you@example.com"
-              value={email}
-              error={emailError || undefined}
-              onChange={(e) => {
-                setEmail(e.target.value)
-                setEmailError('')
-              }}
-              onBlur={commitEmail}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') e.currentTarget.blur()
-              }}
-            />
-          </div>
-          <NavRow label="Password" value="Change" onClick={() => setPasswordOpen(true)} />
-        </DetailGroup>
+          <SectionLabel>Signing in</SectionLabel>
+          <DetailGroup label="Signing in">
+            <div className="ui-fieldrow">
+              <span className="ui-navrow-label">Email</span>
+              <Field
+                aria-label="Email"
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                autoCapitalize="none"
+                spellCheck={false}
+                placeholder="you@example.com"
+                value={email}
+                error={emailError || undefined}
+                onChange={(e) => {
+                  setEmail(e.target.value)
+                  setEmailError('')
+                }}
+                onBlur={commitEmail}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') e.currentTarget.blur()
+                }}
+              />
+            </div>
+            <NavRow label="Password" value="Change" onClick={() => setPasswordOpen(true)} />
+          </DetailGroup>
 
-        <SectionLabel>Just for you</SectionLabel>
-        <DetailGroup label="Just for you">
-          <TripsPreference />
-        </DetailGroup>
+          <SectionLabel>Just for you</SectionLabel>
+          <DetailGroup label="Just for you">
+            <TripsPreference />
+          </DetailGroup>
 
-        <footer className="ui-sheet-footer account-settings-footer">
-          <span className="ui-sheet-who">Your avatar is made from your account.</span>
-          <Button kind="text" danger onClick={() => setDeleting(true)}>
-            Delete account
-          </Button>
-        </footer>
-      </Card>
+          <footer className="ui-sheet-footer account-settings-footer">
+            <span className="ui-sheet-who">Your avatar is made from your account.</span>
+            <Button kind="text" danger onClick={() => setDeleting(true)}>
+              Delete account
+            </Button>
+          </footer>
+        </Paper>
+      </PaperStack>
 
       <PasswordSheet
         open={passwordOpen}

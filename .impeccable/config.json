@@ -1,0 +1,20 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "design-system-font",
+        "value": "outfit",
+        "createdAt": "2026-10-16T18:24:57.751Z",
+        "reason": "Claude: DESIGN.md declares 'Outfit Variable'; same face, detector name mismatch"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "figtree",
+        "createdAt": "2026-10-16T18:24:57.769Z",
+        "reason": "Claude: DESIGN.md declares 'Figtree Variable'; same face, detector name mismatch"
+      }
+    ]
+  }
+}
