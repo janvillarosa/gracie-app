@@ -19,6 +19,8 @@ type Handlers struct {
 	Room *handlers.RoomHandler
 	List *handlers.ListHandler
 	Trip *handlers.TripHandler
+	// Events is optional: when nil, POST /events is not mounted.
+	Events *handlers.EventsHandler
 }
 
 // redactPlacesQuery keeps /places/* query strings (search text, exact coordinates) out of
@@ -99,6 +101,9 @@ func NewRouter(userFinder authmw.UserFinder, h Handlers) http.Handler {
 		ar.Patch("/rooms/{room_id}/lists/{list_id}/items/{item_id}", h.List.UpdateItem)
 		ar.Patch("/rooms/{room_id}/lists/{list_id}/items/{item_id}/position", h.List.UpdateItemPosition)
 		ar.Delete("/rooms/{room_id}/lists/{list_id}/items/{item_id}", h.List.DeleteItem)
+		if h.Events != nil {
+			ar.Post("/events", h.Events.Ingest)
+		}
 		if h.Trip != nil {
 			ar.Post("/rooms/{room_id}/trips/sync", h.Trip.Sync)
 			ar.Post("/rooms/{room_id}/trips/ops", h.Trip.Ops)

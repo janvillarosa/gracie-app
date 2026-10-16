@@ -21,6 +21,7 @@ func RegisterAnalyticsEvents(reg *analytics.Registry) {
 	reg.MustRegister(
 		analytics.EventDef{Name: "trip.created", Props: map[string]analytics.PropSpec{"days_to_start": daysSpec}},
 		analytics.EventDef{Name: "trip.updated", Props: map[string]analytics.PropSpec{"fields": fieldsSpec["fields"], "days_to_start": daysSpec}},
+		analytics.EventDef{Name: "trip.view", Client: true, Props: map[string]analytics.PropSpec{"tab": {Kind: analytics.PropString, MaxLen: 16}}},
 		analytics.EventDef{Name: "trip.deleted"},
 		analytics.EventDef{Name: "trip.restored"},
 		analytics.EventDef{Name: "trip.packing_list_created", Props: map[string]analytics.PropSpec{"days_to_start": daysSpec}},
