@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { Button } from '@components/ui'
-import { Card, Checkbox } from 'antd'
+import { Button, Paper, PaperStack } from '@components/ui'
+import { Checkbox } from 'antd'
 import type { Place } from '@api/tripTypes'
 import { confettiAt } from '@lib/confetti'
 import { hasPin } from '@lib/trips/places'
@@ -209,10 +209,12 @@ export const NextStopDeck: React.FC<Props> = ({
       </section>
     )
   return (
-    <div className={`trip-deck-wrap ${more >= 2 ? 'has-2' : more === 1 ? 'has-1' : ''}`}>
-      <Card className="trip-deck" aria-label="Next stop" role="region">
+    // One or two more stops still to come show as sheets beneath the card. The deck deals and
+    // flips its own cards, so the stack does not play its arrival.
+    <PaperStack peek={more >= 2 ? 2 : more === 1 ? 1 : 0} arrive={false} className="trip-deck-wrap">
+      <Paper className="trip-deck" lift={1} as="section" aria-label="Next stop" role="region">
         {content}
-      </Card>
-    </div>
+      </Paper>
+    </PaperStack>
   )
 }

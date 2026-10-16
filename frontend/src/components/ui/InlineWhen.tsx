@@ -72,7 +72,7 @@ export const InlineWhen: React.FC<Props> = ({
   }, [time])
 
   const options = [
-    ...(allowIdeas ? [{ value: IDEAS, label: 'Ideas (no day yet)' }] : []),
+    ...(allowIdeas ? [{ value: IDEAS, label: 'Ideas' }] : []),
     ...days
       .filter((d) => d.value !== null)
       .map((d) => ({ value: d.value as string, label: d.label })),

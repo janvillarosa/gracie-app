@@ -17,13 +17,13 @@ const antdThemeConfig = {
   cssVar: true,
   algorithm: antdTheme.defaultAlgorithm,
   token: {
-    colorPrimary: 'var(--color-primary, #FFD417)',
+    colorPrimary: 'var(--brand-yellow, #FFD417)',
     colorLink: 'var(--brand-blue, #2348A6)',
-    colorWarning: 'var(--color-warning, #F3F78A)',
-    colorInfo: 'var(--color-secondary, #C7B090)',
-    colorError: 'var(--color-danger, #BE1E2D)',
+    colorWarning: 'var(--warn-ink, #F3F78A)',
+    colorInfo: 'var(--brand-blue, #C7B090)',
+    colorError: 'var(--brand-red, #BE1E2D)',
     colorText: 'var(--text, #3B3B3B)',
-    colorTextSecondary: 'var(--text-secondary, rgba(59,59,59,0.7))',
+    colorTextSecondary: 'var(--muted, rgba(59,59,59,0.7))',
     colorBgBase: 'var(--bg, #F7F7F7)',
     colorBgContainer: 'var(--panel, #FFFFFF)',
     colorBgElevated: 'var(--panel, #FFFFFF)',
@@ -40,7 +40,7 @@ const antdThemeConfig = {
   },
   components: {
     Button: {
-      colorPrimary: 'var(--color-primary, #FFD417)',
+      colorPrimary: 'var(--brand-yellow, #FFD417)',
       fontWeight: 600,
       primaryShadow: 'none',
       defaultShadow: 'none',

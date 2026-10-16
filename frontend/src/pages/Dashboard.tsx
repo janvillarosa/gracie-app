@@ -1,11 +1,12 @@
 import React from 'react'
+import { Paper, Button } from '@components/ui'
 import { Navigate, useLocation, useMatch } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@auth/AuthProvider'
 import { getLists, getMe, getMyRoom, isNotFound } from '@api/endpoints'
 import { RoomPage, lastHousePill } from './RoomPage'
 import { NoRoomPage } from './NoRoomPage'
-import { Card, Alert, Button, Space } from 'antd'
+import { Alert, Space } from 'antd'
 import { SignIn } from '@phosphor-icons/react'
 import { TopNav } from '@components/TopNav'
 import { HouseLoader } from '@components/HouseLoader'
@@ -55,15 +56,15 @@ export const Dashboard: React.FC = () => {
   if (meQuery.isError) {
     return (
       <div className="container">
-        <Card>
+        <Paper>
           <Alert type="error" message="Your session expired. Log in again to continue." showIcon />
           <div className="spacer" />
           <Space>
-            <Button type="primary" onClick={() => setApiKey(null)} icon={<SignIn />}>
+            <Button kind="key" onClick={() => setApiKey(null)} icon={<SignIn />}>
               Log in
             </Button>
           </Space>
-        </Card>
+        </Paper>
       </div>
     )
   }
@@ -72,15 +73,17 @@ export const Dashboard: React.FC = () => {
     if (isNotFound(roomQuery.error)) return <NoRoomPage />
     return (
       <div className="container">
-        <Card>
+        <Paper>
           <Alert
             type="error"
             message="Couldn’t load your house. Check your connection and try again."
             showIcon
           />
           <div className="spacer" />
-          <Button onClick={() => roomQuery.refetch()}>Try again</Button>
-        </Card>
+          <Button kind="quiet" onClick={() => roomQuery.refetch()}>
+            Try again
+          </Button>
+        </Paper>
       </div>
     )
   }

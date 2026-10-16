@@ -1,11 +1,12 @@
 import React from 'react'
+import { Paper, Button } from '@components/ui'
 import { useAuth } from '@auth/AuthProvider'
 import { Link } from 'react-router-dom'
 import { useTransitionNavigate } from '@lib/viewTransition'
 import { useQuery } from '@tanstack/react-query'
 import { getMe, getLists } from '@api/endpoints'
 import type { List } from '@api/types'
-import { Card, Typography, Space, Button, List as AntList, Alert } from 'antd'
+import { Typography, Space, List as AntList, Alert } from 'antd'
 import { ArrowLeft, FolderOpen } from '@phosphor-icons/react'
 import { TopNav } from '@components/TopNav'
 import { useDocumentTitle } from '@lib/useDocumentTitle'
@@ -27,20 +28,20 @@ export const ListsIndex: React.FC = () => {
   if (meQuery.isLoading || listsQuery.isLoading) {
     return (
       <div className="container">
-        <Card>Loading your lists…</Card>
+        <Paper>Loading your lists…</Paper>
       </div>
     )
   }
   if (!roomId) {
     return (
       <div className="container">
-        <Card>
+        <Paper>
           <Alert type="error" message="You’re not in a house yet." showIcon />
           <div className="spacer" />
-          <Button onClick={() => navigate('/app')} icon={<ArrowLeft />}>
+          <Button kind="quiet" onClick={() => navigate('/app')} icon={<ArrowLeft />}>
             Back to house
           </Button>
-        </Card>
+        </Paper>
       </div>
     )
   }
@@ -50,13 +51,13 @@ export const ListsIndex: React.FC = () => {
   return (
     <div className="container">
       <TopNav />
-      <Card>
+      <Paper>
         <Space direction="vertical" style={{ width: '100%' }} size="large">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography.Title level={2} style={{ margin: 0 }}>
               Lists
             </Typography.Title>
-            <Button onClick={() => navigate('/app')} icon={<ArrowLeft />}>
+            <Button kind="quiet" onClick={() => navigate('/app')} icon={<ArrowLeft />}>
               Back
             </Button>
           </div>
@@ -72,7 +73,7 @@ export const ListsIndex: React.FC = () => {
                   actions={[
                     <Button
                       key="open"
-                      type="primary"
+                      kind="quiet"
                       onClick={() => navigate(`/app/lists/${l.list_id}`)}
                       icon={<FolderOpen />}
                     >
@@ -93,7 +94,7 @@ export const ListsIndex: React.FC = () => {
             />
           )}
         </Space>
-      </Card>
+      </Paper>
     </div>
   )
 }

@@ -1,5 +1,6 @@
 import React, { useMemo, useRef, useState } from 'react'
-import { Button, Input } from 'antd'
+import { Button } from '@components/ui'
+import { Input } from 'antd'
 import { Plus } from '@phosphor-icons/react'
 import type { PantryItem } from '@api/types'
 import { parseInput } from '@lib/parseInput'
@@ -157,13 +158,18 @@ export const AddItemBar: React.FC<Props> = ({ onCreate, pantry, listId }) => {
               )}
             </div>
             <Button
+              kind="key"
+              iconOnly
               className={armed ? 'add-btn is-armed' : 'add-btn'}
-              type="primary"
-              shape="circle"
               onClick={submit}
               disabled={!armed}
-              icon={<Plus key={adds} className={adds ? 'add-plus is-turning' : 'add-plus'} />}
-              size="large"
+              icon={
+                <Plus
+                  key={adds}
+                  weight="bold"
+                  className={adds ? 'add-plus is-turning' : 'add-plus'}
+                />
+              }
               aria-label="Add item"
             />
           </div>

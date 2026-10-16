@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Card, message } from 'antd'
+import { message } from 'antd'
 import { Plus } from '@phosphor-icons/react'
 import { errorMessage } from '@lib/errors'
 import { useAuth } from '@auth/AuthProvider'
@@ -11,7 +11,7 @@ import {
   joinRoomByToken,
 } from '@api/endpoints'
 import { CreateHouseSheet } from '@components/CreateHouseSheet'
-import { Button } from '@components/ui'
+import { Button, Paper, PaperStack } from '@components/ui'
 import { useTransitionNavigate } from '@lib/viewTransition'
 import { useDocumentTitle } from '@lib/useDocumentTitle'
 import { TopNav } from '@components/TopNav'
@@ -71,67 +71,69 @@ export const NoRoomPage: React.FC = () => {
   return (
     <div className="container">
       <TopNav />
-      <Card className="paper-card no-room">
-        <h1 className="no-room-title">You’re not in a House yet</h1>
-        <p className="no-room-lede">
-          A House is the people you live with, sharing the same lists and trips.
-        </p>
-
-        <section className="no-room-part" aria-labelledby="start-house">
-          <h2 id="start-house" className="no-room-heading">
-            Start a House
-          </h2>
-          <p className="no-room-text">
-            You’ll be the only member until someone joins with your code.
+      <PaperStack>
+        <Paper className="no-room">
+          <h1 className="no-room-title">You’re not in a House yet</h1>
+          <p className="no-room-lede">
+            A House is the people you live with, sharing the same lists and trips.
           </p>
-          <Button kind="key" icon={<Plus aria-hidden />} onClick={() => setCreateOpen(true)}>
-            Create a House
-          </Button>
-        </section>
 
-        <section className="no-room-part" aria-labelledby="join-house">
-          <h2 id="join-house" className="no-room-heading">
-            Join a House
-          </h2>
-          <p className="no-room-text" id="join-hint">
-            Ask a housemate for the code. They’ll find it under Invite.
-          </p>
-          <form className="join-row" onSubmit={onJoin} noValidate>
-            <input
-              className={joinError ? 'join-code has-error' : 'join-code'}
-              aria-label="House code"
-              aria-describedby={joinError ? 'join-error' : 'join-hint'}
-              aria-invalid={!!joinError}
-              placeholder="K7M2Q"
-              value={token}
-              maxLength={CODE_LENGTH}
-              autoCapitalize="characters"
-              autoComplete="off"
-              autoCorrect="off"
-              spellCheck={false}
-              onChange={(e) => {
-                setJoinError('')
-                setToken(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))
-              }}
-            />
-            <Button kind="quiet" type="submit" disabled={!tokenValid || joining}>
-              {joining ? 'Joining…' : 'Join'}
-            </Button>
-          </form>
-          {joinError && (
-            <p id="join-error" role="alert" className="ui-field-error">
-              {joinError}
+          <section className="no-room-part" aria-labelledby="start-house">
+            <h2 id="start-house" className="no-room-heading">
+              Start a House
+            </h2>
+            <p className="no-room-text">
+              You’ll be the only member until someone joins with your code.
             </p>
-          )}
-        </section>
+            <Button kind="key" icon={<Plus aria-hidden />} onClick={() => setCreateOpen(true)}>
+              Create a House
+            </Button>
+          </section>
 
-        <CreateHouseSheet
-          open={createOpen}
-          onClose={() => setCreateOpen(false)}
-          onSubmit={onCreate}
-          submitting={creating}
-        />
-      </Card>
+          <section className="no-room-part" aria-labelledby="join-house">
+            <h2 id="join-house" className="no-room-heading">
+              Join a House
+            </h2>
+            <p className="no-room-text" id="join-hint">
+              Ask a housemate for the code. They’ll find it under Invite.
+            </p>
+            <form className="join-row" onSubmit={onJoin} noValidate>
+              <input
+                className={joinError ? 'join-code has-error' : 'join-code'}
+                aria-label="House code"
+                aria-describedby={joinError ? 'join-error' : 'join-hint'}
+                aria-invalid={!!joinError}
+                placeholder="K7M2Q"
+                value={token}
+                maxLength={CODE_LENGTH}
+                autoCapitalize="characters"
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck={false}
+                onChange={(e) => {
+                  setJoinError('')
+                  setToken(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))
+                }}
+              />
+              <Button kind="quiet" type="submit" disabled={!tokenValid || joining}>
+                {joining ? 'Joining…' : 'Join'}
+              </Button>
+            </form>
+            {joinError && (
+              <p id="join-error" role="alert" className="ui-field-error">
+                {joinError}
+              </p>
+            )}
+          </section>
+
+          <CreateHouseSheet
+            open={createOpen}
+            onClose={() => setCreateOpen(false)}
+            onSubmit={onCreate}
+            submitting={creating}
+          />
+        </Paper>
+      </PaperStack>
     </div>
   )
 }

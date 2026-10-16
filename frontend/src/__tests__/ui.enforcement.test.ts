@@ -79,6 +79,17 @@ describe('overlays and form controls come from components/ui', () => {
     expect(offenders).toEqual([])
   })
 
+  it('panels and buttons are paper: no Ant Card or Button outside the landing page', () => {
+    const offenders = all
+      .filter((p) => /\.tsx?$/.test(p) && !rel(p).startsWith('components/landing/'))
+      .flatMap((p) =>
+        antdImports(read(p))
+          .filter((n) => n === 'Card' || n === 'Button')
+          .map((n) => `${rel(p)}: ${n}`),
+      )
+    expect(offenders).toEqual([])
+  })
+
   it('only the ui Sheet imports Modal, Drawer or Popover among the ui primitives', () => {
     const offenders = all
       .filter((p) => rel(p).startsWith('components/ui/') && rel(p) !== 'components/ui/Sheet.tsx')

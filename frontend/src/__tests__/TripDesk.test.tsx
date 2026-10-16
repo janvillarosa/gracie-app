@@ -59,7 +59,9 @@ describe('the planning desk layout', () => {
     const shell = document.querySelector('.trip-shell') as HTMLElement
     expect(shell).toHaveClass('is-desk', 'has-map')
     const kids = [...shell.children].map((c) => c.className)
-    expect(kids[0]).toContain('trip-ideas-col')
+    // Ideas is its own small stack of paper: the stack holds the column.
+    expect(kids[0]).toContain('trip-ideas-stack')
+    expect(shell.children[0].querySelector('.trip-ideas-col')).not.toBeNull()
     expect(kids[1]).toContain('trip-days-col')
     expect(kids[2]).toContain('trip-side')
     // Ideas is a column, so the pills are Plan and Bookings.

@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react'
+import React, { useLayoutEffect, useRef, useState } from 'react'
 import {
   Button,
   Chip,
@@ -63,6 +63,20 @@ export const AddBar: React.FC<Props> = ({
   const [value, setValue] = useState('')
   const [adds, setAdds] = useState(0)
   const ref = useRef<{ focus: () => void } | null>(null)
+  // The field's text starts just after the day chip, so the chip's width is measured, not guessed.
+  const fieldBox = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    const box = fieldBox.current
+    const chip = box?.querySelector<HTMLElement>('.trip-target-chip')
+    if (!box || !chip) return
+    const set = () =>
+      box.style.setProperty('--chip-w', `${Math.ceil(chip.getBoundingClientRect().width)}px`)
+    set()
+    if (typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(set)
+    ro.observe(chip)
+    return () => ro.disconnect()
+  })
   const parsed = parseQuickAdd(value)
   const search = usePlaceSuggest(mode === 'booking' ? '' : parsed.title, bias)
   const fresh = search.forQuery === parsed.title.trim()
@@ -137,7 +151,10 @@ export const AddBar: React.FC<Props> = ({
       >
         {({ input }) => (
           <div className="add-row">
-            <div className={mode === 'todo' ? 'add-field trip-add-field has-target' : 'add-field'}>
+            <div
+              ref={fieldBox}
+              className={mode === 'todo' ? 'add-field trip-add-field has-target' : 'add-field'}
+            >
               {mode === 'todo' && (
                 <Chip
                   label="Adding to"
@@ -199,7 +216,13 @@ export const AddBar: React.FC<Props> = ({
               aria-label={`${label}, add`}
               disabled={mode === 'todo' && !armed}
               onClick={mode === 'booking' ? launch : submit}
-              icon={<Plus key={adds} className={adds ? 'add-plus is-turning' : 'add-plus'} />}
+              icon={
+                <Plus
+                  key={adds}
+                  weight="bold"
+                  className={adds ? 'add-plus is-turning' : 'add-plus'}
+                />
+              }
             />
           </div>
         )}

@@ -13,7 +13,8 @@
     "format:check": "biome format src",
     "test": "vitest --pool=forks",
     "test:ci": "vitest run --coverage --pool=forks",
-    "coverage": "vitest run --coverage --pool=forks"
+    "coverage": "vitest run --coverage --pool=forks",
+    "design:sync": "node scripts/sync-design-tokens.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

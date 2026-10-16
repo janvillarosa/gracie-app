@@ -14,7 +14,7 @@ import {
 } from '@api/endpoints'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useLiveQueryOpts } from '@lib/liveQuery'
-import { Card, List as AntList, Dropdown, message } from 'antd'
+import { List as AntList, Dropdown, message } from 'antd'
 import {
   DotsThreeVertical,
   CaretRight,
@@ -45,6 +45,8 @@ import {
   Sheet,
   SheetActions,
   Stamp,
+  Paper,
+  PaperStack,
 } from '@components/ui'
 import { useDocumentTitle } from '@lib/useDocumentTitle'
 
@@ -297,9 +299,9 @@ export const RoomPage: React.FC<{
   return (
     <div className="container">
       <TopNav />
-      <div className="paper-stack">
+      <PaperStack>
         {/* Bottom meta sheet: the House, who is in it, and the way to invite someone. */}
-        <Card className="paper-card paper-meta house-meta">
+        <Paper className="paper-meta house-meta">
           <h1 className="house-title">{houseName}</h1>
           {room.description && <p className="house-desc">{room.description}</p>}
           <div className="house-meta-row">
@@ -328,10 +330,10 @@ export const RoomPage: React.FC<{
               />
             </div>
           </div>
-        </Card>
+        </Paper>
 
         {/* The second sheet: a pill switch between Lists and Trips, with the section's key. */}
-        <Card className="paper-card paper-list">
+        <Paper className="paper-list">
           <PillNav
             label="House sections"
             value={tab}
@@ -393,8 +395,8 @@ export const RoomPage: React.FC<{
               },
             ]}
           />
-        </Card>
-      </div>
+        </Paper>
+      </PaperStack>
 
       {newTripOpen && tripStore && (
         <TripNameModal

@@ -4,12 +4,12 @@ import { useTransitionNavigate } from '@lib/viewTransition'
 import { TransitionLink } from '@components/TransitionLink'
 import { useAuth } from '@auth/AuthProvider'
 import { loginAuth } from '@api/endpoints'
-import { Form, Input, Button, Typography, message } from 'antd'
+import { Form, Input, Typography, message } from 'antd'
 import { useDocumentTitle } from '@lib/useDocumentTitle'
 import { AuthShell } from '@components/AuthShell'
 import { startWelcome } from '@lib/welcome'
 import { getPendingOnLogout, subscribePendingOnLogout } from '@lib/trips/hooks'
-import { Note } from '@components/ui'
+import { Note, Button } from '@components/ui'
 
 export const Login: React.FC = () => {
   const { setApiKey } = useAuth()
@@ -82,15 +82,8 @@ export const Login: React.FC = () => {
             autoComplete="current-password"
           />
         </Form.Item>
-        <Button
-          type="primary"
-          htmlType="submit"
-          disabled={!username || !password}
-          loading={loading}
-          size="large"
-          block
-        >
-          Log in
+        <Button kind="key" type="submit" disabled={!username || !password || loading} block>
+          {loading ? 'Logging in…' : 'Log in'}
         </Button>
       </Form>
     </AuthShell>

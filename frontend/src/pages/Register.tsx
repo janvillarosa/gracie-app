@@ -1,9 +1,10 @@
 import React, { useState } from 'react'
+import { Button } from '@components/ui'
 import { errorMessage } from '@lib/errors'
 import { useTransitionNavigate } from '@lib/viewTransition'
 import { TransitionLink } from '@components/TransitionLink'
 import { registerAuth } from '@api/endpoints'
-import { Form, Input, Button, Typography, message } from 'antd'
+import { Form, Input, Typography, message } from 'antd'
 import { useDocumentTitle } from '@lib/useDocumentTitle'
 import { AuthShell } from '@components/AuthShell'
 
@@ -77,14 +78,12 @@ export const Register: React.FC = () => {
           />
         </Form.Item>
         <Button
-          type="primary"
-          htmlType="submit"
-          disabled={!username || password.length < 8}
-          loading={loading}
-          size="large"
+          kind="key"
+          type="submit"
+          disabled={!username || password.length < 8 || loading}
           block
         >
-          Create account
+          {loading ? 'Creating your account…' : 'Create account'}
         </Button>
       </Form>
     </AuthShell>

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { Paper, PaperStack, Button } from '@components/ui'
 import { errorMessage } from '@lib/errors'
 import { useLocation, useParams } from 'react-router-dom'
 import { useTransitionNavigate } from '@lib/viewTransition'
@@ -23,10 +24,8 @@ import {
 } from '@api/endpoints'
 import type { List, ListItem, ListSuggestion, PantryItem } from '@api/types'
 import {
-  Card,
   Typography,
   Space,
-  Button,
   Input,
   List as AntList,
   Grid,
@@ -538,9 +537,9 @@ export const ListPage: React.FC = () => {
       content: (
         <span className="undo-toast">
           Completed items cleared to pantry
-          <button type="button" className="undo-btn" onClick={undo}>
+          <Button kind="text" className="undo-btn" onClick={undo}>
             Undo
-          </button>
+          </Button>
         </span>
       ),
     })
@@ -628,9 +627,9 @@ export const ListPage: React.FC = () => {
       content: (
         <span className="undo-toast">
           Removed {it.description}
-          <button type="button" className="undo-btn" onClick={undo}>
+          <Button kind="text" className="undo-btn" onClick={undo}>
             Undo
-          </button>
+          </Button>
         </span>
       ),
     })
@@ -787,24 +786,24 @@ export const ListPage: React.FC = () => {
   if (!roomId || (!listMeta && !(redirecting || hadListRef.current))) {
     return (
       <div className="container">
-        <Card>
+        <Paper>
           <Alert
             type="error"
             message="We couldn’t find this list. It may have been deleted."
             showIcon
           />
           <div className="spacer" />
-          <Button onClick={() => navigate('/app')} icon={<ArrowLeft />}>
+          <Button kind="quiet" onClick={() => navigate('/app')} icon={<ArrowLeft />}>
             Back to house
           </Button>
-        </Card>
+        </Paper>
       </div>
     )
   }
   if (!listMeta) {
     return (
       <div className="container">
-        <Card>Redirecting…</Card>
+        <Paper>Redirecting…</Paper>
       </div>
     )
   }
@@ -855,9 +854,9 @@ export const ListPage: React.FC = () => {
         }
       />
       {contextHolder}
-      <div className="paper-stack">
+      <PaperStack>
         {/* Bottom sheet: title + details + actions */}
-        <Card className="paper-card paper-meta">
+        <Paper className="paper-meta">
           <div className="list-header-grid">
             <div className="list-header-title">
               <Typography.Title
@@ -888,18 +887,18 @@ export const ListPage: React.FC = () => {
             <div className="list-actions">
               <Dropdown trigger={['click']} menu={{ items: menuItems, onClick: onMenuClick }}>
                 <Button
+                  kind="text"
+                  iconOnly
                   icon={<DotsThreeVertical />}
-                  type="text"
-                  shape="circle"
                   aria-label="More list actions"
                 />
               </Dropdown>
             </div>
           </div>
-        </Card>
+        </Paper>
 
         {/* Top sheet: tabs over list content */}
-        <Card className="paper-card paper-list">
+        <Paper className="paper-list">
           <div>
             <PillNav
               value={activeTab}
@@ -951,7 +950,7 @@ export const ListPage: React.FC = () => {
                           <RowSkeleton variant="item" rows={4} label="Loading items" />
                         ) : items.length === 0 ? (
                           <div className="empty-state">
-                            <Plus size={20} style={{ color: 'var(--color-primary)' }} />
+                            <Plus size={20} style={{ color: 'var(--brand-yellow)' }} />
                             <Typography.Text type="secondary">
                               No items yet. Add your first item below.
                             </Typography.Text>
@@ -1067,7 +1066,7 @@ export const ListPage: React.FC = () => {
                         {clearedNotes !== null ? (
                           <Button
                             key="undo"
-                            type="text"
+                            kind="text"
                             className="notes-clear is-undo"
                             onClick={onUndoClearNotes}
                             icon={<ArrowCounterClockwise size={18} />}
@@ -1077,7 +1076,7 @@ export const ListPage: React.FC = () => {
                         ) : (
                           <Button
                             key="clear"
-                            type="text"
+                            kind="text"
                             className="notes-clear"
                             onClick={onClearNotes}
                             disabled={!notesText.trim()}
@@ -1087,11 +1086,9 @@ export const ListPage: React.FC = () => {
                           </Button>
                         )}
                         <Button
-                          type="primary"
-                          shape="round"
+                          kind="key"
                           className={notesJustSaved ? 'notes-save is-saved' : 'notes-save'}
                           onClick={onSaveNotes}
-                          loading={notesSaving}
                           disabled={!notesDirty || notesSaving}
                           icon={
                             notesJustSaved ? (
@@ -1106,7 +1103,7 @@ export const ListPage: React.FC = () => {
                             )
                           }
                         >
-                          {notesJustSaved ? 'Saved' : 'Save'}
+                          {notesJustSaved ? 'Saved' : notesSaving ? 'Saving…' : 'Save'}
                         </Button>
                       </div>
                     </Space>
@@ -1115,8 +1112,8 @@ export const ListPage: React.FC = () => {
               ]}
             />
           </div>
-        </Card>
-      </div>
+        </Paper>
+      </PaperStack>
     </div>
   )
 }

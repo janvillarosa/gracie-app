@@ -16,6 +16,27 @@ database name, env vars, and docker-compose service names stay "gracie". Only
 user-facing UI copy says "Bauhouse". The UI calls a room a **House**; backend
 endpoints stay `/rooms/*`.
 
+## Design system — read before any UI change
+
+Bauhouse has one design system. Do not invent around it.
+
+1. **Look it up first.** The living reference is [docs/design-system/index.html](docs/design-system/index.html)
+   (open it in a browser): every token in use and every pattern (paper, stacks, the button family,
+   floating slips). The rules and rationale are in [DESIGN.md](DESIGN.md); the components are in
+   `frontend/src/components/ui/` (see [frontend/CLAUDE.md](frontend/CLAUDE.md), "UI primitives").
+2. **Draw only with tokens.** Every colour, font size, weight, radius, control height, icon size,
+   shadow and grain is a token in the one `:root` block at the top of `frontend/src/styles.css`.
+   No raw hex/rgba, px font sizes or numeric weights in the app's CSS (tests enforce it). Type is
+   nine roles (`--t-display` … `--t-code`), weights are four (`--w-*`), text is three inks
+   (`--ink`, `--text`, `--muted`).
+3. **Compose from the primitives.** Panels are `Paper` (one sheet at one of four heights) and
+   `PaperStack` (sheets slid over each other with sheets peeking beneath). Buttons are `Button`
+   (`key`: one per sheet; `quiet`; `text`; `iconOnly`). Overlays are `Sheet`. No Ant `Card`,
+   `Button` or `Modal` outside the landing page (tests enforce it).
+4. **Missing something?** Add it to the system first: a token in the block (then run
+   `pnpm design:sync` in `frontend/` so the reference page shows it), or a primitive in
+   `components/ui/` with its section on the reference page and in DESIGN.md. Never a one-off.
+
 ## Command surface — use these, not ad-hoc commands
 
 All validation goes through the root `Makefile`, so humans, CI, and agents run the
