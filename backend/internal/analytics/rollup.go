@@ -46,6 +46,12 @@ func NewWorker(events EventRepository, aggs AggregateRepository, reg *Registry) 
 	return &Worker{events: events, aggs: aggs, reg: reg, owner: ids.NewID("worker"), now: time.Now}
 }
 
+// WithClock replaces the clock (tests drive the ingest lag and staleness with it).
+func (w *Worker) WithClock(now func() time.Time) *Worker {
+	w.now = now
+	return w
+}
+
 // FoldOnce runs one fold pass and returns how many events it folded. Only the instance
 // holding the lease does work, so any number of instances can run it safely.
 func (w *Worker) FoldOnce(ctx context.Context) (int, error) {

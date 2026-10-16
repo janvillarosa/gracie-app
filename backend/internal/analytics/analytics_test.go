@@ -85,6 +85,12 @@ func (f *fakeRepo) ListIngestedBetween(context.Context, time.Time, time.Time, in
 func (f *fakeRepo) ListForKey(context.Context, string, string, string, int) ([]Event, error) {
 	return nil, nil
 }
+func (f *fakeRepo) ListByActorSince(context.Context, string, time.Time, int) ([]Event, error) {
+	return nil, nil
+}
+func (f *fakeRepo) ListByRoomSince(context.Context, string, time.Time, int) ([]Event, error) {
+	return nil, nil
+}
 func (f *fakeRepo) DeleteByActor(context.Context, string) error { return nil }
 func (f *fakeRepo) DeleteByRoom(context.Context, string) error  { return nil }
 
@@ -139,6 +145,12 @@ func (blockingRepo) ListIngestedBetween(context.Context, time.Time, time.Time, i
 	return nil, nil
 }
 func (blockingRepo) ListForKey(context.Context, string, string, string, int) ([]Event, error) {
+	return nil, nil
+}
+func (blockingRepo) ListByActorSince(context.Context, string, time.Time, int) ([]Event, error) {
+	return nil, nil
+}
+func (blockingRepo) ListByRoomSince(context.Context, string, time.Time, int) ([]Event, error) {
 	return nil, nil
 }
 func (blockingRepo) DeleteByActor(context.Context, string) error { return nil }

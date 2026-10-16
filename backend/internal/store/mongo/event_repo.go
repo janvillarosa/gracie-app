@@ -94,6 +94,31 @@ func (r *EventRepo) ListForKey(ctx context.Context, roomID, subjectType, key str
 	return out, nil
 }
 
+// since returns up to limit of the newest events matching match at or after since, oldest first.
+func (r *EventRepo) since(ctx context.Context, match bson.D, since time.Time, limit int) ([]analytics.Event, error) {
+	filter := append(match, bson.E{Key: "occurred_at", Value: bson.D{{Key: "$gte", Value: since.UTC()}}})
+	cur, err := r.col().Find(ctx, filter, options.Find().SetSort(bson.D{{Key: "occurred_at", Value: -1}}).SetLimit(int64(limit)))
+	if err != nil {
+		return nil, err
+	}
+	var out []analytics.Event
+	if err := cur.All(ctx, &out); err != nil {
+		return nil, err
+	}
+	for i, j := 0, len(out)-1; i < j; i, j = i+1, j-1 {
+		out[i], out[j] = out[j], out[i]
+	}
+	return out, nil
+}
+
+func (r *EventRepo) ListByActorSince(ctx context.Context, userID string, since time.Time, limit int) ([]analytics.Event, error) {
+	return r.since(ctx, bson.D{{Key: "actor_id", Value: userID}}, since, limit)
+}
+
+func (r *EventRepo) ListByRoomSince(ctx context.Context, roomID string, since time.Time, limit int) ([]analytics.Event, error) {
+	return r.since(ctx, bson.D{{Key: "room_id", Value: roomID}}, since, limit)
+}
+
 func (r *EventRepo) DeleteByActor(ctx context.Context, userID string) error {
 	_, err := r.col().DeleteMany(ctx, bson.D{{Key: "actor_id", Value: userID}})
 	return err

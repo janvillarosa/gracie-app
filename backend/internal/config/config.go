@@ -30,6 +30,7 @@ type Config struct {
 	AnalyticsRetentionDays int
 	AnalyticsEventsRPS     float64
 	AnalyticsFoldEvery     time.Duration
+	AnalyticsProfileEvery  time.Duration
 }
 
 func getEnv(key, def string) string {
@@ -60,6 +61,7 @@ func Load() (*Config, error) {
 	cfg.AnalyticsRetentionDays = getEnvInt("ANALYTICS_RETENTION_DAYS", 400)
 	cfg.AnalyticsEventsRPS = getEnvFloat("ANALYTICS_EVENTS_RPS", 2)
 	cfg.AnalyticsFoldEvery = getEnvDuration("ANALYTICS_FOLD_EVERY", 15*time.Minute)
+	cfg.AnalyticsProfileEvery = getEnvDuration("ANALYTICS_PROFILE_EVERY", time.Hour)
 
 	if cfg.MongoURI == "" || cfg.MongoDB == "" {
 		return nil, fmt.Errorf("missing Mongo configuration (MONGODB_URI, MONGODB_DB)")

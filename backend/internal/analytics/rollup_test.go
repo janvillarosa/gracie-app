@@ -41,7 +41,7 @@ type rig struct {
 func newRig(now time.Time) *rig {
 	r := &rig{events: memstore.NewEventRepo(), aggs: memstore.NewAggRepo(), now: now}
 	r.worker = analytics.NewWorker(r.events, r.aggs, registry())
-	analytics.SetWorkerClock(r.worker, func() time.Time { return r.now })
+	r.worker = r.worker.WithClock(func() time.Time { return r.now })
 	return r
 }
 

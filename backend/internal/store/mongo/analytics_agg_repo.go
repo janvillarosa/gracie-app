@@ -23,10 +23,11 @@ type AggRepo struct {
 
 func NewAggRepo(c *Client, tx store.TxRunner) *AggRepo { return &AggRepo{db: c.DB, tx: tx} }
 
-func (r *AggRepo) periods() *mgo.Collection { return r.db.Collection("period_stats") }
-func (r *AggRepo) keys() *mgo.Collection    { return r.db.Collection("key_stats") }
-func (r *AggRepo) dirty() *mgo.Collection   { return r.db.Collection("analytics_dirty") }
-func (r *AggRepo) state() *mgo.Collection   { return r.db.Collection("analytics_state") }
+func (r *AggRepo) periods() *mgo.Collection  { return r.db.Collection("period_stats") }
+func (r *AggRepo) keys() *mgo.Collection     { return r.db.Collection("key_stats") }
+func (r *AggRepo) dirty() *mgo.Collection    { return r.db.Collection("analytics_dirty") }
+func (r *AggRepo) state() *mgo.Collection    { return r.db.Collection("analytics_state") }
+func (r *AggRepo) profiles() *mgo.Collection { return r.db.Collection("behavior_profiles") }
 
 func (r *AggRepo) EnsureIndexes(ctx context.Context) error {
 	if _, err := r.periods().Indexes().CreateMany(ctx, []mgo.IndexModel{
@@ -183,7 +184,10 @@ func (r *AggRepo) DeleteByRoom(ctx context.Context, roomID string) error {
 	if _, err := r.keys().DeleteMany(ctx, bson.D{{Key: "room_id", Value: roomID}}); err != nil {
 		return err
 	}
-	_, err := r.dirty().DeleteOne(ctx, bson.D{{Key: "_id", Value: "h:" + roomID}})
+	if _, err := r.dirty().DeleteOne(ctx, bson.D{{Key: "_id", Value: "h:" + roomID}}); err != nil {
+		return err
+	}
+	_, err := r.profiles().DeleteOne(ctx, bson.D{{Key: "_id", Value: "h:" + roomID}})
 	return err
 }
 
@@ -191,8 +195,125 @@ func (r *AggRepo) DeleteByUser(ctx context.Context, userID string) error {
 	if _, err := r.periods().DeleteMany(ctx, bson.D{{Key: "scope", Value: "u"}, {Key: "owner", Value: userID}}); err != nil {
 		return err
 	}
-	_, err := r.dirty().DeleteOne(ctx, bson.D{{Key: "_id", Value: "u:" + userID}})
+	if _, err := r.dirty().DeleteOne(ctx, bson.D{{Key: "_id", Value: "u:" + userID}}); err != nil {
+		return err
+	}
+	_, err := r.profiles().DeleteOne(ctx, bson.D{{Key: "_id", Value: "u:" + userID}})
 	return err
+}
+
+// ClaimDirty removes and returns up to limit dirty subjects. Each is deleted as it is taken,
+// so two instances never claim the same subject; a failed recompute puts it back.
+func (r *AggRepo) ClaimDirty(ctx context.Context, limit int) ([]string, error) {
+	var out []string
+	for len(out) < limit {
+		var doc struct {
+			ID string `bson:"_id"`
+		}
+		err := r.dirty().FindOneAndDelete(ctx, bson.D{}, options.FindOneAndDelete().SetSort(bson.D{{Key: "at", Value: 1}})).Decode(&doc)
+		if errors.Is(err, mgo.ErrNoDocuments) {
+			break
+		}
+		if err != nil {
+			return out, err
+		}
+		out = append(out, doc.ID)
+	}
+	return out, nil
+}
+
+func (r *AggRepo) MarkDirty(ctx context.Context, subjects ...string) error {
+	at := time.Now().UTC()
+	for _, s := range subjects {
+		if _, err := r.dirty().UpdateOne(ctx, bson.D{{Key: "_id", Value: s}},
+			bson.D{{Key: "$set", Value: bson.D{{Key: "at", Value: at}}}}, options.Update().SetUpsert(true)); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (r *AggRepo) RequeueStale(ctx context.Context, before time.Time, limit int) (int, error) {
+	cur, err := r.profiles().Find(ctx, bson.D{{Key: "computed_at", Value: bson.D{{Key: "$lt", Value: before.UTC()}}}},
+		options.Find().SetProjection(bson.D{{Key: "_id", Value: 1}}).SetLimit(int64(limit)))
+	if err != nil {
+		return 0, err
+	}
+	var stale []struct {
+		ID string `bson:"_id"`
+	}
+	if err := cur.All(ctx, &stale); err != nil {
+		return 0, err
+	}
+	for _, s := range stale {
+		if err := r.MarkDirty(ctx, s.ID); err != nil {
+			return 0, err
+		}
+	}
+	return len(stale), nil
+}
+
+func (r *AggRepo) PutProfile(ctx context.Context, p *analytics.Profile) error {
+	_, err := r.profiles().ReplaceOne(ctx, bson.D{{Key: "_id", Value: p.ID}}, p, options.Replace().SetUpsert(true))
+	return err
+}
+
+func (r *AggRepo) GetProfile(ctx context.Context, id string) (*analytics.Profile, error) {
+	var p analytics.Profile
+	err := r.profiles().FindOne(ctx, bson.D{{Key: "_id", Value: id}}).Decode(&p)
+	if errors.Is(err, mgo.ErrNoDocuments) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &p, nil
+}
+
+func (r *AggRepo) GetPeriod(ctx context.Context, id string) (map[string]any, error) {
+	var doc bson.M
+	err := r.periods().FindOne(ctx, bson.D{{Key: "_id", Value: id}}).Decode(&doc)
+	if errors.Is(err, mgo.ErrNoDocuments) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return doc, nil
+}
+
+func (r *AggRepo) GetKeyStats(ctx context.Context, roomID, subjectType string, keys []string) (map[string]analytics.KeyStat, error) {
+	ids := make([]string, len(keys))
+	for i, k := range keys {
+		ids[i] = roomID + ":" + subjectType + ":" + k
+	}
+	cur, err := r.keys().Find(ctx, bson.D{{Key: "_id", Value: bson.D{{Key: "$in", Value: ids}}}})
+	if err != nil {
+		return nil, err
+	}
+	var found []analytics.KeyStat
+	if err := cur.All(ctx, &found); err != nil {
+		return nil, err
+	}
+	out := make(map[string]analytics.KeyStat, len(found))
+	for _, ks := range found {
+		out[ks.Key] = ks
+	}
+	return out, nil
+}
+
+func (r *AggRepo) DueKeys(ctx context.Context, roomID, subjectType string, before time.Time, limit int) ([]analytics.KeyStat, error) {
+	filter := bson.D{{Key: "room_id", Value: roomID}, {Key: "subject_type", Value: subjectType},
+		{Key: "intervals.due_at", Value: bson.D{{Key: "$lt", Value: before.UTC()}}}}
+	cur, err := r.keys().Find(ctx, filter, options.Find().SetSort(bson.D{{Key: "intervals.due_at", Value: 1}}).SetLimit(int64(limit)))
+	if err != nil {
+		return nil, err
+	}
+	var out []analytics.KeyStat
+	if err := cur.All(ctx, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 var _ analytics.AggregateRepository = (*AggRepo)(nil)

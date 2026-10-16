@@ -21,6 +21,8 @@ type Handlers struct {
 	Trip *handlers.TripHandler
 	// Events is optional: when nil, POST /events is not mounted.
 	Events *handlers.EventsHandler
+	// Insights is optional: when nil, the insights routes are not mounted.
+	Insights *handlers.InsightsHandler
 }
 
 // redactPlacesQuery keeps /places/* query strings (search text, exact coordinates) out of
@@ -101,6 +103,11 @@ func NewRouter(userFinder authmw.UserFinder, h Handlers) http.Handler {
 		ar.Patch("/rooms/{room_id}/lists/{list_id}/items/{item_id}", h.List.UpdateItem)
 		ar.Patch("/rooms/{room_id}/lists/{list_id}/items/{item_id}/position", h.List.UpdateItemPosition)
 		ar.Delete("/rooms/{room_id}/lists/{list_id}/items/{item_id}", h.List.DeleteItem)
+		if h.Insights != nil {
+			ar.Get("/me/insights", h.Insights.Mine)
+			ar.Get("/rooms/{room_id}/insights", h.Insights.House)
+			ar.Get("/rooms/{room_id}/insights/periods/{period}", h.Insights.HousePeriod)
+		}
 		if h.Events != nil {
 			ar.Post("/events", h.Events.Ingest)
 		}

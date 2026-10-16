@@ -61,13 +61,27 @@ func (k KeyRef) ID() string { return k.RoomID + ":" + k.SubjectType + ":" + k.Ke
 
 // KeyIntervals is the recomputed rhythm of one key.
 type KeyIntervals struct {
-	N          int        // completions (or requests) counted
-	Source     string     // "complete" or "request"
-	EWMADays   float64    // smoothed days between occurrences
-	CV         float64    // spread of the gaps relative to their mean
-	LastAt     time.Time  // latest counted occurrence
-	DueAt      *time.Time // LastAt + EWMADays; nil until there is enough history
-	ComputedAt time.Time
+	N          int        `bson:"n" json:"n"`                               // occurrences counted
+	Source     string     `bson:"source" json:"source"`                     // "complete" or "request"
+	EWMADays   float64    `bson:"ewma_days" json:"ewma_days"`               // smoothed days between occurrences
+	CV         float64    `bson:"cv" json:"cv"`                             // spread of the gaps relative to their mean
+	LastAt     time.Time  `bson:"last_at" json:"last_at"`                   // latest counted occurrence
+	DueAt      *time.Time `bson:"due_at,omitempty" json:"due_at,omitempty"` // LastAt + EWMADays; nil until there is enough history
+	ComputedAt time.Time  `bson:"computed_at" json:"computed_at"`
+}
+
+// KeyStat is what is known about one thing in a house ("whole milk"): how often it was
+// asked for and finished, by whom, and when it is likely due again.
+type KeyStat struct {
+	RoomID      string                      `bson:"room_id" json:"-"`
+	SubjectType string                      `bson:"subject_type" json:"subject_type"`
+	Key         string                      `bson:"key" json:"key"`
+	Category    string                      `bson:"category,omitempty" json:"category,omitempty"`
+	Counts      map[string]int64            `bson:"counts" json:"counts"`
+	FirstAt     time.Time                   `bson:"first_at" json:"first_at"`
+	LastAt      map[string]time.Time        `bson:"last_at" json:"last_at"`
+	ByActor     map[string]map[string]int64 `bson:"by_actor,omitempty" json:"by_actor,omitempty"`
+	Intervals   *KeyIntervals               `bson:"intervals,omitempty" json:"intervals,omitempty"`
 }
 
 // AggregateRepository stores the precomputed documents and the rollup bookkeeping.
@@ -81,6 +95,20 @@ type AggregateRepository interface {
 	ReleaseLease(ctx context.Context, owner string) error
 	// SetKeyIntervals replaces the interval fields of one key_stats document.
 	SetKeyIntervals(ctx context.Context, id string, iv KeyIntervals) error
+	// ClaimDirty removes and returns up to limit subjects whose profile needs recomputing.
+	ClaimDirty(ctx context.Context, limit int) ([]string, error)
+	MarkDirty(ctx context.Context, subjects ...string) error
+	// RequeueStale marks profiles last computed before `before` dirty (idle people's streaks and
+	// windows must move on even without new events). It returns how many it queued.
+	RequeueStale(ctx context.Context, before time.Time, limit int) (int, error)
+	PutProfile(ctx context.Context, p *Profile) error
+	// GetProfile returns (nil, nil) when none has been computed yet.
+	GetProfile(ctx context.Context, id string) (*Profile, error)
+	// GetPeriod returns the raw period document, or (nil, nil) when nothing happened in it.
+	GetPeriod(ctx context.Context, id string) (map[string]any, error)
+	GetKeyStats(ctx context.Context, roomID, subjectType string, keys []string) (map[string]KeyStat, error)
+	// DueKeys returns keys whose predicted due date falls before `before`, soonest first.
+	DueKeys(ctx context.Context, roomID, subjectType string, before time.Time, limit int) ([]KeyStat, error)
 	// DeleteByRoom and DeleteByUser remove aggregates when a house or account is deleted.
 	DeleteByRoom(ctx context.Context, roomID string) error
 	DeleteByUser(ctx context.Context, userID string) error

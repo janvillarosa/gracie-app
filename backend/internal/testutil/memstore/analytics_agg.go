@@ -19,11 +19,12 @@ type AggRepo struct {
 	periods    map[string]map[string]any
 	keys       map[string]map[string]any
 	dirty      map[string]bool
+	profiles   map[string]*analytics.Profile
 	failApply  error
 }
 
 func NewAggRepo() *AggRepo {
-	return &AggRepo{periods: map[string]map[string]any{}, keys: map[string]map[string]any{}, dirty: map[string]bool{}}
+	return &AggRepo{periods: map[string]map[string]any{}, keys: map[string]map[string]any{}, dirty: map[string]bool{}, profiles: map[string]*analytics.Profile{}}
 }
 
 func (r *AggRepo) AcquireLease(_ context.Context, owner string, ttl time.Duration, now time.Time) (time.Time, bool, error) {
@@ -104,6 +105,7 @@ func (r *AggRepo) DeleteByRoom(_ context.Context, roomID string) error {
 		}
 	}
 	delete(r.dirty, "h:"+roomID)
+	delete(r.profiles, "h:"+roomID)
 	return nil
 }
 
@@ -116,6 +118,7 @@ func (r *AggRepo) DeleteByUser(_ context.Context, userID string) error {
 		}
 	}
 	delete(r.dirty, "u:"+userID)
+	delete(r.profiles, "u:"+userID)
 	return nil
 }
 

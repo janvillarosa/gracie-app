@@ -16,6 +16,10 @@ type EventRepository interface {
 	// ListForKey returns up to limit of the newest events for one thing in a house
 	// (subject type + normalized key), oldest first.
 	ListForKey(ctx context.Context, roomID, subjectType, key string, limit int) ([]Event, error)
+	// ListByActorSince and ListByRoomSince return up to limit events at or after since
+	// (by occurred_at), oldest first. They feed profile recomputes.
+	ListByActorSince(ctx context.Context, userID string, since time.Time, limit int) ([]Event, error)
+	ListByRoomSince(ctx context.Context, roomID string, since time.Time, limit int) ([]Event, error)
 	// DeleteByActor and DeleteByRoom remove raw events when an account or house is deleted.
 	DeleteByActor(ctx context.Context, userID string) error
 	DeleteByRoom(ctx context.Context, roomID string) error

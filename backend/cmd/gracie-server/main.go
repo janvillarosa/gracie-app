@@ -52,6 +52,7 @@ func main() {
 	var recorder analytics.Recorder = analytics.NopRecorder{}
 	var bufRecorder *analytics.BufferedRecorder
 	var rollup *analytics.Worker
+	var insights *handlers.InsightsHandler
 	if cfg.AnalyticsEnabled {
 		eventsRepo := mongostore.NewEventRepo(mcli)
 		if err := eventsRepo.EnsureIndexes(ctx); err != nil {
@@ -64,6 +65,7 @@ func main() {
 				log.Printf("analytics: aggregate indexes failed: %v (rollups disabled)", err)
 			} else {
 				rollup = analytics.NewWorker(eventsRepo, aggRepo, analyticsReg)
+				insights = handlers.NewInsightsHandler(services.NewInsightsService(roomsRepo, analytics.NewReader(aggRepo)))
 			}
 		}
 	}
@@ -124,7 +126,7 @@ func main() {
 
 	eventsHandler := handlers.NewEventsHandler(recorder, analyticsReg, ratelimit.New(cfg.AnalyticsEventsRPS, ratelimit.Burst(cfg.AnalyticsEventsRPS)))
 
-	r := router.NewRouter(usersRepo, router.Handlers{Auth: authHandler, User: userHandler, Room: roomHandler, List: listHandler, Trip: tripHandler, Events: eventsHandler})
+	r := router.NewRouter(usersRepo, router.Handlers{Auth: authHandler, User: userHandler, Room: roomHandler, List: listHandler, Trip: tripHandler, Events: eventsHandler, Insights: insights})
 
 	// Google Maps Platform allows storing coordinates for 30 days: purge stale ones at startup
 	// and daily (plus up to an hour of jitter so instances do not fire together).
@@ -134,6 +136,7 @@ func main() {
 	if rollup != nil {
 		// Fold raw events into aggregates; the lease makes it safe on any number of instances.
 		go rollup.RunFold(purgeCtx, cfg.AnalyticsFoldEvery, cfg.AnalyticsFoldEvery/10)
+		go rollup.RunProfiles(purgeCtx, cfg.AnalyticsProfileEvery, cfg.AnalyticsProfileEvery/10)
 	}
 
 	srv := &http.Server{
