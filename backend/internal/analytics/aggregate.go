@@ -59,6 +59,11 @@ type KeyRef struct {
 // ID is the key_stats document id.
 func (k KeyRef) ID() string { return k.RoomID + ":" + k.SubjectType + ":" + k.Key }
 
+// ForecastVersion is the version of the logic that builds KeyIntervals (rhythm and add forecast).
+// Bump it whenever that logic changes: the worker then rebuilds every older forecast from the
+// stored history, so a change takes effect without waiting for each key's next event.
+const ForecastVersion = 1
+
 // KeyIntervals is the recomputed rhythm of one key.
 type KeyIntervals struct {
 	N          int        `bson:"n" json:"n"`                               // occurrences counted
@@ -68,6 +73,8 @@ type KeyIntervals struct {
 	LastAt     time.Time  `bson:"last_at" json:"last_at"`                   // latest counted occurrence
 	DueAt      *time.Time `bson:"due_at,omitempty" json:"due_at,omitempty"` // LastAt + EWMADays; nil until there is enough history
 	ComputedAt time.Time  `bson:"computed_at" json:"computed_at"`
+	// Version is the ForecastVersion this was computed with (0: before versioning).
+	Version int `bson:"v,omitempty" json:"v,omitempty"`
 	// Add forecasts the next time the thing is asked for, with its backtested track record.
 	// Nil until there is enough history. Smart suggestions read only this.
 	Add *AddForecast `bson:"add,omitempty" json:"add,omitempty"`
@@ -137,6 +144,9 @@ type AggregateRepository interface {
 	// UpcomingKeys returns keys whose add forecast window contains now, with a score of at
 	// least minScore and a CV of at most maxCV, highest score first.
 	UpcomingKeys(ctx context.Context, roomID, subjectType string, now time.Time, minScore, maxCV float64, limit int) ([]KeyStat, error)
+	// StaleKeys returns up to limit keys whose intervals were computed with an older (or no)
+	// ForecastVersion than version.
+	StaleKeys(ctx context.Context, version, limit int) ([]KeyRef, error)
 	// ListKeys returns up to limit keys known in a house for one subject type (for finding
 	// look-alike names).
 	ListKeys(ctx context.Context, roomID, subjectType string, limit int) ([]string, error)

@@ -216,3 +216,24 @@ func (r *AggRepo) ListKeys(_ context.Context, roomID, subjectType string, limit 
 	}
 	return out, nil
 }
+
+func (r *AggRepo) StaleKeys(_ context.Context, version, limit int) ([]analytics.KeyRef, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	var out []analytics.KeyRef
+	for _, doc := range r.keys {
+		ks := toKeyStat(doc)
+		if ks.Key == "" || ks.RoomID == "" {
+			continue
+		}
+		if ks.Intervals != nil && ks.Intervals.Version >= version {
+			continue
+		}
+		out = append(out, analytics.KeyRef{RoomID: ks.RoomID, SubjectType: ks.SubjectType, Key: ks.Key})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].ID() < out[j].ID() })
+	if limit > 0 && len(out) > limit {
+		out = out[:limit]
+	}
+	return out, nil
+}

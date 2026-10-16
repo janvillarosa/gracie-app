@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/janvillarosa/gracie-app/backend/internal/analytics"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 func TestMongoProfilesDirtySetAndDueKeys(t *testing.T) {
@@ -184,5 +185,46 @@ func TestMongoListKeysIsScopedToTheHouse(t *testing.T) {
 	keys, err := aggs.ListKeys(ctx, room, "item", 10)
 	if err != nil || len(keys) != 2 {
 		t.Fatalf("keys %v %v", keys, err)
+	}
+}
+
+func TestMongoStaleForecastsAreFoundAndRebuilt(t *testing.T) {
+	c := connectOrSkip(t)
+	ctx := context.Background()
+	events := NewEventRepo(c)
+	aggs := NewAggRepo(c, NewTx(c))
+	_ = events.EnsureIndexes(ctx)
+	_ = aggs.EnsureIndexes(ctx)
+	room := "r_stale_" + randHex(4)
+	base := time.Now().UTC().AddDate(0, 0, -56).Truncate(time.Hour)
+	var evs []analytics.Event
+	for i := 0; i < 8; i++ {
+		evs = append(evs, storedEvent("st"+room+string(rune('a'+i)), "item.added", "u1", room, "milk", base.AddDate(0, 0, 7*i)))
+	}
+	if err := events.InsertMany(ctx, evs); err != nil {
+		t.Fatal(err)
+	}
+	w := analytics.NewWorker(events, aggs, analyticsReg())
+	if _, err := w.FoldOnce(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if stale, _ := aggs.StaleKeys(ctx, analytics.ForecastVersion, 10); len(stale) != 0 {
+		t.Fatalf("freshly folded keys are current: %+v", stale)
+	}
+	// What a server from before versioning left behind: no version, no add forecast.
+	if _, err := c.DB.Collection("key_stats").UpdateMany(ctx, bson.D{{Key: "room_id", Value: room}},
+		bson.D{{Key: "$unset", Value: bson.D{{Key: "intervals.v", Value: ""}, {Key: "intervals.add", Value: ""}}}}); err != nil {
+		t.Fatal(err)
+	}
+	stale, err := aggs.StaleKeys(ctx, analytics.ForecastVersion, 10)
+	if err != nil || len(stale) != 1 || stale[0].Key != "milk" || stale[0].RoomID != room {
+		t.Fatalf("stale: %+v %v", stale, err)
+	}
+	if n, err := w.RefreshStale(ctx, 10); err != nil || n != 1 {
+		t.Fatalf("refresh %d %v", n, err)
+	}
+	got, _ := aggs.GetKeyStats(ctx, room, "item", []string{"milk"})
+	if iv := got["milk"].Intervals; iv == nil || iv.Add == nil || iv.Version != analytics.ForecastVersion {
+		t.Fatalf("rebuilt: %+v", iv)
 	}
 }

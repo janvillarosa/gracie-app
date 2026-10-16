@@ -22,6 +22,8 @@ const (
 	// keysScanned bounds the look-alike search per recompute; maxSiblings bounds how many
 	// look-alike names are merged into one forecast.
 	keysScanned = 2000
+	// staleBatch bounds how many outdated forecasts one tick rebuilds.
+	staleBatch  = 500
 	maxSiblings = 5
 )
 
@@ -228,7 +230,7 @@ func (w *Worker) recomputeKey(ctx context.Context, ref KeyRef) ([]KeyRef, error)
 			source, rhythm = "request", alt
 		}
 	}
-	iv := KeyIntervals{N: rhythm.N, Source: source, EWMADays: rhythm.EWMADays, CV: rhythm.CV, LastAt: rhythm.Last, ComputedAt: w.now().UTC()}
+	iv := KeyIntervals{N: rhythm.N, Source: source, EWMADays: rhythm.EWMADays, CV: rhythm.CV, LastAt: rhythm.Last, ComputedAt: w.now().UTC(), Version: ForecastVersion}
 	if due, ok := rhythm.Due(); ok {
 		iv.DueAt = &due
 	}
@@ -244,6 +246,25 @@ func (w *Worker) recomputeKey(ctx context.Context, ref KeyRef) ([]KeyRef, error)
 	return sibs, w.aggs.SetKeyIntervals(ctx, ref.ID(), iv)
 }
 
+// RefreshStale rebuilds up to limit forecasts computed by older logic (or before forecasts were
+// versioned) from their stored history. Recomputing is idempotent, so any number of instances may
+// run it; it returns how many were rebuilt.
+func (w *Worker) RefreshStale(ctx context.Context, limit int) (int, error) {
+	refs, err := w.aggs.StaleKeys(ctx, ForecastVersion, limit)
+	if err != nil {
+		return 0, err
+	}
+	n := 0
+	for _, ref := range refs {
+		if _, err := w.recomputeKey(ctx, ref); err != nil {
+			log.Printf("analytics: refresh %s: %v", ref.ID(), err)
+			continue
+		}
+		n++
+	}
+	return n, nil
+}
+
 // RunFold folds on a jittered timer until ctx ends, like the coordinate purge.
 func (w *Worker) RunFold(ctx context.Context, every, jitter time.Duration) {
 	for {
@@ -251,6 +272,13 @@ func (w *Worker) RunFold(ctx context.Context, every, jitter time.Duration) {
 			log.Printf("analytics: fold: %v", err)
 		} else if n > 0 {
 			log.Printf("analytics: folded %d events", n)
+		}
+		// After a deploy that changed the forecast logic, the first tick brings every older
+		// forecast up to date (in batches), with no new events needed.
+		if n, err := w.RefreshStale(ctx, staleBatch); err != nil {
+			log.Printf("analytics: refresh stale forecasts: %v", err)
+		} else if n > 0 {
+			log.Printf("analytics: rebuilt %d stale forecasts", n)
 		}
 		wait := every
 		if jitter > 0 {
