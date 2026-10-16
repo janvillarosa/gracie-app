@@ -220,6 +220,10 @@ the analytics aggregates and the live list; the only state is `Room.SuggestionsO
 - **Pause:** two `item.suggestion_ignored` in a row on a list (no `item.suggestion_accepted` between, within
   14 days) stop suggestions there (`pausedByIgnores`, via `EventRepository.ListByContainer`). Ignore is
   written with `emitSync` (`analytics.SyncRecorder`) so the client's immediate refetch sees it.
+- **Look-alike names:** `parse.Similarity` (plurals, spacing, edit distance; 0.85 threshold, 4-letter
+  minimum). The fold merges look-alikes' history into an item's add forecast and scales its score by
+  `NameCertainty`; `ForList` keeps one name per cluster, treats a look-alike on the list as on it, and shows
+  the most recent wording.
 - **House setting:** `PUT /rooms/settings {suggestions_off}`; `GET /rooms/me` returns it.
 - Invariants: never add suggestion state that is not derivable from events and aggregates; an ignore must
   stay an event so the forecast sees it.

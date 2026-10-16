@@ -389,3 +389,45 @@ func TestThePauseIsPerListAndLapses(t *testing.T) {
 		t.Fatalf("two recent ignores pause the list: %+v", got)
 	}
 }
+
+// "orange" one week and "oranges" the next: one weekly habit under two names.
+func (r *suggestRig) orangesBothWays() {
+	r.history("item.added", "orange", r.list, 56, 42, 28, 14)
+	r.history("item.added", "oranges", r.list, 49, 35, 21, 7)
+	r.fold()
+}
+
+func TestLookAlikesAreOneSuggestion(t *testing.T) {
+	r := newSuggestRig(t, SuggestionsOn)
+	r.orangesBothWays()
+	got, err := r.svc.ForList(context.Background(), r.user, r.roomID, r.list, 5)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 || (got[0].Key != "orange" && got[0].Key != "oranges") {
+		t.Fatalf("one slip for orange/oranges, got %v", keysOf(got))
+	}
+}
+
+func TestALookAlikeOnTheListCounts(t *testing.T) {
+	r := newSuggestRig(t, SuggestionsOn)
+	r.orangesBothWays()
+	_ = r.m.Items.Put(context.Background(), &models.ListItem{ItemID: "x", ListID: r.list, RoomID: r.roomID, Description: "Oranges"})
+	if got := r.suggest(); len(got) != 0 {
+		t.Fatalf("Oranges on the list covers orange: %+v", got)
+	}
+}
+
+func TestTheSlipUsesTheMostRecentWording(t *testing.T) {
+	r := newSuggestRig(t, SuggestionsOn)
+	r.orangesBothWays()
+	ctx := context.Background()
+	_ = r.m.Items.Put(ctx, &models.ListItem{ItemID: "old", ListID: r.list, RoomID: r.roomID, Description: "Orange",
+		IsArchived: true, Completed: true, CreatedAt: r.now.AddDate(0, 0, -14)})
+	_ = r.m.Items.Put(ctx, &models.ListItem{ItemID: "new", ListID: r.list, RoomID: r.roomID, Description: "Oranges", Quantity: "6",
+		IsArchived: true, Completed: true, CreatedAt: r.now.AddDate(0, 0, -7)})
+	got := r.suggest()
+	if len(got) != 1 || got[0].Description != "Oranges" || got[0].Quantity != "6" {
+		t.Fatalf("show it the way the house last wrote it: %+v", got)
+	}
+}

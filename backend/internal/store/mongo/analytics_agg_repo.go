@@ -344,4 +344,23 @@ func (r *AggRepo) UpcomingKeys(ctx context.Context, roomID, subjectType string, 
 	return out, nil
 }
 
+func (r *AggRepo) ListKeys(ctx context.Context, roomID, subjectType string, limit int) ([]string, error) {
+	cur, err := r.keys().Find(ctx, bson.D{{Key: "room_id", Value: roomID}, {Key: "subject_type", Value: subjectType}},
+		options.Find().SetProjection(bson.D{{Key: "key", Value: 1}}).SetLimit(int64(limit)))
+	if err != nil {
+		return nil, err
+	}
+	var docs []struct {
+		Key string `bson:"key"`
+	}
+	if err := cur.All(ctx, &docs); err != nil {
+		return nil, err
+	}
+	out := make([]string, 0, len(docs))
+	for _, d := range docs {
+		out = append(out, d.Key)
+	}
+	return out, nil
+}
+
 var _ analytics.AggregateRepository = (*AggRepo)(nil)

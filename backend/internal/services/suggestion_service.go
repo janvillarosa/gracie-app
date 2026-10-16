@@ -145,9 +145,19 @@ func (s *SuggestionService) ForList(ctx context.Context, user *models.User, room
 	if err != nil {
 		return nil, err
 	}
+	// Look-alike names ("orange", "oranges") share one history, so they would all qualify at
+	// once: keep only the most confident name of each, and treat any of them on the list as on it.
 	var cands []candidate
+	var taken []string
 	for _, st := range stats {
-		if st.Intervals == nil || st.Intervals.Add == nil || onList[st.Key] || !isHomeList(st.Containers, listID) {
+		if st.Intervals == nil || st.Intervals.Add == nil || !isHomeList(st.Containers, listID) {
+			continue
+		}
+		if likeAny(st.Key, taken) {
+			continue
+		}
+		taken = append(taken, st.Key)
+		if onListLike(onList, st.Key) {
 			continue
 		}
 		cands = append(cands, candidate{stat: st, add: st.Intervals.Add})
@@ -179,7 +189,7 @@ func (s *SuggestionService) ForList(ctx context.Context, user *models.User, room
 			}
 			display, _ = pantryByKey(items)
 		}
-		out = append(out, toSuggestion(c, display[c.stat.Key]))
+		out = append(out, toSuggestion(c, displayFor(display, c.stat.Key)))
 	}
 	if s.mode == SuggestionsShadow {
 		return []Suggestion{}, nil
@@ -245,6 +255,44 @@ func (s *SuggestionService) keysOnList(ctx context.Context, listID string) (map[
 		}
 	}
 	return keys, nil
+}
+
+// likeAny reports whether key names the same thing as any of keys.
+func likeAny(key string, keys []string) bool {
+	for _, k := range keys {
+		if parse.Similar(key, k) {
+			return true
+		}
+	}
+	return false
+}
+
+// onListLike reports whether the list holds key or a look-alike of it ("Oranges" for "orange").
+func onListLike(onList map[string]bool, key string) bool {
+	if onList[key] {
+		return true
+	}
+	for k := range onList {
+		if parse.Similar(key, k) {
+			return true
+		}
+	}
+	return false
+}
+
+// displayFor picks how to show key: the most recent wording the house used for it or any
+// look-alike ("Oranges" if that is what they typed last), with that item's quantity and unit.
+func displayFor(pantry map[string]*PantryItem, key string) *PantryItem {
+	best := pantry[key]
+	for k, p := range pantry {
+		if k == key || !parse.Similar(key, k) {
+			continue
+		}
+		if best == nil || p.LastAddedAt.After(best.LastAddedAt) {
+			best = p
+		}
+	}
+	return best
 }
 
 // isHomeList reports whether most of a key's activity happens on listID.

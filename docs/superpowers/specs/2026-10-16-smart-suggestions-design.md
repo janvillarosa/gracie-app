@@ -51,6 +51,24 @@ The fold stores the result as `KeyIntervals.Add` (`AddForecast`) on `key_stats`,
 on `(room_id, subject_type, intervals.add.opens_at)`. The request path is a cheap indexed read
 (`Reader.Upcoming` -> `UpcomingKeys`).
 
+## Look-alike names (added 2026-10-16)
+
+"orange" and "oranges", or "butterbeans" and "butter beans", are one thing to a household.
+
+- **Similarity** (`parse.Similarity`): 1.0 when the names match after folding spaces, hyphens and simple
+  English plurals (`parse.CompactKey`); otherwise one minus the edit distance over the longer compact
+  name. Names under four letters only match exactly. Look-alikes are names at 0.85 or above.
+- **Merged history:** when the fold recomputes an item, its add forecast also uses the events of up to
+  five look-alike names in the house. The score is multiplied by the name certainty, the average
+  similarity across the merged occurrences: exact names and plurals cost nothing, a spelling apart
+  ("yoghurt" for "yogurt") lowers the score in proportion to how much of the history it supplied. The
+  certainty is stored on the forecast (`AddForecast.NameCertainty`). Look-alikes of a changed item are
+  recomputed in the same pass. The older own-key rhythm used by insights is unchanged.
+- **One slip per cluster:** at request time only the most confident name of a look-alike group is kept,
+  a look-alike already on the list counts as on it, and the slip shows the wording the house used most
+  recently (with that item's quantity and unit).
+- `suggest-eval backtest` still groups by exact name, so it measures without the merge (follow-up).
+
 ## Request path
 
 `GET /rooms/{id}/lists/{list}/suggestions` (`SuggestionService.ForList`):

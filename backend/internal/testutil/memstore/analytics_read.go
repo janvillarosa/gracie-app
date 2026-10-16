@@ -197,3 +197,22 @@ func (r *AggRepo) UpcomingKeys(_ context.Context, roomID, subjectType string, no
 	}
 	return out, nil
 }
+
+func (r *AggRepo) ListKeys(_ context.Context, roomID, subjectType string, limit int) ([]string, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	var out []string
+	for id, doc := range r.keys {
+		if !strings.HasPrefix(id, roomID+":"+subjectType+":") {
+			continue
+		}
+		if k, _ := doc["key"].(string); k != "" {
+			out = append(out, k)
+		}
+	}
+	sort.Strings(out)
+	if limit > 0 && len(out) > limit {
+		out = out[:limit]
+	}
+	return out, nil
+}
