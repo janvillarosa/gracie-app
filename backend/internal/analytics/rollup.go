@@ -102,7 +102,7 @@ func (w *Worker) recomputeKey(ctx context.Context, ref KeyRef) error {
 	if err != nil {
 		return err
 	}
-	var done, asked []time.Time
+	var done, asked, ignored []time.Time
 	for _, e := range evs {
 		def, ok := w.reg.Resolve(e.Name)
 		if !ok {
@@ -113,6 +113,8 @@ func (w *Worker) recomputeKey(ctx context.Context, ref KeyRef) error {
 			done = append(done, e.OccurredAt)
 		case RoleRequest:
 			asked = append(asked, e.OccurredAt)
+		case RoleDismiss:
+			ignored = append(ignored, e.OccurredAt)
 		}
 	}
 	source, rhythm := "complete", predict.Intervals(done)
@@ -124,6 +126,10 @@ func (w *Worker) recomputeKey(ctx context.Context, ref KeyRef) error {
 	iv := KeyIntervals{N: rhythm.N, Source: source, EWMADays: rhythm.EWMADays, CV: rhythm.CV, LastAt: rhythm.Last, ComputedAt: w.now().UTC()}
 	if due, ok := rhythm.Due(); ok {
 		iv.DueAt = &due
+	}
+	if f, ok := predict.DefaultParams.Predict(asked, done, ignored); ok {
+		iv.Add = &AddForecast{Series: f.Series, N: f.N, EWMADays: f.EWMADays, CV: f.CV, LastAt: f.LastAt,
+			DueAt: f.DueAt, OpensAt: f.OpensAt, ClosesAt: f.ClosesAt, Trials: f.Trials, Hits: f.Hits, Score: f.Score}
 	}
 	return w.aggs.SetKeyIntervals(ctx, ref.ID(), iv)
 }

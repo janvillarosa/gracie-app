@@ -288,6 +288,17 @@ func (r *RoomRepo) UpdateDescription(_ context.Context, roomID string, _ string,
 	rm.UpdatedAt = updatedAt
 	return nil
 }
+func (r *RoomRepo) SetSuggestionsOff(_ context.Context, roomID string, _ string, off bool, updatedAt time.Time) error {
+	r.st.mu.Lock()
+	defer r.st.mu.Unlock()
+	rm, ok := r.st.rooms[roomID]
+	if !ok {
+		return derr.ErrNotFound
+	}
+	rm.SuggestionsOff = off
+	rm.UpdatedAt = updatedAt
+	return nil
+}
 func (r *RoomRepo) UpdateDisplayName(_ context.Context, roomID string, _ string, displayName string, updatedAt time.Time) error {
 	r.st.mu.Lock()
 	defer r.st.mu.Unlock()

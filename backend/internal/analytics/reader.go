@@ -4,6 +4,8 @@ import (
 	"context"
 	"regexp"
 	"time"
+
+	"github.com/janvillarosa/gracie-app/backend/internal/analytics/predict"
 )
 
 var rePeriod = regexp.MustCompile(`^\d{4}(-\d{2}(-\d{2})?)?$`)
@@ -40,6 +42,13 @@ func (r *Reader) KeyStats(ctx context.Context, roomID, subjectType string, keys 
 // should drop what is already on the list (it has the live list loaded) before suggesting.
 func (r *Reader) Due(ctx context.Context, roomID, subjectType string, before time.Time, limit int) ([]KeyStat, error) {
 	return r.aggs.DueKeys(ctx, roomID, subjectType, before, limit)
+}
+
+// Upcoming returns things whose suggestion window is open now and whose forecast clears the
+// confidence bar, most confident first. Like Due, the caller drops what is already on the list.
+func (r *Reader) Upcoming(ctx context.Context, roomID, subjectType string, now time.Time, limit int) ([]KeyStat, error) {
+	p := predict.DefaultParams
+	return r.aggs.UpcomingKeys(ctx, roomID, subjectType, now.UTC(), p.MinScore, p.MaxCV, limit)
 }
 
 // Period returns the raw rolled-up document for "u" or "h" and a valid period, or nil.

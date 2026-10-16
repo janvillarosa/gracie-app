@@ -93,6 +93,17 @@ func (r *RoomRepo) UpdateDisplayName(ctx context.Context, roomID string, userID 
 	return err
 }
 
+// SetSuggestionsOff stores only the "off" state; on is the absent field, so existing houses need no migration.
+func (r *RoomRepo) SetSuggestionsOff(ctx context.Context, roomID string, userID string, off bool, updatedAt time.Time) error {
+	filter := bson.D{{Key: "room_id", Value: roomID}, {Key: "member_ids", Value: bson.D{{Key: "$in", Value: bson.A{userID}}}}}
+	update := bson.D{{Key: "$set", Value: bson.D{{Key: "suggestions_off", Value: true}, {Key: "updated_at", Value: updatedAt.UTC()}}}}
+	if !off {
+		update = bson.D{{Key: "$unset", Value: bson.D{{Key: "suggestions_off", Value: ""}}}, {Key: "$set", Value: bson.D{{Key: "updated_at", Value: updatedAt.UTC()}}}}
+	}
+	_, err := r.col().UpdateOne(ctx, filter, update)
+	return err
+}
+
 func (r *RoomRepo) VoteDeletion(ctx context.Context, roomID string, userID string, ts time.Time) error {
 	_, err := r.col().UpdateOne(ctx, bson.D{{Key: "room_id", Value: roomID}}, bson.D{{Key: "$set", Value: bson.D{{Key: "deletion_votes." + userID, Value: ts.UTC().Format(time.RFC3339)}, {Key: "updated_at", Value: ts.UTC()}}}})
 	return err

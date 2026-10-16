@@ -88,6 +88,9 @@ func (f *fakeRepo) ListForKey(context.Context, string, string, string, int) ([]E
 func (f *fakeRepo) ListByActorSince(context.Context, string, time.Time, int) ([]Event, error) {
 	return nil, nil
 }
+func (f *fakeRepo) ListByContainer(context.Context, string, string, string, []string, time.Time, int) ([]Event, error) {
+	return nil, nil
+}
 func (f *fakeRepo) ListByRoomSince(context.Context, string, time.Time, int) ([]Event, error) {
 	return nil, nil
 }
@@ -111,6 +114,21 @@ func TestBufferedRecorderDrainsOnClose(t *testing.T) {
 	e := repo.got[0]
 	if e.EventID == "" || e.V != EnvelopeVersion || e.Local.TZ != "America/New_York" || e.ExpireAt.Before(e.OccurredAt) {
 		t.Fatalf("not stamped: %+v", e)
+	}
+}
+
+func TestRecordSyncIsReadableBeforeAnyFlush(t *testing.T) {
+	reg := NewRegistry()
+	reg.MustRegister(EventDef{Name: "item.added"})
+	repo := &fakeRepo{}
+	rec := NewBufferedRecorder(repo, reg, 16, time.Hour)
+	defer func() { _ = rec.Close(context.Background()) }()
+	rec.RecordSync(context.Background(), Event{Name: "item.added", ActorID: "u1", RoomID: "r1", Subject: Ref{"item", "i1"}})
+	rec.RecordSync(context.Background(), Event{Name: "unknown.thing"}) // unregistered: dropped
+	repo.mu.Lock()
+	defer repo.mu.Unlock()
+	if len(repo.got) != 1 || repo.got[0].EventID == "" || repo.got[0].V != EnvelopeVersion {
+		t.Fatalf("a sync write is stored and stamped before returning: %+v", repo.got)
 	}
 }
 
@@ -148,6 +166,9 @@ func (blockingRepo) ListForKey(context.Context, string, string, string, int) ([]
 	return nil, nil
 }
 func (blockingRepo) ListByActorSince(context.Context, string, time.Time, int) ([]Event, error) {
+	return nil, nil
+}
+func (blockingRepo) ListByContainer(context.Context, string, string, string, []string, time.Time, int) ([]Event, error) {
 	return nil, nil
 }
 func (blockingRepo) ListByRoomSince(context.Context, string, time.Time, int) ([]Event, error) {

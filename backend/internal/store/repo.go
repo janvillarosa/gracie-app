@@ -37,6 +37,7 @@ type RoomRepository interface {
 	RemoveShareToken(ctx context.Context, roomID string, updatedAt time.Time) error
 	UpdateDescription(ctx context.Context, roomID string, userID string, description string, updatedAt time.Time) error
 	UpdateDisplayName(ctx context.Context, roomID string, userID string, displayName string, updatedAt time.Time) error
+	SetSuggestionsOff(ctx context.Context, roomID string, userID string, off bool, updatedAt time.Time) error
 	VoteDeletion(ctx context.Context, roomID string, userID string, ts time.Time) error
 	RemoveDeletionVote(ctx context.Context, roomID string, userID string) error
 	Delete(ctx context.Context, roomID string) error

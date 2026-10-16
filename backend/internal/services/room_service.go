@@ -202,7 +202,7 @@ func (s *RoomService) CancelDeletionVote(ctx context.Context, user *models.User)
 }
 
 // UpdateRoomSettings updates display name and/or description.
-func (s *RoomService) UpdateRoomSettings(ctx context.Context, user *models.User, displayName *string, description *string) error {
+func (s *RoomService) UpdateRoomSettings(ctx context.Context, user *models.User, displayName *string, description *string, suggestionsOff *bool) error {
 	if user.RoomID == nil || *user.RoomID == "" {
 		return derr.ErrNotFound
 	}
@@ -217,6 +217,12 @@ func (s *RoomService) UpdateRoomSettings(ctx context.Context, user *models.User,
 	if description != nil {
 		changed = append(changed, "description")
 		if err := s.rooms.UpdateDescription(ctx, *user.RoomID, user.UserID, *description, now); err != nil {
+			return err
+		}
+	}
+	if suggestionsOff != nil {
+		changed = append(changed, "suggestions_off")
+		if err := s.rooms.SetSuggestionsOff(ctx, *user.RoomID, user.UserID, *suggestionsOff, now); err != nil {
 			return err
 		}
 	}

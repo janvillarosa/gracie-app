@@ -9,6 +9,8 @@ type Room struct {
 	Description   string            `bson:"description,omitempty" json:"description,omitempty"`
 	ShareToken    *string           `bson:"share_token,omitempty" json:"share_token,omitempty"`
 	DeletionVotes map[string]string `bson:"deletion_votes,omitempty" json:"deletion_votes,omitempty"`
-	CreatedAt     time.Time         `bson:"created_at" json:"created_at"`
-	UpdatedAt     time.Time         `bson:"updated_at" json:"updated_at"`
+	// SuggestionsOff turns smart suggestions off for the whole house. The zero value is on.
+	SuggestionsOff bool      `bson:"suggestions_off,omitempty" json:"suggestions_off"`
+	CreatedAt      time.Time `bson:"created_at" json:"created_at"`
+	UpdatedAt      time.Time `bson:"updated_at" json:"updated_at"`
 }

@@ -143,6 +143,8 @@ type createItemReq struct {
 	Quantity    string `json:"quantity"`
 	Unit        string `json:"unit"`
 	Category    string `json:"category"`
+	// Source says where the add came from; only "suggestion" is recorded.
+	Source string `json:"source"`
 }
 
 func (h *ListHandler) CreateItem(w http.ResponseWriter, r *http.Request) {
@@ -158,7 +160,7 @@ func (h *ListHandler) CreateItem(w http.ResponseWriter, r *http.Request) {
 		api.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request"})
 		return
 	}
-	it, err := h.Lists.CreateItem(r.Context(), u, roomID, listID, req.Description, req.Quantity, req.Unit, req.Category)
+	it, err := h.Lists.CreateItem(services.WithAddSource(r.Context(), req.Source), u, roomID, listID, req.Description, req.Quantity, req.Unit, req.Category)
 	if err != nil {
 		api.WriteJSON(w, statusFromErr(err), map[string]string{"error": err.Error()})
 		return
