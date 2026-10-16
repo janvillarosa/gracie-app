@@ -56,8 +56,9 @@ type BackfillEnv struct {
 }
 
 // BackfillSource walks one domain and emits the events its documents imply. It is pure
-// derivation over a read-only cursor and never writes. tzHint, when non-empty, wins over
-// env.TZ (a trip knows the zone it happened in better than its creator's last-seen zone).
+// derivation over a read-only cursor and never writes. tzHint, when non-empty, is the zone the
+// source already settled on (it needed it for a zone-dependent prop like days_to_start) and
+// wins over env.TZ; when empty, Run asks env.TZ.
 // Name, Source, id and local time are filled in by Run; a source sets the rest.
 type BackfillSource interface {
 	Name() string
