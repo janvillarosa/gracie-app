@@ -1,7 +1,9 @@
-import { Plus } from '@phosphor-icons/react'
+import { Avatar } from '@components/Avatar'
+import { BatteryFull, CaretLeft, CellSignalFull, Plus, WifiHigh } from '@phosphor-icons/react'
 import React, { useEffect, useReducer, useRef, useState } from 'react'
 import { Box, ListHead } from './appUi'
 import { confettiFrom } from './confetti'
+import { DeviceFit } from './DeviceFit'
 import {
   cleanEntry,
   type DemoItem,
@@ -152,75 +154,113 @@ export const HeroSheet: React.FC<{ mateEveryMs?: number }> = ({ mateEveryMs = MA
   const toGet = state.items.filter((i) => !i.done).length
 
   return (
-    <div className="ld-stack" data-ui ref={card}>
-      <div className="ld-app-card is-meta">
-        <ListHead
-          as="h2"
-          icon="🏡" // taste-skill-ignore: the app’s own list icon (lists pick an emoji)
-          title="This week"
-          meta={`${toGet} to get · updated just now`}
-          mates
-        />
-      </div>
-      <div className="ld-app-card is-list">
-        <ul className="ld-rows" aria-label="The House’s list">
-          {open.map((item) => (
-            <Row key={item.id} item={item} onToggle={onToggle} />
-          ))}
-        </ul>
-        {checkedOff.length > 0 && (
-          <>
-            <button
-              type="button"
-              className="ld-done-toggle"
-              aria-expanded={showDone}
-              onClick={() => setShowDone((v) => !v)}
-            >
-              {showDone
-                ? 'Hide checked-off items'
-                : `Show checked-off items (${checkedOff.length})`}
-            </button>
-            {showDone && (
-              <ul className="ld-rows is-checked-off" aria-label="Checked-off items">
-                {checkedOff.map((item) => (
-                  <Row key={item.id} item={item} onToggle={onToggle} />
-                ))}
-              </ul>
-            )}
-          </>
-        )}
-        <form className="ld-addbar" onSubmit={onSubmit}>
-          <span className="ld-addbar-field">
-            <input
-              className="ld-addbar-input"
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onFocus={() => setTyping(true)}
-              onBlur={() => setTyping(false)}
-              maxLength={MAX_DEMO_TEXT + 20}
-              disabled={full}
-              aria-label="Add an item"
-              placeholder={full ? 'This list is full' : 'Add an item. Try “oat milk”'}
-              enterKeyHint="done"
-              autoComplete="off"
-            />
-          </span>
-          <button
-            className={draft.trim() ? 'ld-addbar-btn is-armed' : 'ld-addbar-btn'}
-            type="submit"
-            disabled={full || !draft.trim()}
-            aria-label="Add"
-          >
-            <Plus weight="bold" aria-hidden="true" />
-          </button>
-        </form>
-        {full && (
-          <p className="ld-sheet-note">That’s a full list. Create a free account to keep adding.</p>
-        )}
-        <p className="ld-sr" aria-live="polite">
-          {said}
-        </p>
-      </div>
+    <div className="ld-hero-phone">
+      <DeviceFit max={0.82}>
+        <div
+          className="device device-iphone-14-pro device-silver ld-hero-device"
+          data-ui
+          ref={card}
+        >
+          <div className="device-frame">
+            <div className="device-screen ld-device-screen">
+              <div className="ld-phone-screen is-list">
+                <div className="ld-phone-status" aria-hidden="true">
+                  <span>9:41</span>
+                  <span className="ld-phone-sys">
+                    <CellSignalFull weight="fill" />
+                    <WifiHigh weight="bold" />
+                    <BatteryFull weight="fill" />
+                  </span>
+                </div>
+                <div className="ld-phone-top" aria-hidden="true">
+                  <span className="ld-phone-back">
+                    <CaretLeft weight="bold" /> Our Little Mansion
+                  </span>
+                  <Avatar seed="Mia" size={34} alt="" />
+                </div>
+                <div className="ld-stack">
+                  <div className="ld-app-card is-meta">
+                    <ListHead
+                      as="h2"
+                      icon="🏡" // taste-skill-ignore: the app’s own list icon (lists pick an emoji)
+                      title="This week"
+                      meta={`${toGet} to get · updated just now`}
+                      mates
+                    />
+                  </div>
+                  <div className="ld-app-card is-list">
+                    <ul className="ld-rows" aria-label="The House’s list">
+                      {open.map((item) => (
+                        <Row key={item.id} item={item} onToggle={onToggle} />
+                      ))}
+                    </ul>
+                    {checkedOff.length > 0 && (
+                      <>
+                        <button
+                          type="button"
+                          className="ld-done-toggle"
+                          aria-expanded={showDone}
+                          onClick={() => setShowDone((v) => !v)}
+                        >
+                          {showDone
+                            ? 'Hide checked-off items'
+                            : `Show checked-off items (${checkedOff.length})`}
+                        </button>
+                        {showDone && (
+                          <ul className="ld-rows is-checked-off" aria-label="Checked-off items">
+                            {checkedOff.map((item) => (
+                              <Row key={item.id} item={item} onToggle={onToggle} />
+                            ))}
+                          </ul>
+                        )}
+                      </>
+                    )}
+                    <form className="ld-addbar" onSubmit={onSubmit}>
+                      <span className="ld-addbar-field">
+                        <input
+                          className="ld-addbar-input"
+                          value={draft}
+                          onChange={(e) => setDraft(e.target.value)}
+                          onFocus={() => setTyping(true)}
+                          onBlur={() => setTyping(false)}
+                          maxLength={MAX_DEMO_TEXT + 20}
+                          disabled={full}
+                          aria-label="Add an item"
+                          placeholder={full ? 'This list is full' : 'Add an item. Try “oat milk”'}
+                          enterKeyHint="done"
+                          autoComplete="off"
+                        />
+                      </span>
+                      <button
+                        className={draft.trim() ? 'ld-addbar-btn is-armed' : 'ld-addbar-btn'}
+                        type="submit"
+                        disabled={full || !draft.trim()}
+                        aria-label="Add"
+                      >
+                        <Plus weight="bold" aria-hidden="true" />
+                      </button>
+                    </form>
+                    {full && (
+                      <p className="ld-sheet-note">
+                        That’s a full list. Create a free account to keep adding.
+                      </p>
+                    )}
+                    <p className="ld-sr" aria-live="polite">
+                      {said}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="device-stripe" />
+          <div className="device-header" />
+          <div className="device-sensors" />
+          <div className="device-btns" />
+          <div className="device-power" />
+          <div className="device-home" />
+        </div>
+      </DeviceFit>
       <p className="ld-margin-note" aria-hidden="true">
         <span key={note}>{note}</span>
       </p>

@@ -3,7 +3,8 @@ import { promptInstall, useInstallWay } from '@lib/installPrompt'
 import { PENDING_HOUSE_KEY } from '@lib/pendingHouse'
 import { useTransitionNavigate } from '@lib/viewTransition'
 import { DownloadSimple } from '@phosphor-icons/react'
-import React, { useState } from 'react'
+import React, { useRef, useState } from 'react'
+import { SetWords, useSetOnScreen } from './SetWords'
 
 const RECEIPT_LINES: Array<[string, string]> = [
   ['Lists', '0.00'],
@@ -43,9 +44,12 @@ const InstallLine: React.FC = () => {
 export const FreeReceipt: React.FC = () => (
   <section className="ld-free" aria-labelledby="ld-free-h">
     <div className="ld-free-copy">
-      <h2 id="ld-free-h" className="ld-h2" data-reveal>
-        It costs nothing.
-      </h2>
+      <SetWords
+        id="ld-free-h"
+        className="ld-h2"
+        lines={['It costs', 'nothing.']}
+        accent={{ word: 'nothing', tone: 'mark' }}
+      />
       <p className="ld-body" data-reveal style={{ '--i': 1 } as React.CSSProperties}>
         There are no ads, there’s no paid plan waiting down the line, and you won’t need a card. Add
         everyone you live with and make as many lists and trips as you want.
@@ -96,6 +100,8 @@ export const FreeReceipt: React.FC = () => (
  *  waits in this tab until the new member creates their House. */
 export const CloseLine: React.FC = () => {
   const [name, setName] = useState('')
+  const line = useRef<HTMLHeadingElement>(null)
+  const lineSet = useSetOnScreen(line)
   const go = useTransitionNavigate()
 
   const onSubmit = (e: React.FormEvent) => {
@@ -111,30 +117,50 @@ export const CloseLine: React.FC = () => {
 
   return (
     <section className="ld-close" aria-labelledby="ld-close-h">
-      <form className="ld-close-form" onSubmit={onSubmit}>
-        <h2 id="ld-close-h" className="ld-close-line" data-reveal>
-          <span className="ld-close-lead">Call your House</span>{' '}
-          <span className="ld-close-fill">
-            <input
-              className="ld-close-input"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Our Little Mansion"
-              aria-label="Your House’s name"
-              maxLength={40}
-              autoComplete="off"
-            />
-            <span className="ld-close-and">and</span>
-            <button type="submit" className={name.trim() ? 'ld-close-go is-armed' : 'ld-close-go'}>
-              start.
-            </button>
-          </span>
-        </h2>
-      </form>
-      <p className="ld-close-note">
-        Next you’ll make an account and set up your House. Everyone else joins with a link you send
-        them.
-      </p>
+      <div className="ld-close-copy">
+        <form className="ld-close-form" onSubmit={onSubmit}>
+          <h2
+            id="ld-close-h"
+            className="ld-close-line ld-set"
+            ref={line}
+            data-set={lineSet ? '' : undefined}
+          >
+            <span className="ld-close-lead">
+              {['Call', 'your', 'House'].map((word, i) => (
+                <React.Fragment key={word}>
+                  <span className="ld-w">
+                    <span className="ld-w-in" style={{ '--i': i } as React.CSSProperties}>
+                      {word}
+                    </span>
+                  </span>{' '}
+                </React.Fragment>
+              ))}
+            </span>{' '}
+            <span className="ld-close-fill">
+              <input
+                className="ld-close-input"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Our Little Mansion"
+                aria-label="Your House’s name"
+                maxLength={40}
+                autoComplete="off"
+              />
+              <span className="ld-close-and">and</span>
+              <button
+                type="submit"
+                className={name.trim() ? 'ld-close-go is-armed' : 'ld-close-go'}
+              >
+                start.
+              </button>
+            </span>
+          </h2>
+        </form>
+        <p className="ld-close-note">
+          Next you’ll make an account and set up your House. Everyone else joins with a link you
+          send them.
+        </p>
+      </div>
     </section>
   )
 }

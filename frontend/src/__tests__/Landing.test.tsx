@@ -1,8 +1,10 @@
+import React from 'react'
 import { CreateHouseModal } from '@components/CreateHouseModal'
 import { isAppleTouch, listenForInstallPrompt, resetInstallPrompt } from '@lib/installPrompt'
 import { PENDING_HOUSE_KEY, takePendingHouse } from '@lib/pendingHouse'
 import { HeroSheet } from '@components/landing/HeroSheet'
 import { PlanDesk } from '@components/landing/PlanDesk'
+import { useScrollProgress } from '@components/landing/useScrollProgress'
 import { Landing } from '@pages/Landing'
 import { AppRoutes } from '@routes/AppRoutes'
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
@@ -254,6 +256,83 @@ describe('Landing page', () => {
   })
 })
 
+describe('kinetic type', () => {
+  it('keeps every set heading readable as one sentence', () => {
+    renderLanding()
+    for (const name of ['Lists for the house.', 'Plan the trip together.', 'It costs nothing.']) {
+      const h = screen.getByRole('heading', { level: 2, name })
+      // Without an observer (as without JavaScript) a heading is simply set.
+      expect(h).toHaveAttribute('data-set')
+    }
+    expect(screen.getByRole('heading', { level: 1 })).toHaveAccessibleName(
+      'Manage your life together.',
+    )
+  })
+
+  it('colours one word of each heading', () => {
+    renderLanding()
+    expect(screen.getByText('house.')).toHaveClass('is-red')
+    expect(screen.getByText('together.', { selector: '.ld-w-in' })).toHaveClass('is-blue')
+    expect(screen.getByText('nothing.')).toHaveClass('is-mark')
+  })
+
+  it('keeps the decorative type away from screen readers', () => {
+    renderLanding()
+    expect(document.querySelector('.ld-margin-word')).toHaveAttribute('aria-hidden', 'true')
+    expect(document.querySelector('.ld-band')).toHaveAttribute('aria-hidden', 'true')
+    expect(document.querySelector('.ld-band')).toHaveTextContent(/Groceries.*Chores.*Packing/)
+  })
+})
+
+describe('scroll progress', () => {
+  type Seen = (entries: Array<{ isIntersecting: boolean }>) => void
+  let seen: Seen | null = null
+  beforeEach(() => {
+    seen = null
+    vi.stubGlobal(
+      'IntersectionObserver',
+      class {
+        constructor(cb: Seen) {
+          seen = cb
+        }
+        observe() {}
+        disconnect() {}
+      },
+    )
+    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
+      cb(0)
+      return 1
+    })
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+  })
+
+  const Probe: React.FC<{ mode: 'leave' | 'through' }> = ({ mode }) => {
+    const ref = React.useRef<HTMLDivElement>(null)
+    useScrollProgress(ref, mode)
+    return <div ref={ref} data-testid="probe" />
+  }
+
+  it('writes how far an element has scrolled past the top', () => {
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({
+      top: -250,
+      height: 1000,
+    } as DOMRect)
+    render(<Probe mode="leave" />)
+    act(() => seen?.([{ isIntersecting: true }]))
+    expect(screen.getByTestId('probe').style.getPropertyValue('--p')).toBe('0.250')
+  })
+
+  it('does nothing with reduced motion, so the page rests in its final state', () => {
+    vi.spyOn(window, 'matchMedia').mockReturnValue({ matches: true } as MediaQueryList)
+    render(<Probe mode="through" />)
+    expect(seen).toBeNull()
+    expect(screen.getByTestId('probe').style.getPropertyValue('--p')).toBe('')
+  })
+})
+
 describe('putting it on the home screen', () => {
   beforeAll(() => listenForInstallPrompt())
   afterEach(() => {
@@ -335,7 +414,7 @@ describe('housemates adding to the first list', () => {
   // Real timers, sped up: a housemate adds a line every 70ms.
   const renderList = () => {
     render(<HeroSheet mateEveryMs={70} />)
-    const stack = document.querySelector('.ld-stack') as Element
+    const stack = document.querySelector('.ld-hero-device') as Element
     act(() => watchers.get(stack)?.([{ isIntersecting: true }]))
   }
   const list = () => screen.getByRole('list', { name: 'The House’s list' })

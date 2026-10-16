@@ -5,11 +5,12 @@ import { HeadlineWord } from '@components/landing/HeadlineWord'
 import { HeroSheet } from '@components/landing/HeroSheet'
 import { SharedPlate } from '@components/landing/SharedPlate'
 import { StickyKey } from '@components/landing/StickyKey'
+import { useScrollProgress } from '@components/landing/useScrollProgress'
 import { TransitionLink } from '@components/TransitionLink'
 import { useClientLayoutEffect } from '@lib/useClientLayoutEffect'
 import { useDocumentTitle } from '@lib/useDocumentTitle'
 import type React from 'react'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import '@components/landing/devices.css'
 import '@components/landing/landing.css'
 
@@ -49,11 +50,51 @@ function useDropPrerender() {
   }, [])
 }
 
+const BAND: Array<[string, string, string]> = [
+  ['Groceries', 'Chores', 'Packing'],
+  ['Trips', 'Days', 'Bookings'],
+] as Array<[string, string, string]>
+
+/** Two lines of huge type between the hero and the lists, set like a Bauhaus poster: what a
+ *  House keeps at home, then on a trip. They run in opposite directions as the page scrolls and
+ *  stop when it stops. Decorative: the sections below say the same. */
+const TypeBand: React.FC = () => {
+  const band = useRef<HTMLDivElement>(null)
+  useScrollProgress(band, 'through')
+  return (
+    <div className="ld-band" ref={band} aria-hidden="true">
+      {BAND.map((words, line) => (
+        <p key={words[0]} className={line === 0 ? 'ld-band-line is-a' : 'ld-band-line is-b'}>
+          {[0, 1, 2].map((rep) =>
+            words.map((word, w) => (
+              <span key={`${rep}-${word}`}>
+                {word}
+                <i className={`is-${['red', 'blue', 'yellow'][(w + line) % 3]}`} />
+              </span>
+            )),
+          )}
+        </p>
+      ))}
+    </div>
+  )
+}
+
 export const Landing: React.FC = () => {
   useDocumentTitle('Shared lists and trip planning for your household')
   useDropPrerender()
   const root = useRef<HTMLDivElement>(null)
   const lead = useRef<HTMLSpanElement>(null)
+  const hero = useRef<HTMLElement>(null)
+  // The sideways name drifts slower than the page as the hero scrolls away.
+  useScrollProgress(hero, 'leave')
+  // The page built ahead of time starts the headline's entrance before this one mounts; carrying
+  // the time since navigation into the delays lets this headline pick it up where it is.
+  const [since] = useState(
+    () =>
+      ({
+        '--since': `${typeof performance === 'undefined' ? 0 : Math.round(performance.now())}ms`,
+      }) as React.CSSProperties,
+  )
   useReveal(root)
 
   return (
@@ -79,28 +120,36 @@ export const Landing: React.FC = () => {
         </nav>
       </header>
 
-      <section className="ld-hero" aria-labelledby="ld-hero-h">
-        <h1 id="ld-hero-h" className="ld-h1">
-          <span className="ld-lead" ref={lead}>
-            Manage your
-          </span>{' '}
-          <span className="ld-sr">life </span>
-          <HeadlineWord lead={lead} />
-          <br className="ld-h1-break" /> together.
-        </h1>
-        <p className="ld-lede">
-          Bauhouse is where your household keeps the weekly shop and the next trip. Everyone you
-          live with joins your House and works from the same plan, so nobody has to scroll the group
-          chat looking for that one screenshot.
-        </p>
-        <p className="ld-hero-cta">
-          <TransitionLink to="/register" className="ld-key is-large">
-            Get started free
-          </TransitionLink>
-        </p>
-        <HeroSheet />
+      <section className="ld-hero" aria-labelledby="ld-hero-h" ref={hero} style={since}>
+        <span className="ld-margin-word" aria-hidden="true">
+          Bauhouse
+        </span>
+        <div className="ld-hero-grid">
+          <div className="ld-hero-copy">
+            <h1 id="ld-hero-h" className="ld-h1">
+              <span className="ld-lead" ref={lead}>
+                Manage your
+              </span>{' '}
+              <span className="ld-sr">life </span>
+              <HeadlineWord lead={lead} />
+              <br className="ld-h1-break" /> <span className="ld-h1-end">together.</span>
+            </h1>
+            <p className="ld-lede">
+              Bauhouse is where your household keeps the weekly shop and the next trip. Everyone you
+              live with joins your House and works from the same plan, so nobody has to scroll the
+              group chat looking for that one screenshot.
+            </p>
+            <p className="ld-hero-cta">
+              <TransitionLink to="/register" className="ld-key is-large">
+                Get started free
+              </TransitionLink>
+            </p>
+          </div>
+          <HeroSheet />
+        </div>
       </section>
 
+      <TypeBand />
       <SharedPlate />
       <Capabilities />
       <FreeReceipt />

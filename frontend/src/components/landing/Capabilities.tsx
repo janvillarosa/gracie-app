@@ -5,6 +5,7 @@ import { useEffect, useId, useState } from 'react'
 import { OfflineSlip } from './OfflineSlip'
 import { PhoneTrip } from './PhoneTrip'
 import { PlanDesk } from './PlanDesk'
+import { SetWords } from './SetWords'
 
 // The trips part: one example trip, a weekend in Porto, in its two postures, switched with two
 // pills. Planning at home is a laptop showing the app's desk (ideas, days, "Ready to go?" and the
@@ -94,9 +95,12 @@ export const Capabilities: React.FC = () => {
     <section className="ld-trips" id="trips" aria-labelledby="ld-caps-h">
       <div className="ld-caps">
         <div className="ld-caps-intro">
-          <h2 id="ld-caps-h" className="ld-h2" data-reveal>
-            Plan the trip together.
-          </h2>
+          <SetWords
+            id="ld-caps-h"
+            className="ld-h2"
+            lines={['Plan the trip', 'together.']}
+            accent={{ word: 'together', tone: 'blue' }}
+          />
           <p className="ld-body" data-reveal style={{ '--i': 1 } as React.CSSProperties}>
             You plan trips with the same people you shop with, so it’s the same app. Plan it
             together at home, then run it from your phone. Packing is just another list, so two

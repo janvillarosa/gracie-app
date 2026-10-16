@@ -21,7 +21,7 @@
   --ld-on-ink-muted: #d4d6da;
 
   /* Five type steps. */
-  --ld-display: clamp(46px, 6.4vw, 96px);
+  --ld-display: clamp(52px, 8.6vw, 132px);
   --ld-heading: clamp(36px, 4.4vw, 66px);
   --ld-title: clamp(22px, 2vw, 30px);
   --ld-text: 18px;
@@ -1726,7 +1726,7 @@ p.ld-done-toggle {
 @media (prefers-reduced-motion: no-preference) {
   .ld-hero .ld-h1,
   .ld-hero .ld-lede,
-  .ld-hero .ld-stack {
+  .ld-hero .ld-hero-phone {
     animation: ld-rise 720ms var(--ease-out) both;
   }
 
@@ -1734,7 +1734,7 @@ p.ld-done-toggle {
     animation-delay: 80ms;
   }
 
-  .ld-hero .ld-stack {
+  .ld-hero .ld-hero-phone {
     animation-delay: 170ms;
   }
 
@@ -3096,4 +3096,638 @@ p.ld-done-toggle {
   .ld-next {
     animation: ld-row-in 380ms var(--ease-out) both;
   }
+}
+
+/* ---- bolder: the poster layout -------------------------------------------------------------- */
+
+/* Colour fields bleed past the page column; nothing may scroll sideways because of it. */
+.ld {
+  overflow-x: clip;
+}
+
+/* The hero: a poster, not a centred stack. The headline runs flush left at full size, its
+   cycling word on a line of its own. */
+.ld-hero {
+  padding: 40px var(--ld-gutter) 0;
+  text-align: left;
+}
+
+.ld-hero-grid {
+  max-width: var(--ld-max);
+  margin: 0 auto;
+}
+
+.ld-h1 {
+  line-height: 0.92;
+  letter-spacing: -0.04em;
+}
+
+.ld-rotor {
+  display: block;
+  width: fit-content;
+  margin-inline: 0;
+}
+
+.ld-h1-break {
+  display: none;
+}
+
+.ld-lede {
+  margin: 32px 0 0;
+  max-width: 44ch;
+  text-wrap: pretty;
+}
+
+.ld-hero-cta {
+  margin-top: 36px;
+}
+
+/* The app, in the first screen: the live list on a phone, on the right of the poster. */
+.ld-hero-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  gap: 48px;
+  align-items: center;
+}
+
+.ld-hero-phone {
+  justify-self: end;
+  width: 100%;
+  max-width: 360px;
+}
+
+.ld-hero-phone .ld-stack {
+  margin: 0;
+  max-width: none;
+}
+
+.ld-phone-screen.is-list {
+  overflow: hidden;
+}
+
+/* As on the List page: the sheet fills the screen and the add bar sits at its foot. */
+.ld-phone-screen.is-list .ld-stack {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.ld-phone-screen.is-list .ld-app-card.is-list {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.ld-phone-screen.is-list .ld-addbar {
+  margin-top: auto;
+}
+
+/* Who just added what: a caption under the phone (the app itself has no such line). */
+.ld-hero-phone .ld-margin-note,
+.ld-hero-phone .ld-margin-note::before {
+  position: static;
+}
+
+.ld-hero-phone .ld-margin-note {
+  position: relative;
+  z-index: 2;
+  display: block;
+  width: fit-content;
+  margin: 14px auto 0;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--bg);
+  text-align: center;
+}
+
+.ld-hero-phone .ld-margin-note::before {
+  display: none;
+}
+
+@media (max-width: 1023px) {
+  .ld-hero-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ld-hero-phone {
+    justify-self: center;
+    margin-top: 32px;
+  }
+}
+
+/* Lists: the demo sits on a hard red square, flush to the page's edge, which slides in as the
+   part scrolls in; the list lands on it like paper on a desk. --p rests at 1 (in place). */
+@media (min-width: 1024px) {
+  .ld-shared {
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  }
+}
+
+.ld-plate {
+  margin-left: 0;
+  border-radius: 0;
+  background: var(--brand-red);
+  transform: translateX(calc(max(0, 0.3 - var(--p, 1)) * -150%));
+}
+
+.ld-plate-card {
+  transform: translateY(calc(max(0, 0.34 - var(--p, 1)) * -240px))
+    rotate(calc(max(0, 0.34 - var(--p, 1)) * -16deg));
+}
+
+/* Trips: hard colour fields that run off the page's edge, planning to the left, the trip to the
+   right, with the devices crossing back into the column. */
+.ld-capsheet.is-device {
+  border-radius: 0;
+}
+
+.ld-capsheet.is-blue.is-device {
+  margin-left: calc(50% - 50vw);
+  padding-left: calc(50vw - 50%);
+}
+
+.ld-capsheet.is-red.is-device {
+  margin-right: calc(50% - 50vw);
+  padding-right: calc(50vw - 50%);
+}
+
+
+/* ---- bolder: kinetic type, set like Bauhaus printed matter ----------------------------------- */
+
+.ld {
+  /* A hard stop: fast out, no bounce, like type pushed into a forme. */
+  --ld-ease-set: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* The hero's three lines stack flush left. */
+.ld-hero {
+  position: relative;
+}
+
+.ld-hero-grid {
+  position: relative;
+  z-index: 1;
+}
+
+.ld-h1 {
+  line-height: 0.88;
+}
+
+.ld-h1-end {
+  display: block;
+}
+
+/* A thick ink rule under the headline, running off the left edge of the page. */
+.ld-h1::after {
+  content: '';
+  display: block;
+  width: calc(50vw - 50% + 58%);
+  height: 10px;
+  margin: 36px 0 0 calc(50% - 50vw);
+  background: var(--ink);
+  transform-origin: left;
+}
+
+/* The name turned up the right-hand margin, in House Red, cropped by the page's edge. It drifts
+   down against the scroll, so it moves slower than the page. */
+.ld-margin-word {
+  position: absolute;
+  z-index: 0;
+  top: 8px;
+  right: -0.1em;
+  writing-mode: vertical-rl;
+  font: 800 clamp(120px, 20vw, 290px) / 0.8 var(--font-headings);
+  letter-spacing: -0.04em;
+  color: var(--brand-red);
+  transform: translateY(calc(var(--p, 0) * 40vh)) rotate(180deg);
+  pointer-events: none;
+  user-select: none;
+}
+
+/* The cycling word: the old one lifts out of its line, the new one comes up into it. */
+.ld-rotor {
+  transition:
+    opacity 180ms var(--ease-out),
+    transform 200ms var(--ease-out);
+}
+
+.ld-rotor.is-out {
+  opacity: 0;
+  transform: translateY(-0.32em);
+}
+
+/* The entrance: the lines are set one after another, each pushed in from its side and stopped
+   hard, then the rule is drawn under them. The live page picks this up where the page built ahead
+   of time left it (--since). */
+@media (prefers-reduced-motion: no-preference) {
+  .ld-hero .ld-h1 {
+    animation: none;
+  }
+
+  .ld-hero .ld-lead {
+    animation: ld-set-left 780ms var(--ld-ease-set) both;
+    animation-delay: calc(40ms - var(--since, 0ms));
+  }
+
+  .ld-hero .ld-rotor {
+    animation: ld-set-drop 720ms var(--ld-ease-set) both;
+    animation-delay: calc(240ms - var(--since, 0ms));
+  }
+
+  .ld-hero .ld-rotor.is-swap {
+    animation: ld-set-up 460ms var(--ld-ease-set) both;
+    animation-delay: 0ms;
+  }
+
+  .ld-hero .ld-h1-end {
+    animation: ld-set-right 780ms var(--ld-ease-set) both;
+    animation-delay: calc(400ms - var(--since, 0ms));
+  }
+
+  .ld-hero .ld-h1::after {
+    animation: ld-set-rule 900ms var(--ld-ease-set) both;
+    animation-delay: calc(620ms - var(--since, 0ms));
+  }
+
+  .ld-hero .ld-lede {
+    animation-delay: calc(700ms - var(--since, 0ms));
+  }
+
+  .ld-hero .ld-hero-phone {
+    animation-delay: calc(820ms - var(--since, 0ms));
+  }
+
+  .ld-margin-word {
+    animation: ld-set-rise 1200ms var(--ld-ease-set) both;
+    animation-delay: calc(300ms - var(--since, 0ms));
+  }
+}
+
+@keyframes ld-set-left {
+  from {
+    opacity: 0;
+    transform: translateX(-40vw);
+  }
+}
+
+@keyframes ld-set-right {
+  from {
+    opacity: 0;
+    transform: translateX(40vw);
+  }
+}
+
+@keyframes ld-set-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-0.6em);
+  }
+}
+
+@keyframes ld-set-up {
+  from {
+    opacity: 0;
+    transform: translateY(0.45em);
+  }
+}
+
+@keyframes ld-set-rule {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes ld-set-rise {
+  from {
+    opacity: 0;
+    translate: 0 30%;
+  }
+}
+
+/* The type band: two lines of huge type, what a House keeps at home and on a trip, running in
+   opposite directions with the scroll. --p rests at 0.5, so without the hook they simply stand. */
+.ld-band {
+  display: grid;
+  gap: 0.04em;
+  margin-top: 160px;
+  overflow: hidden;
+}
+
+.ld-band-line {
+  display: flex;
+  gap: 0.34em;
+  width: max-content;
+  margin: 0;
+  white-space: nowrap;
+  font: 800 var(--ld-display) / 0.95 var(--font-headings);
+  letter-spacing: -0.04em;
+  color: var(--ink);
+}
+
+.ld-band-line span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.34em;
+}
+
+.ld-band-line i {
+  display: inline-block;
+  width: 0.2em;
+  height: 0.2em;
+  border-radius: 50%;
+}
+
+.ld-band-line i.is-red {
+  background: var(--brand-red);
+}
+
+.ld-band-line i.is-blue {
+  background: var(--brand-blue);
+}
+
+.ld-band-line i.is-yellow {
+  background: var(--brand-yellow);
+}
+
+.ld-band-line.is-a {
+  transform: translateX(calc(-6% - var(--p, 0.5) * 22%));
+}
+
+.ld-band-line.is-b {
+  transform: translateX(calc(-30% + var(--p, 0.5) * 22%));
+}
+
+/* Section headings set big, a line at a time, one word in a primary colour, a thick rule above
+   that runs off the page. As each comes on screen its words slide up into their lines in turn. */
+.ld-h2.ld-set {
+  font-size: clamp(44px, 7.2vw, 132px);
+  line-height: 0.92;
+  letter-spacing: -0.04em;
+}
+
+.ld-set-line {
+  display: block;
+}
+
+.ld-w {
+  display: inline-block;
+  overflow: hidden;
+  padding-bottom: 0.1em;
+  margin-bottom: -0.1em;
+  vertical-align: top;
+}
+
+.ld-w-in {
+  display: inline-block;
+  transition: transform 760ms var(--ld-ease-set);
+  transition-delay: calc(var(--i, 0) * 70ms);
+}
+
+.ld-w-in.is-red {
+  color: var(--brand-red);
+}
+
+.ld-w-in.is-blue {
+  color: var(--brand-blue);
+}
+
+.ld-w-in.is-mark {
+  padding: 0 0.06em;
+  background: var(--highlighter);
+  color: var(--ink);
+}
+
+.ld-set::before {
+  content: '';
+  display: block;
+  width: calc(100% + 50vw);
+  height: 10px;
+  margin: 0 0 0.32em -50vw;
+  background: var(--ink);
+  transform-origin: right;
+  transition: transform 900ms var(--ld-ease-set);
+}
+
+/* The lists heading sits on the right of its part, so its rule runs off the right edge. */
+.ld-shared .ld-set::before {
+  margin-left: 0;
+  transform-origin: left;
+}
+
+.ld-free .ld-set::before {
+  background: #fff;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ld-motion .ld-set:not([data-set]) .ld-w-in {
+    transform: translateY(110%);
+  }
+
+  .ld-motion .ld-set:not([data-set])::before {
+    transform: scaleX(0);
+  }
+}
+
+@media (max-width: 719px) {
+  .ld-margin-word {
+    display: none;
+  }
+
+  .ld-h1::after {
+    height: 8px;
+    margin-top: 28px;
+  }
+
+  .ld-band {
+    margin-top: 120px;
+  }
+}
+
+/* ---- composition: one page column, one rhythm ------------------------------------------------ */
+
+.ld {
+  /* The page column every section aligns to, and the distance from the screen's edge to it. */
+  --ld-page: min(calc(100vw - 2 * var(--ld-gutter)), var(--ld-max));
+  --ld-edge: calc((100vw - var(--ld-page)) / 2);
+  /* One interval between sections; parts of it are used where two sections belong together. */
+  --ld-section: clamp(104px, 11vw, 168px);
+}
+
+/* Every heavy rule on the left runs from the screen's edge to the page's centre line, so the
+   rules line up down the page whatever the heading's length. */
+.ld-set::before,
+.ld-h1::after {
+  width: calc(var(--ld-edge) + var(--ld-page) * 0.5);
+  margin-left: calc(-1 * var(--ld-edge));
+}
+
+.ld-h1::after {
+  margin-top: 40px;
+}
+
+/* Hero: the name is sized to stand the hero's full height, and stays inside it. */
+.ld-hero {
+  padding-bottom: calc(var(--ld-section) * 0.5);
+  overflow: clip;
+}
+
+.ld-margin-word {
+  font-size: clamp(96px, 10.5vw, 168px);
+}
+
+.ld-lede {
+  margin-top: 40px;
+}
+
+.ld-hero-cta {
+  margin-top: 40px;
+}
+
+/* The band belongs to the hero, the lists follow it: a short interval, then a longer one. */
+.ld-band {
+  margin-top: calc(var(--ld-section) * 0.45);
+}
+
+.ld-shared {
+  margin-top: calc(var(--ld-section) * 0.6);
+}
+
+.ld-shared-copy {
+  padding-left: 64px;
+}
+
+.ld-caps {
+  padding-top: var(--ld-section);
+  padding-bottom: calc(var(--ld-section) * 0.8);
+}
+
+.ld-caps-intro {
+  margin-bottom: 48px;
+}
+
+.ld-views {
+  margin-bottom: 32px;
+}
+
+/* Colour bands line their content up with the page column, not with the screen. */
+.ld-free,
+.ld-offline {
+  padding: var(--ld-section) var(--ld-edge);
+}
+
+.ld-free-copy,
+.ld-offline-copy {
+  justify-self: start;
+}
+
+/* On a colour field the highlighter is solid yellow; the translucent one turns olive on blue. */
+.ld-free .ld-w-in.is-mark {
+  background: var(--brand-yellow);
+}
+
+.ld-close {
+  padding-top: var(--ld-section);
+  padding-bottom: var(--ld-section);
+}
+
+/* The closing sentence at the headings' size, so the page ends as loud as it began. */
+.ld-close-line {
+  font-size: clamp(40px, 6vw, 104px);
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+/* The trip sheets as two-column posters on wide screens: the device large on one side, the words
+   and the photo on the other, mirrored from planning to trip; the text lines up with the page. */
+@media (min-width: 1024px) {
+  .ld-capsheet.is-device {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    align-items: start;
+    padding-top: 64px;
+    padding-bottom: 72px;
+  }
+
+  .ld-capsheet.is-device > .ld-capsheet-name {
+    height: auto;
+    padding: 0 0 28px;
+  }
+
+  .ld-capsheet.is-blue.is-device {
+    grid-template-columns: minmax(0, 4fr) minmax(0, 8fr);
+    grid-template-areas:
+      'name stage'
+      'intro stage';
+    column-gap: 56px;
+    padding-right: 48px;
+  }
+
+  .ld-capsheet.is-blue.is-device > .ld-capsheet-name {
+    grid-area: name;
+  }
+
+  .ld-capsheet.is-device .ld-plan-intro {
+    grid-area: intro;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+    padding: 0;
+  }
+
+  .ld-capsheet.is-blue.is-device > .ld-device-stage {
+    grid-area: stage;
+    align-self: center;
+    padding: 0;
+  }
+
+  .ld-capsheet.is-red.is-device {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    grid-template-areas:
+      'stage name'
+      'stage side';
+    column-gap: 72px;
+    padding-left: 48px;
+  }
+
+  .ld-capsheet.is-red.is-device > .ld-capsheet-name {
+    grid-area: name;
+  }
+
+  .ld-trip-sheet {
+    display: contents;
+  }
+
+  .ld-trip-side {
+    grid-area: side;
+    max-width: 520px;
+  }
+
+  .ld-trip-sheet .ld-device-stage {
+    grid-area: stage;
+    align-self: center;
+  }
+}
+
+@media (max-width: 719px) {
+  .ld-shared-copy {
+    padding-left: var(--ld-gutter);
+  }
+
+  .ld-h1::after {
+    margin-top: 28px;
+  }
+
+  .ld-lede,
+  .ld-hero-cta {
+    margin-top: 28px;
+  }
+}
+
+/* Containers that pad inside their max width get the gutter back, so their content is the same
+   page column as everything else. */
+.ld-caps,
+.ld-close,
+.ld-nav {
+  max-width: calc(var(--ld-max) + 2 * var(--ld-gutter));
 }

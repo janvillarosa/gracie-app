@@ -574,6 +574,30 @@ shows, and that line carries the highlighter; a photo with no line to point to d
 photos are of the example trip's own stops: São Bento station (the 11:00 stop on Saturday's plan, beside the
 laptop), Santa Apolónia (the phone's next stop, the 09:09 train) and Ribeira (where Saturday's slip ends).
 
+**Poster and kinetic type** (2026-10-16, plan `docs/superpowers/plans/2026-10-16-landing-kinetic-type.md`): set
+like Bauhaus printed matter, the type is the image. The hero is a poster on the left, three lines flush left at the
+display size (up to 132px), a thick ink rule under them
+running off the left edge; on the right the app itself, the live List page on an iPhone 14 Pro, with "Bauhouse"
+turned up the margin behind it in House Red, cropped by the page edge, drifting slower than the scroll. The lines are
+pushed in from alternate sides and stop hard (`--ld-ease-set`); the cycling word swaps by lifting out of its line. A
+band of huge type ("Groceries · Chores · Packing", "Trips · Days · Bookings") runs in opposite directions with the
+scroll between the hero and the lists. Section headings (`SetWords.tsx`) are set big across two lines with one word
+in a primary colour (or on the highlighter) and a thick rule above that runs off the page; their words slide up into
+their lines as they come on screen. The lists demo sits on a hard red square that slides in; the trip sheets are
+hard-edged fields bleeding off the page. Scroll motion goes through `useScrollProgress` (`--p`). Everything rests set
+with reduced motion. A shapes-as-mascot direction (circle, square and triangle assembling into the logo) was tried
+and rejected as clip-art: boldness comes from type, layout and motion, not decorative geometry.
+
+**Composition** (2026-10-16): one page column (`--ld-page`, 1280px max between gutters) that every section's
+content starts on, including colour bands, which pad by `--ld-edge` (the distance from the screen's edge to the
+column) rather than by the gutter. One section interval, `--ld-section` (104 to 168px), used whole between unrelated
+parts and in fractions where two parts belong together (hero to type band, band to lists). Every left-side heavy
+rule runs from the screen's edge to the page's centre line, so the rules line up down the page; the lists heading's
+rule runs off the right instead. The sideways name is sized to stand the hero's full height and is clipped to the
+hero. On wide screens the trip sheets are two-column posters, mirrored: planning has words and photo in 4 columns
+and the laptop in 8, the trip has the phone in 5 and words and photo in 7. The closing sentence is set at the
+headings' size.
+
 **Motion** is the paper's own: stamps land one after another, the highlighter inks in, ticks pop with confetti in
 brand colours, the footer wordmark rises, "start." wakes once there's a name in the blank. All of it sits behind
 `prefers-reduced-motion: no-preference`. On phones a sticky "Get started free" key stays within thumb reach once

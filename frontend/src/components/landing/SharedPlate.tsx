@@ -1,6 +1,8 @@
 import type React from 'react'
 import { useEffect, useId, useRef, useState } from 'react'
 import { AddBarStill, Box, ListHead } from './appUi'
+import { SetWords } from './SetWords'
+import { useScrollProgress } from './useScrollProgress'
 import { categorize, PLATE_START, PLATE_WORDS, type PlateRow, plateLand, plateTick } from './demo'
 
 const sleep = (ms: number) => new Promise<void>((r) => window.setTimeout(r, ms))
@@ -125,15 +127,21 @@ const TypingList: React.FC = () => {
  *  to do. */
 export const SharedPlate: React.FC = () => {
   const base = useId()
+  const section = useRef<HTMLElement>(null)
+  // The red square slides in from the edge and the list lands on it as the part scrolls in.
+  useScrollProgress(section, 'through')
   return (
-    <section className="ld-shared" id="lists" aria-labelledby={`${base}-h`}>
+    <section className="ld-shared" id="lists" aria-labelledby={`${base}-h`} ref={section}>
       <div className="ld-plate" data-reveal>
         <TypingList />
       </div>
       <div className="ld-shared-copy">
-        <h2 id={`${base}-h`} className="ld-h2" data-reveal>
-          Lists for the house.
-        </h2>
+        <SetWords
+          id={`${base}-h`}
+          className="ld-h2"
+          lines={['Lists for', 'the house.']}
+          accent={{ word: 'house', tone: 'red' }}
+        />
         <p className="ld-body" data-reveal style={{ '--i': 1 } as React.CSSProperties}>
           Type “oat milk” and it goes under Dairy on its own. After two letters Bauhouse suggests
           what your house buys every week, so you rarely type a whole word. Everyone at home adds to

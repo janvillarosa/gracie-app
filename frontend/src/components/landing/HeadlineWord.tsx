@@ -17,6 +17,8 @@ export const HeadlineWord: React.FC<{ lead: React.RefObject<HTMLElement | null> 
   const [at, setAt] = useState(0)
   const [phase, setPhase] = useState<Phase>('in')
   const from = useRef<number | null>(null)
+  // After the first change every new word swaps in (the first one makes the entrance instead).
+  const [swapped, setSwapped] = useState(false)
 
   useEffect(() => {
     if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
@@ -27,6 +29,7 @@ export const HeadlineWord: React.FC<{ lead: React.RefObject<HTMLElement | null> 
       swap = window.setTimeout(() => {
         from.current = lead.current?.getBoundingClientRect().left ?? null
         setAt((n) => (n + 1) % HEADLINE_WORDS.length)
+        setSwapped(true)
         setPhase('in')
       }, OUT_MS)
     }, HOLD_MS)
@@ -51,7 +54,11 @@ export const HeadlineWord: React.FC<{ lead: React.RefObject<HTMLElement | null> 
   }, [at])
 
   return (
-    <span key={HEADLINE_WORDS[at]} className={`ld-rotor is-${phase}`} aria-hidden="true">
+    <span
+      key={HEADLINE_WORDS[at]}
+      className={`ld-rotor is-${phase}${swapped ? ' is-swap' : ''}`}
+      aria-hidden="true"
+    >
       {HEADLINE_WORDS[at]}
     </span>
   )
