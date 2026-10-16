@@ -20,6 +20,7 @@ type AuthService struct {
 	users store.UserRepository
 	key   []byte
 	ttl   time.Duration
+	emitter
 }
 
 func NewAuthService(users store.UserRepository, encKeyPath string, ttlHours int) (*AuthService, error) {
@@ -58,7 +59,11 @@ func (s *AuthService) Register(ctx context.Context, username, password, name str
 		CreatedAt:   now,
 		UpdatedAt:   now,
 	}
-	return s.users.Put(ctx, user)
+	if err := s.users.Put(ctx, user); err != nil {
+		return err
+	}
+	s.emitUser(ctx, "user.signed_up", userID, "", nil)
+	return nil
 }
 
 type LoginResult struct {
@@ -97,6 +102,11 @@ func (s *AuthService) Login(ctx context.Context, username, password string) (*Lo
 	if err := s.users.SetAPIKey(ctx, u.UserID, hash, lookup, exp, now); err != nil {
 		return nil, err
 	}
+	roomID := ""
+	if u.RoomID != nil {
+		roomID = *u.RoomID
+	}
+	s.emitUser(ctx, "user.logged_in", u.UserID, roomID, nil)
 	return &LoginResult{User: u, APIKey: plain}, nil
 }
 
@@ -150,5 +160,6 @@ func (s *AuthService) ChangePassword(ctx context.Context, userID, current, next 
 	if err := s.users.SetAPIKey(ctx, userID, hash, lookup, exp, now); err != nil {
 		return "", err
 	}
+	s.emitUser(ctx, "user.password_changed", userID, "", nil)
 	return plain, nil
 }

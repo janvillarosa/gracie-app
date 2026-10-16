@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/janvillarosa/gracie-app/backend/internal/analytics"
 	authpkg "github.com/janvillarosa/gracie-app/backend/internal/auth"
 	derr "github.com/janvillarosa/gracie-app/backend/internal/errors"
 	"github.com/janvillarosa/gracie-app/backend/internal/models"
@@ -19,6 +20,7 @@ type UserService struct {
 	items store.ListItemRepository
 	trips store.TripRepository
 	tx    store.TxRunner
+	emitter
 }
 
 func NewUserService(users store.UserRepository, rooms store.RoomRepository, tx store.TxRunner) *UserService {
@@ -70,6 +72,8 @@ func (s *UserService) CreateUserWithSoloRoom(ctx context.Context, name string) (
 	}); err != nil {
 		return nil, err
 	}
+	s.emitUser(ctx, "user.signed_up", userID, roomID, nil)
+	s.emit(ctx, analytics.Event{Name: "house.created", ActorID: userID, RoomID: roomID, Subject: analytics.Ref{Type: "house", ID: roomID}})
 	return &CreatedUser{User: user, APIKey: apiKey}, nil
 }
 
@@ -90,14 +94,20 @@ func (s *UserService) UpdateMe(ctx context.Context, userID string, name *string,
 		return derr.ErrBadRequest
 	}
 	now := time.Now().UTC()
+	var changed []string
 	if name != nil {
 		if err := s.UpdateName(ctx, userID, *name); err != nil {
 			return err
 		}
+		changed = append(changed, "name")
 	}
 	if prefs != nil && prefs.TripsShowNextStop != nil {
-		return s.users.UpdatePreferences(ctx, userID, *prefs, now)
+		if err := s.users.UpdatePreferences(ctx, userID, *prefs, now); err != nil {
+			return err
+		}
+		changed = append(changed, "preferences")
 	}
+	s.emitUser(ctx, "user.profile_updated", userID, "", fieldsProp(changed))
 	return nil
 }
 
@@ -134,6 +144,14 @@ func (s *UserService) UpdateProfile(ctx context.Context, userID string, name *st
 			return err
 		}
 	}
+	var changed []string
+	if username != nil {
+		changed = append(changed, "username")
+	}
+	if name != nil {
+		changed = append(changed, "name")
+	}
+	s.emitUser(ctx, "user.profile_updated", userID, "", fieldsProp(changed))
 	return nil
 }
 

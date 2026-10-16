@@ -18,6 +18,7 @@ import (
 	"github.com/janvillarosa/gracie-app/backend/internal/services"
 	"github.com/janvillarosa/gracie-app/backend/internal/services/categorization"
 	mongostore "github.com/janvillarosa/gracie-app/backend/internal/store/mongo"
+	"github.com/janvillarosa/gracie-app/backend/internal/trips"
 	"github.com/janvillarosa/gracie-app/backend/internal/tzlookup"
 )
 
@@ -59,7 +60,8 @@ func main() {
 			recorder = bufRecorder
 		}
 	}
-	_ = recorder // injected into services in the instrumentation phase
+	services.RegisterAnalyticsEvents(analyticsReg)
+	trips.RegisterAnalyticsEvents(analyticsReg)
 
 	var categoryIndex *mongostore.CategoryIndexRepo
 	if cfg.CategoryIndexEnabled {
@@ -100,6 +102,10 @@ func main() {
 	authSvc, err := services.NewAuthService(usersRepo, cfg.EncKeyFile, cfg.APIKeyTTLHours)
 	if err != nil {
 		log.Fatalf("auth service: %v", err)
+	}
+
+	for _, svc := range []interface{ UseRecorder(analytics.Recorder) }{userSvc, roomSvc, listSvc, tripSvc, authSvc} {
+		svc.UseRecorder(recorder)
 	}
 
 	userHandler := handlers.NewUserHandler(userSvc, []byte(cfg.AvatarSalt))
