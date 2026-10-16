@@ -130,6 +130,10 @@ export function isForbidden(err: unknown): err is ApiError {
   return typeof err === 'object' && err !== null && (err as any).status === 403
 }
 
+export function isUnauthorized(err: unknown): err is ApiError {
+  return typeof err === 'object' && err !== null && (err as any).status === 401
+}
+
 export function isConflict(err: unknown): err is ApiError {
   return typeof err === 'object' && err !== null && (err as any).status === 409
 }

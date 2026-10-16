@@ -84,11 +84,13 @@ describe('Account deletion', () => {
         </MemoryRouter>
       </QueryClientProvider>,
     )
-    await userEvent.click(
-      await screen.findByRole('button', { name: /Permanently delete my account/ }),
+    await userEvent.click(await screen.findByRole('button', { name: 'Delete account' }))
+    await userEvent.type(
+      await screen.findByRole('textbox', { name: 'Type DELETE to confirm' }),
+      'DELETE',
     )
-    await userEvent.type(await screen.findByPlaceholderText('Type DELETE to confirm'), 'DELETE')
-    await userEvent.click(screen.getByRole('button', { name: 'Delete my account' }))
+    const keys = screen.getAllByRole('button', { name: 'Delete account' })
+    await userEvent.click(keys[keys.length - 1])
     await waitFor(() => expect(auth.signOut).toHaveBeenCalledWith('expired'))
     expect(auth.setApiKey).not.toHaveBeenCalled()
     await waitFor(() => expect(navigate).toHaveBeenCalledWith('/login', { replace: true }))

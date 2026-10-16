@@ -56,6 +56,9 @@
   --shadow-key: inset 0 1px 0 rgba(255, 255, 255, 0.55), 0 1px 0 var(--brand-yellow-deep), 0 2px 6px -1px rgba(150, 115, 0, 0.28);
   --shadow-key-hover: inset 0 1px 0 rgba(255, 255, 255, 0.55), 0 1px 0 var(--brand-yellow-deep), 0 6px 14px -4px rgba(150, 115, 0, 0.38);
   /* The red key's own edge and drop, tinted from the red (never the yellow key's warm glow). */
+  /* The edge of a face: a hairline of ink drawn just inside an avatar, so a pale picture
+     still has a rim on white paper and on the pale desk. */
+  --avatar-edge: color-mix(in srgb, var(--ink) 12%, transparent);
   --shadow-key-danger: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 1px 0 color-mix(in srgb, var(--brand-red) 70%, black), 0 2px 6px -1px color-mix(in srgb, var(--brand-red) 30%, transparent);
   --shadow-key-danger-hover: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 1px 0 color-mix(in srgb, var(--brand-red) 70%, black), 0 6px 14px -4px color-mix(in srgb, var(--brand-red) 40%, transparent);
   --shadow-soft: 0 1px 2px rgba(20, 20, 20, 0.05);
@@ -2726,12 +2729,15 @@ textarea.notes-textarea {
   background: var(--panel-subtle);
 }
 
+/* Before we know who you are: an empty disc on the paper tint, the avatar's exact size. */
 .avatar-placeholder {
   display: block;
-  width: 50px;
-  height: 50px;
+  box-sizing: border-box;
+  width: var(--control-lg);
+  height: var(--control-lg);
   border-radius: 50%;
   border: 1px solid var(--border);
+  background: var(--panel-subtle);
 }
 
 /* Skeleton rows match the real rows: list rows on the house page, item rows on a list */
@@ -3413,22 +3419,6 @@ textarea.notes-textarea {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-/* Avatars overlap like stickers on one sheet; each keeps a paper ring so the edge reads. */
-.avatar-stack {
-  display: inline-flex;
-  flex: none;
-}
-.avatar-stack > * {
-  border-radius: 50%;
-  box-shadow: 0 0 0 2px var(--panel);
-}
-.avatar-stack > * + * {
-  margin-left: -8px;
-}
-.avatar-stack > *:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--panel), var(--focus-ring);
-}
 /* Too narrow for the names beside Invite: the avatars (named for screen readers and on tap)
    say who is in the House instead of a clipped "Mia and …". */
 @container (max-width: 320px) {
@@ -3497,16 +3487,16 @@ textarea.notes-textarea {
 }
 
 /* ---- House settings: the Trip settings page, for the House --------------------------------- */
-.house-settings .ui-sheet-title {
+.house-settings .ui-sheet-title,
+.account-settings .ui-sheet-title {
   font-size: var(--title-page);
 }
-.house-settings input.ui-sheet-title {
+.house-settings input.ui-sheet-title,
+.account-settings input.ui-sheet-title {
   font-size: var(--title-page) !important;
 }
-.house-settings .ui-section-label {
-  margin-top: var(--space-6);
-}
-.house-settings .ui-sheet-identity + .ui-section-label {
+.house-settings .ui-section-label,
+.account-settings .ui-section-label {
   margin-top: var(--space-6);
 }
 .house-member-row {
@@ -3528,7 +3518,8 @@ textarea.notes-textarea {
   color: var(--muted);
   font-size: var(--size-meta);
 }
-.house-settings-footer {
+.house-settings-footer,
+.account-settings-footer {
   gap: var(--space-3);
 }
 
@@ -3564,4 +3555,111 @@ textarea.notes-textarea {
   margin: 0;
   color: var(--muted);
   font-size: var(--size-meta);
+}
+
+/* ---- Avatar: the person's colour and initial first, the picture fades in over them ---------- */
+.avatar {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  overflow: hidden;
+  border-radius: 50%;
+  vertical-align: middle;
+}
+.avatar > img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  opacity: 0;
+}
+.avatar.is-loaded > img {
+  opacity: 1;
+}
+/* The rim sits over the picture (inside the circle), so it never changes an avatar's size or
+   the paper ring a stack draws outside it. */
+.avatar::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px var(--avatar-edge);
+  pointer-events: none;
+}
+.avatar-initial {
+  font-family: var(--font-headings);
+  font-weight: 700;
+  line-height: 1;
+  /* Ink at 55% on the pastel: a placeholder, not a name tag. */
+  color: color-mix(in srgb, var(--ink) 55%, transparent);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .avatar > img {
+    transition: opacity var(--dur-base) var(--ease-out);
+  }
+}
+
+/* The avatar menu, once a choice is made, leaves at once: its fade-out would otherwise be
+   snapshotted into the page cross-fade. */
+.topnav-menu[class*='-leave'] {
+  display: none !important;
+}
+
+/* ---- AvatarStack: who is in something, the same on every page ------------------------------ */
+/* Faces overlap by a quarter of their size (--face is set by the component), each on a 2px
+   paper ring so the edges read where they cross. */
+.avatar-stack {
+  --overlap: calc(var(--face, 36px) / 4);
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 0;
+}
+.avatar-stack-face,
+.avatar-stack-more {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--panel);
+}
+.avatar-stack > * + * {
+  margin-left: calc(var(--overlap) * -1);
+}
+.avatar-stack-more {
+  box-sizing: border-box;
+  place-items: center;
+  justify-content: center;
+  align-items: center;
+  width: var(--face, 36px);
+  height: var(--face, 36px);
+  background: var(--panel-subtle);
+  box-shadow:
+    0 0 0 2px var(--panel),
+    inset 0 0 0 1px var(--avatar-edge);
+  color: var(--muted);
+  font-size: calc(var(--face, 36px) * 0.42);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+/* The deal: each face slides out from under the one before it and settles, one after another.
+   Once, when the stack first appears; with reduced motion the faces are simply there. */
+@media (prefers-reduced-motion: no-preference) {
+  .avatar-stack-face,
+  .avatar-stack-more {
+    animation: stack-deal 360ms var(--ease-out) both;
+    animation-delay: calc(60ms + var(--i, 0) * 45ms);
+  }
+}
+@keyframes stack-deal {
+  from {
+    opacity: 0;
+    transform: translateX(calc(var(--overlap) * -1)) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }

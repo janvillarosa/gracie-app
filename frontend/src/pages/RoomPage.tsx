@@ -24,7 +24,7 @@ import {
   UserPlus,
 } from '@phosphor-icons/react'
 import { IconPicker } from '@components/IconPicker'
-import { AvatarBadge } from '@components/AvatarBadge'
+import { AvatarStack } from '@components/AvatarStack'
 import { ShareCodeSheet } from '@components/ShareCodeSheet'
 import { DeleteVoteSheet } from '@components/DeleteVoteSheet'
 import { TopNav } from '@components/TopNav'
@@ -304,18 +304,11 @@ export const RoomPage: React.FC<{
           {room.description && <p className="house-desc">{room.description}</p>}
           <div className="house-meta-row">
             <div className="house-members">
-              <span className="avatar-stack">
-                {members.map((m, idx) => (
-                  <AvatarBadge
-                    key={m.user_id ?? idx}
-                    seed={m.avatar_key}
-                    name={m.name}
-                    size={32}
-                    style="miniavs"
-                  />
-                ))}
+              <AvatarStack members={members} label={`Members: ${memberLine(members, userId)}`} />
+              {/* Said by the stack's label already; this is for the eye. */}
+              <span className="house-members-line" aria-hidden>
+                {memberLine(members, userId)}
               </span>
-              <span className="house-members-line">{memberLine(members, userId)}</span>
             </div>
             <div className="house-meta-actions">
               <Button

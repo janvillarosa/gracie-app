@@ -34,7 +34,7 @@ operator command (see Behavior analytics > Backfill); both Dockerfiles ship it n
   solo room; set `room_id`. Transactional.
 - **Register/Login (email+password):** password is bcrypt-hashed then AES-encrypted
   at rest; login rotates and returns the API key.
-- **Share:** rotate a 5-char share code (URL-safe, excludes I/O/L).
+- **Share:** `GET /rooms/share` returns the current 5-char code (URL-safe, excludes I/O/L), minting one only if none exists (atomic set-if-absent); `POST` rotates it. Joining clears it (single use).
 - **Join:** validate share code, add joiner to the room, set their `room_id`; if the
   joiner had a solo room, delete it in the same transaction.
 - **Deletion by consensus:** each member votes; when all current members have voted,

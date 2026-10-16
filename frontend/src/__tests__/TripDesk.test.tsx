@@ -91,7 +91,7 @@ describe('the planning desk layout', () => {
     const row = top.querySelector('.trip-desk-head') as HTMLElement
     expect(
       [...row.children].map((c) => c.className.split(' ')[0].replace(/^list-icon$/, 'icon')),
-    ).toEqual(['icon', 'trip-desk-text', 'trip-avatars', 'ui-btn'])
+    ).toEqual(['icon', 'trip-desk-text', 'avatar-stack', 'ui-btn'])
   })
 
   it('has no map column without places: the plan widens and says where places will show up', async () => {

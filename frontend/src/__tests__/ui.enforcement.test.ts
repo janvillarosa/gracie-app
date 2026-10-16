@@ -59,11 +59,13 @@ describe('overlays and form controls come from components/ui', () => {
     expect(offenders).toEqual([])
   })
 
-  it('the House screens and their overlays are Sheets, not Ant Modals, Drawers or forms', () => {
+  it('the House and account screens and their overlays are Sheets, not Ant Modals, Drawers or forms', () => {
     const files = [
       'pages/RoomPage.tsx',
       'pages/RoomSettings.tsx',
       'pages/NoRoomPage.tsx',
+      'pages/UserSettings.tsx',
+      'pages/UserSettings.tsx',
       'components/ShareCodeSheet.tsx',
       'components/CreateHouseSheet.tsx',
       'components/DeleteVoteSheet.tsx',

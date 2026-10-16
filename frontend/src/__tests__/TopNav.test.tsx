@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -41,7 +41,9 @@ describe('TopNav', () => {
     expect(screen.getByText('Log out')).toBeInTheDocument()
 
     await userEvent.click(screen.getByText('Log out'))
-    // Key should be removed on logout
-    expect(localStorage.getItem('gracie_api_key')).toBeNull()
+    // The menu shuts first, then the key goes (a frame later, so the menu is not in the fade).
+    await waitFor(() => expect(localStorage.getItem('gracie_api_key')).toBeNull(), {
+      timeout: 3000,
+    })
   })
 })

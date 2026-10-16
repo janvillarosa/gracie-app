@@ -5,7 +5,8 @@ import type { MenuProps } from 'antd'
 import { CaretDown, DotsThreeVertical } from '@phosphor-icons/react'
 import type { Trip } from '@api/tripTypes'
 import { countdown, routeText, shortDay, shortRange, tripPhase } from '@lib/trips/schedule'
-import { Avatar } from '@components/Avatar'
+import { AVATAR_SIZE } from '@components/Avatar'
+import { AvatarStack } from '@components/AvatarStack'
 import type { Member } from '@lib/trips/hooks'
 import { toTripEmoji } from '../../icons'
 
@@ -133,22 +134,12 @@ export const TripHeader: React.FC<HeaderProps> = ({
       </Sheet>
     )
   const avatarsNode = (
-    <span className="trip-avatars" role="img" aria-label={sharedWith(members)}>
-      {members.slice(0, members.length > 4 ? 3 : 4).map((m) => (
-        <Avatar
-          key={m.user_id ?? m.name}
-          seed={m.avatar_key ?? m.name}
-          size={24}
-          alt=""
-          className="trip-avatar"
-        />
-      ))}
-      {members.length > 4 && (
-        <span className="trip-avatar-more" aria-hidden>
-          +{members.length - 3}
-        </span>
-      )}
-    </span>
+    <AvatarStack
+      className="trip-avatars"
+      members={members}
+      label={sharedWith(members)}
+      size={AVATAR_SIZE.small}
+    />
   )
   const banner = deletedBy && (
     <div className="trip-banner" role="status">

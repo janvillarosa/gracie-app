@@ -412,7 +412,7 @@ describe('Show next stop preference', () => {
 
   it('is also on the account page, from the same component', async () => {
     renderTrips('/app/account')
-    expect(await screen.findByRole('heading', { name: 'Trips' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Just for you' })).toBeInTheDocument()
     const sw = await screen.findByRole('switch', { name: /Show next stop when I’m travelling/ })
     await userEvent.click(sw)
     await waitFor(() => expect(meState.prefs.trips_show_next_stop).toBe(false))

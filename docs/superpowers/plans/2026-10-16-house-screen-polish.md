@@ -71,3 +71,44 @@ modals can't import Ant `Modal`.
 Update `RoomPage.test.tsx` (code shown as text; GET then explicit rotate), `CreateHouseModal.test.tsx`;
 add tests for the delete confirms, settings autosave and the GET share endpoint (handler + store).
 `make check`, `make test-integration`, then one after-capture round at 390 and 1280 px.
+
+---
+
+# Part 2 — Account settings and nav loading (2026-10-16)
+
+Evidence: captures of a cold load and of House → Account settings with `/api/*` slowed 1.2s and
+avatar images 1.5s, plus Account settings at 390 and 1280 px.
+
+## Nav and loading
+
+1. **The first loading frame has no nav.** The route fallback (`AppRoutes` Suspense) is a bare
+   card at the top of the page; when the page arrives the nav appears above it and everything
+   drops ~66px. On `/app/*` the fallback draws the same top bar as the page (static logo + the
+   avatar disc), so the card lands where it will stay. Guest routes (`/`, `/login`) keep theirs.
+2. **Avatars are blank until a third-party image arrives.** The nav disc and the House's member
+   stack show nothing (on a phone the meta row's left side is empty). `Avatar` gets a ground in
+   its own colour (the pastel it already derives) with the person's initial, the image fades in
+   over it, and above-the-fold avatars load eagerly instead of `loading="lazy"`.
+3. **The avatar menu ghosts into the next page.** Choosing "Account settings" starts the page
+   cross-fade with the menu still open, so it fades across both pages. Close the menu first.
+4. Not in this pass, flagged: avatars come from `api.dicebear.com`, a third-party origin that
+   PRODUCT.md says the app doesn't use (only Google Maps). Self-hosting them (the `@dicebear/*`
+   packages render the same SVG locally) is a follow-up of its own.
+
+## Account settings (rebuilt like Trip and House settings)
+
+5. Back link "‹ Elm Street" in the top bar (no Back pill); identity is the avatar tile, the name
+   typed in place (saves on commit) and the email as the context line.
+6. **Sign-in** group: Email as an autosaving field row with its rule inline; **Password** as a
+   NavRow that opens a sheet (current / new / confirm, borderless fields, rule and mismatch shown
+   inline, one key "Change password"). Removes both Save buttons and the boxed Ant inputs.
+7. **Just for you** group: the existing "Show next stop when I'm travelling" switch.
+8. Footer: muted "Your avatar is made from your account." and a red "Delete account". It opens a
+   `confirm` Sheet that keeps type-DELETE-to-confirm, with true copy: you leave your House; if
+   you're the only one in it, the House and its lists and trips go too. Replaces the Ant Modal
+   and the "Danger zone" heading.
+
+## Tests and verification
+Account settings tests (name and email autosave, email rule, password sheet, delete confirm),
+a route-fallback test (the app shell has the nav), `make check`, then one slowed-network capture
+round at 390 and 1280 px.

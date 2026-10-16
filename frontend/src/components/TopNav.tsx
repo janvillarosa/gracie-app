@@ -1,4 +1,4 @@
-import React, { useRef } from 'react'
+import React, { useRef, useState } from 'react'
 import { Dropdown } from 'antd'
 import { CaretLeft } from '@phosphor-icons/react'
 import type { MenuProps } from 'antd'
@@ -6,7 +6,7 @@ import { useAuth } from '@auth/AuthProvider'
 import { useQuery } from '@tanstack/react-query'
 import { getMe } from '@api/endpoints'
 import { BrandLogo } from '@components/BrandLogo'
-import { Avatar } from '@components/Avatar'
+import { AVATAR_SIZE, Avatar } from '@components/Avatar'
 import { TransitionLink } from '@components/TransitionLink'
 import { useTransitionNavigate, withViewTransition } from '@lib/viewTransition'
 
@@ -29,9 +29,15 @@ export const TopNav: React.FC<Props> = ({ back }) => {
     { type: 'divider' as const },
     { key: 'logout', label: 'Log out' },
   ]
+  // The menu is shut before the page changes, so it is not caught in the cross-fade and
+  // ghosted across both pages.
+  const [menuOpen, setMenuOpen] = useState(false)
   const onMenuClick: MenuProps['onClick'] = ({ key }) => {
-    if (key === 'account') navigate('/app/account')
-    if (key === 'logout') void signOut('user', withViewTransition)
+    setMenuOpen(false)
+    requestAnimationFrame(() => {
+      if (key === 'account') navigate('/app/account')
+      if (key === 'logout') void signOut('user', withViewTransition)
+    })
   }
 
   const seed = me?.avatar_key || me?.name || me?.user_id || 'me'
@@ -49,6 +55,9 @@ export const TopNav: React.FC<Props> = ({ back }) => {
       <div className="topnav-right">
         <Dropdown
           menu={{ items, onClick: onMenuClick }}
+          open={menuOpen}
+          onOpenChange={setMenuOpen}
+          rootClassName="topnav-menu"
           trigger={['click']}
           placement="bottomRight"
         >
@@ -57,8 +66,10 @@ export const TopNav: React.FC<Props> = ({ back }) => {
             {me ? (
               <Avatar
                 seed={seed}
-                size={50}
+                size={AVATAR_SIZE.tile}
                 style={'miniavs'}
+                name={me.name}
+                eager
                 alt={(me.name || 'User') + ' avatar'}
                 className={hadPlaceholder.current ? 'avatar-in' : undefined}
               />

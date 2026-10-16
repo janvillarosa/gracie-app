@@ -8,7 +8,7 @@ import { cancelDeletion, getMe, getMyRoom, updateRoomSettings, voteDeletion } fr
 import { DESCRIPTION_RULE, isValidDisplayName, MAX_DESCRIPTION, NAME_RULE } from '@lib/validation'
 import { ShareCodeSheet } from '@components/ShareCodeSheet'
 import { DeleteVoteSheet } from '@components/DeleteVoteSheet'
-import { AvatarBadge } from '@components/AvatarBadge'
+import { AVATAR_SIZE, Avatar } from '@components/Avatar'
 import { HouseLoader } from '@components/HouseLoader'
 import { TopNav } from '@components/TopNav'
 import {
@@ -163,7 +163,8 @@ export const RoomSettings: React.FC = () => {
         <DetailGroup label="Members">
           {members.map((m, idx) => (
             <div className="house-member-row" key={m.user_id ?? idx}>
-              <AvatarBadge seed={m.avatar_key} name={m.name} size={32} style="miniavs" />
+              {/* The name is right beside it: the face is decoration. */}
+              <Avatar seed={m.avatar_key} name={m.name} size={AVATAR_SIZE.row} alt="" eager />
               <span className="house-member-name">{m.name}</span>
               {m.user_id && m.user_id === me && <span className="house-member-you">You</span>}
             </div>
