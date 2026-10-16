@@ -337,3 +337,31 @@ func TestDifferentThingsStayApart(t *testing.T) {
 		t.Fatalf("oat milk must not borrow almond milk's history: %+v", a)
 	}
 }
+
+func TestStaleForecastsAreRebuiltWithoutNewEvents(t *testing.T) {
+	r := newRig(t0.Add(120 * 24 * time.Hour))
+	for i := 0; i < 8; i++ {
+		r.add(ev("item.added", "mia", "room_1", "milk", t0.AddDate(0, 0, 7*i)))
+	}
+	if _, err := r.worker.FoldOnce(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	// What an older server left behind: a rhythm with no add forecast and no version.
+	_ = r.aggs.SetKeyIntervals(context.Background(), "room_1:item:milk", analytics.KeyIntervals{N: 8, Source: "request"})
+	if iv := r.aggs.Key("room_1:item:milk")["intervals"].(analytics.KeyIntervals); iv.Add != nil {
+		t.Fatal("setup: the forecast should be gone")
+	}
+
+	n, err := r.worker.RefreshStale(context.Background(), 100)
+	if err != nil || n != 1 {
+		t.Fatalf("refreshed %d %v", n, err)
+	}
+	iv := r.aggs.Key("room_1:item:milk")["intervals"].(analytics.KeyIntervals)
+	if iv.Add == nil || iv.Add.Trials != 5 || iv.Version != analytics.ForecastVersion {
+		t.Fatalf("rebuilt from the stored history with the current logic: %+v", iv)
+	}
+	// Up to date now: a second pass has nothing to do.
+	if n, _ := r.worker.RefreshStale(context.Background(), 100); n != 0 {
+		t.Fatalf("second pass refreshed %d", n)
+	}
+}

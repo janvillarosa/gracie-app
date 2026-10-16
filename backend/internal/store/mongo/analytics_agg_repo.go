@@ -165,6 +165,7 @@ func (r *AggRepo) SetKeyIntervals(ctx context.Context, id string, iv analytics.K
 		{Key: "intervals.cv", Value: iv.CV},
 		{Key: "intervals.last_at", Value: iv.LastAt.UTC()},
 		{Key: "intervals.computed_at", Value: iv.ComputedAt.UTC()},
+		{Key: "intervals.v", Value: iv.Version},
 	}
 	var unset bson.D
 	if iv.DueAt != nil {
@@ -340,6 +341,32 @@ func (r *AggRepo) UpcomingKeys(ctx context.Context, roomID, subjectType string, 
 	var out []analytics.KeyStat
 	if err := cur.All(ctx, &out); err != nil {
 		return nil, err
+	}
+	return out, nil
+}
+
+func (r *AggRepo) StaleKeys(ctx context.Context, version, limit int) ([]analytics.KeyRef, error) {
+	// $not $gte also matches documents with no intervals.v at all (computed before versioning).
+	filter := bson.D{{Key: "intervals.v", Value: bson.D{{Key: "$not", Value: bson.D{{Key: "$gte", Value: version}}}}}}
+	cur, err := r.keys().Find(ctx, filter, options.Find().
+		SetProjection(bson.D{{Key: "room_id", Value: 1}, {Key: "subject_type", Value: 1}, {Key: "key", Value: 1}}).
+		SetLimit(int64(limit)))
+	if err != nil {
+		return nil, err
+	}
+	var docs []struct {
+		RoomID      string `bson:"room_id"`
+		SubjectType string `bson:"subject_type"`
+		Key         string `bson:"key"`
+	}
+	if err := cur.All(ctx, &docs); err != nil {
+		return nil, err
+	}
+	out := make([]analytics.KeyRef, 0, len(docs))
+	for _, d := range docs {
+		if d.RoomID != "" && d.Key != "" {
+			out = append(out, analytics.KeyRef{RoomID: d.RoomID, SubjectType: d.SubjectType, Key: d.Key})
+		}
 	}
 	return out, nil
 }

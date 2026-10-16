@@ -224,6 +224,9 @@ the analytics aggregates and the live list; the only state is `Room.SuggestionsO
   minimum). The fold merges look-alikes' history into an item's add forecast and scales its score by
   `NameCertainty`; `ForList` keeps one name per cluster, treats a look-alike on the list as on it, and shows
   the most recent wording.
+- **Forecast version:** `analytics.ForecastVersion` is stamped on every `KeyIntervals`. **Bump it whenever the
+  rhythm or add-forecast logic changes** (or after a backfill folded by older code): each fold tick then rebuilds
+  every older forecast from stored history (`Worker.RefreshStale`, 500 per tick), no new events needed.
 - **House setting:** `PUT /rooms/settings {suggestions_off}`; `GET /rooms/me` returns it.
 - Invariants: never add suggestion state that is not derivable from events and aggregates; an ignore must
   stay an event so the forecast sees it.
