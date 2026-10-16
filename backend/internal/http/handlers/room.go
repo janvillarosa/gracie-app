@@ -63,6 +63,7 @@ func (h *RoomHandler) GetMyRoom(w http.ResponseWriter, r *http.Request) {
 		"created_at":       rm.CreatedAt,
 		"updated_at":       rm.UpdatedAt,
 		"my_deletion_vote": myVote,
+		"suggestions_off":  rm.SuggestionsOff,
 	}
 	api.WriteJSON(w, http.StatusOK, view)
 }
@@ -140,12 +141,13 @@ func (h *RoomHandler) JoinRoom(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	api.WriteJSON(w, http.StatusOK, map[string]any{
-		"display_name": rm.DisplayName,
-		"description":  rm.Description,
-		"members":      members,
-		"members_meta": membersMeta,
-		"created_at":   rm.CreatedAt,
-		"updated_at":   rm.UpdatedAt,
+		"display_name":    rm.DisplayName,
+		"description":     rm.Description,
+		"members":         members,
+		"members_meta":    membersMeta,
+		"created_at":      rm.CreatedAt,
+		"updated_at":      rm.UpdatedAt,
+		"suggestions_off": rm.SuggestionsOff,
 	})
 }
 
@@ -225,8 +227,9 @@ func (h *RoomHandler) CancelDeletion(w http.ResponseWriter, r *http.Request) {
 }
 
 type updateSettingsReq struct {
-	DisplayName *string `json:"display_name"`
-	Description *string `json:"description"`
+	DisplayName    *string `json:"display_name"`
+	Description    *string `json:"description"`
+	SuggestionsOff *bool   `json:"suggestions_off"`
 }
 
 func (h *RoomHandler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
@@ -260,11 +263,11 @@ func (h *RoomHandler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 		api.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": "description too long"})
 		return
 	}
-	if req.DisplayName == nil && req.Description == nil {
+	if req.DisplayName == nil && req.Description == nil && req.SuggestionsOff == nil {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
-	if err := h.Rooms.UpdateRoomSettings(r.Context(), u, req.DisplayName, req.Description); err != nil {
+	if err := h.Rooms.UpdateRoomSettings(r.Context(), u, req.DisplayName, req.Description, req.SuggestionsOff); err != nil {
 		code := http.StatusBadRequest
 		if err == derr.ErrNotFound {
 			code = http.StatusNotFound

@@ -10,7 +10,7 @@ import {
   getMyRoom,
 } from '@api/endpoints'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Card, Typography, Space, Button, Input, Form, Grid, message } from 'antd'
+import { Card, Typography, Space, Button, Input, Form, Grid, Switch, message } from 'antd'
 import { ArrowLeft, FloppyDisk, ShareNetwork, Trash, XCircle } from '@phosphor-icons/react'
 import { DESCRIPTION_RULE, isValidDisplayName, MAX_DESCRIPTION, NAME_RULE } from '@lib/validation'
 import { ShareCodeModal } from '@components/ShareCodeModal'
@@ -71,6 +71,21 @@ export const RoomSettings: React.FC = () => {
       message.error(errorMessage(e, 'Couldn’t save your changes. Try again.'))
     } finally {
       setSaving(false)
+    }
+  }
+
+  // Saves on toggle: it is a preference, not part of the name and description form.
+  const [savingSuggestions, setSavingSuggestions] = useState(false)
+  const onToggleSuggestions = async (on: boolean) => {
+    setSavingSuggestions(true)
+    try {
+      await updateRoomSettings(apiKey!, { suggestions_off: !on })
+      await qc.invalidateQueries({ queryKey: ['my-room'] })
+      qc.invalidateQueries({ queryKey: ['suggestions'] })
+    } catch (e) {
+      message.error(errorMessage(e, 'Couldn’t save that. Try again.'))
+    } finally {
+      setSavingSuggestions(false)
     }
   }
 
@@ -160,6 +175,25 @@ export const RoomSettings: React.FC = () => {
               Save
             </Button>
           </Form>
+          <div className="settings-toggle">
+            <div>
+              <Typography.Text strong id="smart-suggestions-label">
+                Smart suggestions
+              </Typography.Text>
+              <br />
+              <Typography.Text type="secondary" id="smart-suggestions-help">
+                Suggest things your house usually adds, a little before they’re due.
+              </Typography.Text>
+            </div>
+            <Switch
+              checked={!roomQuery.data?.suggestions_off}
+              disabled={!roomQuery.data || savingSuggestions}
+              loading={savingSuggestions}
+              onChange={onToggleSuggestions}
+              aria-labelledby="smart-suggestions-label"
+              aria-describedby="smart-suggestions-help"
+            />
+          </div>
           <Space wrap>
             <Button type="primary" onClick={onShare} icon={<ShareNetwork />}>
               Share code

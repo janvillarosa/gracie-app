@@ -30,6 +30,7 @@ const (
 	RoleNone     Role = iota
 	RoleRequest       // the thing was asked for (item.added)
 	RoleComplete      // the thing was done (item.checked, recipe.cooked)
+	RoleDismiss       // a suggestion for the thing was turned down; it counts against that forecast
 )
 
 // EventDef declares one event name. Domains register theirs at startup.

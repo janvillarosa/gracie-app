@@ -54,6 +54,8 @@ func main() {
 	var rollup *analytics.Worker
 	var purger *analytics.Purger
 	var insights *handlers.InsightsHandler
+	var suggestReader *analytics.Reader
+	var suggestEvents analytics.EventRepository
 	if cfg.AnalyticsEnabled {
 		eventsRepo := mongostore.NewEventRepo(mcli)
 		if err := eventsRepo.EnsureIndexes(ctx); err != nil {
@@ -67,7 +69,9 @@ func main() {
 			} else {
 				rollup = analytics.NewWorker(eventsRepo, aggRepo, analyticsReg)
 				purger = analytics.NewPurger(eventsRepo, aggRepo)
-				insights = handlers.NewInsightsHandler(services.NewInsightsService(roomsRepo, analytics.NewReader(aggRepo)))
+				reader := analytics.NewReader(aggRepo)
+				insights = handlers.NewInsightsHandler(services.NewInsightsService(roomsRepo, reader))
+				suggestReader, suggestEvents = reader, eventsRepo
 			}
 		}
 	}
@@ -105,6 +109,9 @@ func main() {
 	categorizers := buildCategorizers(ctx, cfg, indexArg(categoryIndex))
 	listSvc := services.NewListService(usersRepo, roomsRepo, listsRepo, itemsRepo, categorizers["grocery"])
 	tripSvc := services.NewTripService(roomsRepo, tripsRepo, listSvc, listsRepo)
+	// Smart suggestions answer with nothing while analytics is off (nil reader).
+	suggestSvc := services.NewSuggestionService(roomsRepo, listsRepo, itemsRepo, suggestReader, suggestEvents, services.ParseSuggestionMode(cfg.SuggestionsMode))
+	log.Printf("suggestions: mode %s", services.ParseSuggestionMode(cfg.SuggestionsMode))
 
 	// Coordinates -> time zone for Google places sent without one. The tzf dataset
 	// (~34 MB heap, ~150 ms) loads lazily on the first such place, never at startup.
@@ -115,7 +122,7 @@ func main() {
 		log.Fatalf("auth service: %v", err)
 	}
 
-	for _, svc := range []interface{ UseRecorder(analytics.Recorder) }{userSvc, roomSvc, listSvc, tripSvc, authSvc} {
+	for _, svc := range []interface{ UseRecorder(analytics.Recorder) }{userSvc, roomSvc, listSvc, tripSvc, authSvc, suggestSvc} {
 		svc.UseRecorder(recorder)
 	}
 	if purger != nil {
@@ -132,7 +139,7 @@ func main() {
 
 	eventsHandler := handlers.NewEventsHandler(recorder, analyticsReg, ratelimit.New(cfg.AnalyticsEventsRPS, ratelimit.Burst(cfg.AnalyticsEventsRPS)))
 
-	r := router.NewRouter(usersRepo, router.Handlers{Auth: authHandler, User: userHandler, Room: roomHandler, List: listHandler, Trip: tripHandler, Events: eventsHandler, Insights: insights})
+	r := router.NewRouter(usersRepo, router.Handlers{Auth: authHandler, User: userHandler, Room: roomHandler, List: listHandler, Trip: tripHandler, Events: eventsHandler, Insights: insights, Suggestions: handlers.NewSuggestionsHandler(suggestSvc)})
 
 	// Google Maps Platform allows storing coordinates for 30 days: purge stale ones at startup
 	// and daily (plus up to an hour of jitter so instances do not fire together).

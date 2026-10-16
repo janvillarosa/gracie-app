@@ -38,6 +38,7 @@ func (r *AggRepo) EnsureIndexes(ctx context.Context) error {
 	_, err := r.keys().Indexes().CreateMany(ctx, []mgo.IndexModel{
 		{Keys: bson.D{{Key: "room_id", Value: 1}, {Key: "subject_type", Value: 1}, {Key: "intervals.due_at", Value: 1}}},
 		{Keys: bson.D{{Key: "room_id", Value: 1}, {Key: "subject_type", Value: 1}, {Key: "last_at.added", Value: -1}}},
+		{Keys: bson.D{{Key: "room_id", Value: 1}, {Key: "subject_type", Value: 1}, {Key: "intervals.add.opens_at", Value: 1}}},
 	})
 	return err
 }
@@ -165,12 +166,22 @@ func (r *AggRepo) SetKeyIntervals(ctx context.Context, id string, iv analytics.K
 		{Key: "intervals.last_at", Value: iv.LastAt.UTC()},
 		{Key: "intervals.computed_at", Value: iv.ComputedAt.UTC()},
 	}
-	var update bson.D
+	var unset bson.D
 	if iv.DueAt != nil {
 		set = append(set, bson.E{Key: "intervals.due_at", Value: iv.DueAt.UTC()})
-		update = bson.D{{Key: "$set", Value: set}}
 	} else {
-		update = bson.D{{Key: "$set", Value: set}, {Key: "$unset", Value: bson.D{{Key: "intervals.due_at", Value: ""}}}}
+		unset = append(unset, bson.E{Key: "intervals.due_at", Value: ""})
+	}
+	if iv.Add != nil {
+		a := *iv.Add
+		a.LastAt, a.DueAt, a.OpensAt, a.ClosesAt = a.LastAt.UTC(), a.DueAt.UTC(), a.OpensAt.UTC(), a.ClosesAt.UTC()
+		set = append(set, bson.E{Key: "intervals.add", Value: a})
+	} else {
+		unset = append(unset, bson.E{Key: "intervals.add", Value: ""})
+	}
+	update := bson.D{{Key: "$set", Value: set}}
+	if len(unset) > 0 {
+		update = append(update, bson.E{Key: "$unset", Value: unset})
 	}
 	// No upsert: the document was created by ApplyBatch; a key deleted since is simply gone.
 	_, err := r.keys().UpdateOne(ctx, bson.D{{Key: "_id", Value: id}}, update)
@@ -306,6 +317,23 @@ func (r *AggRepo) DueKeys(ctx context.Context, roomID, subjectType string, befor
 	filter := bson.D{{Key: "room_id", Value: roomID}, {Key: "subject_type", Value: subjectType},
 		{Key: "intervals.due_at", Value: bson.D{{Key: "$lt", Value: before.UTC()}}}}
 	cur, err := r.keys().Find(ctx, filter, options.Find().SetSort(bson.D{{Key: "intervals.due_at", Value: 1}}).SetLimit(int64(limit)))
+	if err != nil {
+		return nil, err
+	}
+	var out []analytics.KeyStat
+	if err := cur.All(ctx, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (r *AggRepo) UpcomingKeys(ctx context.Context, roomID, subjectType string, now time.Time, minScore, maxCV float64, limit int) ([]analytics.KeyStat, error) {
+	filter := bson.D{{Key: "room_id", Value: roomID}, {Key: "subject_type", Value: subjectType},
+		{Key: "intervals.add.opens_at", Value: bson.D{{Key: "$lte", Value: now.UTC()}}},
+		{Key: "intervals.add.closes_at", Value: bson.D{{Key: "$gte", Value: now.UTC()}}},
+		{Key: "intervals.add.score", Value: bson.D{{Key: "$gte", Value: minScore}}},
+		{Key: "intervals.add.cv", Value: bson.D{{Key: "$lte", Value: maxCV}}}}
+	cur, err := r.keys().Find(ctx, filter, options.Find().SetSort(bson.D{{Key: "intervals.add.score", Value: -1}, {Key: "key", Value: 1}}).SetLimit(int64(limit)))
 	if err != nil {
 		return nil, err
 	}

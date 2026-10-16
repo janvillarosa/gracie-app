@@ -180,6 +180,27 @@ own events.
   carry no trip link (the trip lead-time model uses `trip.packing_list_created` instead);
   `GetPantry` still scans history and can move to `key_stats`.
 
+## Smart suggestions
+
+Spec: `docs/superpowers/specs/2026-10-16-smart-suggestions-design.md`. A suggestion is a pure function of
+the analytics aggregates and the live list; the only state is `Room.SuggestionsOff` and the events.
+
+- **Forecast** (`analytics/predict/forecast.go`, pure): `Params.Predict` forecasts the next add and
+  scores it by **backtesting** its own history (Wilson lower bound of hits/trials). The fold stores it as
+  `KeyIntervals.Add`; `Reader.Upcoming` reads keys whose window is open now. Tune `DefaultParams` with
+  `suggest-eval`, not by feel. Adds are preferred; checks are the fallback; no profile is required.
+- **Service** (`services/suggestion_service.go`): `ForList` (home list, not already on the list, not ignored
+  this cycle, raw events newer than the rollup win) and `Ignore` (emits `item.suggestion_ignored`, a
+  `RoleDismiss` event that counts against the forecast). Routes: `GET .../lists/{id}/suggestions`,
+  `POST .../suggestions/ignore {key}`.
+- **Mode** `SUGGESTIONS_MODE=off|shadow|on` (default shadow). Shadow records `item.suggestion_predicted`
+  (`Skip: true`, never rolled up; deterministic id per house, item and cycle) and returns nothing.
+- **`cmd/suggest-eval`** `backtest | shadow | backfill [-apply]`, backed by `analytics/eval` (pure, shared
+  with the tests). Go-live gate: shadow precision >= 70% over >= 50 settled predictions across >= 2 weeks.
+- **House setting:** `PUT /rooms/settings {suggestions_off}`; `GET /rooms/me` returns it.
+- Invariants: never add suggestion state that is not derivable from events and aggregates; an ignore must
+  stay an event so the forecast sees it.
+
 ## Testing
 
 The fast path is in-process and honest:

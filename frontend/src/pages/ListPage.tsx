@@ -18,8 +18,10 @@ import {
   updateList,
   clearListItems,
   getRoomPantry,
+  getListSuggestions,
+  ignoreListSuggestion,
 } from '@api/endpoints'
-import type { List, ListItem, PantryItem } from '@api/types'
+import type { List, ListItem, ListSuggestion, PantryItem } from '@api/types'
 import {
   Card,
   Typography,
@@ -67,6 +69,7 @@ import { useStableCallback } from '@lib/useStableCallback'
 import { useDocumentTitle } from '@lib/useDocumentTitle'
 import { ItemRow, reorderLock } from '@components/ItemRow'
 import { AddItemBar } from '@components/AddItemBar'
+import { SuggestionSlip } from '@components/SuggestionSlip'
 import { track } from '@lib/analytics'
 import { TopNav } from '@components/TopNav'
 import { PillNav } from '@components/PillNav'
@@ -170,6 +173,20 @@ export const ListPage: React.FC = () => {
     retry: false,
     staleTime: 5 * 60_000,
   })
+
+  // Smart suggestion: the one thing the house usually adds around now. The server decides
+  // (and answers with nothing when the feature is off); a failure just means no slip.
+  const suggestionsKey = ['suggestions', roomId, listId]
+  const suggestionsQuery = useQuery({
+    queryKey: suggestionsKey,
+    queryFn: () => getListSuggestions(apiKey!, roomId!, listId),
+    enabled: !!roomId && !!listId,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    retry: false,
+    staleTime: 60_000,
+  })
+  const suggestion = suggestionsQuery.data?.[0]
 
   // Items that replace a skeleton fade in; cached items just appear with the sheet.
   const itemsWereLoading = useRef(false)
@@ -300,7 +317,11 @@ export const ListPage: React.FC = () => {
   const inFlight = useRef(0)
   const settle = () => {
     inFlight.current -= 1
-    if (inFlight.current === 0) qc.invalidateQueries({ queryKey: ['list-items', listId] })
+    if (inFlight.current === 0) {
+      qc.invalidateQueries({ queryKey: ['list-items', listId] })
+      // What is on the list changed, so what is worth suggesting may have too.
+      qc.invalidateQueries({ queryKey: ['suggestions', roomId, listId] })
+    }
   }
 
   // Server id -> the temporary id a row was first rendered with, so swapping in the
@@ -332,7 +353,7 @@ export const ListPage: React.FC = () => {
   // Adds appear instantly: insert a placeholder row, then swap in the server's item
   // (which carries the category) when the request returns.
   const onCreateItem = useStableCallback(
-    async (p: { description: string; quantity?: string; unit?: string }) => {
+    async (p: { description: string; quantity?: string; unit?: string; source?: 'suggestion' }) => {
       const tempId = `tmp-${++tempSeq.current}`
       const now = new Date().toISOString()
       const maxOrder = items.reduce((m, x) => Math.max(m, x.order || 0), 0)
@@ -376,6 +397,51 @@ export const ListPage: React.FC = () => {
       }
     },
   )
+
+  const nudge = (name: 'nudge.shown' | 'nudge.tapped' | 'nudge.dismissed') =>
+    track(name, {
+      subject: { type: 'nudge', id: 'recurring' },
+      container: { type: 'list', id: listId },
+      props: { kind: 'recurring' },
+    })
+
+  // One slip at a time: taking or ignoring it pops it, and the next in line (if any) shows.
+  const dropSuggestion = (key: string) =>
+    qc.setQueryData<ListSuggestion[]>(suggestionsKey, (prev) => prev?.filter((s) => s.key !== key))
+
+  const onAddSuggestion = useStableCallback(async (s: ListSuggestion) => {
+    nudge('nudge.tapped')
+    dropSuggestion(s.key)
+    try {
+      await onCreateItem({
+        description: s.description,
+        quantity: s.quantity,
+        unit: s.unit,
+        source: 'suggestion',
+      })
+    } catch {
+      // onCreateItem already rolled back and told the user; bring the slip back.
+      qc.invalidateQueries({ queryKey: suggestionsKey })
+    }
+  })
+
+  const onIgnoreSuggestion = useStableCallback(async (s: ListSuggestion) => {
+    nudge('nudge.dismissed')
+    dropSuggestion(s.key)
+    try {
+      await ignoreListSuggestion(apiKey!, roomId!, listId, s.key)
+    } catch {
+      qc.invalidateQueries({ queryKey: suggestionsKey })
+    }
+  })
+
+  // nudge.shown once per slip per visit, not once per render.
+  const shownKeys = useRef(new Set<string>())
+  useEffect(() => {
+    if (!suggestion || shownKeys.current.has(suggestion.key)) return
+    shownKeys.current.add(suggestion.key)
+    nudge('nudge.shown')
+  }, [suggestion?.key])
 
   // Optimistically rewrite every cached variant of this list's items; returns a rollback.
   const applyOptimistic = async (
@@ -820,6 +886,13 @@ export const ListPage: React.FC = () => {
                   ),
                   children: (
                     <>
+                      {suggestion && (
+                        <SuggestionSlip
+                          suggestion={suggestion}
+                          onAdd={onAddSuggestion}
+                          onIgnore={onIgnoreSuggestion}
+                        />
+                      )}
                       <Space
                         // Remount when the items arrive so a skeleton hands over with a fade
                         key={itemsQuery.isLoading ? 'loading' : 'ready'}

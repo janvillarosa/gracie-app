@@ -6,6 +6,7 @@ import type {
   List,
   ListItem,
   ListIcon,
+  ListSuggestion,
   PantryItem,
 } from './types'
 
@@ -83,7 +84,7 @@ export async function cancelDeletion(apiKey: string): Promise<void> {
 
 export async function updateRoomSettings(
   apiKey: string,
-  params: { display_name?: string; description?: string },
+  params: { display_name?: string; description?: string; suggestions_off?: boolean },
 ): Promise<RoomView> {
   return apiFetch<RoomView>(`/rooms/settings`, {
     method: 'PUT',
@@ -201,12 +202,44 @@ export async function createListItem(
   apiKey: string,
   roomId: string,
   listId: string,
-  params: { description: string; quantity?: string; unit?: string; category?: string },
+  params: {
+    description: string
+    quantity?: string
+    unit?: string
+    category?: string
+    // 'suggestion' when the add came from tapping a smart suggestion.
+    source?: 'suggestion'
+  },
 ): Promise<ListItem> {
   return apiFetch<ListItem>(`/rooms/${roomId}/lists/${listId}/items`, {
     method: 'POST',
     apiKey,
     body: JSON.stringify(params),
+  })
+}
+
+export async function getListSuggestions(
+  apiKey: string,
+  roomId: string,
+  listId: string,
+): Promise<ListSuggestion[]> {
+  const r = await apiFetch<{ suggestions: ListSuggestion[] }>(
+    `/rooms/${roomId}/lists/${listId}/suggestions`,
+    { apiKey },
+  )
+  return r.suggestions
+}
+
+export async function ignoreListSuggestion(
+  apiKey: string,
+  roomId: string,
+  listId: string,
+  key: string,
+): Promise<void> {
+  await apiFetch<void>(`/rooms/${roomId}/lists/${listId}/suggestions/ignore`, {
+    method: 'POST',
+    apiKey,
+    body: JSON.stringify({ key }),
   })
 }
 

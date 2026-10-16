@@ -84,6 +84,15 @@ why the config forces a single fork.
   (`onClearCompleted`) works the same way: rows leave at once, the `/clear` request waits for the
   toast to close, Undo cancels it.
 
+## Smart suggestions
+
+`ListPage` asks `GET /rooms/{id}/lists/{list}/suggestions` and shows the **first** answer as one
+`SuggestionSlip` above the items (never inside the list or the add bar). Add goes through `onCreateItem`
+with `source: 'suggestion'`; Ignore posts the key. Both pop the slip optimistically and the next one shows;
+a failed call re-fetches. The server decides everything (confidence, home list, house setting), so a
+failure or an empty answer just shows nothing. Events: `nudge.shown|tapped|dismissed` with
+`kind: 'recurring'`. The House settings page has the on/off switch (`suggestions_off`).
+
 ## Behavior tracking (`lib/analytics/`)
 
 - `tracker.ts` is a small injectable queue (`Tracker`); `index.ts` binds it to the API and `localStorage`.

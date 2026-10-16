@@ -83,3 +83,48 @@ func TestMongoProfilesDirtySetAndDueKeys(t *testing.T) {
 		t.Fatal("DeleteByUser left period stats behind")
 	}
 }
+
+func TestMongoUpcomingKeysAndContainers(t *testing.T) {
+	c := connectOrSkip(t)
+	ctx := context.Background()
+	events := NewEventRepo(c)
+	aggs := NewAggRepo(c, NewTx(c))
+	_ = events.EnsureIndexes(ctx)
+	_ = aggs.EnsureIndexes(ctx)
+
+	room := "r_up_" + randHex(4)
+	// Eight weekly adds ending a week ago: the next one is due now.
+	base := time.Now().UTC().AddDate(0, 0, -56).Truncate(time.Hour)
+	var evs []analytics.Event
+	for i := 0; i < 8; i++ {
+		evs = append(evs, storedEvent("up"+room+string(rune('a'+i)), "item.added", "u1", room, "milk", base.AddDate(0, 0, 7*i)))
+	}
+	if err := events.InsertMany(ctx, evs); err != nil {
+		t.Fatal(err)
+	}
+	w := analytics.NewWorker(events, aggs, analyticsReg())
+	if _, err := w.FoldOnce(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	now := time.Now().UTC()
+	got, err := aggs.UpcomingKeys(ctx, room, "item", now, 0.65, 0.5, 10)
+	if err != nil || len(got) != 1 || got[0].Key != "milk" {
+		t.Fatalf("upcoming: %+v %v", got, err)
+	}
+	if got[0].Containers["list:list_1"] != 8 {
+		t.Fatalf("containers must decode onto KeyStat: %+v", got[0].Containers)
+	}
+	if a := got[0].Intervals.Add; a == nil || a.Trials != 5 || a.Hits != 5 || a.Series != "added" {
+		t.Fatalf("stored forecast: %+v", got[0].Intervals)
+	}
+	if early, _ := aggs.UpcomingKeys(ctx, room, "item", now.AddDate(0, 0, -6), 0.65, 0.5, 10); len(early) != 0 {
+		t.Fatalf("window not open yet: %+v", early)
+	}
+	if strict, _ := aggs.UpcomingKeys(ctx, room, "item", now, 0.99, 0.5, 10); len(strict) != 0 {
+		t.Fatalf("score below the bar: %+v", strict)
+	}
+	if other, _ := aggs.UpcomingKeys(ctx, "other_room", "item", now, 0.65, 0.5, 10); len(other) != 0 {
+		t.Fatalf("other house: %+v", other)
+	}
+}

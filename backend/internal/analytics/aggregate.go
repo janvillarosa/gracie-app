@@ -68,6 +68,25 @@ type KeyIntervals struct {
 	LastAt     time.Time  `bson:"last_at" json:"last_at"`                   // latest counted occurrence
 	DueAt      *time.Time `bson:"due_at,omitempty" json:"due_at,omitempty"` // LastAt + EWMADays; nil until there is enough history
 	ComputedAt time.Time  `bson:"computed_at" json:"computed_at"`
+	// Add forecasts the next time the thing is asked for, with its backtested track record.
+	// Nil until there is enough history. Smart suggestions read only this.
+	Add *AddForecast `bson:"add,omitempty" json:"add,omitempty"`
+}
+
+// AddForecast is a stored predict.Forecast: when the thing is next expected to be added, the
+// window a suggestion for it is shown in, and how often that window was right in the past.
+type AddForecast struct {
+	Series   string    `bson:"series" json:"series"` // "added" or "checked"
+	N        int       `bson:"n" json:"n"`
+	EWMADays float64   `bson:"ewma_days" json:"ewma_days"`
+	CV       float64   `bson:"cv" json:"cv"`
+	LastAt   time.Time `bson:"last_at" json:"last_at"` // start of the current cycle
+	DueAt    time.Time `bson:"due_at" json:"due_at"`
+	OpensAt  time.Time `bson:"opens_at" json:"opens_at"`
+	ClosesAt time.Time `bson:"closes_at" json:"closes_at"`
+	Trials   int       `bson:"trials" json:"trials"`
+	Hits     int       `bson:"hits" json:"hits"`
+	Score    float64   `bson:"score" json:"score"`
 }
 
 // KeyStat is what is known about one thing in a house ("whole milk"): how often it was
@@ -82,6 +101,8 @@ type KeyStat struct {
 	LastAt      map[string]time.Time        `bson:"last_at" json:"last_at"`
 	ByActor     map[string]map[string]int64 `bson:"by_actor,omitempty" json:"by_actor,omitempty"`
 	Intervals   *KeyIntervals               `bson:"intervals,omitempty" json:"intervals,omitempty"`
+	// Containers counts the key's events per container ("list:<id>"): where the thing lives.
+	Containers map[string]int64 `bson:"containers,omitempty" json:"-"`
 }
 
 // AggregateRepository stores the precomputed documents and the rollup bookkeeping.
@@ -109,6 +130,9 @@ type AggregateRepository interface {
 	GetKeyStats(ctx context.Context, roomID, subjectType string, keys []string) (map[string]KeyStat, error)
 	// DueKeys returns keys whose predicted due date falls before `before`, soonest first.
 	DueKeys(ctx context.Context, roomID, subjectType string, before time.Time, limit int) ([]KeyStat, error)
+	// UpcomingKeys returns keys whose add forecast window contains now, with a score of at
+	// least minScore and a CV of at most maxCV, highest score first.
+	UpcomingKeys(ctx context.Context, roomID, subjectType string, now time.Time, minScore, maxCV float64, limit int) ([]KeyStat, error)
 	// DeleteByRoom and DeleteByUser remove aggregates when a house or account is deleted.
 	DeleteByRoom(ctx context.Context, roomID string) error
 	DeleteByUser(ctx context.Context, userID string) error

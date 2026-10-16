@@ -17,6 +17,7 @@ export const tripServer = new MockTripServer()
 export const server = setupServer(
   ...tripHandlers(tripServer),
   http.get('/api/rooms/:roomId/pantry', () => json([])),
+  http.get('/api/rooms/:roomId/lists/:listId/suggestions', () => json({ suggestions: [] })),
   http.post('/api/events', () => json({ accepted: 0, rejected: 0 })),
   http.get('/api/rooms/me', () => json({ display_name: 'The House', members: [] })),
 )

@@ -125,6 +125,12 @@ func toKeyStat(doc map[string]any) analytics.KeyStat {
 			ks.ByActor[actor] = verbs
 		}
 	}
+	if m, ok := doc["containers"].(map[string]any); ok {
+		ks.Containers = map[string]int64{}
+		for k, v := range m {
+			ks.Containers[k], _ = v.(int64)
+		}
+	}
 	if iv, ok := doc["intervals"].(analytics.KeyIntervals); ok {
 		ks.Intervals = &iv
 	}
@@ -157,6 +163,35 @@ func (r *AggRepo) DueKeys(_ context.Context, roomID, subjectType string, before 
 		}
 	}
 	sort.SliceStable(out, func(i, j int) bool { return out[i].Intervals.DueAt.Before(*out[j].Intervals.DueAt) })
+	if limit > 0 && len(out) > limit {
+		out = out[:limit]
+	}
+	return out, nil
+}
+
+func (r *AggRepo) UpcomingKeys(_ context.Context, roomID, subjectType string, now time.Time, minScore, maxCV float64, limit int) ([]analytics.KeyStat, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	var out []analytics.KeyStat
+	for id, doc := range r.keys {
+		if !strings.HasPrefix(id, roomID+":"+subjectType+":") {
+			continue
+		}
+		ks := toKeyStat(doc)
+		if ks.Intervals == nil || ks.Intervals.Add == nil {
+			continue
+		}
+		a := ks.Intervals.Add
+		if !a.OpensAt.After(now) && !a.ClosesAt.Before(now) && a.Score >= minScore && a.CV <= maxCV {
+			out = append(out, ks)
+		}
+	}
+	sort.SliceStable(out, func(i, j int) bool {
+		if si, sj := out[i].Intervals.Add.Score, out[j].Intervals.Add.Score; si != sj {
+			return si > sj
+		}
+		return out[i].Key < out[j].Key
+	})
 	if limit > 0 && len(out) > limit {
 		out = out[:limit]
 	}

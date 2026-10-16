@@ -76,7 +76,9 @@ export default defineConfig(({ isSsrBuild }) => ({
       reporter: ['text', 'lcov'],
       reportsDirectory: 'coverage',
       // The dev-only mock worker and its seed data are exercised by hand, not by tests.
-      exclude: ['src/mocks/browser.ts', 'src/mocks/seed.ts'],
+      // Setting exclude replaces Vitest's defaults, so build output is listed again: `make check`
+      // builds before it tests, and minified bundles would otherwise count as untested functions.
+      exclude: ['src/mocks/browser.ts', 'src/mocks/seed.ts', 'dist/**', 'dist-ssr/**', 'coverage/**'],
       // Ratchet floor set just below the current baseline (statements 45.7%,
       // branches 76.8%, functions 75.0%, lines 45.7%). Vitest reads these as
       // percentages (0-100). Raise them as coverage grows; never lower.

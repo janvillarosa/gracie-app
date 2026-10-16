@@ -141,6 +141,19 @@ func TestMongoRoomRepoCRUD(t *testing.T) {
 	if err := rr.UpdateDescription(context.Background(), rm.RoomID, "u2", "Desc", time.Now().UTC()); err != nil {
 		t.Fatalf("upd desc: %v", err)
 	}
+	// smart suggestions setting: only "off" is stored; on is the absent field
+	if err := rr.SetSuggestionsOff(context.Background(), rm.RoomID, "u2", true, time.Now().UTC()); err != nil {
+		t.Fatalf("suggestions off: %v", err)
+	}
+	if got, _ := rr.GetByID(context.Background(), rm.RoomID); got == nil || !got.SuggestionsOff {
+		t.Fatalf("suggestions_off not stored: %+v", got)
+	}
+	if err := rr.SetSuggestionsOff(context.Background(), rm.RoomID, "u2", false, time.Now().UTC()); err != nil {
+		t.Fatalf("suggestions on: %v", err)
+	}
+	if got, _ := rr.GetByID(context.Background(), rm.RoomID); got == nil || got.SuggestionsOff {
+		t.Fatalf("suggestions_off not cleared: %+v", got)
+	}
 	if err := rr.Delete(context.Background(), rm.RoomID); err != nil {
 		t.Fatalf("delete: %v", err)
 	}
