@@ -86,6 +86,7 @@ func NewRouter(userFinder authmw.UserFinder, h Handlers) http.Handler {
 		ar.Get("/rooms/me", h.Room.GetMyRoom)
 		ar.Get("/rooms/{room_id}/pantry", h.List.GetPantry)
 		ar.Post("/rooms", h.Room.CreateSoloRoom)
+		ar.Get("/rooms/share", h.Room.GetShareToken)
 		ar.Post("/rooms/share", h.Room.ShareRoom)
 		ar.Post("/rooms/join", h.Room.JoinByToken)
 		ar.Post("/rooms/{room_id}/join", h.Room.JoinRoom)

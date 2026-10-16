@@ -34,6 +34,9 @@ type RoomRepository interface {
 	GetByID(ctx context.Context, id string) (*models.Room, error)
 	GetByShareToken(ctx context.Context, token string) (*models.Room, error)
 	SetShareToken(ctx context.Context, roomID string, userID string, token string, updatedAt time.Time) error
+	// SetShareTokenIfAbsent sets token only when the room has no share token, atomically, and
+	// returns the token the room holds afterwards (the existing one, or this one).
+	SetShareTokenIfAbsent(ctx context.Context, roomID string, userID string, token string, updatedAt time.Time) (string, error)
 	RemoveShareToken(ctx context.Context, roomID string, updatedAt time.Time) error
 	UpdateDescription(ctx context.Context, roomID string, userID string, description string, updatedAt time.Time) error
 	UpdateDisplayName(ctx context.Context, roomID string, userID string, displayName string, updatedAt time.Time) error

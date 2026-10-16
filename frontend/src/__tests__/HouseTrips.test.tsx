@@ -54,6 +54,20 @@ describe('House page: Lists and Trips as a pill switch', () => {
     expect(here()).toBe('/app')
   })
 
+  it('keeps the House mounted across a pill switch: only the pane changes', async () => {
+    renderTrips('/app')
+    const title = await screen.findByRole('heading', { level: 1 })
+    const invite = screen.getByRole('button', { name: /invite/i })
+    await userEvent.click(screen.getByRole('tab', { name: 'Trips' }))
+    await screen.findByRole('button', { name: /New trip/ })
+    // The same nodes, not a fresh page: nothing above the pills is rebuilt or re-animated.
+    expect(screen.getByRole('heading', { level: 1 })).toBe(title)
+    expect(screen.getByRole('button', { name: /invite/i })).toBe(invite)
+    await userEvent.click(screen.getByRole('tab', { name: 'Lists' }))
+    await screen.findByRole('button', { name: /New list/ })
+    expect(screen.getByRole('heading', { level: 1 })).toBe(title)
+  })
+
   it('moves between pills with the arrow keys', async () => {
     renderTrips('/app')
     const lists = await screen.findByRole('tab', { name: 'Lists' })
@@ -162,7 +176,7 @@ describe('Trips pill', () => {
 
   it('says so, in the House voice, when there are no trips', async () => {
     renderTrips('/app/trips')
-    expect(await screen.findByText('No trips yet. Where to first?')).toBeInTheDocument()
+    expect(await screen.findByText('No trips yet')).toBeInTheDocument()
   })
 
   it('asks one thing to create a trip, then opens it', async () => {

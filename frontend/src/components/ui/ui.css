@@ -47,6 +47,7 @@
 .ui-btn.is-key.is-danger {
   background: var(--brand-red);
   color: var(--on-red);
+  box-shadow: var(--shadow-key-danger);
 }
 .ui-btn.is-quiet {
   min-height: var(--control-md);
@@ -92,6 +93,9 @@
 @media (hover: hover) {
   .ui-btn.is-key:hover:not(:disabled) {
     box-shadow: var(--shadow-key-hover);
+  }
+  .ui-btn.is-key.is-danger:hover:not(:disabled) {
+    box-shadow: var(--shadow-key-danger-hover);
   }
   .ui-btn.is-quiet:hover:not(:disabled),
   .ui-btn.is-text:hover:not(:disabled) {
@@ -555,6 +559,11 @@ input.ui-sheet-title {
 input.ui-sheet-title:focus-visible {
   box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--brand-blue) 70%, transparent);
   outline: none;
+}
+/* A title that breaks its rule says so in red, focused or not. */
+input.ui-sheet-title.has-error,
+input.ui-sheet-title.has-error:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--brand-red);
 }
 .ui-sheet-titlerow {
   display: flex;

@@ -1,33 +1,32 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { errorMessage } from '@lib/errors'
 import { deviceZone } from '@lib/trips/limits'
-import type { RoomView, List } from '@api/types'
+import type { RoomView, List, ListIcon } from '@api/types'
 import { useAuth } from '@auth/AuthProvider'
+import { useNavigate } from 'react-router-dom'
 import { useTransitionNavigate } from '@lib/viewTransition'
 import {
   createList,
   getLists,
-  rotateShare,
   voteListDeletion,
   cancelListDeletion,
   updateList,
 } from '@api/endpoints'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useLiveQueryOpts } from '@lib/liveQuery'
-import { Card, Typography, Space, Button, List as AntList, Dropdown, message } from 'antd'
+import { Card, List as AntList, Dropdown, message } from 'antd'
 import {
   DotsThreeVertical,
   CaretRight,
-  ShareNetwork,
   Plus,
-  FloppyDisk,
-  X,
   GearSix,
+  ListBullets,
+  UserPlus,
 } from '@phosphor-icons/react'
-import type { MenuProps } from 'antd'
 import { IconPicker } from '@components/IconPicker'
-import { AvatarBadge } from '@components/AvatarBadge'
-import { ShareCodeModal } from '@components/ShareCodeModal'
+import { AvatarStack } from '@components/AvatarStack'
+import { ShareCodeSheet } from '@components/ShareCodeSheet'
+import { DeleteVoteSheet } from '@components/DeleteVoteSheet'
 import { TopNav } from '@components/TopNav'
 import { TransitionLink } from '@components/TransitionLink'
 import { RowSkeleton } from '@components/RowSkeleton'
@@ -38,14 +37,15 @@ import { useTripState, useTripStoreFor } from '@lib/trips/hooks'
 import { localDateKey, tripPhase } from '@lib/trips/schedule'
 import { toEmoji } from '../icons'
 import {
-  Button as KeyButton,
+  Button,
   DetailGroup,
+  EmptyState,
   Field,
   NavRow,
   Sheet,
   SheetActions,
+  Stamp,
 } from '@components/ui'
-import type { ListIcon } from '@api/types'
 import { useDocumentTitle } from '@lib/useDocumentTitle'
 
 const PILL_KEY = 'bauhouse_house_pill'
@@ -57,6 +57,20 @@ export const lastHousePill = (): 'lists' | 'trips' => {
   }
 }
 
+type Member = { name: string; avatar_key: string; user_id?: string }
+
+/** "Just you", "Mia and Sam", "Mia, Sam and Jo", "Mia, Sam and 2 more". */
+export const memberLine = (members: Member[], me?: string): string => {
+  if (members.length <= 1)
+    return members.length && members[0].user_id !== me ? members[0].name : 'Just you'
+  const names = members.map((m) => m.name)
+  if (names.length === 2) return `${names[0]} and ${names[1]}`
+  if (names.length === 3) return `${names[0]}, ${names[1]} and ${names[2]}`
+  return `${names[0]}, ${names[1]} and ${names.length - 2} more`
+}
+
+const packingOf = (l: List) => l.name.startsWith('Packing · ')
+
 export const RoomPage: React.FC<{
   room: RoomView
   roomId: string
@@ -66,23 +80,28 @@ export const RoomPage: React.FC<{
 }> = ({ room, roomId, userId, tab = 'lists' }) => {
   const { apiKey } = useAuth()
   const navigate = useTransitionNavigate()
-  useDocumentTitle(room.display_name || 'House')
-  const [shareOpen, setShareOpen] = useState(false)
-  const [shareToken, setShareToken] = useState<string | null>(null)
+  // A pill switch is not a new page: PillNav slides its own pane, so no whole-page cross-fade.
+  const navigateInPlace = useNavigate()
+  const houseName = room.display_name || 'House'
+  useDocumentTitle(houseName)
+  const qc = useQueryClient()
+  const members: Member[] =
+    room.members_meta ?? room.members.map((name) => ({ name, avatar_key: name }))
+  const memberCount = Math.max(members.length, 1)
 
+  const [shareOpen, setShareOpen] = useState(false)
+  const [createOpen, setCreateOpen] = useState(false)
   const [creating, setCreating] = useState(false)
   const [newName, setNewName] = useState('')
   const [newDesc, setNewDesc] = useState('')
-  const [createOpen, setCreateOpen] = useState(false)
-  const [editOpen, setEditOpen] = useState(false)
-  const [editing, setEditing] = useState(false)
+  const [newIcon, setNewIcon] = useState<ListIcon | undefined>(undefined)
+  // Edit list: the sheet autosaves each field as it is committed.
   const [editTarget, setEditTarget] = useState<List | null>(null)
   const [editName, setEditName] = useState('')
   const [editDesc, setEditDesc] = useState('')
-  const [newIcon, setNewIcon] = useState<ListIcon | undefined>(undefined)
   const [editIcon, setEditIcon] = useState<ListIcon | undefined>(undefined)
-  const [editIconTouched, setEditIconTouched] = useState(false)
-  const qc = useQueryClient()
+  const [deleting, setDeleting] = useState<List | null>(null)
+
   const tripStore = useTripStoreFor(roomId, userId, apiKey)
   const tripState = useTripState(tripStore)
   const [newTripOpen, setNewTripOpen] = useState(false)
@@ -95,7 +114,7 @@ export const RoomPage: React.FC<{
     try {
       localStorage.setItem(PILL_KEY, next)
     } catch {}
-    navigate(next === 'trips' ? '/app/trips' : '/app')
+    navigateInPlace(next === 'trips' ? '/app/trips' : '/app')
   }
   // The pill is remembered for this viewer; the URL is what is shown.
   useEffect(() => {
@@ -104,49 +123,46 @@ export const RoomPage: React.FC<{
     } catch {}
   }, [tab])
 
-  const onShare = async () => {
-    try {
-      const r = await rotateShare(apiKey!)
-      setShareToken(r.token)
-      setShareOpen(true)
-    } catch (e: any) {
-      message.error(errorMessage(e, 'Couldn’t get your share code. Try again.'))
-    }
-  }
-
-  const parseMs = (v: any, def: number) => {
+  const parseMs = (v: unknown, def: number) => {
     const n = Number(v)
     return Number.isFinite(n) && n > 0 ? n : def
   }
-  const listsMs = parseMs((import.meta as any).env?.VITE_LIVE_QUERY_LISTS_MS, 4000)
+  const listsMs = parseMs(import.meta.env?.VITE_LIVE_QUERY_LISTS_MS, 4000)
   const liveOpts = useLiveQueryOpts(listsMs)
   const listsQuery = useQuery({
     queryKey: ['lists', roomId],
-    queryFn: () => getLists(apiKey!, roomId),
+    queryFn: () => getLists(apiKey as string, roomId),
     ...liveOpts,
   })
   const lists = listsQuery.data ?? []
   // Rows that replace a skeleton fade in; rows already cached just appear with the sheet.
   const listsWereLoading = useRef(false)
   if (listsQuery.isLoading) listsWereLoading.current = true
+  const refreshLists = () => qc.invalidateQueries({ queryKey: ['lists', roomId] })
 
-  // Deletion actions removed from dashboard; keep minimal helpers only if needed elsewhere
+  const votesOf = (l: List) => Object.keys(l.deletion_votes ?? {})
+  const othersVoted = (l: List) => votesOf(l).filter((id) => id !== userId).length
+  const iVoted = (l: List) => !!l.deletion_votes?.[userId]
+  const nameOf = (id: string) => members.find((m) => m.user_id === id)?.name
 
+  const closeCreate = () => {
+    setCreateOpen(false)
+    setNewName('')
+    setNewDesc('')
+    setNewIcon(undefined)
+  }
   const onCreateList = async () => {
-    if (!newName.trim()) return
+    if (!newName.trim() || creating) return
     setCreating(true)
     try {
-      await createList(apiKey!, roomId, {
+      await createList(apiKey as string, roomId, {
         name: newName.trim(),
         description: newDesc.trim() || undefined,
         icon: newIcon,
       })
-      setNewName('')
-      setNewDesc('')
-      setNewIcon(undefined)
-      setCreateOpen(false)
-      await qc.invalidateQueries({ queryKey: ['lists', roomId] })
-    } catch (e: any) {
+      closeCreate()
+      await refreshLists()
+    } catch (e) {
       message.error(errorMessage(e, 'Couldn’t create the list. Try again.'))
     } finally {
       setCreating(false)
@@ -158,108 +174,159 @@ export const RoomPage: React.FC<{
     setEditName(l.name)
     setEditDesc(l.description || '')
     setEditIcon(l.icon as ListIcon | undefined)
-    setEditIconTouched(false)
-    setEditOpen(true)
   }
-
-  const onSaveEdit = async () => {
-    if (!editTarget) return
-    if (!editName.trim()) {
-      message.error('Give the list a name.')
-      return
-    }
-    setEditing(true)
+  const saveList = async (
+    l: List,
+    body: { name?: string; description?: string; icon?: ListIcon | '' },
+  ) => {
     try {
-      const body: any = { name: editName.trim(), description: editDesc.trim() || undefined }
-      if (editIconTouched) {
-        body.icon = editIcon ?? ''
-      }
-      await updateList(apiKey!, roomId, editTarget.list_id, body)
-      setEditOpen(false)
-      setEditTarget(null)
-      await qc.invalidateQueries({ queryKey: ['lists', roomId] })
-    } catch (e: any) {
+      const updated = await updateList(apiKey as string, roomId, l.list_id, body)
+      setEditTarget((t) => (t && t.list_id === l.list_id ? { ...t, ...updated } : t))
+      await refreshLists()
+    } catch (e) {
       message.error(errorMessage(e, 'Couldn’t save the list. Try again.'))
-    } finally {
-      setEditing(false)
     }
+  }
+  // Commits whatever changed in the text fields: on blur, on Enter and on close.
+  const commitEdit = () => {
+    if (!editTarget) return
+    const name = editName.trim()
+    const desc = editDesc.trim()
+    const body: { name?: string; description?: string } = {}
+    if (name && name !== editTarget.name) body.name = name
+    if (desc !== (editTarget.description || '')) body.description = desc
+    if (!name) setEditName(editTarget.name)
+    if (Object.keys(body).length) void saveList(editTarget, body)
+  }
+  const closeEdit = () => {
+    commitEdit()
+    setEditTarget(null)
   }
 
   const onVoteList = async (l: List) => {
     try {
-      await voteListDeletion(apiKey!, roomId, l.list_id)
-      await qc.invalidateQueries({ queryKey: ['lists', roomId] })
-    } catch (e: any) {
+      const r = await voteListDeletion(apiKey as string, roomId, l.list_id)
+      setDeleting(null)
+      setEditTarget(null)
+      message.success(r.deleted ? `Deleted ${l.name}.` : 'Vote recorded.')
+      await refreshLists()
+    } catch (e) {
       message.error(errorMessage(e, 'Couldn’t record your vote. Try again.'))
     }
   }
   const onCancelVoteList = async (l: List) => {
     try {
-      await cancelListDeletion(apiKey!, roomId, l.list_id)
-      await qc.invalidateQueries({ queryKey: ['lists', roomId] })
-    } catch (e: any) {
+      await cancelListDeletion(apiKey as string, roomId, l.list_id)
+      setEditTarget((t) => (t && t.list_id === l.list_id ? { ...t, deletion_votes: undefined } : t))
+      await refreshLists()
+    } catch (e) {
       message.error(errorMessage(e, 'Couldn’t cancel your vote. Try again.'))
     }
   }
+
+  // Who has voted to delete a list, in words, for its sheet's footer.
+  const voteLine = (l: List) => {
+    const ids = votesOf(l)
+    if (!ids.length) return ''
+    const names = ids.map((id) => (id === userId ? 'You' : (nameOf(id) ?? 'Someone')))
+    return `${names.join(' and ')} voted to delete it.`
+  }
+
+  const listRows = (
+    <AntList
+      className={listsWereLoading.current ? 'lists-list is-arriving' : 'lists-list'}
+      dataSource={lists}
+      renderItem={(l) => {
+        // A trip's packing list says whose it is.
+        const packing = packingOf(l)
+        const icon = l.icon ? toEmoji(l.icon) : packing ? '🧳' : null
+        const meta = packing ? `For ${l.name.slice('Packing · '.length)}` : l.description
+        const votes = votesOf(l).length
+        return (
+          <AntList.Item>
+            <TransitionLink to={`/app/lists/${l.list_id}`} className="list-row-link">
+              <span className={icon ? 'list-icon' : 'list-icon is-blank'} aria-hidden>
+                {icon ?? <ListBullets weight="bold" />}
+              </span>
+              <span className="list-row-text">
+                <span className="list-row-name">{packing ? 'Packing' : l.name}</span>
+                {meta && <span className="list-row-desc">{meta}</span>}
+                {votes > 0 && (
+                  <span className="list-row-vote">
+                    <Stamp>{`Delete vote ${votes} of ${memberCount}`}</Stamp>
+                  </span>
+                )}
+              </span>
+            </TransitionLink>
+            <Dropdown
+              trigger={['click']}
+              placement="bottomRight"
+              menu={{
+                items: [
+                  { key: 'edit', label: 'Edit details' },
+                  iVoted(l)
+                    ? { key: 'cancel', label: 'Cancel my delete vote' }
+                    : {
+                        key: 'vote',
+                        label: othersVoted(l) + 1 >= memberCount ? 'Delete list' : 'Vote to delete',
+                        danger: true,
+                      },
+                ],
+                onClick: ({ key }) => {
+                  if (key === 'edit') onOpenEdit(l)
+                  if (key === 'vote') setDeleting(l)
+                  if (key === 'cancel') void onCancelVoteList(l)
+                },
+              }}
+            >
+              <Button
+                kind="text"
+                iconOnly
+                className="list-row-menu"
+                icon={<DotsThreeVertical size={20} weight="bold" />}
+                aria-label={`Actions for ${l.name}`}
+              />
+            </Dropdown>
+            <CaretRight className="list-row-caret" size={18} weight="bold" aria-hidden />
+          </AntList.Item>
+        )
+      }}
+    />
+  )
 
   return (
     <div className="container">
       <TopNav />
       <div className="paper-stack">
-        {/* Bottom meta sheet: title/description/share */}
-        <Card className="paper-card paper-meta">
-          <Typography.Title level={2} style={{ margin: 0 }}>
-            {room.display_name || 'House'}
-          </Typography.Title>
-
-          {room.description && (
-            <div style={{ marginTop: 8 }}>
-              <Typography.Text type="secondary">{room.description}</Typography.Text>
+        {/* Bottom meta sheet: the House, who is in it, and the way to invite someone. */}
+        <Card className="paper-card paper-meta house-meta">
+          <h1 className="house-title">{houseName}</h1>
+          {room.description && <p className="house-desc">{room.description}</p>}
+          <div className="house-meta-row">
+            <div className="house-members">
+              <AvatarStack members={members} label={`Members: ${memberLine(members, userId)}`} />
+              {/* Said by the stack's label already; this is for the eye. */}
+              <span className="house-members-line" aria-hidden>
+                {memberLine(members, userId)}
+              </span>
             </div>
-          )}
-
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: 12,
-              paddingTop: 15,
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Typography.Text type="secondary">Members:</Typography.Text>
-              <Space size={8} wrap>
-                {(room as any).members_meta?.length ? (
-                  (room as any).members_meta.map((m: any, idx: number) => (
-                    <AvatarBadge
-                      key={idx}
-                      seed={m.avatar_key}
-                      name={m.name}
-                      size={35}
-                      style="miniavs"
-                    />
-                  ))
-                ) : (
-                  <span>{room.members?.join(', ') || '—'}</span>
-                )}
-              </Space>
-            </div>
-
-            <Space>
-              <Button onClick={onShare} icon={<ShareNetwork />} shape="round">
-                Share code
+            <div className="house-meta-actions">
+              <Button
+                kind="quiet"
+                icon={<UserPlus aria-hidden />}
+                onClick={() => setShareOpen(true)}
+              >
+                Invite
               </Button>
               <Button
-                icon={<GearSix size={20} />}
-                shape="circle"
-                type="text"
+                kind="text"
+                iconOnly
+                icon={<GearSix size={20} aria-hidden />}
                 aria-label="House settings"
                 title="House settings"
                 onClick={() => navigate('/app/settings')}
               />
-            </Space>
+            </div>
           </div>
         </Card>
 
@@ -272,22 +339,16 @@ export const RoomPage: React.FC<{
             extra={
               tab === 'trips' ? (
                 <Button
-                  type="primary"
-                  shape="round"
+                  kind="key"
                   // Not before the device's own copy has loaded, so nothing is made out of order.
                   disabled={!tripState.ready}
                   onClick={() => setNewTripOpen(true)}
-                  icon={<Plus />}
+                  icon={<Plus aria-hidden />}
                 >
                   New trip
                 </Button>
               ) : (
-                <Button
-                  type="primary"
-                  shape="round"
-                  onClick={() => setCreateOpen(true)}
-                  icon={<Plus />}
-                >
+                <Button kind="key" onClick={() => setCreateOpen(true)} icon={<Plus aria-hidden />}>
                   New list
                 </Button>
               )
@@ -298,73 +359,23 @@ export const RoomPage: React.FC<{
                 label: 'Lists',
                 children: listsQuery.isLoading ? (
                   <RowSkeleton variant="list" rows={3} label="Loading your lists" />
+                ) : listsQuery.isError && lists.length === 0 ? (
+                  <EmptyState
+                    title="Couldn’t load your lists"
+                    action={
+                      <Button kind="quiet" onClick={() => void listsQuery.refetch()}>
+                        Try again
+                      </Button>
+                    }
+                  >
+                    {errorMessage(listsQuery.error, 'Check your connection.')}
+                  </EmptyState>
                 ) : lists.length === 0 ? (
-                  <Typography.Text type="secondary">
-                    No lists yet. Create one with New list.
-                  </Typography.Text>
+                  <EmptyState title="No lists yet">
+                    Groceries, chores, a wish list: start one with New list.
+                  </EmptyState>
                 ) : (
-                  <AntList
-                    className={listsWereLoading.current ? 'lists-list is-arriving' : 'lists-list'}
-                    dataSource={lists}
-                    renderItem={(l) => {
-                      // A trip's packing list says whose it is.
-                      const packing = l.name.startsWith('Packing · ')
-                      const icon = l.icon ? toEmoji(l.icon) : packing ? '🧳' : null
-                      const meta = packing
-                        ? `For ${l.name.slice('Packing · '.length)}`
-                        : l.description
-                      return (
-                        <AntList.Item>
-                          <TransitionLink to={`/app/lists/${l.list_id}`} className="list-row-link">
-                            {icon ? (
-                              <span className="list-icon" aria-hidden>
-                                {icon}
-                              </span>
-                            ) : null}
-                            <span className="list-row-text">
-                              <span className="list-row-name">{packing ? 'Packing' : l.name}</span>
-                              {meta && (
-                                <Typography.Text type="secondary" className="list-row-desc">
-                                  {meta}
-                                </Typography.Text>
-                              )}
-                            </span>
-                          </TransitionLink>
-                          <Dropdown
-                            trigger={['click']}
-                            placement="bottomRight"
-                            menu={{
-                              items: [
-                                { key: 'edit', label: 'Edit details' },
-                                ...(l.deletion_votes && l.deletion_votes[userId]
-                                  ? [{ key: 'cancel', label: 'Cancel delete vote' }]
-                                  : [{ key: 'vote', label: 'Vote to delete list' }]),
-                              ],
-                              onClick: ({ key }) => {
-                                if (key === 'edit') onOpenEdit(l)
-                                if (key === 'vote') onVoteList(l)
-                                if (key === 'cancel') onCancelVoteList(l)
-                              },
-                            }}
-                          >
-                            <Button
-                              className="list-row-menu"
-                              icon={<DotsThreeVertical size={20} weight="bold" />}
-                              type="text"
-                              shape="circle"
-                              aria-label={`Actions for ${l.name}`}
-                            />
-                          </Dropdown>
-                          <CaretRight
-                            className="list-row-caret"
-                            size={18}
-                            weight="bold"
-                            aria-hidden
-                          />
-                        </AntList.Item>
-                      )
-                    }}
-                  />
+                  listRows
                 ),
               },
               {
@@ -389,6 +400,7 @@ export const RoomPage: React.FC<{
         <TripNameModal
           title="Name your trip"
           cta="Create trip"
+          context="Dates and places can come later."
           onCancel={() => setNewTripOpen(false)}
           onSubmit={(title) => {
             const id = tripStore.createTrip({
@@ -402,25 +414,14 @@ export const RoomPage: React.FC<{
         />
       )}
 
-      <ShareCodeModal
-        open={shareOpen}
-        token={shareToken}
-        onClose={() => setShareOpen(false)}
-        onRotate={async () => {
-          try {
-            const r = await rotateShare(apiKey!)
-            setShareToken(r.token)
-          } catch (e: any) {
-            message.error(errorMessage(e, 'Couldn’t make a new code. Try again.'))
-          }
-        }}
-      />
+      <ShareCodeSheet open={shareOpen} onClose={() => setShareOpen(false)} houseName={houseName} />
 
-      {/* New list and Rename list: the same Sheet as the trip screens. */}
+      {/* New list: the name is the title, typed in place; one key. */}
       <Sheet
         open={createOpen}
-        label="Add list"
-        onClose={() => setCreateOpen(false)}
+        label="New list"
+        onClose={closeCreate}
+        dirty={!creating && (!!newName.trim() || !!newDesc.trim() || !!newIcon)}
         identity={
           <div className="ui-sheet-identity">
             <div className="ui-sheet-identity-text">
@@ -429,26 +430,27 @@ export const RoomPage: React.FC<{
                 placeholder="List name"
                 aria-label="List name"
                 value={newName}
+                maxLength={120}
                 onChange={(e) => setNewName(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !creating && newName.trim()) void onCreateList()
+                  if (e.key === 'Enter') void onCreateList()
                 }}
                 // biome-ignore lint/a11y/noAutofocus: the sheet opens because the user asked for it
                 autoFocus
               />
-              <p className="ui-sheet-context">Add list</p>
+              <p className="ui-sheet-context">Everyone in {houseName} can see it.</p>
             </div>
           </div>
         }
         actions={
           <SheetActions>
-            <KeyButton
+            <Button
               kind="key"
               disabled={creating || !newName.trim()}
               onClick={() => void onCreateList()}
             >
-              Create
-            </KeyButton>
+              {creating ? 'Creating…' : 'Create list'}
+            </Button>
           </SheetActions>
         }
         details={
@@ -456,14 +458,15 @@ export const RoomPage: React.FC<{
             <div className="ui-fieldrow">
               <span className="ui-navrow-label">Description</span>
               <Field
-                placeholder="Description (optional)"
+                aria-label="Description"
+                placeholder="Optional"
                 value={newDesc}
                 onChange={(e) => setNewDesc(e.target.value)}
               />
             </div>
             <NavRow
               label="Icon"
-              value={newIcon ? (toEmoji(newIcon) ?? 'Add an icon') : 'Add an icon (optional)'}
+              value={newIcon ? toEmoji(newIcon) : 'None'}
               empty={!newIcon}
               picker={{
                 title: 'Icon',
@@ -482,10 +485,11 @@ export const RoomPage: React.FC<{
         }
       />
 
+      {/* Edit list: everything saves as it changes; the vote to delete is the footer. */}
       <Sheet
-        open={editOpen}
-        label="Edit list"
-        onClose={() => setEditOpen(false)}
+        open={!!editTarget}
+        label={editTarget ? `Edit ${editTarget.name}` : 'Edit list'}
+        onClose={closeEdit}
         identity={
           <div className="ui-sheet-identity">
             <div className="ui-sheet-identity-text">
@@ -494,51 +498,45 @@ export const RoomPage: React.FC<{
                 placeholder="List name"
                 aria-label="List name"
                 value={editName}
+                maxLength={120}
                 onChange={(e) => setEditName(e.target.value)}
+                onBlur={commitEdit}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !editing && editName.trim()) void onSaveEdit()
+                  if (e.key === 'Enter') e.currentTarget.blur()
                 }}
-                // biome-ignore lint/a11y/noAutofocus: the sheet opens because the user asked for it
-                autoFocus
               />
-              <p className="ui-sheet-context">Edit list</p>
+              <p className="ui-sheet-context">In {houseName}</p>
             </div>
           </div>
-        }
-        actions={
-          <SheetActions>
-            <KeyButton
-              kind="key"
-              disabled={editing || !editName.trim()}
-              onClick={() => void onSaveEdit()}
-            >
-              Save
-            </KeyButton>
-          </SheetActions>
         }
         details={
           <DetailGroup label="Details">
             <div className="ui-fieldrow">
               <span className="ui-navrow-label">Description</span>
               <Field
-                placeholder="Description (optional)"
+                aria-label="Description"
+                placeholder="Optional"
                 value={editDesc}
                 onChange={(e) => setEditDesc(e.target.value)}
+                onBlur={commitEdit}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') e.currentTarget.blur()
+                }}
               />
             </div>
             <NavRow
               label="Icon"
-              value={editIcon ? (toEmoji(editIcon) ?? 'Add an icon') : 'Add an icon'}
+              value={editIcon ? toEmoji(editIcon) : 'None'}
               empty={!editIcon}
               picker={{
                 title: 'Icon',
                 content: (close) => (
                   <IconPicker
                     value={editIcon}
-                    onChange={(val) => {
-                      setEditIcon(val)
-                      setEditIconTouched(true)
+                    onChange={(v) => {
+                      setEditIcon(v)
                       close()
+                      if (editTarget) void saveList(editTarget, { icon: v ?? '' })
                     }}
                   />
                 ),
@@ -546,7 +544,35 @@ export const RoomPage: React.FC<{
             />
           </DetailGroup>
         }
+        footer={
+          editTarget && (
+            <footer className="ui-sheet-footer">
+              <span className="ui-sheet-who">{voteLine(editTarget)}</span>
+              {iVoted(editTarget) ? (
+                <Button kind="text" onClick={() => void onCancelVoteList(editTarget)}>
+                  Cancel my vote
+                </Button>
+              ) : (
+                <Button kind="text" danger onClick={() => setDeleting(editTarget)}>
+                  {othersVoted(editTarget) + 1 >= memberCount ? 'Delete list' : 'Vote to delete'}
+                </Button>
+              )}
+            </footer>
+          )
+        }
       />
+
+      {deleting && (
+        <DeleteVoteSheet
+          open
+          kind="list"
+          name={deleting.name}
+          members={memberCount}
+          othersVoted={othersVoted(deleting)}
+          onClose={() => setDeleting(null)}
+          onConfirm={() => onVoteList(deleting)}
+        />
+      )}
     </div>
   )
 }

@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -14,24 +14,26 @@ const json = (body: unknown) =>
     headers: { 'Content-Type': 'application/json' },
   })
 
-const renderRoom = () => {
+const DEFAULT_LISTS = [
+  {
+    list_id: 'l1',
+    room_id: 'r1',
+    name: 'Groceries',
+    description: 'Weekly shop',
+    icon: 'BROCCOLI',
+  },
+  { list_id: 'l2', room_id: 'r1', name: 'Road trip' },
+]
+
+const renderRoom = (
+  room: any = { display_name: 'The House', members: ['u1'] },
+  lists: unknown[] = DEFAULT_LISTS,
+) => {
   localStorage.setItem('gracie_api_key', 'k_test')
   server.use(
     http.get('/api/me', () => json({ user_id: 'u1', name: 'Alice', avatar_key: 'alice' })),
-    http.get('/api/rooms/r1/lists', () =>
-      json([
-        {
-          list_id: 'l1',
-          room_id: 'r1',
-          name: 'Groceries',
-          description: 'Weekly shop',
-          icon: 'BROCCOLI',
-        },
-        { list_id: 'l2', room_id: 'r1', name: 'Road trip' },
-      ]),
-    ),
+    http.get('/api/rooms/r1/lists', () => json(lists)),
   )
-  const room = { display_name: 'The House', members: ['u1'] } as any
   render(
     <MemoryRouter initialEntries={['/app']}>
       <AuthProvider>
@@ -87,40 +89,129 @@ describe('RoomPage navigation', () => {
     await waitFor(() => expect(body).toEqual({ name: 'Chores' }))
   })
 
-  it('edits a list and votes to delete it from the row menu', async () => {
+  it('autosaves list edits and confirms before the vote that deletes', async () => {
     let patched: any = null
     let voted = false
     server.use(
       http.patch('/api/rooms/r1/lists/l1', async ({ request }) => {
         patched = await request.json()
-        return json({ list_id: 'l1', room_id: 'r1', name: patched.name })
+        return json({ list_id: 'l1', room_id: 'r1', name: patched.name ?? 'Groceries' })
       }),
       http.post('/api/rooms/r1/lists/l1/deletion/vote', () => {
         voted = true
-        return json({ deleted: false })
+        return json({ deleted: true })
       }),
     )
     renderRoom()
     await userEvent.click(await screen.findByRole('button', { name: 'Actions for Groceries' }))
     await userEvent.click(await screen.findByText('Edit details'))
     const name = await screen.findByDisplayValue('Groceries')
+    // No Save button: the name saves when it is committed.
+    expect(screen.queryByRole('button', { name: /^save$/i })).not.toBeInTheDocument()
     await userEvent.clear(name)
-    await userEvent.type(name, 'Weekly shop')
-    await userEvent.click(screen.getByRole('button', { name: /save/i }))
-    await waitFor(() => expect(patched).toMatchObject({ name: 'Weekly shop' }))
+    await userEvent.type(name, 'Weekly shop{Enter}')
+    await waitFor(() => expect(patched).toEqual({ name: 'Weekly shop' }))
 
-    await userEvent.click(screen.getByRole('button', { name: 'Actions for Groceries' }))
-    await userEvent.click(await screen.findByText('Vote to delete list'))
+    // Alone in the House, the vote is the last one: the sheet says so, and nothing is sent yet.
+    await userEvent.click(screen.getByRole('button', { name: 'Delete list' }))
+    expect(await screen.findByText(/this can’t be undone/i)).toBeInTheDocument()
+    expect(voted).toBe(false)
+    await userEvent.click(screen.getByRole('button', { name: 'Delete' }))
     await waitFor(() => expect(voted).toBe(true))
   })
 
-  it('shows the share code and makes a new one on request', async () => {
-    let n = 0
-    server.use(http.post('/api/rooms/share', () => json({ token: `code-${++n}` })))
+  it('says how many votes a shared list needs before deleting', async () => {
+    renderRoom(
+      {
+        display_name: 'The House',
+        members: ['Alice', 'Sam', 'Jo'],
+        members_meta: [
+          { name: 'Alice', avatar_key: 'a', user_id: 'u1' },
+          { name: 'Sam', avatar_key: 's', user_id: 'u2' },
+          { name: 'Jo', avatar_key: 'j', user_id: 'u3' },
+        ],
+      },
+      [{ list_id: 'l1', room_id: 'r1', name: 'Groceries', deletion_votes: { u2: 'x' } }],
+    )
+    expect(await screen.findByText('Delete vote 1 of 3')).toBeInTheDocument()
+    expect(screen.getByText('Alice, Sam and Jo')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Actions for Groceries' }))
+    await userEvent.click(await screen.findByText('Vote to delete'))
+    expect(await screen.findByText(/yours makes 2 of 3/i)).toBeInTheDocument()
+  })
+
+  it('shows the House’s current code and replaces it only on request', async () => {
+    let rotations = 0
+    let reads = 0
+    server.use(
+      http.get('/api/rooms/share', () => {
+        reads++
+        return json({ token: rotations ? `NEW${rotations}` : 'K7M2Q' })
+      }),
+      http.post('/api/rooms/share', () => json({ token: `NEW${++rotations}` })),
+    )
     renderRoom()
-    await userEvent.click(screen.getByRole('button', { name: /share code/i }))
-    expect(await screen.findByDisplayValue('code-1')).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: /new code/i }))
-    expect(await screen.findByDisplayValue('code-2')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /invite/i }))
+    expect(await screen.findByText('K7M2Q')).toBeInTheDocument()
+    // Closing and opening again reads the same code: nothing is rotated by looking.
+    await userEvent.click(screen.getByRole('button', { name: 'Close' }))
+    await userEvent.click(screen.getByRole('button', { name: /invite/i }))
+    await waitFor(() => expect(reads).toBe(2))
+    expect(await screen.findByText('K7M2Q')).toBeInTheDocument()
+    expect(rotations).toBe(0)
+
+    await userEvent.click(screen.getByRole('button', { name: /get new code/i }))
+    expect(await screen.findByText('NEW1')).toBeInTheDocument()
+    expect(screen.getByText(/the old one no longer works/i)).toBeInTheDocument()
+  })
+
+  it('creates a list with an icon picked from the tiles', async () => {
+    let body: any = null
+    server.use(
+      http.post('/api/rooms/r1/lists', async ({ request }) => {
+        body = await request.json()
+        return json({ list_id: 'l9', room_id: 'r1', name: body.name })
+      }),
+    )
+    renderRoom()
+    await userEvent.click(screen.getByRole('button', { name: /new list/i }))
+    await userEvent.type(await screen.findByRole('textbox', { name: 'List name' }), 'Garden')
+    await userEvent.click(screen.getByRole('button', { name: /icon/i }))
+    const tiles = await screen.findByRole('group', { name: 'List icon' })
+    expect(within(tiles).getByRole('button', { name: 'None' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    await userEvent.click(within(tiles).getByRole('button', { name: 'Sunflower' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Create list' }))
+    await waitFor(() => expect(body).toEqual({ name: 'Garden', icon: 'SUNFLOWER' }))
+  })
+
+  it('saves a new icon from Edit list as soon as it is picked, and can clear it', async () => {
+    const patches: any[] = []
+    server.use(
+      http.patch('/api/rooms/r1/lists/l1', async ({ request }) => {
+        patches.push(await request.json())
+        return json({ list_id: 'l1', room_id: 'r1', name: 'Groceries' })
+      }),
+    )
+    renderRoom()
+    await userEvent.click(await screen.findByRole('button', { name: 'Actions for Groceries' }))
+    await userEvent.click(await screen.findByText('Edit details'))
+    await userEvent.click(await screen.findByRole('button', { name: /icon/i }))
+    await userEvent.click(await screen.findByRole('button', { name: 'None' }))
+    await waitFor(() => expect(patches).toContainEqual({ icon: '' }))
+  })
+
+  it('copies the invite code and says so', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+    server.use(http.get('/api/rooms/share', () => json({ token: 'K7M2Q' })))
+    renderRoom()
+    await userEvent.click(screen.getByRole('button', { name: /invite/i }))
+    await screen.findByText('K7M2Q')
+    await userEvent.click(screen.getByRole('button', { name: 'Copy code' }))
+    expect(writeText).toHaveBeenCalledWith('K7M2Q')
+    expect(await screen.findByRole('button', { name: 'Copied' })).toBeInTheDocument()
   })
 })

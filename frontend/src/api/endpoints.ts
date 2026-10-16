@@ -62,6 +62,12 @@ export async function createRoom(apiKey: string): Promise<RoomView> {
   return apiFetch<RoomView>('/rooms', { method: 'POST', apiKey })
 }
 
+// The House's current invite code; minted only if it has none. Reading never replaces a code.
+export async function getShareCode(apiKey: string): Promise<{ token: string }> {
+  return apiFetch<{ token: string }>('/rooms/share', { apiKey })
+}
+
+// A new invite code: the old one stops working.
 export async function rotateShare(apiKey: string): Promise<{ token: string }> {
   return apiFetch<{ token: string }>('/rooms/share', { method: 'POST', apiKey })
 }
@@ -122,6 +128,10 @@ export function isNotFound(err: unknown): err is ApiError {
 
 export function isForbidden(err: unknown): err is ApiError {
   return typeof err === 'object' && err !== null && (err as any).status === 403
+}
+
+export function isUnauthorized(err: unknown): err is ApiError {
+  return typeof err === 'object' && err !== null && (err as any).status === 401
 }
 
 export function isConflict(err: unknown): err is ApiError {

@@ -117,6 +117,20 @@ func TestMongoRoomRepoCRUD(t *testing.T) {
 	if _, err := rr.GetByShareToken(context.Background(), "tok1"); err != nil {
 		t.Fatalf("by tok: %v", err)
 	}
+	// Set-if-absent keeps the existing code...
+	if got, err := rr.SetShareTokenIfAbsent(context.Background(), rm.RoomID, "u1", "tok2", time.Now().UTC()); err != nil || got != "tok1" {
+		t.Fatalf("if absent with a code: %q %v, want tok1", got, err)
+	}
+	if err := rr.RemoveShareToken(context.Background(), rm.RoomID, time.Now().UTC()); err != nil {
+		t.Fatalf("rm tok: %v", err)
+	}
+	// ...and sets one when there is none; a non-member gets nothing.
+	if got, err := rr.SetShareTokenIfAbsent(context.Background(), rm.RoomID, "u1", "tok3", time.Now().UTC()); err != nil || got != "tok3" {
+		t.Fatalf("if absent without a code: %q %v, want tok3", got, err)
+	}
+	if _, err := rr.SetShareTokenIfAbsent(context.Background(), rm.RoomID, "stranger", "tok4", time.Now().UTC()); err == nil {
+		t.Fatal("a non-member read the code")
+	}
 	if err := rr.RemoveShareToken(context.Background(), rm.RoomID, time.Now().UTC()); err != nil {
 		t.Fatalf("rm tok: %v", err)
 	}

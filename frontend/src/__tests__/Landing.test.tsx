@@ -1,5 +1,5 @@
 import React from 'react'
-import { CreateHouseModal } from '@components/CreateHouseModal'
+import { CreateHouseSheet } from '@components/CreateHouseSheet'
 import { isAppleTouch, listenForInstallPrompt, resetInstallPrompt } from '@lib/installPrompt'
 import { PENDING_HOUSE_KEY, takePendingHouse } from '@lib/pendingHouse'
 import { HeroSheet } from '@components/landing/HeroSheet'
@@ -637,7 +637,7 @@ describe('pending House name', () => {
 
   it('fills the create-a-house name field', () => {
     sessionStorage.setItem(PENDING_HOUSE_KEY, 'The Flat')
-    render(<CreateHouseModal open onClose={() => {}} onSubmit={() => {}} />)
-    expect(screen.getByPlaceholderText('e.g., Our Little Mansion')).toHaveValue('The Flat')
+    render(<CreateHouseSheet open onClose={() => {}} onSubmit={() => {}} />)
+    expect(screen.getByRole('textbox', { name: 'House name' })).toHaveValue('The Flat')
   })
 })

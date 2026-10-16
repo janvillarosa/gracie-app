@@ -55,6 +55,12 @@
   /* Yellow key: shadow tinted from the deep yellow instead of grey */
   --shadow-key: inset 0 1px 0 rgba(255, 255, 255, 0.55), 0 1px 0 var(--brand-yellow-deep), 0 2px 6px -1px rgba(150, 115, 0, 0.28);
   --shadow-key-hover: inset 0 1px 0 rgba(255, 255, 255, 0.55), 0 1px 0 var(--brand-yellow-deep), 0 6px 14px -4px rgba(150, 115, 0, 0.38);
+  /* The red key's own edge and drop, tinted from the red (never the yellow key's warm glow). */
+  /* The edge of a face: a hairline of ink drawn just inside an avatar, so a pale picture
+     still has a rim on white paper and on the pale desk. */
+  --avatar-edge: color-mix(in srgb, var(--ink) 12%, transparent);
+  --shadow-key-danger: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 1px 0 color-mix(in srgb, var(--brand-red) 70%, black), 0 2px 6px -1px color-mix(in srgb, var(--brand-red) 30%, transparent);
+  --shadow-key-danger-hover: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 1px 0 color-mix(in srgb, var(--brand-red) 70%, black), 0 6px 14px -4px color-mix(in srgb, var(--brand-red) 40%, transparent);
   --shadow-soft: 0 1px 2px rgba(20, 20, 20, 0.05);
   /* Paper elevation: every surface is a sheet at one of these heights.
      Each step = a tight contact shadow + a soft ambient one. */
@@ -691,10 +697,13 @@ h5.ant-typography {
   min-width: 0;
 }
 
+/* A long name takes two lines, then clips: the same for lists and trips. */
 .lists-list .list-row-name {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 /* Descriptions may wrap once on a phone, then clip */
@@ -721,11 +730,12 @@ h5.ant-typography {
   color: var(--ink) !important;
 }
 
-/* Divider drawn inset so the row's rounded hover fill doesn't bend it */
+/* Divider drawn inset to the text column (past the icon tile), so it never bends around the
+   row's rounded hover fill and reads as a line under the words, not the stickers. */
 .lists-list .ant-list-item::after {
   content: '';
   position: absolute;
-  left: 12px;
+  left: calc(12px + 44px + 14px);
   right: 12px;
   bottom: 0;
   height: 1px;
@@ -877,13 +887,6 @@ h5.ant-typography {
 
 .add-ghost-typed {
   color: transparent;
-}
-
-.settings-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
 }
 
 /* Smart suggestions: one sheet of paper above the items. Its Add is the one yellow key, and a
@@ -1502,48 +1505,83 @@ h5.ant-typography {
   border-radius: var(--radius-squircle) !important;
 }
 
-/* No-room page sections and divider */
-.no-room-card .section {
-  padding: 8px 0;
-}
-
-.no-room-divider {
-  border-block-start: 1px solid var(--border-strong) !important;
-  margin: 12px 0 !important;
-}
-
 .settings-divider {
   border-block-start: 1px solid var(--border-strong) !important;
   margin: 12px 0 !important;
 }
 
-.no-room-card .ant-btn {
-  width: auto;
+/* ---- No House yet: start one, or join with a code ----------------------------------------- */
+.no-room .no-room-title {
+  margin: 0;
+  font-size: clamp(26px, 3.2vw, 38px);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.08;
 }
-
 @media (max-width: 767px) {
-  .no-room-card .ant-btn {
-    width: 100%;
+  .no-room .no-room-title {
+    font-size: clamp(32px, 3.68vw, 46px);
   }
 }
-
-.no-room-subtitle {
+.no-room-lede {
+  margin: var(--space-2) 0 0;
   color: var(--text-secondary);
-  display: block;
-  margin: 4px 0 12px;
+  font-size: var(--size-body);
+  line-height: 1.5;
 }
-
-@media (min-width: 768px) {
-  .join-row {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-  }
-
-  .join-row .ant-input {
-    flex: 1;
-    min-width: 260px;
-  }
+.no-room-part {
+  padding-top: var(--space-6);
+}
+.no-room-part + .no-room-part {
+  margin-top: var(--space-6);
+  border-top: 1px solid var(--border);
+}
+.no-room .no-room-heading {
+  margin: 0;
+  font-size: clamp(20px, 2.4vw, 24px);
+  font-weight: 650;
+  letter-spacing: -0.015em;
+}
+.no-room-text {
+  margin: var(--space-1) 0 var(--space-4);
+  color: var(--muted);
+  font-size: var(--size-body);
+  line-height: 1.5;
+}
+.join-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+/* The code field: set like the invite slip's code, on the paper tint (no box). */
+.join-code {
+  box-sizing: border-box;
+  width: 9.5ch;
+  min-width: 0;
+  height: var(--control-lg);
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--panel-subtle);
+  color: var(--ink);
+  font-family: var(--font-headings);
+  font-size: 24px !important;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  font-variant-numeric: tabular-nums;
+  text-transform: uppercase;
+  outline: none;
+}
+.join-code::placeholder {
+  color: var(--muted);
+  font-weight: 500;
+}
+.join-code:focus-visible {
+  background: var(--panel);
+  box-shadow: var(--focus-ring);
+}
+.join-code.has-error {
+  box-shadow: 0 0 0 2px var(--brand-red);
 }
 
 /* Paper stack layout for ListPage */
@@ -2691,12 +2729,15 @@ textarea.notes-textarea {
   background: var(--panel-subtle);
 }
 
+/* Before we know who you are: an empty disc on the paper tint, the avatar's exact size. */
 .avatar-placeholder {
   display: block;
-  width: 50px;
-  height: 50px;
+  box-sizing: border-box;
+  width: var(--control-lg);
+  height: var(--control-lg);
   border-radius: 50%;
   border: 1px solid var(--border);
+  background: var(--panel-subtle);
 }
 
 /* Skeleton rows match the real rows: list rows on the house page, item rows on a list */
@@ -3332,4 +3373,293 @@ textarea.notes-textarea {
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3);
+}
+
+/* ---- House page: the meta sheet ------------------------------------------------------------ */
+.house-meta .house-title {
+  margin: 0;
+  font-size: clamp(26px, 3.2vw, 38px);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.08;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 767px) {
+  .house-meta .house-title {
+    font-size: clamp(35px, 3.68vw, 46px);
+  }
+}
+.house-desc {
+  margin: var(--space-2) 0 0;
+  color: var(--text-secondary);
+  font-size: var(--size-body);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.house-meta-row {
+  container-type: inline-size;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-4);
+  padding-top: var(--space-5);
+}
+.house-members {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.house-members-line {
+  color: var(--muted);
+  font-size: var(--size-body);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Too narrow for the names beside Invite: the avatars (named for screen readers and on tap)
+   say who is in the House instead of a clipped "Mia and …". */
+@container (max-width: 320px) {
+  .house-members-line {
+    display: none;
+  }
+}
+.house-meta-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* A list without an icon keeps the icon's place, so every title starts on one line. */
+.list-icon.is-blank {
+  color: var(--muted);
+  font-size: 18px;
+}
+.lists-list .list-row-desc {
+  color: var(--text-secondary);
+}
+.list-row-vote {
+  display: block;
+  margin-top: var(--space-1);
+}
+
+/* ---- Invite code: a ticket slip with a torn top edge --------------------------------------- */
+.share-slip {
+  margin-top: var(--tier-identity-actions);
+  padding: var(--space-4) 0 var(--space-1);
+  border-top: 2px dashed var(--border-strong);
+  text-align: center;
+}
+.share-code {
+  margin: 0;
+  font-family: var(--font-headings);
+  font-size: 40px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.16em;
+  /* The tracking adds space after the last letter too; give it back so the code is centred. */
+  margin-right: -0.16em;
+  line-height: 1.1;
+  color: var(--ink);
+  user-select: all;
+}
+.share-code.is-loading {
+  color: var(--border-strong);
+}
+.share-note {
+  margin: var(--space-2) 0 0;
+  color: var(--ok-ink);
+  font-size: var(--size-meta);
+}
+/* The key sits under the code, centred like the ticket slip's. */
+.share-slip + .ui-sheet-actions {
+  justify-content: center;
+  margin-left: 0;
+}
+.share-slip ~ .ui-sheet-footer {
+  gap: var(--space-3);
+}
+.share-error {
+  color: var(--brand-red);
+}
+
+/* ---- House settings: the Trip settings page, for the House --------------------------------- */
+.house-settings .ui-sheet-title,
+.account-settings .ui-sheet-title {
+  font-size: var(--title-page);
+}
+.house-settings input.ui-sheet-title,
+.account-settings input.ui-sheet-title {
+  font-size: var(--title-page) !important;
+}
+.house-settings .ui-section-label,
+.account-settings .ui-section-label {
+  margin-top: var(--space-6);
+}
+.house-member-row {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--row-h);
+  padding: 0 var(--detail-inset);
+}
+.house-member-name {
+  overflow: hidden;
+  font-weight: 500;
+  color: var(--ink);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.house-member-you {
+  color: var(--muted);
+  font-size: var(--size-meta);
+}
+.house-settings-footer,
+.account-settings-footer {
+  gap: var(--space-3);
+}
+
+/* A row answers a tap on touch screens (hover covers the pointer case). */
+@media (hover: none) {
+  .lists-list .ant-list-item:has(.list-row-link:active) {
+    background: var(--panel-subtle);
+  }
+}
+@media (hover: none) and (prefers-reduced-motion: no-preference) {
+  .lists-list .ant-list-item:has(.list-row-link:active) .list-row-caret {
+    transform: translateX(3px);
+  }
+}
+
+/* A switch in a settings group: the label, the switch, and one muted line under them. */
+.pref {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--detail-inset);
+}
+.pref-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.pref-label {
+  font-weight: 500;
+  color: var(--ink);
+}
+.pref-help {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--size-meta);
+}
+
+/* ---- Avatar: the person's colour and initial first, the picture fades in over them ---------- */
+.avatar {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  overflow: hidden;
+  border-radius: 50%;
+  vertical-align: middle;
+}
+.avatar > img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  opacity: 0;
+}
+.avatar.is-loaded > img {
+  opacity: 1;
+}
+/* The rim sits over the picture (inside the circle), so it never changes an avatar's size or
+   the paper ring a stack draws outside it. */
+.avatar::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px var(--avatar-edge);
+  pointer-events: none;
+}
+.avatar-initial {
+  font-family: var(--font-headings);
+  font-weight: 700;
+  line-height: 1;
+  /* Ink at 55% on the pastel: a placeholder, not a name tag. */
+  color: color-mix(in srgb, var(--ink) 55%, transparent);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .avatar > img {
+    transition: opacity var(--dur-base) var(--ease-out);
+  }
+}
+
+/* The avatar menu, once a choice is made, leaves at once: its fade-out would otherwise be
+   snapshotted into the page cross-fade. */
+.topnav-menu[class*='-leave'] {
+  display: none !important;
+}
+
+/* ---- AvatarStack: who is in something, the same on every page ------------------------------ */
+/* Faces overlap by a quarter of their size (--face is set by the component), each on a 2px
+   paper ring so the edges read where they cross. */
+.avatar-stack {
+  --overlap: calc(var(--face, 36px) / 4);
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 0;
+}
+.avatar-stack-face,
+.avatar-stack-more {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--panel);
+}
+.avatar-stack > * + * {
+  margin-left: calc(var(--overlap) * -1);
+}
+.avatar-stack-more {
+  box-sizing: border-box;
+  place-items: center;
+  justify-content: center;
+  align-items: center;
+  width: var(--face, 36px);
+  height: var(--face, 36px);
+  background: var(--panel-subtle);
+  box-shadow:
+    0 0 0 2px var(--panel),
+    inset 0 0 0 1px var(--avatar-edge);
+  color: var(--muted);
+  font-size: calc(var(--face, 36px) * 0.42);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+/* The deal: each face slides out from under the one before it and settles, one after another.
+   Once, when the stack first appears; with reduced motion the faces are simply there. */
+@media (prefers-reduced-motion: no-preference) {
+  .avatar-stack-face,
+  .avatar-stack-more {
+    animation: stack-deal 360ms var(--ease-out) both;
+    animation-delay: calc(60ms + var(--i, 0) * 45ms);
+  }
+}
+@keyframes stack-deal {
+  from {
+    opacity: 0;
+    transform: translateX(calc(var(--overlap) * -1)) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }

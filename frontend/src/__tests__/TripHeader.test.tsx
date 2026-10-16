@@ -51,7 +51,7 @@ describe('the avatar stack in the trip header', () => {
   it('shows three faces and a +N disc beyond four members', () => {
     const { container } = header(6)
     expect(container.querySelectorAll('.trip-avatars img')).toHaveLength(3)
-    expect(container.querySelector('.trip-avatar-more')).toHaveTextContent('+3')
+    expect(container.querySelector('.avatar-stack-more')).toHaveTextContent('+3')
     expect(
       screen.getByRole('img', { name: 'Shared with Jan, Mia, Zoe, Kai, Lu and Ed' }),
     ).toBeInTheDocument()
@@ -60,7 +60,7 @@ describe('the avatar stack in the trip header', () => {
   it('shows four faces, and no disc, at exactly four', () => {
     const { container } = header(4)
     expect(container.querySelectorAll('.trip-avatars img')).toHaveLength(4)
-    expect(container.querySelector('.trip-avatar-more')).toBeNull()
+    expect(container.querySelector('.avatar-stack-more')).toBeNull()
   })
 
   it('sits on the date line, which is a sibling of the title row (so it can wrap whole)', () => {

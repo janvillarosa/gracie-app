@@ -1,5 +1,5 @@
 import React from 'react'
-import { Navigate, useLocation } from 'react-router-dom'
+import { Navigate, useLocation, useMatch } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@auth/AuthProvider'
 import { getLists, getMe, getMyRoom, isNotFound } from '@api/endpoints'
@@ -10,9 +10,13 @@ import { SignIn } from '@phosphor-icons/react'
 import { TopNav } from '@components/TopNav'
 import { HouseLoader } from '@components/HouseLoader'
 
-export const Dashboard: React.FC<{ tab?: 'lists' | 'trips' }> = ({ tab = 'lists' }) => {
+/** /app and /app/trips: one House page whose pill follows the URL. Both routes render this same
+ *  component, so switching pills keeps the page mounted: only the pill's pane changes, and the
+ *  sheets, avatars and data stay put instead of being rebuilt and re-animated. */
+export const Dashboard: React.FC = () => {
   const { apiKey, setApiKey } = useAuth()
   const loc = useLocation()
+  const tab: 'lists' | 'trips' = useMatch('/app/trips') ? 'trips' : 'lists'
   const key = apiKey!
   const meQuery = useQuery({
     queryKey: ['me'],
@@ -85,6 +89,3 @@ export const Dashboard: React.FC<{ tab?: 'lists' | 'trips' }> = ({ tab = 'lists'
   const me = meQuery.data!
   return <RoomPage room={room} roomId={me.room_id!} userId={me.user_id} tab={tab} />
 }
-
-/** /app/trips: the same House page, on the Trips pill. */
-export const TripsDashboard: React.FC = () => <Dashboard tab="trips" />

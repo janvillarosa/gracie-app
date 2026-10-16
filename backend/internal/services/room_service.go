@@ -76,6 +76,15 @@ func (s *RoomService) RotateShareToken(ctx context.Context, user *models.User) (
 	return token, nil
 }
 
+// CurrentShareToken returns the House's invite code, minting one only when it has none. Reading
+// it never invalidates a code already handed out; RotateShareToken is the explicit "new code".
+func (s *RoomService) CurrentShareToken(ctx context.Context, user *models.User) (string, error) {
+	if user.RoomID == nil || *user.RoomID == "" {
+		return "", derr.ErrNotFound
+	}
+	return s.rooms.SetShareTokenIfAbsent(ctx, *user.RoomID, user.UserID, ids.NewShareToken5(), time.Now().UTC())
+}
+
 // JoinRoom joins the authenticated user to the target room using a token.
 func (s *RoomService) JoinRoom(ctx context.Context, joiner *models.User, roomID, token string) (*models.Room, error) {
 	now := time.Now().UTC()

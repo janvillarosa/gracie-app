@@ -263,6 +263,21 @@ func (r *RoomRepo) SetShareToken(_ context.Context, roomID string, _ string, tok
 	r.st.byShareToken[token] = roomID
 	return nil
 }
+func (r *RoomRepo) SetShareTokenIfAbsent(_ context.Context, roomID string, _ string, token string, updatedAt time.Time) (string, error) {
+	r.st.mu.Lock()
+	defer r.st.mu.Unlock()
+	rm, ok := r.st.rooms[roomID]
+	if !ok {
+		return "", derr.ErrNotFound
+	}
+	if rm.ShareToken != nil && *rm.ShareToken != "" {
+		return *rm.ShareToken, nil
+	}
+	rm.ShareToken = &token
+	rm.UpdatedAt = updatedAt
+	r.st.byShareToken[token] = roomID
+	return token, nil
+}
 func (r *RoomRepo) RemoveShareToken(_ context.Context, roomID string, updatedAt time.Time) error {
 	r.st.mu.Lock()
 	defer r.st.mu.Unlock()

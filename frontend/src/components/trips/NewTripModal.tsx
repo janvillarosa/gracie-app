@@ -7,6 +7,8 @@ type Props = {
   initial?: string
   onSubmit: (name: string) => void
   onCancel: () => void
+  // The muted line under the name; the title (the sheet's purpose) is the accessible name.
+  context?: string
 }
 
 // Asks one thing: the name. Dates, a destination and the route come later, from the trip's
@@ -16,6 +18,7 @@ export const TripNameModal: React.FC<Props> = ({
   title,
   cta,
   initial = '',
+  context,
   onSubmit,
   onCancel,
 }) => {
@@ -44,7 +47,7 @@ export const TripNameModal: React.FC<Props> = ({
                 if (e.key === 'Enter') submit()
               }}
             />
-            <p className="ui-sheet-context">{title}</p>
+            <p className="ui-sheet-context">{context ?? title}</p>
           </div>
         </div>
       }

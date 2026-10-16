@@ -236,7 +236,7 @@ failure or an empty answer just shows nothing. Events: `nudge.shown|tapped|dismi
   `components/landing/appUi.tsx` copies the app's own pieces (list header, PillNav, checkbox, add bar,
   avatars); keep it in step when those change in the app.
 - "Call your House ___ and start." stores the name in `sessionStorage` (`lib/pendingHouse.ts`);
-  `CreateHouseModal` takes it once to prefill the House name.
+  `CreateHouseSheet` takes it once to prefill the House name.
 - Photos in `assets/landing/` are open-licence (CC BY); `credits.json` holds sources, the footer credits them, and
   each JPEG carries its provenance in a comment. Keep all three in step when adding or swapping a picture.
 - The page's thesis: one shared space for the household, from the weekly shop to the next trip. Four parts and a close: hero, **Lists for the house** (`SharedPlate.tsx`, id `lists`), **Plan the trip together** (`Capabilities.tsx`, id `trips`: a weekend in Porto in two views behind two tab pills, "Planning at home" = `PlanDesk.tsx`, the desk with the drawn `PortoMap.tsx` in a MacBook Pro frame, and "On the trip" = `PhoneTrip.tsx` in an iPhone 14 Pro frame, plus `OfflineSlip`. The frames are Devices.css (MIT), vendored as `components/landing/devices.css` (only those two devices; its reset is scoped to the frame's own parts, and the notice is a `/*!` comment so the build keeps it); `DeviceFit.tsx` scales a frame to the width it has; both views stay in the markup without JavaScript), **It costs nothing** (`FreeReceipt`, with `InstallLine`), then the closing sentence. The lists section's looping typing demo keeps its logic in `demo.ts` (`plateTick`, `plateLand`): one tick per new line, and a line already on the list is never landed again, so leaving and coming back mid-word can't duplicate or shrink it. It plays only while on screen and rests on a finished list with reduced motion. Calls to action say "Get started free" (never "Try"). `StickyKey` pins that key to the bottom of phones once the hero's has scrolled away, and steps aside while another key, the close, the footer or a `[data-ui]` picture is in its strip.
@@ -266,6 +266,12 @@ each, styled by `ui/ui.css` from tokens on `:root` in `styles.css` (`--space-*`,
 | `InlineWhen`, `InlineSelect`, `StampSelect` | `InlineWhen.tsx`, `InlineSelect.tsx`, `StampSelect.tsx` | The desktop inspector's in-place editors (variant `panel`; phones keep pickers). `InlineWhen`: a day select, a typed 24-hour time (`lib/trips/clock.ts` parses "9", "930", "2:30pm"; ↑/↓ ±15 min, Shift ±1 h; blank clears when allowed), and the length as segments. `InlineSelect`: a native select drawn like the paper (linked booking). `StampSelect`: stamps outlined in their colours, only the chosen one filled. The desktop Place rows (todo; booking From/To) are `InlinePlace` (Enter on typed text drops a pin from coordinates or keeps an address: `components/trips/typedPlace.ts`); phones keep `PlacePicker`. |
 | `Row` | `Row.tsx` | The row grid `[lead 24] 12 [time 48] 12 [title] [trail]`. |
 | `Note`, `SectionLabel`, `EmptyState` | `Note.tsx`, `SectionLabel.tsx`, `EmptyState.tsx` | Muted/warn one-liner (warn = amber text + glyph, no side rule), small caps label, friendly empty line. |
+
+**House screens** (`RoomPage`, `RoomSettings`, `NoRoomPage`) are built from the same primitives:
+`ShareCodeSheet` (the invite code as a ticket slip; reads `GET /rooms/share`, replaces only on "Get
+new code"), `CreateHouseSheet`, `DeleteVoteSheet` (says what a delete vote does before it is cast;
+the last vote deletes) and `IconPicker` (`ChipGroup` tiles). House settings mirrors Trip settings and
+autosaves; so does Edit list.
 
 Rules, enforced by `__tests__/ui.enforcement.test.ts`: trip files and `RoomPage` import no Ant
 `Modal`/`Drawer`/`Popover` (trip files also no `Input`/`Select`/`Button`/`Switch`/`DatePicker`);

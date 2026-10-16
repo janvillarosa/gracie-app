@@ -48,7 +48,8 @@ Endpoints
 - PUT `/me`: Update name.
 - GET `/rooms/me`: Get current room view (sanitized; no internal IDs; includes display name, description, member names).
 - POST `/rooms`: Create a solo room if user has none (409 if exists).
-- POST `/rooms/share`: Rotate share token and return `{ token }`.
+- GET `/rooms/share`: Return the House's current invite code `{ token }`, minting one only if it has none (reading never replaces a code someone was given).
+- POST `/rooms/share`: Replace the invite code and return the new `{ token }`; the old one stops working. A code is single use: joining clears it.
 - POST `/rooms/join`: Body `{ token }` to join a room using a 5‑char code (no room ID required).
 - PUT `/rooms/settings`: `{ display_name?, description? }` update.
 - POST `/rooms/deletion/vote`: Record deletion vote; when all current members have voted, the room is deleted and all users’ `room_id` values are cleared.

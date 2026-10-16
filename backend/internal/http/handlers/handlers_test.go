@@ -56,6 +56,14 @@ func TestHTTPFlow(t *testing.T) {
 	if share.Token == "" {
 		t.Fatalf("share failed")
 	}
+	// Reading the invite returns the same code; it does not mint a new one.
+	current := struct {
+		Token string `json:"token"`
+	}{}
+	doGetAuthJSON(t, r, "/rooms/share", aResp.APIKey, &current, http.StatusOK)
+	if current.Token != share.Token {
+		t.Fatalf("GET /rooms/share = %q, want the existing %q", current.Token, share.Token)
+	}
 
 	// Create user B and join
 	bResp := struct {

@@ -20,6 +20,12 @@ function hslToHex(h: number, s: number, l: number): string {
   return `${toHex(f(0))}${toHex(f(8))}${toHex(f(4))}`
 }
 
+/** The avatar's pastel ground for a seed, as a CSS colour: the same one the image is drawn on,
+ *  so a placeholder in it turns into the picture without a change of colour. */
+export function avatarGround(seed: string): string {
+  return `#${deriveBgHex(seed)}`
+}
+
 function deriveBgHex(seed: string): string {
   const h = hashSeed(seed)
   const hue = h % 360

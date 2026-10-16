@@ -21,6 +21,8 @@ type Props = {
   tile?: boolean
   // Show a small pencil after the title on hover and focus: this title can be renamed here.
   editHint?: boolean
+  // The title's own rule (a House name), instead of the trip title limit.
+  validate?: (v: string) => string
 }
 
 /** Tier 1 of a sheet: what this is, big. A leading mark, the title, and one context line. */
@@ -36,6 +38,7 @@ export const SheetIdentity: React.FC<Props> = ({
   titleLabel,
   tile,
   editHint,
+  validate,
 }) => (
   <div
     className={
@@ -52,6 +55,7 @@ export const SheetIdentity: React.FC<Props> = ({
           disabled={disabled}
           placeholder={placeholder}
           label={titleLabel}
+          validate={validate}
         />
         {editHint && onTitle && <PencilSimple className="ui-sheet-pencil" aria-hidden />}
       </div>

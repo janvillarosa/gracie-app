@@ -1,221 +1,221 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useState } from 'react'
+import { Card, message } from 'antd'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { errorMessage } from '@lib/errors'
 import { useTransitionNavigate } from '@lib/viewTransition'
 import { useAuth } from '@auth/AuthProvider'
-import {
-  rotateShare,
-  voteDeletion,
-  cancelDeletion,
-  updateRoomSettings,
-  getMyRoom,
-} from '@api/endpoints'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Card, Typography, Space, Button, Input, Form, Grid, Switch, message } from 'antd'
-import { ArrowLeft, FloppyDisk, ShareNetwork, Trash, XCircle } from '@phosphor-icons/react'
+import { cancelDeletion, getMe, getMyRoom, updateRoomSettings, voteDeletion } from '@api/endpoints'
 import { DESCRIPTION_RULE, isValidDisplayName, MAX_DESCRIPTION, NAME_RULE } from '@lib/validation'
-import { ShareCodeModal } from '@components/ShareCodeModal'
-import { useDocumentTitle } from '@lib/useDocumentTitle'
+import { ShareCodeSheet } from '@components/ShareCodeSheet'
+import { DeleteVoteSheet } from '@components/DeleteVoteSheet'
+import { AVATAR_SIZE, Avatar } from '@components/Avatar'
+import { HouseLoader } from '@components/HouseLoader'
 import { TopNav } from '@components/TopNav'
+import {
+  Button,
+  DetailGroup,
+  Field,
+  NavRow,
+  SectionLabel,
+  SheetIdentity,
+  Switch,
+} from '@components/ui'
+import type { RoomView } from '@api/types'
+import { useDocumentTitle } from '@lib/useDocumentTitle'
 
-const NAME_RE = /^[A-Za-z0-9 ]+$/ // kept for backwards compatibility if referenced; prefer lib/validation
+const nameProblem = (v: string) => (v && !isValidDisplayName(v) ? NAME_RULE : '')
 
+/** House settings, laid out like Trip settings: the House's name (typed in place), what it is
+ *  about, who is in it and how to invite someone, then the vote to delete it. Everything saves
+ *  as it changes. */
 export const RoomSettings: React.FC = () => {
   const { apiKey } = useAuth()
   const navigate = useTransitionNavigate()
   useDocumentTitle('House settings')
   const qc = useQueryClient()
-  const roomQuery = useQuery({ queryKey: ['my-room'], queryFn: () => getMyRoom(apiKey!) })
-  const [displayName, setDisplayName] = useState('')
+  const roomQuery = useQuery({ queryKey: ['my-room'], queryFn: () => getMyRoom(apiKey as string) })
+  const meQuery = useQuery({ queryKey: ['me'], queryFn: () => getMe(apiKey as string) })
+  const room = roomQuery.data
+  const me = meQuery.data?.user_id
   const [description, setDescription] = useState('')
-  const [initialized, setInitialized] = useState(false)
   const [shareOpen, setShareOpen] = useState(false)
-  const [shareToken, setShareToken] = useState<string | null>(null)
-  const [saving, setSaving] = useState(false)
-  const screens = Grid.useBreakpoint()
-  const isMobile = !screens.md
+  const [confirming, setConfirming] = useState(false)
 
-  const nameValid = useMemo(() => !displayName || isValidDisplayName(displayName), [displayName])
-
-  // Initialize form fields with current values once room data is loaded
   useEffect(() => {
-    if (!initialized && roomQuery.data) {
-      setDisplayName(roomQuery.data.display_name || '')
-      setDescription(roomQuery.data.description || '')
-      setInitialized(true)
-    }
-  }, [roomQuery.data, initialized])
+    if (room) setDescription(room.description || '')
+  }, [room?.description])
 
-  const originalName = roomQuery.data?.display_name || ''
-  const originalDesc = roomQuery.data?.description || ''
-  const hasChanges = displayName !== originalName || description !== originalDesc
-
-  const onSave = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (displayName && !nameValid) {
-      message.error(NAME_RULE)
-      return
-    }
-    if (description.length > MAX_DESCRIPTION) {
-      message.error(DESCRIPTION_RULE)
-      return
-    }
-    setSaving(true)
-    try {
-      const payload: { display_name?: string; description?: string } = {}
-      if (displayName !== originalName) payload.display_name = displayName || undefined
-      if (description !== originalDesc) payload.description = description
-      await updateRoomSettings(apiKey!, payload)
-      message.success('House settings saved.')
-      qc.invalidateQueries({ queryKey: ['my-room'] })
-    } catch (e: any) {
-      message.error(errorMessage(e, 'Couldn’t save your changes. Try again.'))
-    } finally {
-      setSaving(false)
-    }
+  if (!room) {
+    return (
+      <div className="container" aria-busy="true">
+        <TopNav back={{ to: '/app', label: 'House' }} />
+        <div className="route-skeleton">
+          <HouseLoader label="Loading your House" />
+        </div>
+      </div>
+    )
   }
 
-  // Saves on toggle: it is a preference, not part of the name and description form.
-  const [savingSuggestions, setSavingSuggestions] = useState(false)
-  const onToggleSuggestions = async (on: boolean) => {
-    setSavingSuggestions(true)
+  const houseName = room.display_name || 'House'
+  const members: { name: string; avatar_key: string; user_id?: string }[] =
+    room.members_meta ?? room.members.map((name) => ({ name, avatar_key: name }))
+  const memberCount = Math.max(members.length, 1)
+  const votes = room.deletion_votes ?? (room.my_deletion_vote ? 1 : 0)
+  const othersVoted = votes - (room.my_deletion_vote ? 1 : 0)
+  const descError = description.length > MAX_DESCRIPTION ? DESCRIPTION_RULE : ''
+
+  const save = async (payload: { display_name?: string; description?: string }, done: string) => {
     try {
-      await updateRoomSettings(apiKey!, { suggestions_off: !on })
+      await updateRoomSettings(apiKey as string, payload)
+      message.success(done)
+      await qc.invalidateQueries({ queryKey: ['my-room'] })
+    } catch (e) {
+      message.error(errorMessage(e, 'Couldn’t save your changes. Try again.'))
+    }
+  }
+  const commitDescription = () => {
+    if (descError || description === (room.description || '')) return
+    void save({ description }, 'Description saved.')
+  }
+
+  // Smart suggestions: a House preference that saves on toggle, and rolls back if refused.
+  const suggestionsOn = !room.suggestions_off
+  const onToggleSuggestions = async (on: boolean) => {
+    const before = qc.getQueryData<RoomView>(['my-room'])
+    qc.setQueryData<RoomView | undefined>(['my-room'], (r) =>
+      r ? { ...r, suggestions_off: !on } : r,
+    )
+    try {
+      await updateRoomSettings(apiKey as string, { suggestions_off: !on })
       await qc.invalidateQueries({ queryKey: ['my-room'] })
       qc.invalidateQueries({ queryKey: ['suggestions'] })
     } catch (e) {
+      qc.setQueryData(['my-room'], before)
       message.error(errorMessage(e, 'Couldn’t save that. Try again.'))
-    } finally {
-      setSavingSuggestions(false)
     }
   }
 
-  const onShare = async () => {
+  const onVote = async () => {
     try {
-      const r = await rotateShare(apiKey!)
-      setShareToken(r.token)
-      setShareOpen(true)
-    } catch (e: any) {
-      message.error(errorMessage(e, 'Couldn’t make a new code. Try again.'))
-    }
-  }
-
-  const onVoteDelete = async () => {
-    try {
-      const res = await voteDeletion(apiKey!)
+      const res = await voteDeletion(apiKey as string)
+      setConfirming(false)
       if (res.deleted) {
-        // Room deleted; go back to dashboard
         navigate('/app', { replace: true })
-      } else {
-        message.success('Vote recorded. The house is deleted once every member votes.')
+        return
       }
-      qc.invalidateQueries({ queryKey: ['my-room'] })
-    } catch (e: any) {
+      message.success('Vote recorded.')
+      await qc.invalidateQueries({ queryKey: ['my-room'] })
+    } catch (e) {
       message.error(errorMessage(e, 'Couldn’t record your vote. Try again.'))
     }
   }
-
   const onCancelVote = async () => {
     try {
-      await cancelDeletion(apiKey!)
-      message.success('Vote canceled.')
-      qc.invalidateQueries({ queryKey: ['my-room'] })
-    } catch (e: any) {
+      await cancelDeletion(apiKey as string)
+      message.success('Vote cancelled.')
+      await qc.invalidateQueries({ queryKey: ['my-room'] })
+    } catch (e) {
       message.error(errorMessage(e, 'Couldn’t cancel your vote. Try again.'))
     }
   }
 
+  const voteLine =
+    votes === 0
+      ? memberCount > 1
+        ? 'Deleting takes everyone’s vote.'
+        : ''
+      : room.my_deletion_vote
+        ? `You voted to delete it. ${votes} of ${memberCount} so far.`
+        : `${votes} of ${memberCount} voted to delete it.`
+
   return (
     <div className="container">
-      <TopNav />
-      <Card>
-        <Space direction="vertical" style={{ width: '100%' }} size="large">
-          {isMobile ? (
-            <Space direction="vertical" style={{ width: '100%' }} size="small">
-              <Typography.Title level={2} style={{ margin: 0 }}>
-                House settings
-              </Typography.Title>
-              <Space wrap>
-                <Button onClick={() => navigate('/app')} icon={<ArrowLeft />}>
-                  Back
-                </Button>
-              </Space>
-            </Space>
-          ) : (
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography.Title level={2} style={{ margin: 0 }}>
-                House settings
-              </Typography.Title>
-              <Button onClick={() => navigate('/app')} icon={<ArrowLeft />}>
-                Back
-              </Button>
-            </div>
-          )}
-          <Form layout="vertical" onSubmitCapture={onSave}>
-            <Form.Item
-              label="House name"
-              validateStatus={displayName && !nameValid ? 'error' : ''}
-              extra={displayName && !nameValid ? undefined : NAME_RULE}
-              help={displayName && !nameValid ? NAME_RULE : undefined}
-            >
-              <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
-            </Form.Item>
-            <Form.Item label="Description">
-              <Input.TextArea
-                rows={4}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-              />
-            </Form.Item>
-            <Button
-              type="primary"
-              htmlType="submit"
-              disabled={saving || !hasChanges || !nameValid}
-              icon={<FloppyDisk />}
-            >
-              Save
-            </Button>
-          </Form>
-          <div className="settings-toggle">
-            <div>
-              <Typography.Text strong id="smart-suggestions-label">
-                Smart suggestions
-              </Typography.Text>
-              <br />
-              <Typography.Text type="secondary" id="smart-suggestions-help">
-                Suggest things your house usually adds, a little before they’re due.
-              </Typography.Text>
-            </div>
-            <Switch
-              checked={!roomQuery.data?.suggestions_off}
-              disabled={!roomQuery.data || savingSuggestions}
-              loading={savingSuggestions}
-              onChange={onToggleSuggestions}
-              aria-labelledby="smart-suggestions-label"
-              aria-describedby="smart-suggestions-help"
+      <TopNav back={{ to: '/app', label: houseName }} />
+      <Card className="paper-card house-settings">
+        <SheetIdentity
+          title={houseName}
+          onTitle={(v) => void save({ display_name: v }, 'Name saved.')}
+          titleLabel="House name"
+          validate={nameProblem}
+          editHint
+          context="House settings"
+        />
+
+        <SectionLabel>About</SectionLabel>
+        <DetailGroup label="About">
+          <div className="ui-fieldrow">
+            <span className="ui-navrow-label">Description</span>
+            <Field
+              aria-label="Description"
+              placeholder="Optional"
+              value={description}
+              error={descError || undefined}
+              onChange={(e) => setDescription(e.target.value)}
+              onBlur={commitDescription}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') e.currentTarget.blur()
+              }}
             />
           </div>
-          <Space wrap>
-            <Button type="primary" onClick={onShare} icon={<ShareNetwork />}>
-              Share code
+        </DetailGroup>
+
+        <SectionLabel>{memberCount === 1 ? 'Just you' : `${memberCount} members`}</SectionLabel>
+        <DetailGroup label="Members">
+          {members.map((m, idx) => (
+            <div className="house-member-row" key={m.user_id ?? idx}>
+              {/* The name is right beside it: the face is decoration. */}
+              <Avatar seed={m.avatar_key} name={m.name} size={AVATAR_SIZE.row} alt="" eager />
+              <span className="house-member-name">{m.name}</span>
+              {m.user_id && m.user_id === me && <span className="house-member-you">You</span>}
+            </div>
+          ))}
+          <NavRow label="Invite" value="Get a code" onClick={() => setShareOpen(true)} />
+        </DetailGroup>
+
+        <SectionLabel>Lists</SectionLabel>
+        <DetailGroup label="Lists">
+          <div className="pref">
+            <div className="pref-row">
+              <label htmlFor="smart-suggestions" className="pref-label">
+                Smart suggestions
+              </label>
+              <Switch
+                id="smart-suggestions"
+                checked={suggestionsOn}
+                onChange={(on) => void onToggleSuggestions(on)}
+                aria-describedby="smart-suggestions-help"
+              />
+            </div>
+            <p className="pref-help" id="smart-suggestions-help">
+              Suggest things your House usually adds, a little before they’re due.
+            </p>
+          </div>
+        </DetailGroup>
+
+        <footer className="ui-sheet-footer house-settings-footer">
+          <span className="ui-sheet-who">{voteLine}</span>
+          {room.my_deletion_vote ? (
+            <Button kind="text" onClick={() => void onCancelVote()}>
+              Cancel my vote
             </Button>
-            {roomQuery.data?.my_deletion_vote ? (
-              <Button onClick={onCancelVote} icon={<XCircle />}>
-                Cancel delete vote
-              </Button>
-            ) : (
-              <Button danger onClick={onVoteDelete} icon={<Trash />}>
-                Vote to delete house
-              </Button>
-            )}
-          </Space>
-          <ShareCodeModal
-            open={shareOpen}
-            token={shareToken}
-            onClose={() => setShareOpen(false)}
-            onRotate={onShare}
-          />
-        </Space>
+          ) : (
+            <Button kind="text" danger onClick={() => setConfirming(true)}>
+              {othersVoted + 1 >= memberCount ? 'Delete House' : 'Vote to delete'}
+            </Button>
+          )}
+        </footer>
       </Card>
+
+      <ShareCodeSheet open={shareOpen} onClose={() => setShareOpen(false)} houseName={houseName} />
+      <DeleteVoteSheet
+        open={confirming}
+        kind="house"
+        name={houseName}
+        members={memberCount}
+        othersVoted={othersVoted}
+        onClose={() => setConfirming(false)}
+        onConfirm={onVote}
+      />
     </div>
   )
 }

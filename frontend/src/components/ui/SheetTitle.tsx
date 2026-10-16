@@ -12,6 +12,8 @@ type Props = {
   placeholder?: string
   // The accessible name of the field.
   label?: string
+  // What is wrong with a value ('' when nothing): defaults to the trip title limit.
+  validate?: (v: string) => string
 }
 
 /** The large heading of a sheet (Outfit 26/700): inline-editable where it makes sense, with the
@@ -23,6 +25,7 @@ export const SheetTitle: React.FC<Props> = ({
   disabled,
   placeholder,
   label = 'Title',
+  validate = titleProblem,
 }) => {
   const [problem, setProblem] = useState('')
   const field = useRef<HTMLInputElement>(null)
@@ -43,7 +46,7 @@ export const SheetTitle: React.FC<Props> = ({
       placeholder={placeholder}
       disabled={disabled}
       error={problem}
-      onChange={(e) => setProblem(titleProblem(e.target.value))}
+      onChange={(e) => setProblem(validate(e.target.value))}
       onKeyDown={(e) => {
         if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
       }}
@@ -52,7 +55,7 @@ export const SheetTitle: React.FC<Props> = ({
         if (!v) {
           e.target.value = value
           setProblem('')
-        } else if (titleProblem(v)) setProblem(titleProblem(v))
+        } else if (validate(v)) setProblem(validate(v))
         else if (v !== value) onCommit(v)
       }}
     />

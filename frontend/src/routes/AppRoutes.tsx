@@ -2,6 +2,7 @@ import React from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { useAuth } from '@auth/AuthProvider'
 import { HouseLoader } from '@components/HouseLoader'
+import { NavShell } from '@components/NavShell'
 
 // Chunks to warm once the browser is idle, by who is looking: a signed-out visitor (on the
 // landing page) only needs the way in, so the trip planner and its map loader never download for
@@ -30,7 +31,6 @@ const RoomSettings = lazyPage(() => import('@pages/RoomSettings'), 'RoomSettings
 const UserSettings = lazyPage(() => import('@pages/UserSettings'), 'UserSettings')
 const ListPage = lazyPage(() => import('@pages/ListPage'), 'ListPage')
 const ListsIndex = lazyPage(() => import('@pages/ListsIndex'), 'ListsIndex')
-const TripsDashboard = lazyPage(() => import('@pages/Dashboard'), 'TripsDashboard')
 const TripPage = lazyPage(() => import('@pages/TripPage'), 'TripPage')
 const TripSettings = lazyPage(() => import('@pages/TripSettings'), 'TripSettings')
 // Dev only: the UI primitives gallery. `import.meta.env.DEV` is false in a production build, so
@@ -56,6 +56,20 @@ const RequireGuest: React.FC<React.PropsWithChildren> = ({ children }) => {
   return <>{children}</>
 }
 
+// While a page's code loads: inside the app, the same top bar the page will have (so nothing
+// drops when it arrives) over the House loader; elsewhere (landing, sign-in) just the loader.
+export const RouteFallback: React.FC = () => {
+  const inApp = useLocation().pathname.startsWith('/app')
+  return (
+    <div className="container" aria-busy="true" data-route-fallback>
+      {inApp && <NavShell />}
+      <div className="route-skeleton">
+        <HouseLoader label="Loading" />
+      </div>
+    </div>
+  )
+}
+
 // Warm the other route chunks once the browser is idle, so a navigation never has to wait on
 // a network fetch (and a view transition never snapshots a loading state).
 const prefetchPages = (audience: Audience) => () => {
@@ -75,15 +89,7 @@ export const AppRoutes: React.FC = () => {
   }, [isAuthed])
   return (
     <main>
-      <React.Suspense
-        fallback={
-          <div className="container" aria-busy="true" data-route-fallback>
-            <div className="route-skeleton">
-              <HouseLoader label="Loading" />
-            </div>
-          </div>
-        }
-      >
+      <React.Suspense fallback={<RouteFallback />}>
         <Routes>
           <Route
             path="/login"
@@ -145,7 +151,8 @@ export const AppRoutes: React.FC = () => {
             path="/app/trips"
             element={
               <RequireAuth>
-                <TripsDashboard />
+                {/* The same element as /app: the House stays mounted across a pill switch. */}
+                <Dashboard />
               </RequireAuth>
             }
           />

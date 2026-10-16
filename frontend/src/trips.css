@@ -117,11 +117,7 @@
 .trip-header {
   padding: 0 2px 4px;
 }
-.trip-avatars {
-  display: inline-flex;
-  gap: 4px;
-  flex: none;
-}
+/* The stack itself is AvatarStack (styles.css); a trip only places it. */
 .trip-offline {
   font-size: 13px;
   font-weight: 600;
@@ -945,8 +941,6 @@
   }
 }
 .trip-avatars {
-  display: flex;
-  gap: 4px;
   margin-top: 8px;
 }
 .trip-dayline {
@@ -1875,33 +1869,7 @@
   gap: 6px 12px;
 }
 .trip-metaline .trip-avatars {
-  display: inline-flex;
-  align-items: center;
-  gap: 0;
   margin: 0 0 0 auto;
-}
-.trip-avatar {
-  flex: none;
-  margin-left: -6px;
-  border-radius: 50%;
-  box-shadow: 0 0 0 2px var(--panel);
-}
-.trip-avatars > :first-child {
-  margin-left: 0;
-}
-.trip-avatar-more {
-  display: grid;
-  place-items: center;
-  box-sizing: border-box;
-  width: 24px;
-  height: 24px;
-  margin-left: -6px;
-  border-radius: 50%;
-  background: var(--panel-subtle);
-  box-shadow: 0 0 0 2px var(--panel);
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 700;
 }
 /* The menu button ends at the card's content edge, like the avatar stack: its hit area reaches
    past the glyph with a pseudo-element instead of padding. */
