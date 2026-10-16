@@ -51,6 +51,7 @@ func main() {
 	analyticsReg := analytics.NewRegistry()
 	var recorder analytics.Recorder = analytics.NopRecorder{}
 	var bufRecorder *analytics.BufferedRecorder
+	var rollup *analytics.Worker
 	if cfg.AnalyticsEnabled {
 		eventsRepo := mongostore.NewEventRepo(mcli)
 		if err := eventsRepo.EnsureIndexes(ctx); err != nil {
@@ -58,6 +59,12 @@ func main() {
 		} else {
 			bufRecorder = analytics.NewBufferedRecorder(eventsRepo, analyticsReg, cfg.AnalyticsBuffer, time.Duration(cfg.AnalyticsRetentionDays)*24*time.Hour)
 			recorder = bufRecorder
+			aggRepo := mongostore.NewAggRepo(mcli, tx)
+			if err := aggRepo.EnsureIndexes(ctx); err != nil {
+				log.Printf("analytics: aggregate indexes failed: %v (rollups disabled)", err)
+			} else {
+				rollup = analytics.NewWorker(eventsRepo, aggRepo, analyticsReg)
+			}
 		}
 	}
 	services.RegisterAnalyticsEvents(analyticsReg)
@@ -124,6 +131,10 @@ func main() {
 	purgeCtx, stopPurge := context.WithCancel(context.Background())
 	defer stopPurge()
 	go tripSvc.RunCoordsPurge(purgeCtx, 24*time.Hour, time.Hour)
+	if rollup != nil {
+		// Fold raw events into aggregates; the lease makes it safe on any number of instances.
+		go rollup.RunFold(purgeCtx, cfg.AnalyticsFoldEvery, cfg.AnalyticsFoldEvery/10)
+	}
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,

@@ -77,6 +77,23 @@ func (r *EventRepo) ListIngestedBetween(ctx context.Context, from, to time.Time,
 	return out, nil
 }
 
+func (r *EventRepo) ListForKey(ctx context.Context, roomID, subjectType, key string, limit int) ([]analytics.Event, error) {
+	filter := bson.D{{Key: "room_id", Value: roomID}, {Key: "subject.type", Value: subjectType}, {Key: "key", Value: key}}
+	// newest first so the limit keeps the most recent history, then flipped to oldest first
+	cur, err := r.col().Find(ctx, filter, options.Find().SetSort(bson.D{{Key: "occurred_at", Value: -1}}).SetLimit(int64(limit)))
+	if err != nil {
+		return nil, err
+	}
+	var out []analytics.Event
+	if err := cur.All(ctx, &out); err != nil {
+		return nil, err
+	}
+	for i, j := 0, len(out)-1; i < j; i, j = i+1, j-1 {
+		out[i], out[j] = out[j], out[i]
+	}
+	return out, nil
+}
+
 func (r *EventRepo) DeleteByActor(ctx context.Context, userID string) error {
 	_, err := r.col().DeleteMany(ctx, bson.D{{Key: "actor_id", Value: userID}})
 	return err

@@ -54,12 +54,13 @@ type Repos struct {
 	Items  store.ListItemRepository
 	Trips  store.TripRepository
 	Events *EventRepo
+	Aggs   *AggRepo
 }
 
 // Compose returns in-memory repos + a no-op Tx runner.
 func Compose() Repos {
 	st := NewStore()
-	return Repos{Tx: Tx{}, Users: &UserRepo{st}, Rooms: &RoomRepo{st}, Lists: &ListRepo{st}, Items: &ListItemRepo{st}, Trips: &TripRepo{st}, Events: NewEventRepo()}
+	return Repos{Tx: Tx{}, Users: &UserRepo{st}, Rooms: &RoomRepo{st}, Lists: &ListRepo{st}, Items: &ListItemRepo{st}, Trips: &TripRepo{st}, Events: NewEventRepo(), Aggs: NewAggRepo()}
 }
 
 // UserRepo

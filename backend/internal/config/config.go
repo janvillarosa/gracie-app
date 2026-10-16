@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"time"
 )
 
 type Config struct {
@@ -28,6 +29,7 @@ type Config struct {
 	AnalyticsBuffer        int
 	AnalyticsRetentionDays int
 	AnalyticsEventsRPS     float64
+	AnalyticsFoldEvery     time.Duration
 }
 
 func getEnv(key, def string) string {
@@ -57,6 +59,7 @@ func Load() (*Config, error) {
 	cfg.AnalyticsBuffer = getEnvInt("ANALYTICS_BUFFER", 4096)
 	cfg.AnalyticsRetentionDays = getEnvInt("ANALYTICS_RETENTION_DAYS", 400)
 	cfg.AnalyticsEventsRPS = getEnvFloat("ANALYTICS_EVENTS_RPS", 2)
+	cfg.AnalyticsFoldEvery = getEnvDuration("ANALYTICS_FOLD_EVERY", 15*time.Minute)
 
 	if cfg.MongoURI == "" || cfg.MongoDB == "" {
 		return nil, fmt.Errorf("missing Mongo configuration (MONGODB_URI, MONGODB_DB)")
@@ -80,6 +83,15 @@ func getEnvFloat(key string, def float64) float64 {
 		var f float64
 		if _, err := fmt.Sscanf(v, "%g", &f); err == nil && f > 0 {
 			return f
+		}
+	}
+	return def
+}
+
+func getEnvDuration(key string, def time.Duration) time.Duration {
+	if v := os.Getenv(key); v != "" {
+		if d, err := time.ParseDuration(v); err == nil && d > 0 {
+			return d
 		}
 	}
 	return def

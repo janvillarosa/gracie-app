@@ -29,7 +29,7 @@ func Stamp(ev *Event, now time.Time, tz string, retention time.Duration) {
 		ev.OccurredAt = now
 	}
 	ev.OccurredAt = ev.OccurredAt.UTC()
-	ev.IngestedAt = now.UTC()
+	ev.IngestedAt = now.UTC().Truncate(time.Millisecond) // Mongo keeps milliseconds; the fold watermark compares them
 	ev.Local = LocalAt(ev.OccurredAt, tz)
 	ev.ExpireAt = ev.OccurredAt.Add(retention)
 }

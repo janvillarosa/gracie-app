@@ -82,6 +82,9 @@ func (f *fakeRepo) InsertMany(_ context.Context, evs []Event) error {
 func (f *fakeRepo) ListIngestedBetween(context.Context, time.Time, time.Time, int) ([]Event, error) {
 	return nil, nil
 }
+func (f *fakeRepo) ListForKey(context.Context, string, string, string, int) ([]Event, error) {
+	return nil, nil
+}
 func (f *fakeRepo) DeleteByActor(context.Context, string) error { return nil }
 func (f *fakeRepo) DeleteByRoom(context.Context, string) error  { return nil }
 
@@ -133,6 +136,9 @@ type blockingRepo struct{ block chan struct{} }
 
 func (b blockingRepo) InsertMany(context.Context, []Event) error { <-b.block; return nil }
 func (blockingRepo) ListIngestedBetween(context.Context, time.Time, time.Time, int) ([]Event, error) {
+	return nil, nil
+}
+func (blockingRepo) ListForKey(context.Context, string, string, string, int) ([]Event, error) {
 	return nil, nil
 }
 func (blockingRepo) DeleteByActor(context.Context, string) error { return nil }

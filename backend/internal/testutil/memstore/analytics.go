@@ -47,6 +47,22 @@ func (r *EventRepo) ListIngestedBetween(_ context.Context, from, to time.Time, l
 	return out, nil
 }
 
+func (r *EventRepo) ListForKey(_ context.Context, roomID, subjectType, key string, limit int) ([]analytics.Event, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	var out []analytics.Event
+	for _, e := range r.evs {
+		if e.RoomID == roomID && e.Key == key && e.Subject.Type == subjectType {
+			out = append(out, e)
+		}
+	}
+	sort.SliceStable(out, func(i, j int) bool { return out[i].OccurredAt.Before(out[j].OccurredAt) })
+	if limit > 0 && len(out) > limit {
+		out = out[len(out)-limit:]
+	}
+	return out, nil
+}
+
 func (r *EventRepo) DeleteByActor(_ context.Context, userID string) error {
 	return r.deleteWhere(func(e analytics.Event) bool { return e.ActorID == userID })
 }

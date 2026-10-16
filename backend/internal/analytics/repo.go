@@ -13,6 +13,9 @@ type EventRepository interface {
 	InsertMany(ctx context.Context, evs []Event) error
 	// ListIngestedBetween returns events with from <= ingested_at < to, oldest first, up to limit.
 	ListIngestedBetween(ctx context.Context, from, to time.Time, limit int) ([]Event, error)
+	// ListForKey returns up to limit of the newest events for one thing in a house
+	// (subject type + normalized key), oldest first.
+	ListForKey(ctx context.Context, roomID, subjectType, key string, limit int) ([]Event, error)
 	// DeleteByActor and DeleteByRoom remove raw events when an account or house is deleted.
 	DeleteByActor(ctx context.Context, userID string) error
 	DeleteByRoom(ctx context.Context, roomID string) error
