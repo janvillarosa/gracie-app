@@ -1,4 +1,5 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useClientLayoutEffect } from '@lib/useClientLayoutEffect'
+import { useEffect, useRef, useState } from 'react'
 
 // "Manage your ___ together.": the blank cycles through what a House keeps, and the highlighter
 // swipes across each new word the way it marks a new line on a list.
@@ -36,8 +37,7 @@ export const HeadlineWord: React.FC<{ lead: React.RefObject<HTMLElement | null> 
   }, [lead])
 
   // FLIP: the new word changed the line's width; slide the lead words from their old place.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: runs once per word change
-  useLayoutEffect(() => {
+  useClientLayoutEffect(() => {
     const el = lead.current
     const before = from.current
     from.current = null

@@ -1,14 +1,42 @@
 import { TransitionLink } from '@components/TransitionLink'
+import { promptInstall, useInstallWay } from '@lib/installPrompt'
 import { PENDING_HOUSE_KEY } from '@lib/pendingHouse'
 import { useTransitionNavigate } from '@lib/viewTransition'
+import { DownloadSimple } from '@phosphor-icons/react'
 import React, { useState } from 'react'
 
 const RECEIPT_LINES: Array<[string, string]> = [
   ['Lists', '0.00'],
   ['Trips, with maps and bookings', '0.00'],
   ['Everyone at home', '0.00'],
-  ['Works with no signal', '0.00'],
+  ['Every phone and laptop', '0.00'],
 ]
+
+/** Where Bauhouse runs, and the way onto this device's home screen: a button where the browser
+ *  can install it, Safari's one step on iPhone and iPad, nothing more once it's installed. */
+const InstallLine: React.FC = () => {
+  const way = useInstallWay()
+  return (
+    <div className="ld-install" data-reveal style={{ '--i': 2 } as React.CSSProperties}>
+      <p>
+        It works in the browser on iPhones, Android phones and laptops, so it doesn’t matter who has
+        which.
+        {way === 'ios' && (
+          <>
+            {' '}
+            To put it on your home screen, tap Share, then <b>Add to Home Screen</b>.
+          </>
+        )}
+      </p>
+      {way === 'prompt' && (
+        <button type="button" className="ld-install-btn" onClick={() => void promptInstall()}>
+          <DownloadSimple weight="bold" aria-hidden="true" />
+          Install Bauhouse
+        </button>
+      )}
+    </div>
+  )
+}
 
 /** The price, rung up on a shop receipt: everything in the House comes to 0.00, and a "Nothing
  *  due" stamp lands on it as it scrolls into view. */
@@ -19,23 +47,24 @@ export const FreeReceipt: React.FC = () => (
         It costs nothing.
       </h2>
       <p className="ld-body" data-reveal style={{ '--i': 1 } as React.CSSProperties}>
-        There’s no plan to pick and no card to enter. Add everyone at home, make as many lists and
-        trips as you like, and keep using it for as long as you do.
+        There are no ads, there’s no paid plan waiting down the line, and you won’t need a card. Add
+        everyone you live with and make as many lists and trips as you want.
       </p>
+      <InstallLine />
       <TransitionLink
         to="/register"
         className="ld-key is-large"
         data-reveal
-        style={{ '--i': 2 } as React.CSSProperties}
+        style={{ '--i': 3 } as React.CSSProperties}
       >
-        Try Bauhouse free
+        Get started free
       </TransitionLink>
     </div>
     <div className="ld-receipt-wrap" data-reveal>
       <div
         className="ld-receipt"
         role="img"
-        aria-label="A receipt for a House on Bauhouse: lists, trips, housemates and offline use all come to 0.00. Total 0.00, nothing due."
+        aria-label="A receipt for a House on Bauhouse: lists, trips, housemates and every device all come to 0.00. Total 0.00, nothing due."
       >
         <p className="ld-receipt-head">Bauhouse</p>
         <p className="ld-receipt-sub">Your House</p>
@@ -103,8 +132,8 @@ export const CloseLine: React.FC = () => {
         </h2>
       </form>
       <p className="ld-close-note">
-        Next you’ll make an account and set up your House, the shared space everyone at home joins
-        with a link.
+        Next you’ll make an account and set up your House. Everyone else joins with a link you send
+        them.
       </p>
     </section>
   )
@@ -113,18 +142,18 @@ export const CloseLine: React.FC = () => {
 // The found pictures on the page; sources and full credits in src/assets/landing/credits.json.
 const PHOTOS = [
   {
-    what: 'Alfama rooftops',
-    creator: 'Dale Cruse',
-    page: 'https://commons.wikimedia.org/w/index.php?curid=176043191',
+    what: 'São Bento station',
+    creator: 'Michael Gaylard',
+    page: 'https://commons.wikimedia.org/wiki/File:Exploring_the_Azulejo-Adorned_Grand_Hall_of_S%C3%A3o_Bento_Station_(55248917165).jpg',
     license: 'CC BY 4.0',
     licenseUrl: 'https://creativecommons.org/licenses/by/4.0/',
   },
   {
-    what: 'Tram 28 at the Sé',
-    creator: 'Vernaccia',
-    page: 'https://commons.wikimedia.org/w/index.php?curid=73559190',
-    license: 'CC BY 2.0',
-    licenseUrl: 'https://creativecommons.org/licenses/by/2.0/',
+    what: 'Ribeira',
+    creator: 'Jakub Hałun',
+    page: 'https://commons.wikimedia.org/wiki/File:Rabelo_boats_and_Ribeira_seen_from_Cais_de_Gaia,_20250605_1623_9879.jpg',
+    license: 'CC BY 4.0',
+    licenseUrl: 'https://creativecommons.org/licenses/by/4.0/',
   },
   {
     what: 'Santa Apolónia station',
@@ -140,7 +169,7 @@ export const LandingFooter: React.FC = () => (
     <div className="ld-footer-row">
       <ul className="ld-footer-main">
         <li>
-          <TransitionLink to="/register">Try Bauhouse free</TransitionLink>
+          <TransitionLink to="/register">Get started free</TransitionLink>
         </li>
         <li>
           <TransitionLink to="/login">Log in</TransitionLink>

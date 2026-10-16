@@ -1,8 +1,11 @@
 import { CreateHouseModal } from '@components/CreateHouseModal'
+import { isAppleTouch, listenForInstallPrompt, resetInstallPrompt } from '@lib/installPrompt'
 import { PENDING_HOUSE_KEY, takePendingHouse } from '@lib/pendingHouse'
+import { HeroSheet } from '@components/landing/HeroSheet'
+import { PlanDesk } from '@components/landing/PlanDesk'
 import { Landing } from '@pages/Landing'
 import { AppRoutes } from '@routes/AppRoutes'
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 
 let authed = false
@@ -26,24 +29,26 @@ describe('Landing page', () => {
     sessionStorage.clear()
   })
 
-  it('leads with the pitch and the sign-up key', () => {
+  it('leads with a short, real list and the sign-up key', () => {
     renderLanding()
     expect(
       screen.getByRole('heading', { level: 1, name: 'Manage your life together.' }),
     ).toBeInTheDocument()
     const demo = screen.getByRole('list', { name: 'The House’s list' })
-    for (const line of [
-      'Simple enough',
-      'sorts your list into aisles',
-      'Everyone at home',
-      'Works without signal',
-    ]) {
-      expect(within(demo).getByText(new RegExp(line))).toBeInTheDocument()
-    }
-    expect(screen.getAllByRole('link', { name: 'Try Bauhouse free' })[0]).toHaveAttribute(
+    expect(
+      within(demo)
+        .getAllByRole('listitem')
+        .map((li) => li.textContent),
+    ).toEqual(['LemonsProduce', 'Bin bagsHousehold', 'Porto train ticketsTrips'])
+    expect(screen.getAllByRole('link', { name: 'Get started free' })[0]).toHaveAttribute(
       'href',
       '/register',
     )
+  })
+
+  it('never says “try”, which reads as a trial with a paywall after it', () => {
+    renderLanding()
+    expect(screen.queryAllByRole('link', { name: /try/i })).toHaveLength(0)
   })
 
   it('adds the visitor’s line, stamps it, and Sam ticks it off', async () => {
@@ -74,7 +79,7 @@ describe('Landing page', () => {
     fireEvent.submit(bar)
     expect(
       within(screen.getByRole('list', { name: 'The House’s list' })).getAllByRole('listitem'),
-    ).toHaveLength(4)
+    ).toHaveLength(3)
   })
 
   it('stops the demo when the list is full and points to sign-up', () => {
@@ -93,51 +98,108 @@ describe('Landing page', () => {
 
   it('splits the page plainly into the House’s lists and trip planning', () => {
     renderLanding()
-    const nav = screen.getByRole('navigation', { name: 'What Bauhouse is for' })
-    expect(within(nav).getByRole('link', { name: /Lists for the house/ })).toHaveAttribute(
-      'href',
-      '#lists',
-    )
-    expect(within(nav).getByRole('link', { name: /Trip planning/ })).toHaveAttribute(
-      'href',
-      '#trips',
-    )
-    // Each part is its own labelled section, in that order.
     const lists = screen.getByRole('heading', { level: 2, name: 'Lists for the house.' })
-    const trips = screen.getByRole('heading', { level: 2, name: 'Plan the trip in one place.' })
+    const trips = screen.getByRole('heading', { level: 2, name: 'Plan the trip together.' })
     expect(lists.compareDocumentPosition(trips) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(lists.closest('section')).toHaveAttribute('id', 'lists')
     expect(trips.closest('section')).toHaveAttribute('id', 'trips')
+    // Working with no signal is a trip promise (trips keep a copy on the phone; lists don't yet).
+    fireEvent.click(screen.getByRole('tab', { name: 'On the trip' }))
+    const offline = screen.getByRole('heading', {
+      level: 3,
+      name: 'On the trip, even with no signal.',
+    })
+    expect(offline.closest('section')).toHaveAttribute('id', 'trips')
   })
 
-  it('sells not having to fiddle: no template, no spreadsheet, every device', () => {
+  it('shows the trip two ways: planning at home, and on the trip', () => {
     renderLanding()
+    const plan = screen.getByRole('tab', { name: 'Planning at home' })
+    const trip = screen.getByRole('tab', { name: 'On the trip' })
+    expect(plan).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tabpanel', { name: 'Planning at home' })).toBeVisible()
+    expect(screen.queryByRole('tabpanel', { name: 'On the trip' })).toBeNull()
+    fireEvent.click(trip)
+    expect(trip).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tabpanel', { name: 'On the trip' })).toBeVisible()
+    expect(screen.queryByRole('tabpanel', { name: 'Planning at home' })).toBeNull()
+    // Arrow keys move between the two, as in the app's tabs.
+    fireEvent.keyDown(trip, { key: 'ArrowLeft' })
+    expect(plan).toHaveAttribute('aria-selected', 'true')
+    expect(plan).toHaveFocus()
+  })
+
+  it('lets a visitor put ideas on their days until the trip is ready to go', async () => {
+    renderLanding()
+    const desk = screen.getByRole('region', { name: 'Ready to go?' })
+    expect(within(desk).getByText('Sun 26 has nothing planned yet')).toBeInTheDocument()
+    expect(screen.getByText('Nothing planned yet')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /Put Livraria Lello on Sunday at 10:30/ }))
+    expect(screen.queryByText('Nothing planned yet')).toBeNull()
+    const days = document.querySelector('.ld-plan-days') as HTMLElement
+    expect(within(days).getByText('Livraria Lello')).toBeInTheDocument()
+    expect(screen.getByText('Ready to go')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /Put Francesinha on Saturday at 13:00/ }))
+    // Saturday's new stop lands between the others, in time order.
+    const sat = within(document.querySelector('.ld-plan-days') as HTMLElement).getAllByText(
+      /^(São Bento station|Francesinha|Dinner in Ribeira)$/,
+    )
+    expect(sat.map((e) => e.textContent)).toEqual([
+      'São Bento station',
+      'Francesinha',
+      'Dinner in Ribeira',
+    ])
+  })
+
+  it('shows the next stop on the phone, with the booking code a counter asks for', () => {
+    renderLanding()
+    fireEvent.click(screen.getByRole('tab', { name: 'On the trip' }))
+    const next = screen.getByRole('region', { name: 'Next stop' })
+    expect(within(next).getByRole('heading', { name: 'Santa Apolónia' })).toBeInTheDocument()
+    const code = within(next).getByRole('button', { name: 'Show code' })
+    fireEvent.click(code)
+    expect(code).toHaveAttribute('aria-expanded', 'true')
+    expect(within(next).getByText('7HQ2KD')).toBeInTheDocument()
+    // Ticking it off brings the next stop up.
+    fireEvent.click(within(next).getByRole('button', { name: 'Tick off Train to Porto' }))
     expect(
-      screen.getByText(/no Notion template to build and no Google Sheet or Doc to share around/),
+      within(screen.getByRole('region', { name: 'Next stop' })).getByRole('heading', {
+        name: 'São Bento station',
+      }),
     ).toBeInTheDocument()
-    expect(
-      screen.getByText(/No Notion template to build, no Google Sheet to share/),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByRole('heading', { level: 2, name: 'Every device, with or without signal.' }),
-    ).toBeInTheDocument()
-    expect(screen.getByText(/installs to your home screen/)).toBeInTheDocument()
+  })
+
+  it('leads with home and trips together, and introduces the House', () => {
+    renderLanding()
+    const lede = screen.getByText(/keeps the weekly shop and the next trip/)
+    expect(lede).toHaveTextContent(/Everyone you live with joins your House/)
+    expect(lede).toHaveTextContent(/scroll the group chat/)
+    expect(screen.queryByText(/Notion/)).toBeNull()
+    expect(screen.queryByText(/aisle/i)).toBeNull()
     // The typing list is decoration for sighted visitors.
     expect(screen.getByText('Basmati rice').closest('[aria-hidden="true"]')).not.toBeNull()
+  })
+
+  it('says plainly how bookings get in', () => {
+    renderLanding()
+    fireEvent.click(screen.getByRole('tab', { name: 'On the trip' }))
+    expect(screen.getByText(/types it in once, code included/)).toBeInTheDocument()
   })
 
   it('rings the whole House up at nothing', () => {
     renderLanding()
     expect(screen.getByRole('heading', { level: 2, name: 'It costs nothing.' })).toBeInTheDocument()
     expect(screen.getByRole('img', { name: /Total 0\.00, nothing due/ })).toBeInTheDocument()
+    expect(screen.getByText(/no ads, there’s no paid plan/)).toBeInTheDocument()
   })
 
   it('holds itinerary changes while there is no signal', () => {
     renderLanding()
+    fireEvent.click(screen.getByRole('tab', { name: 'On the trip' }))
     const signal = screen.getByRole('switch', { name: 'No signal' })
     fireEvent.click(signal)
     expect(signal).toHaveAttribute('aria-checked', 'true')
-    fireEvent.click(screen.getByRole('checkbox', { name: /Tram 28 to Graça/ }))
+    fireEvent.click(screen.getByRole('checkbox', { name: /São Bento station/ }))
     expect(screen.getByText('No signal. 1 change saved on this phone')).toBeInTheDocument()
     expect(screen.getByText('Waiting')).toBeInTheDocument()
     fireEvent.click(signal)
@@ -168,21 +230,292 @@ describe('Landing page', () => {
 
   it('says which line of the plan each photo shows', () => {
     renderLanding()
-    expect(screen.getByText(/The 11:00 stop on Saturday’s plan: Tram 28/)).toBeInTheDocument()
     expect(
-      screen.getByText(/Santa Apolónia, where Sunday’s 09:09 to Porto leaves from/),
+      screen.getByText('São Bento station, the 11:00 stop on Saturday’s plan.'),
     ).toBeInTheDocument()
-    expect(screen.getByText('Alfama, where Saturday ends: dinner at 20:00.')).toBeInTheDocument()
+    expect(
+      screen.getByText('Santa Apolónia, where Saturday’s 09:09 to Porto leaves from.'),
+    ).toBeInTheDocument()
+    expect(screen.getByText('Ribeira, where Saturday ends: dinner at 20:00.')).toBeInTheDocument()
+    // Each photo's line carries the highlighter where it appears on screen.
+    expect(document.querySelector('.ld-dayrow.is-marked')).toHaveTextContent('São Bento station')
+    expect(document.querySelector('.ld-next-title.ld-mark')).toHaveTextContent('Santa Apolónia')
+    expect(document.querySelector('.ld-slip .ld-mark')).toHaveTextContent('Dinner in Ribeira')
   })
 
   it('credits every found photo', () => {
     renderLanding()
-    for (const who of ['Dale Cruse', 'Vernaccia', 'Metro Centric']) {
+    for (const who of ['Michael Gaylard', 'Jakub Hałun', 'Metro Centric']) {
       expect(screen.getByRole('link', { name: who })).toHaveAttribute(
         'href',
         expect.stringContaining('wikimedia.org'),
       )
     }
+  })
+})
+
+describe('putting it on the home screen', () => {
+  beforeAll(() => listenForInstallPrompt())
+  afterEach(() => {
+    act(() => resetInstallPrompt())
+    vi.restoreAllMocks()
+  })
+
+  it('offers an install button where the browser can install it', async () => {
+    renderLanding()
+    expect(screen.queryByRole('button', { name: 'Install Bauhouse' })).toBeNull()
+    const prompt = vi.fn().mockResolvedValue(undefined)
+    const e = Object.assign(new Event('beforeinstallprompt'), {
+      prompt,
+      userChoice: Promise.resolve({ outcome: 'accepted' as const }),
+    })
+    act(() => void window.dispatchEvent(e))
+    await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Install Bauhouse' })))
+    expect(prompt).toHaveBeenCalledOnce()
+    // Installed: the button goes and doesn't come back.
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: 'Install Bauhouse' })).toBeNull(),
+    )
+  })
+
+  it('drops the button once the browser says it is installed', () => {
+    renderLanding()
+    const e = Object.assign(new Event('beforeinstallprompt'), {
+      prompt: vi.fn(),
+      userChoice: new Promise(() => {}),
+    })
+    act(() => void window.dispatchEvent(e))
+    expect(screen.getByRole('button', { name: 'Install Bauhouse' })).toBeInTheDocument()
+    act(() => void window.dispatchEvent(new Event('appinstalled')))
+    expect(screen.queryByRole('button', { name: 'Install Bauhouse' })).toBeNull()
+  })
+
+  it('gives Safari’s one step on iPhone, where no button can install it', () => {
+    vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue(
+      'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15',
+    )
+    renderLanding()
+    expect(screen.getByText(/tap Share, then/)).toHaveTextContent('Add to Home Screen')
+    expect(screen.queryByRole('button', { name: 'Install Bauhouse' })).toBeNull()
+  })
+
+  it('just says where it runs anywhere else', () => {
+    renderLanding()
+    expect(
+      screen.getByText(/works in the browser on iPhones, Android phones and laptops/),
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/Add to Home Screen/)).toBeNull()
+  })
+
+  it('knows an iPad that reports itself as a Mac', () => {
+    expect(isAppleTouch('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)', 5)).toBe(true)
+    expect(isAppleTouch('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)', 0)).toBe(false)
+    expect(isAppleTouch('Mozilla/5.0 (Linux; Android 15; Pixel 9)', 5)).toBe(false)
+  })
+})
+
+describe('housemates adding to the first list', () => {
+  type Seen = (entries: Array<{ isIntersecting: boolean }>) => void
+  const watchers = new Map<Element, Seen>()
+  beforeEach(() => {
+    vi.stubGlobal(
+      'IntersectionObserver',
+      class {
+        constructor(private cb: Seen) {}
+        observe(el: Element) {
+          watchers.set(el, this.cb)
+        }
+        unobserve() {}
+        disconnect() {}
+      },
+    )
+  })
+  afterEach(() => vi.unstubAllGlobals())
+
+  // Real timers, sped up: a housemate adds a line every 70ms.
+  const renderList = () => {
+    render(<HeroSheet mateEveryMs={70} />)
+    const stack = document.querySelector('.ld-stack') as Element
+    act(() => watchers.get(stack)?.([{ isIntersecting: true }]))
+  }
+  const list = () => screen.getByRole('list', { name: 'The House’s list' })
+
+  it('adds lines while it is on screen and says who added the last one', async () => {
+    renderList()
+    expect(await within(list()).findByText('Yogurt')).toBeInTheDocument()
+    expect(await screen.findByText(/^(Mia|Sam|Jo) added /)).toBeInTheDocument()
+    expect(await within(list()).findByText('Passports')).toBeInTheDocument()
+    // The oldest line is ticked off so the list stays short.
+    await waitFor(() => expect(within(list()).queryByText('Porto train tickets')).toBeNull())
+  })
+
+  it('waits while the visitor is typing', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'] })
+    try {
+      renderList()
+      fireEvent.focus(screen.getByRole('textbox', { name: 'Add an item' }))
+      await act(() => vi.advanceTimersByTimeAsync(700))
+      expect(within(list()).getAllByRole('listitem')).toHaveLength(3)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+})
+
+describe('planning desk playing itself', () => {
+  type Seen = (entries: Array<{ isIntersecting: boolean }>) => void
+  const watchers = new Map<Element, Seen>()
+  beforeEach(() => {
+    vi.stubGlobal(
+      'IntersectionObserver',
+      class {
+        constructor(private cb: Seen) {}
+        observe(el: Element) {
+          watchers.set(el, this.cb)
+        }
+        unobserve() {}
+        disconnect() {}
+      },
+    )
+  })
+  afterEach(() => vi.unstubAllGlobals())
+
+  const show = () => {
+    render(<PlanDesk autoplayMs={60} />)
+    const desk = document.querySelector('.device-macbook-pro') as Element
+    act(() => watchers.get(desk)?.([{ isIntersecting: true }]))
+  }
+
+  it('lands the first two ideas by itself and leaves the rest to the visitor', async () => {
+    show()
+    expect(await screen.findByText('Ready to go')).toBeInTheDocument()
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: /Put Port cellars/ })).toBeNull(),
+    )
+    expect(screen.queryByRole('button', { name: /Put Livraria Lello/ })).toBeNull()
+    expect(screen.getByRole('button', { name: /Put Francesinha/ })).toBeInTheDocument()
+  })
+
+  it('stops as soon as the visitor taps an idea', async () => {
+    show()
+    fireEvent.click(screen.getByRole('button', { name: /Put Francesinha/ }))
+    await new Promise((r) => setTimeout(r, 250))
+    // Their tap ended the show: the first two ideas are still waiting.
+    expect(screen.getByRole('button', { name: /Put Port cellars/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Put Livraria Lello/ })).toBeInTheDocument()
+  })
+})
+
+describe('typing list', () => {
+  type Seen = (entries: Array<{ isIntersecting: boolean }>) => void
+  const watchers = new Map<Element, Seen>()
+  const seen = (isIntersecting: boolean) => act(() => watchers.get(card())?.([{ isIntersecting }]))
+  beforeEach(() => {
+    // Only the demo's own sleeps. Faking every timer API here broke focus timing in later test
+    // files that share this worker (HouseTrips, TripScroll).
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    vi.spyOn(Math, 'random').mockReturnValue(0)
+    vi.stubGlobal(
+      'IntersectionObserver',
+      class {
+        constructor(private cb: Seen) {}
+        observe(el: Element) {
+          watchers.set(el, this.cb)
+        }
+        unobserve() {}
+        disconnect() {}
+      },
+    )
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+  })
+
+  const card = () => document.querySelector('.ld-plate-card') as HTMLElement
+  const lines = () =>
+    Array.from(card().querySelectorAll('.ld-row-title')).map((e) => e.firstChild?.textContent)
+
+  it('suggests the word as it is typed, lands it once, and keeps the list full', async () => {
+    renderLanding()
+    seen(true)
+    await act(() => vi.advanceTimersByTimeAsync(200))
+    expect(card().querySelector('.ld-slips')).toHaveTextContent('Oat milk')
+    await act(() => vi.advanceTimersByTimeAsync(3000))
+    expect(lines()).toEqual(['Oat milk', 'Basmati rice', 'Lemons', 'Sourdough'])
+    // Leaving and coming back never types the same line again.
+    seen(false)
+    seen(true)
+    await act(() => vi.advanceTimersByTimeAsync(6000))
+    expect(lines().filter((l) => l === 'Oat milk')).toHaveLength(1)
+    expect(lines()).toHaveLength(4)
+  })
+})
+
+describe('build-time copy', () => {
+  it('renders the whole page to HTML for visitors without JavaScript', async () => {
+    // Layout effects warn when rendered to a string; the real build has no window and skips them.
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const { renderLanding: renderStatic } = await import('../landing.server')
+    const html = renderStatic()
+    expect(html).toContain('Manage your')
+    expect(html).toContain('keeps the weekly shop and the next trip')
+    expect(html).toContain('Get started free')
+    vi.restoreAllMocks()
+  })
+
+  it('is removed once the live page is on screen', () => {
+    const copy = document.createElement('div')
+    copy.id = 'prerender'
+    document.body.appendChild(copy)
+    renderLanding()
+    expect(document.getElementById('prerender')).toBeNull()
+  })
+})
+
+describe('sticky key (phones)', () => {
+  const rects = new Map<string, Partial<DOMRect>>()
+  const place = (selector: string, r: Partial<DOMRect>) => rects.set(selector, r)
+  const sticky = () => document.querySelector('.ld-sticky') as HTMLElement
+
+  beforeEach(() => {
+    rects.clear()
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (
+      this: Element,
+    ) {
+      for (const [sel, r] of rects)
+        if (this.matches(sel)) return { top: 0, bottom: 0, ...r } as DOMRect
+      // Everything else is far below the screen.
+      return { top: 5000, bottom: 5100 } as DOMRect
+    })
+    vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(800)
+  })
+  afterEach(() => vi.restoreAllMocks())
+
+  const scroll = () => act(() => void window.dispatchEvent(new Event('scroll')))
+
+  it('waits until the first key has scrolled away', () => {
+    place('.ld-hero-cta', { top: 300, bottom: 360 })
+    renderLanding()
+    expect(sticky()).not.toHaveClass('is-on')
+    place('.ld-hero-cta', { top: -200, bottom: -140 })
+    scroll()
+    expect(sticky()).toHaveClass('is-on')
+  })
+
+  it('steps aside while another key is on screen, so two never stack', () => {
+    place('.ld-hero-cta', { top: -200, bottom: -140 })
+    place('.ld-free .ld-key', { top: 600, bottom: 660 })
+    renderLanding()
+    expect(sticky()).not.toHaveClass('is-on')
+  })
+
+  it('steps aside rather than cover a row of a demo', () => {
+    place('.ld-hero-cta', { top: -200, bottom: -140 })
+    place('.ld-slip-body', { top: 200, bottom: 780 })
+    renderLanding()
+    expect(sticky()).not.toHaveClass('is-on')
   })
 })
 

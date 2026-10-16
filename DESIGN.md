@@ -532,10 +532,15 @@ The marketing page at `/` (logged-out visitors) is the same paper turned up to p
 app's ground, ink, faces, stamps, highlighter and yellow key. Direction contract:
 `.impeccable/surfaces/frontend-src-pages-landing-tsx.md`; build notes in `frontend/CLAUDE.md`.
 
-**Thesis.** There is nothing to fiddle with: no template to build, no spreadsheet to share, one simple app on
-every device, offline. So its demonstrations show less work, not more features. The page is divided plainly in
-two: two link blocks under the first screen (ink for the House's lists, blue for trip planning), then a section
-for each, then the claims that cover both (every device and offline, free).
+**Thesis.** One shared space for the household, from the weekly shop to the next trip: the same House shares
+both, instead of a group chat full of screenshots. Its demonstrations show less work, not more features. The
+page is four parts and a close (distilled 2026-10-16 after a sales critique; plan in
+`docs/superpowers/plans/2026-10-16-landing-distill.md`): the hero with its live list, **Lists** (one typing
+demo that also shows the add bar's suggestion), **Trips** (one example trip, a weekend in Porto, in two views
+switched by two pills: "Planning at home" is a laptop showing the app's desk, with Ideas, the days, "Ready to go?"
+and a drawn map of Porto; "On the trip" is a phone showing the next stop and its booking code, then the no-signal
+itinerary, because working offline is a trip promise today), **Free** (the receipt, where it runs, and
+the way onto the home screen), then the closing sentence. Don't name rival apps; the page sells home plus trips.
 
 **Type.** Outfit 800 for display and headings, Figtree for text, in five steps only: display `clamp(46px, 6.4vw, 96px)`,
 heading `clamp(36px, 4.4vw, 66px)`, title `clamp(22px, 2vw, 30px)`, text 18px, small 14px. The headline's last
@@ -546,29 +551,47 @@ heading's accessible name stays "Manage your life together.".
 or sheet field; it stays on keys, the highlighter and the switch's on-state. Landing tone `#ECECEC` is the
 toned paper (the blank in the closing sentence, the secondary key).
 
-**Shapes and paper.** Paper has shaped edges instead of boxes: the peeking sheet under the hero list, folder-like
-stacking sheets (sticky, each as tall as the tallest so a taller sheet never pokes out beneath a shorter one), a
-zigzag-torn itinerary slip, and a torn till receipt with a tilted red "Nothing due" rubber stamp that lands once.
+**Shapes and paper.** Paper has shaped edges instead of boxes: the peeking sheet under the hero list, two flat
+trip sheets (blue for planning, red for the trip) with rounded corners, a zigzag-torn itinerary slip, and a torn till receipt with a tilted red "Nothing due" rubber stamp that lands once.
 Controls are 12px-cornered on the landing (full pills in the app).
 
 **Product pictures** are the app's own rows, tabs, add bar, day plan, bookings and packing list, copied from the
-real screens (`components/landing/appUi.tsx`), marked `data-ui`, never a device frame. They show only what the app
+real screens (`components/landing/appUi.tsx`), marked `data-ui`. Only the two trip views sit in devices: the MacBook Pro and iPhone 14 Pro frames from
+Devices.css (MIT, vendored in `components/landing/devices.css` with its notice). `DeviceFit.tsx` lays each frame out
+at its own size and scales it to fit, so a phone shows the same laptop, smaller; the desk is laid out at 960x600
+and shrunk into the MacBook's screen. The map of Porto is drawn, not map data (`PortoMap.tsx`, generated
+paths in `portoMapData.ts`), with the app's pills and day routes on it. They show only what the app
 does (list rows carry no "added by" line). The hero list and the typing list are live: a line is typed, another
-housemate ticks the bottom item, the new line lands with the highlighter and its aisle stamp, and the ticked one
-folds into "Show checked-off items" so the list stays balanced. Example housemates (Mia, Sam, Jo) are never
+housemate ticks the bottom item, the new line lands with the highlighter and its section stamp, and the ticked one
+folds into "Show checked-off items" so the list stays balanced. From the second letter the typing list's add bar
+shows its suggestion slip rising over the rows, as the app's slips do. Say "sections", never "aisles": the app
+sorts by category, not by a shop's layout. Example housemates (Mia, Sam, Jo) are never
 labelled "demo": the page sells the product.
 
 **Photographs** are credited open-licence pictures (CC BY, Wikimedia Commons) in `frontend/src/assets/landing/`
 with provenance in `credits.json` and in each file. Every photo carries a caption naming the line of the plan it
-shows, and that line carries the highlighter; a photo with no line to point to does not go on the page.
+shows, and that line carries the highlighter; a photo with no line to point to does not go on the page. The trip
+photos are of the example trip's own stops: São Bento station (the 11:00 stop on Saturday's plan, beside the
+laptop), Santa Apolónia (the phone's next stop, the 09:09 train) and Ribeira (where Saturday's slip ends).
 
 **Motion** is the paper's own: stamps land one after another, the highlighter inks in, ticks pop with confetti in
 brand colours, the footer wordmark rises, "start." wakes once there's a name in the blank. All of it sits behind
-`prefers-reduced-motion: no-preference`. On phones a sticky "Try Bauhouse free" key stays within thumb reach once
-the first one has scrolled away and steps aside for the closing sentence and the footer.
+`prefers-reduced-motion: no-preference`. On phones a sticky "Get started free" key stays within thumb reach once
+the first one has scrolled away. It steps aside whenever another key, the closing sentence or the footer is on
+screen, and whenever a product picture reaches the strip it would cover.
 
-**Calls to action** say what they do for a stranger: "Try Bauhouse free" ("Try it free" in the nav), never
-"Start your House"; the House is explained once, in the closing note.
+**Calls to action** say "Get started free" ("Get started" in the nav). Never "Try", which reads as a trial with
+a paywall after it, and never "Start your House". The House is introduced in the hero's lede ("everyone you live
+with joins your House") and again in the closing note.
+
+**Home screen.** The receipt section says it runs in the browser on iPhone, Android and laptops. Where the
+browser can install it (`beforeinstallprompt`, Chromium) a quiet outlined "Install Bauhouse" button sits under
+that line; on iPhone and iPad it adds Safari's one step (Share, then Add to Home Screen); once installed it says
+nothing more (`lib/installPrompt.ts`).
+
+**Without JavaScript.** `/` is rendered to HTML at build time (`src/landing.server.tsx`,
+`scripts/prerender.mjs`) with its stylesheet linked, so search engines, link previews (`public/og.png`) and
+visitors without JavaScript see the whole page. The live page replaces that copy before its first paint.
 
 **Landing Don'ts.** Don't fill a section or sheet with yellow (the app's sign-in screens are the only yellow
 field). Don't add a sixth type size. Don't put an eyebrow label above a heading. Don't invent a feature the app

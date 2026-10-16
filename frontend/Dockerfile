@@ -8,6 +8,8 @@ RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
 RUN pnpm install --frozen-lockfile=false
 COPY tsconfig.json vite.config.ts index.html ./
 COPY src ./src
+COPY scripts ./scripts
+COPY public ./public
 # Allow overriding live query intervals at build time for Vite
 ARG VITE_LIVE_QUERY_LISTS_MS
 ARG VITE_LIVE_QUERY_ITEMS_MS

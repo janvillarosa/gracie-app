@@ -2,24 +2,39 @@ import { TransitionLink } from '@components/TransitionLink'
 import type React from 'react'
 import { useEffect, useState } from 'react'
 
-/** Phones only: once the first "Try Bauhouse free" has scrolled away, a key stays at the bottom
- *  of the screen within thumb reach, and steps aside for the closing sentence and the footer,
- *  where the page asks again. Decided from where those parts are on screen at each scroll. */
-export const StickyKey: React.FC<{ away: string; until: string }> = ({ away, until }) => {
+// The strip at the bottom of the screen that the key takes up, with its padding.
+const KEY_BAND = 96
+
+/** Phones only: once the first "Get started free" has scrolled away, a key waits at the bottom of
+ *  the screen within thumb reach. It steps aside whenever another way to start is on screen
+ *  (`avoid`: the inline keys, the closing sentence, the footer), so two identical keys never stack,
+ *  and whenever a product picture (`spare`) reaches the strip it would cover, so it never hides a
+ *  row of a demo. Decided from where those parts are on screen at each scroll. */
+export const StickyKey: React.FC<{ away: string; avoid: string; spare: string }> = ({
+  away,
+  avoid,
+  spare,
+}) => {
   const [show, setShow] = useState(false)
 
   useEffect(() => {
     const first = document.querySelector(away)
-    const ends = Array.from(document.querySelectorAll(until))
-    if (!first || ends.length === 0) return
-    // Three measurements per scroll event is cheap, and React ignores a state that hasn't changed.
+    const ends = Array.from(document.querySelectorAll(avoid))
+    const pictures = Array.from(document.querySelectorAll(spare))
+    if (!first) return
+    // A few rects per scroll event is cheap, and React ignores a state that hasn't changed.
     const update = () => {
+      const h = window.innerHeight
       const gone = first.getBoundingClientRect().bottom < 0
-      const atEnd = ends.some((el) => {
+      const onScreen = ends.some((el) => {
         const r = el.getBoundingClientRect()
-        return r.top < window.innerHeight && r.bottom > 0
+        return r.top < h && r.bottom > 0
       })
-      setShow(gone && !atEnd)
+      const wouldCover = pictures.some((el) => {
+        const r = el.getBoundingClientRect()
+        return r.top < h && r.bottom > h - KEY_BAND
+      })
+      setShow(gone && !onScreen && !wouldCover)
     }
     update()
     window.addEventListener('scroll', update, { passive: true })
@@ -28,12 +43,12 @@ export const StickyKey: React.FC<{ away: string; until: string }> = ({ away, unt
       window.removeEventListener('scroll', update)
       window.removeEventListener('resize', update)
     }
-  }, [away, until])
+  }, [away, avoid, spare])
 
   return (
     <div className={show ? 'ld-sticky is-on' : 'ld-sticky'} aria-hidden={!show}>
       <TransitionLink to="/register" className="ld-key is-large is-wide" tabIndex={show ? 0 : -1}>
-        Try Bauhouse free
+        Get started free
       </TransitionLink>
     </div>
   )

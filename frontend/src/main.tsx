@@ -10,6 +10,7 @@ import './fonts.css'
 import 'antd/dist/reset.css'
 import './styles.css'
 import { setupPWAAssets } from '@lib/pwaAssets'
+import { listenForInstallPrompt } from '@lib/installPrompt'
 
 // Hoisted so the theme object keeps a stable identity across renders.
 const antdThemeConfig = {
@@ -71,6 +72,7 @@ const queryClient = new QueryClient()
 
 // Inject icons/manifest before app mounts
 setupPWAAssets()
+listenForInstallPrompt()
 
 // Opt-in dev backend for trips (VITE_MOCK_TRIPS=1): an in-browser implementation of the API.
 // The constant condition lets the bundler drop it, and the mocks, from production builds.

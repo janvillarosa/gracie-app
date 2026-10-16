@@ -535,16 +535,6 @@
   }
 }
 
-/* One pitch line keeps a dry highlight: the line the page most wants read. */
-.ld-row.is-marked:not(.is-done) .ld-row-title::after {
-  content: '';
-  position: absolute;
-  z-index: -1;
-  inset: 42% -4px 4% -4px;
-  border-radius: 3px;
-  background: var(--highlighter);
-}
-
 .ld-done-toggle {
   display: block;
   min-height: 44px;
@@ -608,7 +598,7 @@ p.ld-done-toggle {
   color: var(--ld-blue-fg);
 }
 
-.ld-stamp:is(.is-offline, .is-amber) {
+.ld-stamp:is(.is-trips, .is-amber) {
   background: var(--ld-amber-bg);
   color: var(--ld-amber-fg);
 }
@@ -740,23 +730,41 @@ p.ld-done-toggle {
   color: var(--ld-grey-ink);
 }
 
-/* The sketch's margin note, in the gutter beside the sheet on wide screens. */
+/* Who just added what: a small line over the sheet, and in the gutter beside it on wide
+   screens. It changes as the housemates add to the list. */
 .ld-margin-note {
-  display: none;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(100% + 10px);
+  margin: 0;
+  text-align: center;
+  font: 600 var(--ld-small) / 1.4 var(--font-body);
+  color: var(--ld-grey-ink);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ld-margin-note span {
+    display: inline-block;
+    animation: ld-note-in 320ms var(--ease-out) both;
+  }
+}
+
+@keyframes ld-note-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
 }
 
 @media (min-width: 1360px) {
   .ld-margin-note {
-    display: block;
-    position: absolute;
     left: calc(100% + 32px);
+    right: auto;
+    bottom: auto;
     top: 170px;
     width: 190px;
-    margin: 0;
-    font-weight: 600;
-    font-size: var(--ld-small);
-    line-height: 1.4;
-    color: var(--ld-grey-ink);
+    text-align: left;
   }
 
   .ld-margin-note::before {
@@ -770,66 +778,6 @@ p.ld-done-toggle {
 }
 
 /* ---- the page in two: lists, and trips ------------------------------------------------ */
-
-.ld-parts {
-  max-width: 1080px;
-  margin: 110px auto 0;
-  padding: 0 var(--ld-gutter);
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
-
-.ld-part {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 28px 72px 30px 28px;
-  border-radius: var(--ld-radius);
-  color: #fff !important;
-  text-decoration: none;
-  transition: transform var(--dur-fast) var(--ease-out);
-}
-
-.ld-part.is-lists {
-  background: var(--ink);
-}
-
-.ld-part.is-trips {
-  background: var(--brand-blue);
-}
-
-.ld-part-title {
-  font: 800 var(--ld-title) / 1.1 var(--font-headings);
-  letter-spacing: -0.02em;
-}
-
-.ld-part-text {
-  font-size: var(--ld-text);
-  line-height: 1.4;
-  max-width: 30ch;
-}
-
-.ld-part-arrow {
-  position: absolute;
-  right: 26px;
-  top: 50%;
-  margin-top: -14px;
-  width: 28px;
-  height: 28px;
-  transition: transform var(--dur-base) var(--ease-out);
-}
-
-.ld-part:active {
-  transform: scale(0.99);
-}
-
-@media (hover: hover) {
-  .ld-part:hover .ld-part-arrow {
-    transform: translateY(5px);
-  }
-}
 
 /* ---- one list, whole house ------------------------------------------------------------ */
 
@@ -890,63 +838,122 @@ p.ld-done-toggle {
 .ld-shared-copy {
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  gap: 48px;
+  justify-content: center;
   padding: 64px var(--ld-gutter) 64px 24px;
   max-width: 620px;
 }
 
-.ld-shared-text .ld-body {
+.ld-shared-copy .ld-body {
   margin-top: 28px;
 }
 
-.ld-cells {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
+/* The suggestion rises above the add bar, over the bottom rows, as the app's slips do, so the
+   card never changes height while a word is typed. */
+.ld-plate-bar {
+  position: relative;
 }
 
-.ld-cell {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 72px;
-  border-radius: var(--ld-control-radius);
-  font: 700 var(--ld-text) / 1 var(--font-body);
-  text-decoration: none;
-  transition: transform var(--dur-press) var(--ease-out);
+.ld-slips.is-rising {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(100% - 6px);
+  z-index: 1;
 }
 
-.ld-cell.is-key {
-  background: var(--brand-yellow);
-  color: var(--ink) !important;
-  box-shadow: var(--shadow-key); /* taste-skill-ignore: brand key (DESIGN: kept) */
+/* ---- trips: two sheets, then the offline slip ------------------------------------------ */
+
+.ld-trips {
+  scroll-margin-top: 0;
 }
 
-.ld-cell.is-tone {
-  background: var(--ld-tone);
+/* The two ways to use a trip: two pills like the app's tabs, as real buttons. */
+.ld-views {
+  margin: 0 0 28px;
 }
 
-.ld-cell:active {
-  transform: scale(0.98);
+.ld-views .ld-pill {
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  font-family: inherit;
+  cursor: pointer;
 }
 
-@media (hover: hover) {
-  .ld-cell.is-tone:hover {
-    background: var(--ld-tone-hover);
+.ld-views .ld-pill.is-on {
+  background: var(--panel);
+}
+
+.ld-views .ld-pill:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+[role='tabpanel'][hidden],
+.ld-trips div[hidden] {
+  display: none;
+}
+
+/* ---- the planning desk ------------------------------------------------------------------ */
+
+.ld-plan-label {
+  margin: 0 0 6px;
+  font: 700 12px / 1 var(--font-body);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ld-grey-ink);
+}
+
+.ld-plan-empty {
+  margin: 8px 0 0;
+  font-size: var(--ld-small);
+  color: var(--ld-grey-ink);
+}
+
+/* An empty day: the app's dashed slot, which turns yellow while something is dragged over it. */
+.ld-slot {
+  margin: 6px 0 0;
+  padding: 18px 12px;
+  border: 1.5px dashed var(--ld-soft-rule);
+  border-radius: 12px;
+  text-align: center;
+  font-size: var(--ld-small);
+  color: var(--ld-grey-ink);
+}
+
+/* A stop that just landed on its day: the same highlighter swipe a new list line gets, drying
+   like ink. */
+.ld-dayrow.is-fresh .ld-dayrow-what {
+  position: relative;
+  z-index: 0;
+  align-self: flex-start;
+}
+
+.ld-dayrow.is-fresh .ld-dayrow-what::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: 42% -4px 4% -4px;
+  border-radius: 3px;
+  background: var(--highlighter);
+  transform-origin: left center;
+  animation: highlight-fade 1500ms ease both;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ld-dayrow.is-fresh {
+    animation: ld-row-in 380ms var(--ease-out) both;
   }
 
-  .ld-cell.is-key:hover {
-    box-shadow: var(--shadow-key-hover); /* taste-skill-ignore: brand key (DESIGN: kept) */
+  .ld-dayrow.is-fresh .ld-dayrow-what::after {
+    animation: highlight 1500ms var(--ease-out) 80ms both;
   }
 }
-
-/* ---- capabilities: stacking sheets ---------------------------------------------------- */
 
 .ld-caps {
   max-width: var(--ld-max);
   margin: 0 auto;
-  padding: 150px var(--ld-gutter) 0;
+  padding: 150px var(--ld-gutter) 140px;
   scroll-margin-top: 0;
 }
 
@@ -961,18 +968,6 @@ p.ld-done-toggle {
 }
 
 /* A sheet that sits where it is instead of stacking (the lists part's single ink sheet). */
-.ld-capsheet.is-static {
-  position: relative;
-  top: auto;
-  min-height: 0;
-  border-radius: var(--ld-radius);
-}
-
-.ld-lists-more {
-  max-width: var(--ld-max);
-  margin: 0 auto;
-  padding: 40px var(--ld-gutter) 0;
-}
 
 .ld-sheets {
   list-style: none;
@@ -982,10 +977,8 @@ p.ld-done-toggle {
 
 .ld-capsheet {
   --band: 76px;
-  min-height: var(--sheet-h, 0);
-  position: sticky;
-  top: calc(16px + var(--n) * var(--band));
-  border-radius: var(--ld-radius) var(--ld-radius) 0 0;
+  position: relative;
+  border-radius: var(--ld-radius);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -996,11 +989,6 @@ p.ld-done-toggle {
   margin-top: 40px;
 }
 
-.ld-capsheet.is-ink {
-  background: var(--ink);
-  color: #fff;
-}
-
 .ld-capsheet.is-blue {
   background: var(--brand-blue);
   color: #fff;
@@ -1009,11 +997,6 @@ p.ld-done-toggle {
 .ld-capsheet.is-red {
   background: var(--brand-red);
   color: #fff;
-}
-
-.ld-capsheet.is-paper {
-  background: var(--panel);
-  color: var(--ink);
 }
 
 .ld-capsheet-name {
@@ -1028,64 +1011,13 @@ p.ld-done-toggle {
   letter-spacing: -0.02em;
 }
 
-.ld-capsheet-body {
-  flex: 1;
-  display: grid;
-  grid-template-columns: 5fr 7fr;
-}
-
-.ld-capsheet-side {
-  display: flex;
-  flex-direction: column;
-  gap: 28px;
-  padding: 4px 40px 40px;
-}
-
 /* The photo takes whatever the column has left, so the colour never sits empty; its caption
    names the line of the plan it shows. */
-.ld-capsheet-photo {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin: 0;
-}
-
-.ld-capsheet-photo img {
-  display: block;
-  width: 100%;
-  height: auto;
-  aspect-ratio: 4 / 3;
-  object-fit: cover;
-}
-
-.ld-capsheet-photo figcaption,
-.ld-slip-plate figcaption {
-  font-size: var(--ld-small);
-  line-height: 1.4;
-  max-width: 42ch;
-}
 
 /* A dry highlighter on the line a photo shows: a thick underline in highlighter ink, so it
    follows the words line by line when the name wraps on a phone. */
-.ld-dayrow.is-marked .ld-dayrow-what,
-.ld-mark {
-  text-decoration: underline;
-  text-decoration-color: var(--highlighter);
-  text-decoration-thickness: 0.55em;
-  text-underline-offset: -0.35em;
-  text-decoration-skip-ink: none;
-}
 
 /* Every other sheet turns over: the fragment on the left, the words on the right. */
-.ld-capsheet:nth-child(even) .ld-capsheet-body {
-  grid-template-columns: 7fr 5fr;
-}
-
-.ld-capsheet:nth-child(even) .ld-capsheet-frag {
-  order: -1;
-  border-radius: 0 var(--ld-radius) 0 0;
-}
 
 .ld-capsheet-text {
   order: -1;
@@ -1095,48 +1027,9 @@ p.ld-done-toggle {
   line-height: 1.5;
 }
 
-.ld-capsheet-frag {
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding: 40px 40px;
-  border-radius: var(--ld-radius) 0 0 0;
-  background: var(--panel);
-  color: var(--ink);
-}
-
-.ld-capsheet.is-paper .ld-capsheet-frag {
-  background: var(--ld-tone);
-  border-radius: 0;
-}
-
 /* The last sheet has no picture: its words sit under the name and the list spans the sheet. */
-.ld-capsheet.is-paper .ld-capsheet-body,
-.ld-capsheet.is-paper:nth-child(even) .ld-capsheet-body {
-  grid-template-columns: 1fr;
-}
-
-.ld-capsheet.is-paper .ld-capsheet-side {
-  padding-bottom: 28px;
-}
-
-.ld-capsheet.is-paper .ld-capsheet-frag {
-  order: 0;
-}
-
-.ld-capsheet.is-paper .ld-frag {
-  width: min(100%, 760px);
-}
 
 /* Fragments: pieces of the real app */
-.ld-frag {
-  width: min(100%, 540px);
-  font-size: var(--ld-text);
-}
-
-.ld-frag .ld-app-card.is-flat {
-  box-shadow: var(--paper-edge), 0 18px 40px -28px rgba(20, 20, 20, 0.35); /* taste-skill-ignore: data-ui app card */
-}
 
 .ld-slips {
   list-style: none;
@@ -1177,12 +1070,6 @@ p.ld-done-toggle {
   .ld-caret {
     animation: ld-blink 1.1s steps(1) infinite;
   }
-}
-
-.ld-frag-foot {
-  margin: 14px 0 0;
-  font-size: var(--ld-small);
-  color: var(--ld-grey-ink);
 }
 
 /* Trip plan: the day heading, then rows of tick, time, stop (and its place), category dot. */
@@ -1260,78 +1147,10 @@ p.ld-done-toggle {
 }
 
 /* Bookings: the list, then the open booking's details as the inspector shows them. */
-.ld-bookrow {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  margin: 6px -10px 0;
-  padding: 10px;
-  border-radius: 12px;
-  font-size: var(--ld-small);
-  color: var(--ld-grey-ink);
-}
-
-.ld-bookrow.is-on {
-  background: var(--panel-subtle);
-}
-
-.ld-bookrow svg {
-  flex: none;
-  font-size: 20px;
-  color: var(--ink);
-}
-
-.ld-bookrow span {
-  display: flex;
-  flex-direction: column;
-}
-
-.ld-bookrow b {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--ink);
-}
-
-.ld-details {
-  margin: 12px 0 18px;
-  padding: 4px 16px;
-  border-radius: 14px;
-  background: var(--panel-subtle);
-}
-
-.ld-details div {
-  display: grid;
-  grid-template-columns: 80px 1fr;
-  align-items: center;
-  min-height: 46px;
-  border-bottom: 1px solid var(--border); /* taste-skill-ignore: data-ui app card */
-}
-
-.ld-details div:last-child {
-  border-bottom: 0;
-}
-
-.ld-details dt {
-  font-size: var(--ld-small);
-  color: var(--ld-grey-ink);
-}
-
-.ld-details dd {
-  margin: 0;
-  font-size: 16px;
-  color: var(--ink);
-}
-
-.ld-details .ld-code {
-  font: 800 20px/1 var(--font-headings);
-  letter-spacing: 0.08em;
-  font-variant-numeric: tabular-nums;
-}
 
 /* ---- offline: the itinerary slip ------------------------------------------------------ */
 
 .ld-offline {
-  margin-top: 200px;
   background: var(--ink);
   color: #fff;
   padding: 140px var(--ld-gutter) 170px;
@@ -1428,39 +1247,6 @@ p.ld-done-toggle {
   color: var(--ink);
   margin-bottom: 14px;
   padding-bottom: 18px;
-}
-
-.ld-slip-plate {
-  margin: 0;
-}
-
-.ld-slip-photo {
-  display: block;
-  overflow: hidden;
-}
-
-.ld-slip-plate img {
-  display: block;
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  object-fit: cover;
-}
-
-.ld-slip-plate figcaption {
-  padding: 10px 28px 0;
-  color: var(--ld-grey-ink);
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .ld-slip-plate img {
-    transform: scale(1.08);
-    transition: transform 9s linear;
-  }
-
-  .ld-slip[data-in] .ld-slip-plate img,
-  .ld:not(.ld-motion) .ld-slip-plate img {
-    transform: scale(1);
-  }
 }
 
 .ld-slip-body {
@@ -1608,8 +1394,50 @@ p.ld-done-toggle {
 }
 
 .ld-free .ld-body {
-  margin: 28px 0 36px;
+  margin-top: 28px;
   max-width: 38ch;
+}
+
+/* How to put it on a home screen: the PWA install steps, in the small step. */
+/* Where it runs, and the way onto the home screen: Safari's step, or the browser's install button
+   (quiet, outlined on the blue field, so the yellow key stays the one call to action). */
+.ld-install {
+  margin: 20px 0 36px;
+  max-width: 46ch;
+  font: 400 var(--ld-small) / 1.6 var(--font-body);
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.ld-install-btn {
+  margin-top: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1.5px solid rgba(255, 255, 255, 0.7);
+  border-radius: var(--ld-control-radius);
+  background: transparent;
+  color: #fff;
+  font: 700 var(--ld-small) / 1 var(--font-body);
+  cursor: pointer;
+  transition: background var(--dur-press) var(--ease-out);
+}
+
+.ld-install-btn:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+
+@media (hover: hover) {
+  .ld-install-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+  }
+}
+
+.ld-install b {
+  font-weight: 700;
+  color: #fff;
 }
 
 .ld-receipt-wrap {
@@ -1977,69 +1805,11 @@ p.ld-done-toggle {
     animation-delay: 1000ms;
   }
 
-  .ld-row.is-marked:not(.is-done) .ld-row-title::after {
-    transform-origin: left center;
-    animation: ld-pen 700ms var(--ease-out) 1300ms both;
-  }
-
   /* A sheet's stamps land when the sheet's piece of the app scrolls into view. */
-  .ld-motion .ld-capsheet-frag .ld-stamp {
-    opacity: 0;
-  }
-
-  .ld-motion .ld-capsheet-frag[data-in] .ld-stamp {
-    animation: stamp 340ms var(--ease-out) 420ms both;
-  }
-
-  .ld-motion .ld-capsheet-frag[data-in] .ld-slips li:nth-child(2) .ld-stamp {
-    animation-delay: 560ms;
-  }
-
-  .ld-motion .ld-capsheet-frag[data-in] .ld-slips li:nth-child(3) .ld-stamp {
-    animation-delay: 700ms;
-  }
 
   /* The highlighter inks in on the line a photo shows. */
-  .ld-motion .ld-capsheet-frag .ld-dayrow.is-marked .ld-dayrow-what,
-  .ld-motion .ld-capsheet-frag .ld-mark {
-    text-decoration-color: transparent;
-  }
-
-  .ld-motion .ld-capsheet-frag[data-in] .ld-dayrow.is-marked .ld-dayrow-what,
-  .ld-motion .ld-capsheet-frag[data-in] .ld-mark {
-    text-decoration-color: var(--highlighter);
-    transition: text-decoration-color 900ms ease 700ms;
-  }
 
   /* The category dots drop in down the day. */
-  .ld-motion .ld-capsheet-frag .ld-pip {
-    opacity: 0;
-    transform: scale(0.4);
-  }
-
-  .ld-motion .ld-capsheet-frag[data-in] .ld-pip {
-    opacity: 1;
-    transform: none;
-    transition:
-      transform 360ms var(--ease-out),
-      opacity 240ms var(--ease-out);
-  }
-
-  .ld-motion .ld-capsheet-frag[data-in] .ld-dayrow:nth-of-type(1) .ld-pip {
-    transition-delay: 300ms;
-  }
-
-  .ld-motion .ld-capsheet-frag[data-in] .ld-dayrow:nth-of-type(2) .ld-pip {
-    transition-delay: 420ms;
-  }
-
-  .ld-motion .ld-capsheet-frag[data-in] .ld-dayrow:nth-of-type(3) .ld-pip {
-    transition-delay: 540ms;
-  }
-
-  .ld-motion .ld-capsheet-frag[data-in] .ld-dayrow:nth-of-type(4) .ld-pip {
-    transition-delay: 660ms;
-  }
 
   /* The offline slip: waiting changes pop on, and the status line slides in on every change. */
   .ld-waiting {
@@ -2166,25 +1936,6 @@ p.ld-done-toggle {
     border-radius: var(--ld-radius);
   }
 
-  .ld-capsheet-body,
-  .ld-capsheet:nth-child(even) .ld-capsheet-body {
-    grid-template-columns: 1fr;
-  }
-
-  .ld-capsheet-frag,
-  .ld-capsheet:nth-child(even) .ld-capsheet-frag {
-    order: -1;
-    border-radius: 0;
-  }
-
-  .ld-capsheet-side {
-    padding-top: 28px;
-  }
-
-  .ld-capsheet-photo img {
-    aspect-ratio: 3 / 2;
-  }
-
   .ld-offline {
     grid-template-columns: 1fr;
     gap: 56px;
@@ -2220,19 +1971,6 @@ p.ld-done-toggle {
 
   .ld-nav {
     height: 64px;
-  }
-
-  .ld-parts {
-    grid-template-columns: 1fr;
-    margin-top: 80px;
-  }
-
-  .ld-part {
-    padding: 22px 64px 24px 22px;
-  }
-
-  .ld-lists-more {
-    padding-top: 24px;
   }
 
   .ld-nav-links {
@@ -2298,14 +2036,6 @@ p.ld-done-toggle {
     padding: 16px 16px 0;
   }
 
-  .ld-cells {
-    grid-template-columns: 1fr;
-  }
-
-  .ld-cell {
-    height: 60px;
-  }
-
   .ld-caps {
     padding-top: 120px;
   }
@@ -2318,17 +2048,12 @@ p.ld-done-toggle {
     padding: 0 20px;
   }
 
-  .ld-capsheet-frag {
-    padding: 24px 16px;
-  }
-
-  .ld-capsheet-side {
-    padding: 24px 20px 32px;
-  }
-
   .ld-offline {
-    margin-top: 140px;
     padding: 100px var(--ld-gutter) 120px;
+  }
+
+  .ld-caps {
+    padding-bottom: 96px;
   }
 
   .ld-slip-body {
@@ -2376,5 +2101,999 @@ p.ld-done-toggle {
 
   .ld-wordmark {
     margin-top: 64px;
+  }
+}
+
+/* ---- the drawn map of Porto ------------------------------------------------------------- */
+
+.ld-map {
+  display: block;
+  width: 100%;
+  height: 100%;
+  font-family: var(--font-body);
+}
+
+.ld-map-street-casing,
+.ld-map-street,
+.ld-map-art-casing,
+.ld-map-art,
+.ld-map-shore,
+.ld-map-bank,
+.ld-map-channel,
+.ld-map-bridge,
+.ld-map-bridge-casing,
+.ld-map-rail,
+.ld-map-rail-casing {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.ld-map-street-casing {
+  stroke: #d8dcd4;
+  stroke-width: 3.6;
+}
+
+.ld-map-street {
+  stroke: #fff;
+  stroke-width: 2.1;
+}
+
+.ld-map-art-casing {
+  stroke: #cfd4cb;
+  stroke-width: 7;
+}
+
+.ld-map-art {
+  stroke: #fff;
+  stroke-width: 5;
+}
+
+.ld-map-park {
+  fill: #d3e2c6;
+  stroke: #c3d6b5;
+  stroke-width: 1;
+}
+
+.ld-map-building {
+  fill: #dadfd6;
+  stroke: #cdd3c9;
+  stroke-width: 0.8;
+}
+
+.ld-map-pilar {
+  fill: #e6e9e2;
+}
+
+.ld-map-water {
+  fill: #c9dce9;
+}
+
+.ld-map-channel {
+  stroke: #d8e6f0;
+  stroke-width: 11;
+  opacity: 0.7;
+}
+
+.ld-map-shore {
+  stroke: #aac4d6;
+  stroke-width: 1.4;
+}
+
+.ld-map-bank {
+  stroke: #c9cfc5;
+  stroke-width: 6;
+  opacity: 0.55;
+}
+
+.ld-map-boat {
+  fill: #a9835a;
+}
+
+.ld-map-sail {
+  fill: #f4eee2;
+}
+
+.ld-map-bridge-casing {
+  stroke: #7d858d;
+  stroke-width: 6.5;
+}
+
+.ld-map-bridge-casing.is-upper {
+  stroke-width: 8;
+}
+
+.ld-map-bridge {
+  stroke: #f4f5f2;
+  stroke-width: 3.6;
+}
+
+.ld-map-bridge.is-upper {
+  stroke-width: 5;
+}
+
+.ld-map-rail-casing {
+  stroke: #6d747c;
+  stroke-width: 4;
+}
+
+.ld-map-rail {
+  stroke: #d9dde0;
+  stroke-width: 1.4;
+  stroke-dasharray: 3 3;
+}
+
+.ld-map-water-label {
+  font: italic 600 9.5px var(--font-body);
+  letter-spacing: 0.24em;
+  fill: #7f9db3;
+}
+
+.ld-map-area {
+  font: 700 8px var(--font-body);
+  letter-spacing: 0.2em;
+  fill: #8d948a;
+}
+
+.ld-map-poi {
+  font: 600 7.5px var(--font-body);
+  fill: #7d857a;
+}
+
+.ld-pill-shadow {
+  filter: drop-shadow(0 1px 1.5px rgba(20, 20, 20, 0.28));
+}
+
+.ld-map-name {
+  font: 700 10.5px var(--font-body);
+  fill: var(--ink);
+}
+
+.ld-map-time {
+  font: 600 10px var(--font-body);
+  fill: #6b7078;
+}
+
+.ld-route-line {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ld-pin.is-fresh {
+    animation: ld-pin-drop 520ms var(--ease-out) both;
+  }
+
+  .ld-route.is-fresh .ld-route-line {
+    animation: ld-route-draw 900ms var(--ease-out) 200ms both;
+  }
+}
+
+@keyframes ld-pin-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-14px) scale(0.6);
+  }
+}
+
+@keyframes ld-route-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+}
+
+/* ---- the planning view: a laptop showing the app's desk -------------------------------- */
+
+.ld-device-stage {
+  padding: 8px 72px 24px;
+}
+
+.ld-desk {
+  display: grid;
+  gap: 12px;
+  font-size: var(--ld-small);
+  line-height: 1.35;
+  color: var(--ink);
+}
+
+.ld-desk-ideas,
+.ld-desk-main {
+  background: var(--panel);
+  border: 1px solid var(--border-strong); /* taste-skill-ignore: data-ui app card */
+  border-radius: 16px;
+}
+
+.ld-desk-ideas {
+  padding: 14px 14px 8px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.ld-desk-ideas ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.ld-desk-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 8px;
+  font: 700 11px / 1.2 var(--font-body);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ld-grey-ink);
+}
+
+.ld-desk-hint {
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.ld-idea {
+  width: 100%;
+  min-height: 56px;
+  display: grid;
+  grid-template-columns: 14px 10px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 4px;
+  border: 0;
+  border-bottom: 1px solid var(--border); /* taste-skill-ignore: data-ui app card */
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--dur-press) var(--ease-out);
+}
+
+.ld-idea-grip {
+  color: var(--ld-soft-rule);
+}
+
+.ld-idea-text {
+  display: grid;
+  min-width: 0;
+}
+
+.ld-idea-what {
+  font: 600 14px / 1.25 var(--font-body);
+}
+
+.ld-idea-place {
+  font-size: 12px;
+  color: var(--ld-grey-ink);
+}
+
+.ld-idea-to {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--panel-subtle);
+  font: 700 11px / 1 var(--font-body);
+  color: var(--ld-grey-ink);
+}
+
+.ld-idea:active {
+  background: var(--ld-slip-hot);
+}
+
+.ld-idea:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: -2px;
+  border-radius: 10px;
+}
+
+@media (hover: hover) {
+  .ld-idea:hover {
+    background: var(--ld-slip-hot);
+  }
+}
+
+.ld-desk-main {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 14px 16px 0;
+  overflow: hidden;
+}
+
+.ld-trip-head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.ld-trip-title {
+  margin: 0;
+  font: 800 22px / 1.1 var(--font-headings);
+  letter-spacing: -0.02em;
+  color: var(--ink-heading);
+}
+
+.ld-trip-head .ld-app-meta {
+  margin: 2px 0 0;
+}
+
+.ld-ready {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--panel-subtle);
+}
+
+.ld-ready.is-done {
+  grid-template-columns: 1fr;
+}
+
+.ld-ready-list {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+}
+
+.ld-ready-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 0;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.ld-ready-list svg {
+  flex: none;
+}
+
+.ld-ready-list .is-ok svg {
+  color: var(--ld-ok);
+}
+
+.ld-ready-list .is-todo {
+  font-weight: 600;
+}
+
+.ld-ready-list .is-todo svg {
+  color: var(--ink);
+}
+
+.ld-ready-meta,
+.ld-ready-link {
+  color: var(--ld-grey-ink);
+  font-weight: 500;
+}
+
+.ld-ready-link {
+  margin-left: 4px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.ld-ready-all {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font: 700 var(--ld-text) / 1.2 var(--font-body);
+}
+
+.ld-ready-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--brand-yellow);
+  color: var(--ink);
+}
+
+.ld-desk-main > .ld-pills {
+  align-self: flex-start;
+}
+
+.ld-plan-days {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+
+.ld-plan-days::-webkit-scrollbar {
+  display: none;
+}
+
+.ld-desk-main .ld-addbar {
+  margin: 6px -16px 0;
+  padding-inline: 16px;
+}
+
+.ld-desk-map {
+  position: relative;
+  min-height: 300px;
+  border: 1px solid var(--border-strong); /* taste-skill-ignore: data-ui app card */
+  border-radius: 16px;
+  overflow: hidden;
+  background: #e9ece6;
+}
+
+.ld-map-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--border-strong); /* taste-skill-ignore: data-ui app card */
+  border-radius: 999px;
+  background: var(--panel);
+  font: 600 12px / 1 var(--font-body);
+  box-shadow: 0 1px 3px rgba(20, 20, 20, 0.14); /* taste-skill-ignore: data-ui app card */
+}
+
+.ld-map-chip.is-day {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+}
+
+.ld-map-chips {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 6px;
+}
+
+.ld-map-zoom {
+  position: absolute;
+  right: 10px;
+  bottom: 22px;
+  display: grid;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--panel);
+  box-shadow: 0 1px 3px rgba(20, 20, 20, 0.2); /* taste-skill-ignore: data-ui app card */
+}
+
+.ld-map-zoom svg {
+  box-sizing: content-box;
+  width: 14px;
+  height: 14px;
+  padding: 9px;
+}
+
+.ld-map-zoom svg + svg {
+  border-top: 1px solid var(--border); /* taste-skill-ignore: data-ui app card */
+}
+
+/* ---- the on-the-trip view: a phone showing the app -------------------------------------- */
+
+.ld-phone-tabs {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.ld-phone-tabs .ld-pills {
+  margin-bottom: 0;
+}
+
+.ld-phone-tabs .ld-pill {
+  padding: 0 11px;
+  min-height: 32px;
+}
+
+.ld-phone-map {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 34px;
+  padding: 0 11px;
+  border: 1px solid var(--border-strong); /* taste-skill-ignore: data-ui app card */
+  border-radius: 999px;
+  background: var(--panel);
+  font: 700 13px / 1 var(--font-body);
+}
+
+.ld-next {
+  margin: 8px 0 4px;
+  padding: 14px 14px 14px;
+  border: 1px solid var(--border-strong); /* taste-skill-ignore: data-ui app card */
+  border-radius: 18px;
+  background: var(--panel);
+  box-shadow: var(--paper-edge); /* taste-skill-ignore: data-ui app card */
+}
+
+.ld-next-maps,
+.ld-next-code {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 999px;
+  font: 700 14px / 1 var(--font-body);
+}
+
+.ld-next-maps {
+  background: var(--brand-yellow);
+  box-shadow: var(--shadow-key); /* taste-skill-ignore: brand key (DESIGN: kept) */
+}
+
+.ld-next-code {
+  min-width: 118px;
+  border: 1.5px solid var(--border-strong); /* taste-skill-ignore: data-ui app card */
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.ld-next-code:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.ld-next-code .ld-code {
+  font-size: 18px;
+  letter-spacing: 0.12em;
+}
+
+/* ---- the trips sheets: photos beside the lines they show --------------------------------- */
+
+/* A photo takes the column it is given; its caption names the line of the plan it shows. */
+.ld-capsheet-photo {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+}
+
+.ld-capsheet-photo img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 3 / 2;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+.ld-capsheet-photo figcaption,
+.ld-slip-plate figcaption {
+  font-size: var(--ld-small);
+  line-height: 1.4;
+  max-width: 42ch;
+}
+
+/* A dry highlighter on the line a photo shows: a thick underline in highlighter ink, so it
+   follows the words line by line when a name wraps. */
+.ld-dayrow.is-marked .ld-dayrow-what,
+.ld-mark {
+  text-decoration: underline;
+  text-decoration-color: var(--highlighter);
+  text-decoration-thickness: 0.55em;
+  text-underline-offset: -0.35em;
+  text-decoration-skip-ink: none;
+}
+
+.ld-capsheet.is-device .ld-plan-intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 360px);
+  gap: 40px;
+  align-items: center;
+  padding: 4px 40px 36px;
+}
+
+.ld-trip-sheet {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  gap: 40px;
+  align-items: center;
+  padding: 0 40px 56px;
+}
+
+.ld-trip-side {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.ld-trip-sheet .ld-device-stage {
+  padding: 0;
+}
+
+.ld-slip-plate {
+  margin: 0;
+}
+
+.ld-slip-photo {
+  display: block;
+  overflow: hidden;
+}
+
+.ld-slip-photo img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+
+.ld-slip-plate figcaption {
+  padding: 12px 28px 0;
+  color: var(--ld-grey-ink);
+}
+
+/* ---- the devices: Devices.css frames (devices.css), scaled to fit ---------------------------- */
+
+/* DeviceFit lays a frame out at its own size and scales it to the width it has, centred. */
+.ld-fit {
+  position: relative;
+  width: 100%;
+}
+
+.ld-fit-inner {
+  width: max-content;
+  margin: 0 auto;
+}
+
+.ld-fit.is-fitted .ld-fit-inner {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  margin: 0;
+  transform-origin: top center;
+}
+
+.ld-device-screen {
+  overflow: hidden;
+}
+
+/* The MacBook Pro's screen is 596x371 inside its border: the app is laid out at 960 wide and
+   shrunk into it, so it reads at a desktop's scale. */
+.ld-laptop-ui {
+  display: flex;
+  flex-direction: column;
+  width: 960px;
+  height: 598px;
+  transform: scale(0.6208);
+  transform-origin: 0 0;
+  background: var(--bg);
+}
+
+/* A menu bar across the top of the screen, as macOS draws it; the notch sits in it. */
+.ld-laptop-menubar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  height: 30px;
+  padding: 0 18px;
+  background: #eceef0;
+  font: 600 13px / 1 var(--font-body);
+  color: var(--ink);
+}
+
+.ld-laptop-menus {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.ld-desk {
+  flex: 1;
+  min-height: 0;
+  grid-template-columns: 196px minmax(0, 1fr) 300px;
+  grid-template-rows: minmax(0, 1fr);
+  padding: 12px;
+  background: var(--bg);
+}
+
+.ld-desk-map {
+  min-height: 0;
+}
+
+/* The iPhone 14 Pro's screen is 390x830 with the island at its top: the app sits under the
+   status bar, with the home indicator at the bottom. */
+.ld-phone-screen {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  height: 100%;
+  padding: 64px 16px 34px;
+  background: var(--bg);
+  color: var(--ink);
+  font-size: var(--ld-small);
+  line-height: 1.35;
+}
+
+.ld-phone-status {
+  position: absolute;
+  top: 17px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 22px;
+  padding: 0 32px 0 40px;
+  font: 700 16px / 1 var(--font-body);
+  letter-spacing: -0.01em;
+}
+
+.ld-phone-sys {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 17px;
+}
+
+.ld-phone-home {
+  position: absolute;
+  bottom: 9px;
+  left: 50%;
+  width: 134px;
+  height: 5px;
+  transform: translateX(-50%);
+  border-radius: 3px;
+  background: rgba(20, 20, 20, 0.6);
+}
+
+.ld-phone-screen .ld-dayrow {
+  grid-template-columns: 22px 54px 1fr 10px;
+  min-height: 52px;
+}
+
+.ld-phone-screen .ld-dayrow.is-stay svg {
+  color: var(--ld-grey-ink);
+}
+
+.ld-phone-add {
+  margin: 0 -16px -34px;
+  padding: 10px 16px 34px;
+}
+
+@media (max-width: 899px) {
+  .ld-device-stage {
+    padding: 4px 20px 12px;
+  }
+}
+
+@media (max-width: 899px) {
+  .ld-capsheet.is-device .ld-plan-intro {
+    grid-template-columns: 1fr;
+    gap: 24px;
+    padding: 4px 20px 28px;
+  }
+
+  .ld-trip-sheet {
+    grid-template-columns: 1fr;
+    gap: 36px;
+    padding: 0 20px 36px;
+  }
+}
+
+/* ---- the phone's screen, as the app draws a trip on a phone ------------------------------ */
+
+.ld-phone-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 2px 12px;
+}
+
+.ld-phone-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: 600 16px / 1 var(--font-body);
+  color: var(--ink);
+}
+
+/* The app's paper stack: the header sheet runs on under the list sheet, which overlaps it with
+   its own rounded corners and a lift, and a third sheet's edge peeks out at the bottom. */
+.ld-phone-stack {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 18px;
+}
+
+.ld-phone-stack::after {
+  content: '';
+  position: absolute;
+  z-index: 1;
+  left: 14px;
+  right: 14px;
+  bottom: -8px;
+  height: 40px;
+  background: var(--panel);
+  border: 1px solid var(--border-strong); /* taste-skill-ignore: data-ui app card */
+  border-radius: 0 0 var(--radius-squircle) var(--radius-squircle);
+  box-shadow: 0 4px 10px -4px rgba(0, 0, 0, 0.1); /* taste-skill-ignore: data-ui app card */
+}
+
+.ld-phone-head {
+  position: relative;
+  padding: 16px 16px 30px;
+  border: 1px solid var(--border-strong); /* taste-skill-ignore: data-ui app card */
+  border-bottom: 0;
+  border-radius: var(--radius-squircle) var(--radius-squircle) 0 0;
+  background: var(--panel);
+  box-shadow: var(--paper-edge), var(--lift-0); /* taste-skill-ignore: data-ui app card */
+}
+
+.ld-phone-head-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.ld-phone-head-row.is-meta {
+  grid-template-columns: minmax(0, 1fr) auto;
+  margin-top: 10px;
+}
+
+.ld-phone-title {
+  margin: 0;
+  font: 800 30px / 1.05 var(--font-headings);
+  letter-spacing: -0.02em;
+  color: var(--ink-heading);
+  text-wrap: balance;
+}
+
+.ld-phone-more {
+  align-self: start;
+  color: var(--ld-grey-ink);
+}
+
+.ld-phone-day {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 15px;
+  color: var(--ld-grey-ink);
+}
+
+.ld-phone-sheet {
+  position: relative;
+  z-index: 2;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  margin-top: -20px;
+  padding: 14px 14px 4px;
+  border: 1px solid var(--border-strong); /* taste-skill-ignore: data-ui app card */
+  border-radius: var(--radius-squircle);
+  background: var(--panel);
+  box-shadow: var(--paper-edge), var(--lift-1); /* taste-skill-ignore: data-ui app card */
+}
+
+/* The next stop: one card, with the edges of the next one or two peeking out under it. */
+.ld-next-wrap {
+  position: relative;
+  z-index: 1;
+  margin: 12px 0 30px;
+}
+
+.ld-next-wrap.has-1::after,
+.ld-next-wrap.has-2::after,
+.ld-next-wrap.has-2::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  left: 12px;
+  right: 12px;
+  bottom: -8px;
+  height: 36px;
+  background: var(--panel);
+  border: 1px solid var(--border-strong); /* taste-skill-ignore: data-ui app card */
+  border-radius: 0 0 18px 18px;
+  box-shadow: 0 4px 10px -4px rgba(0, 0, 0, 0.1); /* taste-skill-ignore: data-ui app card */
+}
+
+.ld-next-wrap.has-2::before {
+  left: 24px;
+  right: 24px;
+  bottom: -16px;
+}
+
+.ld-next {
+  display: grid;
+  gap: 6px;
+  padding: 16px 16px 18px;
+  border: 1px solid var(--border-strong); /* taste-skill-ignore: data-ui app card */
+  border-radius: 18px;
+  background: var(--panel);
+  box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.08); /* taste-skill-ignore: data-ui app card */
+}
+
+.ld-kicker {
+  margin: 0;
+  font: 650 12px / 1.2 var(--font-body);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ld-grey-ink);
+}
+
+.ld-next-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.ld-next-check {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  margin: -6px -10px 0 -10px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.ld-next-check:focus-visible {
+  outline: 2px solid var(--ink);
+  border-radius: 12px;
+}
+
+.ld-next-title {
+  margin: 0;
+  font: 800 28px / 1.12 var(--font-headings);
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  text-wrap: balance;
+}
+
+.ld-next-sub {
+  margin: 0 0 0 36px;
+  font-size: 14px;
+  color: var(--ld-grey-ink);
+}
+
+.ld-next-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 8px 0 0 36px;
+}
+
+.ld-next.is-done .ld-next-sub {
+  margin-left: 0;
+}
+
+.ld-later {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 2px 2px;
+  color: var(--ld-grey-ink);
+}
+
+.ld-later b {
+  margin-right: 8px;
+  font: 800 22px / 1.2 var(--font-headings);
+  color: var(--ink);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ld-next {
+    animation: ld-row-in 380ms var(--ease-out) both;
   }
 }
