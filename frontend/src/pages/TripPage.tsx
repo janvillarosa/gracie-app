@@ -22,6 +22,7 @@ import { LIMITS } from '@lib/trips/limits'
 import type { Booking, Trip } from '@api/tripTypes'
 import { errorMessage } from '@lib/errors'
 import { useDocumentTitle } from '@lib/useDocumentTitle'
+import { track } from '@lib/analytics'
 import { memberName, useTrips, type Member } from '@lib/trips/hooks'
 import type { TripStore } from '@lib/trips/store'
 import {
@@ -1284,6 +1285,10 @@ export const TripPage: React.FC = () => {
   const { store, state, userId, members, loading, roomName, showNextStop } = useTrips()
   const trip = state.trips[tripId]
   useDocumentTitle(trip?.title)
+  const viewed = !!trip
+  React.useEffect(() => {
+    if (viewed && tripId) track('trip.view', { subject: { type: 'trip', id: tripId } })
+  }, [viewed, tripId])
   if (loading || !store || (!trip && !state.synced)) {
     return (
       <div className="container" aria-busy="true">

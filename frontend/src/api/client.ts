@@ -2,6 +2,16 @@ const DEFAULT_BASE = '/api'
 
 export type ApiError = Error & { status?: number }
 
+// The browser's IANA zone ("Asia/Manila"). The server buckets behavior by the user's local
+// time, so it travels with every request; the server validates it and ignores a bad value.
+function localZone(): string | undefined {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined
+  } catch {
+    return undefined
+  }
+}
+
 export async function apiFetch<T>(
   path: string,
   options: RequestInit & { apiKey?: string | null } = {},
@@ -16,6 +26,7 @@ export async function apiFetch<T>(
     ...rest,
     headers: {
       'Content-Type': 'application/json',
+      ...(localZone() ? { 'X-Timezone': localZone() as string } : {}),
       ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
       ...(headers || {}),
     },

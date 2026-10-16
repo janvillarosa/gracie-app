@@ -6,6 +6,7 @@ import { parseInput } from '@lib/parseInput'
 import { ghostRemainder, rankSuggestions, type Suggestion } from '@lib/suggest'
 import { getCategoryClass } from '@lib/category'
 import { Combobox } from '@components/ui/Combobox'
+import { track } from '@lib/analytics'
 
 type Parsed = { description: string; quantity?: string; unit?: string }
 
@@ -14,6 +15,8 @@ type Props = {
   onCreate: (item: Parsed) => Promise<unknown>
   // The house's past items, best first. Optional: the bar works the same without them.
   pantry?: PantryItem[]
+  // Which list the bar adds to; lets us learn how often a suggestion is taken over typing.
+  listId?: string
 }
 
 const MAX_SLIPS = 5
@@ -48,7 +51,7 @@ const SlipBody = React.memo(function SlipBody({ s }: { s: Suggestion }) {
 const renderSlip = (s: Suggestion) => <SlipBody s={s} />
 
 // Owns the draft text so keystrokes re-render only this bar, not the whole list page.
-export const AddItemBar: React.FC<Props> = ({ onCreate, pantry }) => {
+export const AddItemBar: React.FC<Props> = ({ onCreate, pantry, listId }) => {
   const [value, setValue] = useState('')
   // Bumped on every add; re-keys the plus icon so its turn animation replays.
   const [adds, setAdds] = useState(0)
@@ -94,6 +97,14 @@ export const AddItemBar: React.FC<Props> = ({ onCreate, pantry }) => {
 
   // Typed quantity wins; otherwise fall back to what the house usually buys.
   const pick = (s: Suggestion) => {
+    if (listId) {
+      track('add_bar.suggestion_accepted', {
+        subject: { type: 'add_bar', id: listId },
+        container: { type: 'list', id: listId },
+        key: s.item.description,
+        props: { rank: slips.indexOf(s) + 1 },
+      })
+    }
     const typed = parseInput(value.trim())
     add(
       {

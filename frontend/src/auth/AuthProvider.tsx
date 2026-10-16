@@ -10,6 +10,7 @@ import React, {
 import { useNavigate } from 'react-router-dom'
 import { getMe } from '@api/endpoints'
 import { wipeTripData } from '@lib/trips/store'
+import { setAnalyticsKey, startAppTracking } from '@lib/analytics'
 
 export type SignOutReason = 'user' | 'expired'
 
@@ -68,6 +69,12 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     },
     [signOut],
   )
+
+  // Behavior tracking follows the signed-in key; signing out clears its queue.
+  useEffect(() => {
+    setAnalyticsKey(apiKey)
+    if (apiKey) startAppTracking()
+  }, [apiKey])
 
   // Optional: verify key on mount
   useEffect(() => {
