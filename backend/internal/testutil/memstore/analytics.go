@@ -93,6 +93,21 @@ func (r *EventRepo) All() []analytics.Event {
 	return append([]analytics.Event(nil), r.evs...)
 }
 
+func (r *EventRepo) InsertNew(_ context.Context, evs []analytics.Event) (int, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	n := 0
+	for _, e := range evs {
+		if r.seen[e.EventID] {
+			continue
+		}
+		r.seen[e.EventID] = true
+		r.evs = append(r.evs, e)
+		n++
+	}
+	return n, nil
+}
+
 func (r *EventRepo) EarliestOccurred(_ context.Context, source string) (time.Time, bool, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()

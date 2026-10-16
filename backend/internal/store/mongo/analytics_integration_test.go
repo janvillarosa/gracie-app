@@ -229,3 +229,24 @@ func TestBackfillReaderStreamsByRoomWithoutCredentials(t *testing.T) {
 		t.Fatalf("trip projection leaked user text: %+v", tr)
 	}
 }
+
+func TestEventRepoInsertNewCountsOnlyNewEvents(t *testing.T) {
+	c := connectOrSkip(t)
+	repo := NewEventRepo(c)
+	ctx := context.Background()
+	if err := repo.EnsureIndexes(ctx); err != nil {
+		t.Fatal(err)
+	}
+	at := time.Now().UTC().Add(-time.Hour)
+	a, b := storedEvent("bf1:item.added:i1", "item.added", "u1", "r1", "milk", at), storedEvent("bf1:item.added:i2", "item.added", "u1", "r1", "eggs", at)
+	if n, err := repo.InsertNew(ctx, []analytics.Event{a, b}); err != nil || n != 2 {
+		t.Fatalf("first insert: n=%d err=%v", n, err)
+	}
+	cNew := storedEvent("bf1:item.added:i3", "item.added", "u1", "r1", "rice", at)
+	if n, err := repo.InsertNew(ctx, []analytics.Event{a, cNew, b}); err != nil || n != 1 {
+		t.Fatalf("mixed duplicates: n=%d err=%v, want 1 new", n, err)
+	}
+	if n, err := repo.InsertNew(ctx, []analytics.Event{a, b, cNew}); err != nil || n != 0 {
+		t.Fatalf("all duplicates: n=%d err=%v", n, err)
+	}
+}

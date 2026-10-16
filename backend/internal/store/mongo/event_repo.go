@@ -130,6 +130,25 @@ func (r *EventRepo) DeleteByRoom(ctx context.Context, roomID string) error {
 	return err
 }
 
+// InsertNew is InsertMany that reports how many events were new rather than duplicates.
+func (r *EventRepo) InsertNew(ctx context.Context, evs []analytics.Event) (int, error) {
+	if len(evs) == 0 {
+		return 0, nil
+	}
+	docs := make([]any, len(evs))
+	for i := range evs {
+		docs[i] = evs[i]
+	}
+	_, err := r.col().InsertMany(ctx, docs, options.InsertMany().SetOrdered(false))
+	if err == nil {
+		return len(evs), nil
+	}
+	if onlyDuplicateKeys(err) {
+		return len(evs) - len(err.(mgo.BulkWriteException).WriteErrors), nil
+	}
+	return 0, err
+}
+
 // EarliestOccurred returns the oldest occurred_at among events from source; ok is false when
 // there are none. The backfill uses it as the moment live analytics started.
 func (r *EventRepo) EarliestOccurred(ctx context.Context, source string) (time.Time, bool, error) {
