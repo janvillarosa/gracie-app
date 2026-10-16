@@ -37,7 +37,11 @@ forecast by replaying it.
   checks, as a re-add usually follows a completion. A checks-only house still works. No profile
   is needed.
 - **Window.** For a predicted due time D and smoothed gap E days: opens at D - clamp(0.2E, 12h, 2d),
-  closes at D + clamp(0.1E, 6h, 1d). A suggestion shows only while now is inside it.
+  closes at D + clamp(0.1E, 6h, 1d). A suggestion shows only while now is inside it. The window then
+  widens to cover the habit's own wobble: two standard deviations of the gaps (CV x E x 2) on each side,
+  capped at 2 days early and 1.5 days late, and never narrower than the base. A steady weekly item keeps
+  its tight window; a "Saturday or Sunday" shopper (gaps of 6 and 8 days) gets one that opens on Friday,
+  and their Sunday adds count as hits instead of misses (added 2026-10-16, `JitterK`, `MaxJitterGrace`).
 - **Backtest.** For every occurrence after the first three, forecast it from what came before and
   count a hit when it landed in the window (too early and too late are misses). An
   `item.suggestion_ignored` inside a cycle turns that cycle into a miss, so ignores lower future

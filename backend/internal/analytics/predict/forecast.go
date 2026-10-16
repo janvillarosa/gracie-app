@@ -23,8 +23,13 @@ type Params struct {
 	LeadFrac, GraceFrac float64       // window around the due time, as a fraction of the rhythm
 	MinLead, MaxLead    time.Duration // clamps on the lead
 	MinGrace, MaxGrace  time.Duration // clamps on the grace
-	MinScore            float64       // a forecast below this is never shown
-	MaxCV               float64       // a rhythm more irregular than this is never shown
+	// JitterK widens the window by this many standard deviations of the house's own gaps, so a
+	// "Saturday or Sunday" habit (gaps of 6 and 8 days) still lands inside it. MaxJitterGrace
+	// caps how late that widening may reach; the lead stays capped by MaxLead.
+	JitterK        float64
+	MaxJitterGrace time.Duration
+	MinScore       float64 // a forecast below this is never shown
+	MaxCV          float64 // a rhythm more irregular than this is never shown
 }
 
 // DefaultParams appear a little before the habit would happen and step aside soon after.
@@ -32,6 +37,7 @@ var DefaultParams = Params{
 	LeadFrac: 0.2, GraceFrac: 0.1,
 	MinLead: 12 * time.Hour, MaxLead: 48 * time.Hour,
 	MinGrace: 6 * time.Hour, MaxGrace: 24 * time.Hour,
+	JitterK: 2, MaxJitterGrace: 36 * time.Hour,
 	MinScore: 0.65, MaxCV: 0.5,
 }
 
@@ -68,10 +74,17 @@ func fracOfDays(days, frac float64) time.Duration {
 	return time.Duration(days * frac * 24 * float64(time.Hour))
 }
 
-// Window is when a suggestion for something due at `due` with a rhythm of ewmaDays is shown.
-func (p Params) Window(due time.Time, ewmaDays float64) (opens, closes time.Time) {
+// Window is when a suggestion for something due at `due` is shown. It is a fixed share of the
+// rhythm (ewmaDays), widened to cover the rhythm's own wobble (cv is the gaps' spread over their
+// mean): a steady habit keeps a tight window, a looser one gets room on both sides. It never
+// shrinks below the fixed share.
+func (p Params) Window(due time.Time, ewmaDays, cv float64) (opens, closes time.Time) {
 	lead := clampDur(fracOfDays(ewmaDays, p.LeadFrac), p.MinLead, p.MaxLead)
 	grace := clampDur(fracOfDays(ewmaDays, p.GraceFrac), p.MinGrace, p.MaxGrace)
+	if wobble := fracOfDays(ewmaDays, cv*p.JitterK); wobble > 0 {
+		lead = max(lead, min(wobble, p.MaxLead))
+		grace = max(grace, min(wobble, p.MaxJitterGrace))
+	}
 	return due.Add(-lead), due.Add(grace)
 }
 
@@ -88,7 +101,7 @@ func (p Params) Backtest(times, ignores []time.Time) (trials, hits int) {
 			continue
 		}
 		trials++
-		opens, closes := p.Window(due, r.EWMADays)
+		opens, closes := p.Window(due, r.EWMADays, r.CV)
 		actual := kept[i]
 		if actual.Before(opens) || actual.After(closes) || ignoredBetween(ignores, kept[i-1], actual) {
 			continue
@@ -133,7 +146,7 @@ func (p Params) Predict(added, checked, ignores []time.Time) (Forecast, bool) {
 		return Forecast{}, false
 	}
 	f := Forecast{Series: series, N: r.N, EWMADays: r.EWMADays, CV: r.CV, LastAt: r.Last, DueAt: due}
-	f.OpensAt, f.ClosesAt = p.Window(due, r.EWMADays)
+	f.OpensAt, f.ClosesAt = p.Window(due, r.EWMADays, r.CV)
 	f.Trials, f.Hits = p.Backtest(times, ignores)
 	f.Score = Wilson(f.Hits, f.Trials, WilsonZ)
 	return f, true
