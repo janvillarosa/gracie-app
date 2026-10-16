@@ -385,3 +385,33 @@ Modified:
 - A "shopping run" is ≥ 3 check-offs within 45 minutes. The EWMA α is 0.3 and the decay half-life is 28 days. All are constants in `predict/` and easy to tune.
 - Only normalized item keys are stored, never raw item text.
 - The analytics opt-out and the `GetPantry` → `key_stats` swap are deferred to follow-ups.
+
+## As built (differences from the plan above)
+
+Written after implementation; where this contradicts the plan, this is what shipped.
+
+- **`add_bar.suggestions_shown` is not sent.** The Combobox exposes no "opened" signal and a
+  per-keystroke event would be noise. The take rate is `add_bar.suggestion_accepted` over
+  `item.added` (typed adds are the difference).
+- **Server events carry no `via`/`qty` props.** The server cannot tell a typed add from a
+  suggestion; the client event answers that.
+- **`list.cleared {count}`** replaces `items.cleared` so every name is `<subject>.<verb>`.
+- **`user.account_deleted` / `house.deleted` for the deleted subject are not retained:** the purge
+  erases them with everything else (`analytics.Purger`, plus a second sweep 15s later for events
+  still in a recorder buffer).
+- **Profiles are computed from raw events** (last 180 days, up to 20,000) by a separate
+  `ProfilePass`, on the dirty set the fold produces, plus a requeue of profiles older than 24h so
+  idle people's streaks and next windows move on. Per-key intervals are recomputed from raw history
+  right after each fold, never incrementally.
+- **Per-day `key_counts`** (top-of-the-year raw material) are stored; the month/year "top 50" close
+  step is **not built yet** (see follow-ups). Path segments built from text replace `.`/`$` with `_`.
+- **Overdue rhythms** predict "today at your usual hour" (tomorrow if that hour has passed).
+- **Insights routes are mounted only when analytics is enabled** and its indexes could be created.
+- **Joining a house** dissolves the solo house's aggregates but keeps the person's events and profile.
+
+### Follow-ups (not in this change)
+- User-facing analytics opt-out (single check point: `Recorder.Record`).
+- Month/year "top things" closing job for the year-in-review.
+- Re-home a dissolved solo house's key history when its owner joins another house.
+- Move `GetPantry` onto `key_stats`, and use `Reader.Due` for add-bar suggestions and nudges.
+- Link packing-list items to their trip so first-packing-check lead times can be learned.

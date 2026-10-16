@@ -211,6 +211,7 @@ func (s *UserService) DeleteAccount(ctx context.Context, userID string) error {
 			return err
 		}
 	}
+	s.purgeUser(ctx, userID)
 	if deletedRoomID != "" {
 		go s.cleanupRoomResources(context.Background(), deletedRoomID)
 	}
@@ -218,6 +219,7 @@ func (s *UserService) DeleteAccount(ctx context.Context, userID string) error {
 }
 
 func (s *UserService) cleanupRoomResources(ctx context.Context, roomID string) {
+	s.purgeRoom(ctx, roomID)
 	if s.trips != nil {
 		_ = s.trips.DeleteByRoom(ctx, roomID)
 	}

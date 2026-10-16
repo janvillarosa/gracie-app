@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"log"
 	"strings"
 
 	"github.com/janvillarosa/gracie-app/backend/internal/analytics"
@@ -9,7 +10,33 @@ import (
 
 // emitter gives a service nil-safe event emission. Services embed it and get a
 // UseRecorder setter, so constructors and existing tests stay unchanged.
-type emitter struct{ rec analytics.Recorder }
+type emitter struct {
+	rec    analytics.Recorder
+	purger *analytics.Purger
+}
+
+// UsePurger injects the eraser used when an account or house is deleted (optional).
+func (e *emitter) UsePurger(p *analytics.Purger) { e.purger = p }
+
+// purgeUser and purgeRoom never fail the caller: the account or house is already gone, and
+// anything left behind expires with the raw events' TTL.
+func (e *emitter) purgeUser(ctx context.Context, userID string) {
+	if e.purger == nil {
+		return
+	}
+	if err := e.purger.PurgeUser(ctx, userID); err != nil {
+		log.Printf("analytics: purge user %s: %v", userID, err)
+	}
+}
+
+func (e *emitter) purgeRoom(ctx context.Context, roomID string) {
+	if e.purger == nil {
+		return
+	}
+	if err := e.purger.PurgeRoom(ctx, roomID); err != nil {
+		log.Printf("analytics: purge house %s: %v", roomID, err)
+	}
+}
 
 // UseRecorder injects the behavior-event recorder (optional).
 func (e *emitter) UseRecorder(r analytics.Recorder) { e.rec = r }

@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"log"
 	"time"
 
 	"github.com/janvillarosa/gracie-app/backend/internal/analytics"
@@ -126,6 +127,12 @@ func (s *RoomService) JoinRoom(ctx context.Context, joiner *models.User, roomID,
 	}); err != nil {
 		return nil, err
 	}
+	if deleteSolo != nil && s.purger != nil {
+		// The solo house is gone; the person's own events stay (their profile is built from them).
+		if err := s.purger.ForgetRoomAggregates(ctx, deleteSolo.RoomID); err != nil {
+			log.Printf("analytics: forget house %s: %v", deleteSolo.RoomID, err)
+		}
+	}
 	s.emitHouse(ctx, "house.joined", joiner, rm.RoomID, nil)
 	return s.rooms.GetByID(ctx, rm.RoomID)
 }
@@ -220,6 +227,7 @@ func (s *RoomService) UpdateRoomSettings(ctx context.Context, user *models.User,
 }
 
 func (s *RoomService) cleanupRoomResources(ctx context.Context, roomID string) {
+	s.purgeRoom(ctx, roomID)
 	if s.trips != nil {
 		_ = s.trips.DeleteByRoom(ctx, roomID)
 	}

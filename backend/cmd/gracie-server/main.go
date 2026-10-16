@@ -52,6 +52,7 @@ func main() {
 	var recorder analytics.Recorder = analytics.NopRecorder{}
 	var bufRecorder *analytics.BufferedRecorder
 	var rollup *analytics.Worker
+	var purger *analytics.Purger
 	var insights *handlers.InsightsHandler
 	if cfg.AnalyticsEnabled {
 		eventsRepo := mongostore.NewEventRepo(mcli)
@@ -65,6 +66,7 @@ func main() {
 				log.Printf("analytics: aggregate indexes failed: %v (rollups disabled)", err)
 			} else {
 				rollup = analytics.NewWorker(eventsRepo, aggRepo, analyticsReg)
+				purger = analytics.NewPurger(eventsRepo, aggRepo)
 				insights = handlers.NewInsightsHandler(services.NewInsightsService(roomsRepo, analytics.NewReader(aggRepo)))
 			}
 		}
@@ -115,6 +117,10 @@ func main() {
 
 	for _, svc := range []interface{ UseRecorder(analytics.Recorder) }{userSvc, roomSvc, listSvc, tripSvc, authSvc} {
 		svc.UseRecorder(recorder)
+	}
+	if purger != nil {
+		userSvc.UsePurger(purger)
+		roomSvc.UsePurger(purger)
 	}
 
 	userHandler := handlers.NewUserHandler(userSvc, []byte(cfg.AvatarSalt))

@@ -25,6 +25,16 @@ is the only implementation (uses `go.mongodb.org/mongo-driver`). See
   index** (only trips that have it) serving the daily 30-day purge. The `place_cache`
   collection no longer exists (Photon was removed); drop it manually from old databases.
 
+- **Analytics** (see `analytics` in `../../CLAUDE.md`): `events` (raw, unique `event_id`, TTL on
+  `expire_at`, generic indexes by actor/target/room/container/key), `period_stats`
+  (`<u|h>:<id>:<day|month|year>`, nested counts by `<subject>.<verb>`), `key_stats`
+  (`<room>:<subject type>:<key>` with `intervals.due_at` indexed), `behavior_profiles`
+  (`u:<user>` / `h:<room>`, replaced whole), `analytics_dirty` (subjects awaiting a profile
+  recompute) and `analytics_state` (`_id: "rollup"`: lease + watermark). Field paths are nested
+  (`counts.item.checked`), and path segments built from user text go through `pathSafe`
+  (`.` and `$` become `_`). `ApplyBatch` writes aggregates, the dirty set and the watermark in one
+  transaction; the watermark compares `ingested_at`, which Mongo keeps to the millisecond.
+
 ## Rules & pitfalls (learned the hard way)
 
 - **Transactions require a replica set.** Signup, join, and finalize-deletion run in
