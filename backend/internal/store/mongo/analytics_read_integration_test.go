@@ -228,3 +228,34 @@ func TestMongoStaleForecastsAreFoundAndRebuilt(t *testing.T) {
 		t.Fatalf("rebuilt: %+v", iv)
 	}
 }
+
+func TestMongoUpcomingFindsALaterWindowAfterASkippedWeek(t *testing.T) {
+	c := connectOrSkip(t)
+	ctx := context.Background()
+	events := NewEventRepo(c)
+	aggs := NewAggRepo(c, NewTx(c))
+	_ = events.EnsureIndexes(ctx)
+	_ = aggs.EnsureIndexes(ctx)
+	room := "r_skip_" + randHex(4)
+	// Weekly until two weeks ago: this week's window is the second one.
+	base := time.Now().UTC().AddDate(0, 0, -63).Truncate(time.Hour)
+	var evs []analytics.Event
+	for i := 0; i < 8; i++ {
+		evs = append(evs, storedEvent("sk"+room+string(rune('a'+i)), "item.added", "u1", room, "milk", base.AddDate(0, 0, 7*i)))
+	}
+	if err := events.InsertMany(ctx, evs); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := analytics.NewWorker(events, aggs, analyticsReg()).FoldOnce(ctx); err != nil {
+		t.Fatal(err)
+	}
+	now := time.Now().UTC()
+	got, err := aggs.UpcomingKeys(ctx, room, "item", now, 0.65, 0.5, 10)
+	if err != nil || len(got) != 1 || got[0].Key != "milk" {
+		t.Fatalf("upcoming: %+v %v", got, err)
+	}
+	a := got[0].Intervals.Add
+	if a.ClosesAt.After(now) || len(a.Windows) < 2 {
+		t.Fatalf("the first window has closed, a later one is open: %+v", a)
+	}
+}

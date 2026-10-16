@@ -248,9 +248,12 @@ func (s *SuggestionService) keysOnList(ctx context.Context, listID string) (map[
 	if err != nil {
 		return nil, err
 	}
+	// Only what is still to get counts as on the list. A checked item was bought: many houses
+	// never clear their list, so checked rows pile up and would otherwise block every suggestion.
+	// A purchase in the current cycle is caught by currentCycleIsOpen instead.
 	keys := make(map[string]bool, len(items))
 	for _, it := range items {
-		if !it.IsArchived {
+		if !it.IsArchived && !it.Completed {
 			keys[parse.NormalizeKey(it.Description)] = true
 		}
 	}
@@ -315,6 +318,12 @@ func (s *SuggestionService) currentCycleIsOpen(ctx context.Context, roomID strin
 	if err != nil {
 		return false, err
 	}
+	// Only the kind of event the forecast learned from starts a new cycle: checking off what was
+	// added (the purchase itself, often a day later) is part of the same cycle.
+	cycleEvent := "item.added"
+	if c.add.Series == predict.SeriesChecked {
+		cycleEvent = "item.checked"
+	}
 	since := c.add.LastAt.Add(predict.MinGap)
 	for _, e := range evs {
 		switch e.Name {
@@ -322,7 +331,7 @@ func (s *SuggestionService) currentCycleIsOpen(ctx context.Context, roomID strin
 			if e.OccurredAt.After(c.add.LastAt) {
 				return false, nil
 			}
-		case "item.added", "item.checked":
+		case cycleEvent:
 			if e.OccurredAt.After(since) {
 				return false, nil
 			}

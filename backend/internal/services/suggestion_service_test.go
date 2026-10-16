@@ -127,16 +127,24 @@ func TestNothingBeforeTheWindowOpensOrAfterItCloses(t *testing.T) {
 	r := newSuggestRig(t, SuggestionsOn)
 	r.weekly("whole milk", r.list)
 	r.fold()
-	base := r.now
-	r.now = base.Add(-3 * 24 * time.Hour) // four days into a seven day rhythm
+	base := r.now // due now: the last add was a week ago
+	r.now = base.Add(-4 * 24 * time.Hour)
 	if got := r.suggest(); len(got) != 0 {
 		t.Fatalf("too early: %+v", got)
 	}
-	r.now = base.Add(-30 * time.Hour) // the window opens 1.4 days before
+	r.now = base.Add(-30 * time.Hour) // the window opens three days before
 	if got := r.suggest(); len(got) != 1 {
 		t.Fatalf("shortly before it is due: %+v", got)
 	}
-	r.now = base.Add(2 * 24 * time.Hour)
+	r.now = base.Add(3 * 24 * time.Hour) // between this week's window and next week's
+	if got := r.suggest(); len(got) != 0 {
+		t.Fatalf("stepped aside after the window: %+v", got)
+	}
+	r.now = base.Add(6 * 24 * time.Hour) // skipped a week: it comes back for the next one
+	if got := r.suggest(); len(got) != 1 {
+		t.Fatalf("back the week after a skip: %+v", got)
+	}
+	r.now = base.Add(40 * 24 * time.Hour) // past every tolerated skip: the habit has lapsed
 	if got := r.suggest(); len(got) != 0 {
 		t.Fatalf("lapsed: %+v", got)
 	}
@@ -170,9 +178,23 @@ func TestNotSuggestedWhenAlreadyOnTheList(t *testing.T) {
 	r := newSuggestRig(t, SuggestionsOn)
 	r.weekly("whole milk", r.list)
 	r.fold()
-	_ = r.m.Items.Put(context.Background(), &models.ListItem{ItemID: "x", ListID: r.list, RoomID: r.roomID, Description: "whole  MILK", Completed: true})
+	_ = r.m.Items.Put(context.Background(), &models.ListItem{ItemID: "x", ListID: r.list, RoomID: r.roomID, Description: "whole  MILK"})
 	if got := r.suggest(); len(got) != 0 {
-		t.Fatalf("checked but not cleared still counts as on the list: %+v", got)
+		t.Fatalf("still to get: already on the list: %+v", got)
+	}
+}
+
+// Houses that never clear their list keep every checked row. A row checked in an earlier cycle
+// was bought then; it must not block this cycle's suggestion.
+func TestACheckedRowFromAnEarlierCycleDoesNotBlock(t *testing.T) {
+	r := newSuggestRig(t, SuggestionsOn)
+	r.weekly("whole milk", r.list)
+	r.fold()
+	done := r.now.AddDate(0, 0, -7)
+	_ = r.m.Items.Put(context.Background(), &models.ListItem{ItemID: "old", ListID: r.list, RoomID: r.roomID, Description: "Whole milk",
+		Completed: true, CompletedAt: &done, CreatedAt: done})
+	if got := r.suggest(); len(got) != 1 {
+		t.Fatalf("a checked row from last week should not block this week: %+v", got)
 	}
 }
 
@@ -429,5 +451,17 @@ func TestTheSlipUsesTheMostRecentWording(t *testing.T) {
 	got := r.suggest()
 	if len(got) != 1 || got[0].Description != "Oranges" || got[0].Quantity != "6" {
 		t.Fatalf("show it the way the house last wrote it: %+v", got)
+	}
+}
+
+// The usual purchase: added on Saturday evening, checked off on Sunday. The check belongs to the
+// same cycle and must not hide next week's suggestion.
+func TestCheckingOffTheLastAddDoesNotEndTheCycle(t *testing.T) {
+	r := newSuggestRig(t, SuggestionsOn)
+	r.weekly("whole milk", r.list)
+	r.history("item.checked", "whole milk", r.list, 6.25) // 18 hours after the last add
+	r.fold()
+	if got := r.suggest(); len(got) != 1 {
+		t.Fatalf("checking off last week's milk must not hide this week's: %+v", got)
 	}
 }
