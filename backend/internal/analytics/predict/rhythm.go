@@ -44,24 +44,19 @@ func HOWHistogram(occ []Occurrence, now time.Time) Histogram {
 func Runs(times []time.Time) []time.Time {
 	var out []time.Time
 	start, count := 0, 0
-	flush := func(end int) {
+	flush := func() {
 		if count >= RunMin {
 			out = append(out, times[start])
 		}
-		_ = end
 	}
 	for i, t := range times {
-		if i == 0 || t.Sub(times[i-1]) > RunGap {
-			if i > 0 {
-				flush(i)
-			}
+		if i > 0 && t.Sub(times[i-1]) > RunGap {
+			flush()
 			start, count = i, 0
 		}
 		count++
 	}
-	if len(times) > 0 {
-		flush(len(times))
-	}
+	flush()
 	return out
 }
 
