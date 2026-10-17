@@ -83,7 +83,14 @@ export async function startMockTrips() {
   ]
   // Groceries carries stamps, amounts and a long name, so narrow layouts can be checked. Adds
   // are kept, so taking a suggestion shows up in the list.
-  type Row = { description: string; category?: string; quantity?: string; unit?: string }
+  type Row = {
+    description: string
+    category?: string
+    quantity?: string
+    unit?: string
+    completed?: boolean
+    archived?: boolean
+  }
   const groceries: Row[] = [
     { description: 'Oregano', category: 'Produce' },
     { description: 'Dill plant', category: 'Produce' },
@@ -125,25 +132,50 @@ export async function startMockTrips() {
     ),
     http.get('/api/rooms/:roomId/lists', () => HttpResponse.json(lists)),
     http.get('/api/rooms/:roomId/pantry', () => HttpResponse.json([])),
-    http.get('/api/rooms/:roomId/lists/:listId/items', ({ params }) => {
+    http.get('/api/rooms/:roomId/lists/:listId/items', ({ params, request }) => {
       const pack = params.listId === srv.listId
+      const withDone = new URL(request.url).searchParams.get('include_completed') === 'true'
       const rows: Row[] = pack
         ? ['Passport', 'Charger', 'Sun cream', 'Walking shoes'].map((description) => ({
             description,
           }))
         : groceries
       return HttpResponse.json(
-        rows.map((row, i) => ({
-          ...row,
-          item_id: `item_${pack ? 'pack' : 'groc'}_${i}`,
-          list_id: params.listId,
-          room_id: ROOM,
-          completed: false,
-          order: i + 1,
-          created_at: now,
-          updated_at: now,
-        })),
+        rows
+          .map((row, i) => ({
+            ...row,
+            item_id: `item_${pack ? 'pack' : 'groc'}_${i}`,
+            list_id: params.listId,
+            room_id: ROOM,
+            completed: !!row.completed,
+            order: i + 1,
+            created_at: now,
+            updated_at: now,
+          }))
+          .filter((r, i) => !rows[i].archived && (withDone || !r.completed)),
       )
+    }),
+    // Checking off and Clear completed (groceries only), so a shopping run can be walked through.
+    http.patch('/api/rooms/:roomId/lists/:listId/items/:itemId', async ({ params, request }) => {
+      const body = (await request.json().catch(() => ({}))) as { completed?: boolean }
+      const i = Number(String(params.itemId).replace('item_groc_', ''))
+      const row = groceries[i]
+      if (!row) return new HttpResponse(null, { status: 404 })
+      if (body.completed !== undefined) row.completed = body.completed
+      return HttpResponse.json({
+        ...row,
+        item_id: params.itemId,
+        list_id: params.listId,
+        room_id: ROOM,
+        completed: !!row.completed,
+        order: i + 1,
+        created_at: now,
+        updated_at: new Date().toISOString(),
+      })
+    }),
+    http.post('/api/rooms/:roomId/lists/:listId/clear', () => {
+      for (const row of groceries) if (row.completed) row.archived = true
+      return new HttpResponse(null, { status: 204 })
     }),
     http.post('/api/rooms/:roomId/lists/:listId/items', async ({ params, request }) => {
       const body = (await request.json().catch(() => ({}))) as Row & { source?: string }
@@ -170,7 +202,7 @@ export async function startMockTrips() {
     http.get('/api/rooms/:roomId/lists/:listId/suggestions', ({ params, request }) => {
       // Mid-shop (run mode): something not due yet, but due before the next shop.
       if (new URL(request.url).searchParams.get('during') === 'run') {
-        const soon = { key: 'oat milk', description: 'Oat milk', quantity: '2', unit: 'L' }
+        const soon = { key: 'butter', description: 'Butter', quantity: '250', unit: 'g' }
         return HttpResponse.json({
           suggestions: spent.has(soon.key)
             ? []

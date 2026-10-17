@@ -136,6 +136,7 @@
   /* ---- Texture: a fine grain on paper, a coarser one on the desk. Each is a background layer
      with its strength baked in: `background: var(--grain-paper), var(--panel)`. --------------- */
   --grain-paper: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.25 0 0 0 0 0.22 0 0 0 0 0.18 0 0 0 0.077 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --ink-wear: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 9 0 0 0 -2.9'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); /* a mask: ink that has not quite taken everywhere, for a stamped mark */
   --paper-fill: var(--grain-paper), var(--panel); /* a white fill inside a sheet: the same paper, grain and all */
   --well-fill: var(--grain-paper), var(--panel-subtle); /* a tinted fill inside a sheet */
   --desk-fill: var(--grain-desk), var(--bg); /* the desk, where something must cover what scrolls under it */
@@ -148,10 +149,11 @@
   --dur-fast: 160ms;
   --dur-base: 240ms;
   --dur-slow: 420ms;
-  --dur-stamp: 260ms; /* the run-done stamp pressing onto the sheet */
-  --stamp-tilt: -5deg; /* a hand-pressed stamp is never square to the page */
-  --stamp-press: 1.18; /* how far above the sheet the stamp starts before it lands */
-  --stamp-hold: 2500ms; /* how long it rests before lifting away (RubberStamp's holdMs sets it) */
+  --dur-stamp: 140ms; /* the run-done mark taking the ink as the stamp lands */
+  --stamp-tool-ms: 560ms; /* the stamp tool coming down on the slip and lifting away */
+  --stamp-hit: 250ms; /* the moment it lands: the mark, the slip's thud and the tool's lift are timed off it */
+  --stamp-tilt: -4deg; /* an inked mark is never square to the paper */
+  --stamp-press: 1.18; /* how far above the paper the mark starts before it takes the ink */
 
   /* ---- Layout: sheets and the row grid ----------------------------------------------- */
   --sheet-inset: 20px;
@@ -240,8 +242,9 @@
 }
 </style><!-- /design-tokens -->
 <style>
-  .ds-rubber-stamp { display:grid; justify-items:center; gap:var(--space-1); padding:var(--space-3) var(--space-5); border:3px solid var(--ink); border-radius:var(--radius-md); outline:1.5px solid var(--ink); outline-offset:-8px; background:var(--brand-yellow); color:var(--ink); transform:rotate(var(--stamp-tilt)); font:var(--w-semibold) var(--t-meta) var(--font-body); }
-  .ds-rubber-stamp .t { font:var(--w-bold) var(--t-heading) var(--font-headings); letter-spacing:0.08em; text-transform:uppercase; }
+  .ds-rubber-stamp { display:grid; justify-items:center; gap:var(--space-1); width:min(100%,320px); padding:var(--space-7) var(--space-6) var(--space-6); border-radius:var(--radius-lg); background:var(--paper-fill); box-shadow:var(--paper-edge), var(--lift-3); transform:rotate(var(--peek-tilt-1)); font:var(--w-semibold) var(--t-lead) var(--font-body); color:var(--ink); }
+  .ds-rubber-stamp .t { margin-bottom:var(--space-3); padding:var(--space-2) var(--space-4); border:3px solid var(--ink); border-radius:var(--radius-sm); font:var(--w-bold) var(--t-title) var(--font-headings); letter-spacing:0.14em; text-transform:uppercase; text-shadow:0 0 1px color-mix(in srgb, var(--ink) 40%, transparent); transform:rotate(var(--stamp-tilt)); -webkit-mask-image:var(--ink-wear); mask-image:var(--ink-wear); -webkit-mask-size:160px; mask-size:160px; }
+  .ds-rubber-stamp span + span:not(.t) + span { font:var(--w-regular) var(--t-body) var(--font-body); color:var(--muted); }
   /* Reference-page only: the app self-hosts the variable faces; this page loads the same families
      from Google Fonts, so it names them as Google does. */
   :root {
@@ -596,7 +599,7 @@
     <div class="part-head">
       <div>
         <h2>A finished run is a stamp</h2>
-        <p><code>RubberStamp</code> is a moment, not a control. When a shopping run ends (the last item checked, or Clear done, mid-run) a Key Yellow stamp with an inked double edge presses onto the sheet at <code>--stamp-tilt</code>, starting <code>--stamp-press</code> above it over <code>--dur-stamp</code>, rests for <code>--stamp-hold</code>, then lifts away. It sits over the upper middle of the page, never over the add bar; a tap dismisses it; it is announced once, politely. Reduced motion skips the press and only fades. One per run, and it only ever praises ("4 min quicker than usual"), never scolds.</p>
+        <p><code>RubberStamp</code> is a moment, not a control: a paper slip at popover height (<code>--lift-3</code>) pops into the middle of the screen, set down a hair off true (<code>--peek-tilt-1</code>). A small stamp tool (ink and neutrals) comes down on it; the moment it lands (<code>--stamp-hit</code>) the slip is pressed toward the desk for a beat and the mark takes the ink, then the tool lifts away (<code>--stamp-tool-ms</code>). The mark is ink on paper: a 3px <code>--ink</code> outline with 8px corners, Outfit 28px caps, tilted <code>--stamp-tilt</code>, a touch of bleed at its edge and worn by <code>--ink-wear</code> so it reads as a real impression. It is never filled, so the page's one yellow key stays the only yellow. No scrim: the page stays usable and a tap or Esc dismisses it. Reduced motion drops the tool and the movement and only fades. One per run, announced once, and it only ever praises ("4 min quicker than usual"), never scolds.</p>
       </div>
     </div>
     <div style="display:flex;justify-content:center;padding:32px 0">

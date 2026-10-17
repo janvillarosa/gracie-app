@@ -303,13 +303,15 @@ button.ui-note:focus-visible {
   color: var(--ink);
 }
 
-/* ---- RubberStamp: an inked moment pressed onto the sheet ------------------------------------- */
-/* Fixed over the upper middle of the page, clear of the add bar; only the stamp itself takes taps. */
+/* ---- RubberStamp: a paper slip pops into the middle of the screen with an inked mark ----------- */
+/* Fixed to the screen's centre (portalled to the body, so a transformed sheet can't move it); the page
+   stays usable around it: only the slip itself takes a tap. Popover height, never a scrim. */
 .ui-rubber-stamp-anchor {
   position: fixed;
-  inset: 22vh 0 auto;
-  display: flex;
-  justify-content: center;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
   pointer-events: none;
   z-index: 40;
 }
@@ -319,47 +321,130 @@ button.ui-note:focus-visible {
   display: grid;
   justify-items: center;
   gap: var(--space-1);
-  padding: var(--space-3) var(--space-5);
-  border: 3px solid var(--ink);
-  border-radius: var(--radius-md);
-  outline: 1.5px solid var(--ink);
-  outline-offset: -8px;
-  background: var(--brand-yellow);
-  color: var(--ink);
-  transform: rotate(var(--stamp-tilt));
-  animation: stamp-lift var(--dur-base) var(--ease-out) calc(var(--stamp-hold) - var(--dur-base)) both;
+  width: min(100%, 320px);
+  padding: var(--space-7) var(--space-6) var(--space-6);
+  border-radius: var(--radius-lg);
+  background: var(--paper-fill);
+  box-shadow: var(--paper-edge), var(--lift-3);
+  transform: rotate(var(--peek-tilt-1)); /* set down a hair off true, like the sheets beneath */
+}
+/* The mark: ink on paper, outlined like a rubber stamp, never filled. The ink has bled a little at
+   its edge and has not taken everywhere (--ink-wear), as a real impression has not. */
+.ui-rubber-stamp-mark {
+  position: relative;
+  margin-bottom: var(--space-3);
 }
 .ui-rubber-stamp-title {
-  font: var(--w-bold) var(--t-heading) var(--font-headings);
-  letter-spacing: 0.08em;
+  display: block;
+  padding: var(--space-2) var(--space-4);
+  border: 3px solid var(--ink);
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  font: var(--w-bold) var(--t-title) var(--font-headings);
+  letter-spacing: 0.14em;
   text-transform: uppercase;
+  text-shadow: 0 0 1px color-mix(in srgb, var(--ink) 40%, transparent);
+  transform: rotate(var(--stamp-tilt));
+  -webkit-mask-image: var(--ink-wear);
+  mask-image: var(--ink-wear);
+  -webkit-mask-size: 160px;
+  mask-size: 160px;
 }
 .ui-rubber-stamp-line {
-  font: var(--w-semibold) var(--t-meta) var(--font-body);
+  font: var(--w-semibold) var(--t-lead) var(--font-body);
+  color: var(--ink);
+}
+.ui-rubber-stamp-line + .ui-rubber-stamp-line {
+  font: var(--w-regular) var(--t-body) var(--font-body);
+  color: var(--muted);
+}
+/* The stamp tool: ink knob and body, a rubber plate. It is only there while it moves. */
+.ui-rubber-stamp-tool {
+  display: none;
+  position: absolute;
+  left: 50%;
+  bottom: 28%;
+  width: 56px;
+  height: 64px;
+  margin-left: -28px;
+  pointer-events: none;
+  transform-origin: 50% 100%;
+}
+.ui-rubber-stamp-tool .knob,
+.ui-rubber-stamp-tool .neck,
+.ui-rubber-stamp-tool .body {
+  fill: var(--ink);
+}
+.ui-rubber-stamp-tool .body {
+  fill: var(--text);
+}
+.ui-rubber-stamp-tool .plate {
+  fill: var(--muted);
 }
 @media (prefers-reduced-motion: no-preference) {
   .ui-rubber-stamp:not(.is-still) {
     animation:
-      stamp-press var(--dur-stamp) var(--ease-out) both,
-      stamp-lift var(--dur-base) var(--ease-out) calc(var(--stamp-hold) - var(--dur-base)) both;
+      stamp-arrive var(--dur-base) var(--ease-out) both,
+      stamp-thud var(--dur-fast) var(--ease-out) var(--stamp-hit) both;
+  }
+  .ui-rubber-stamp:not(.is-still) .ui-rubber-stamp-tool {
+    display: block;
+    animation: stamp-tool var(--stamp-tool-ms) var(--ease-out) both;
+  }
+  /* The mark takes the moment the tool lands, and not before. */
+  .ui-rubber-stamp:not(.is-still) .ui-rubber-stamp-title {
+    animation: stamp-press var(--dur-stamp) var(--ease-out) var(--stamp-hit) both;
+  }
+  .ui-rubber-stamp.is-leaving:not(.is-still) {
+    animation: stamp-leave var(--dur-fast) var(--ease-out) both;
+  }
+}
+.ui-rubber-stamp.is-leaving {
+  opacity: 0;
+  transition: opacity var(--dur-fast) linear;
+}
+@keyframes stamp-arrive {
+  from {
+    opacity: 0;
+    transform: scale(0.9) rotate(var(--peek-tilt-1));
+  }
+}
+/* The slip is pressed toward the desk for a beat as the stamp hits it. */
+@keyframes stamp-thud {
+  50% {
+    box-shadow: var(--paper-edge), var(--lift-0);
+  }
+}
+@keyframes stamp-tool {
+  0% {
+    opacity: 0;
+    transform: translateY(-48px) rotate(var(--stamp-tilt));
+  }
+  25% {
+    opacity: 1;
+  }
+  45% {
+    opacity: 1;
+    transform: translateY(0) rotate(var(--stamp-tilt)) scaleY(0.96);
+  }
+  55% {
+    transform: translateY(0) rotate(var(--stamp-tilt));
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-64px) rotate(var(--stamp-tilt));
   }
 }
 @keyframes stamp-press {
   from {
     opacity: 0;
-    transform: rotate(calc(var(--stamp-tilt) * 2)) scale(var(--stamp-press));
-  }
-  70% {
-    opacity: 1;
-    transform: rotate(var(--stamp-tilt)) scale(0.97);
-  }
-  to {
-    transform: rotate(var(--stamp-tilt)) scale(1);
+    transform: rotate(var(--stamp-tilt)) scale(var(--stamp-press));
   }
 }
-@keyframes stamp-lift {
+@keyframes stamp-leave {
   to {
     opacity: 0;
+    transform: scale(0.97) rotate(var(--peek-tilt-1));
   }
 }
 
