@@ -1,52 +1,55 @@
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { tracker } from '@lib/analytics'
 import { setupRunPage } from './listRun.helpers'
 
 const checkOff = async (name: string) =>
   userEvent.click(await screen.findByRole('checkbox', { name: `Check off ${name}` }))
-const slip = () => screen.queryByRole('status', { name: /Run done/ })
+const announcement = () => screen.queryByRole('dialog', { name: 'Run done' })
+const confetti = () => document.querySelectorAll('.confetti-piece').length
 
-describe('ListPage run-done slip', () => {
-  it('slip lands once per run: on the last check, not again on Clear done', async () => {
+describe('ListPage run done', () => {
+  it('announces once per run: on the last check, dismissed by its key, not again on Clear done', async () => {
     const calls = setupRunPage({ items: ['Milk', 'Eggs', 'Bread'] })
     await checkOff('Milk')
     await checkOff('Eggs')
     await checkOff('Bread')
-    expect(await screen.findByRole('status', { name: /Run done/ })).toHaveTextContent('3 items')
-    await userEvent.click(slip()!)
-    await waitFor(() => expect(slip()).not.toBeInTheDocument())
+    const dialog = await screen.findByRole('dialog', { name: 'Run done' })
+    expect(dialog.querySelector('.ui-ink-stamp')).toHaveTextContent('Run done')
+    expect(dialog).toHaveTextContent('3 items')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Nice' }))
+    await waitFor(() => expect(announcement()).not.toBeInTheDocument())
     await userEvent.click(await screen.findByRole('button', { name: 'More list actions' }))
     await userEvent.click(await screen.findByText('Clear completed'))
     await waitFor(() =>
       expect(screen.queryByRole('checkbox', { name: /Bread/ })).not.toBeInTheDocument(),
     )
-    expect(slip()).not.toBeInTheDocument()
+    expect(announcement()).not.toBeInTheDocument()
     await tracker.flush()
     const marked = calls.events.filter((e) => e.name === 'list.run_stamped')
     expect(marked).toHaveLength(1)
     expect(marked[0].props).toEqual({ items: 3, minutes: 0 })
   })
 
-  it('checking the last item outside a run lands nothing', async () => {
+  it('checking the last item outside a run announces nothing', async () => {
     setupRunPage({ items: ['Milk', 'Eggs'] })
     await checkOff('Milk')
     await checkOff('Eggs')
     await waitFor(() =>
       expect(screen.queryByRole('checkbox', { name: 'Check off Eggs' })).not.toBeInTheDocument(),
     )
-    expect(slip()).not.toBeInTheDocument()
+    expect(announcement()).not.toBeInTheDocument()
   })
 
-  it('Clear done during a run with items left lands the slip', async () => {
+  it('Clear done during a run with items left announces it', async () => {
     setupRunPage({ items: ['Milk', 'Eggs', 'Bread', 'Tea'] })
     await checkOff('Milk')
     await checkOff('Eggs')
     await checkOff('Bread')
-    expect(slip()).not.toBeInTheDocument()
+    expect(announcement()).not.toBeInTheDocument()
     await userEvent.click(await screen.findByRole('button', { name: 'More list actions' }))
     await userEvent.click(await screen.findByText('Clear completed'))
-    expect(await screen.findByRole('status', { name: /Run done/ })).toHaveTextContent('3 items')
+    expect(await screen.findByRole('dialog', { name: 'Run done' })).toHaveTextContent('3 items')
   })
 
   it('a quick run against learned habits says so', async () => {
@@ -57,26 +60,20 @@ describe('ListPage run-done slip', () => {
     await checkOff('Milk')
     await checkOff('Eggs')
     await checkOff('Bread')
-    expect(await screen.findByRole('status', { name: /Run done/ })).toHaveTextContent(
+    expect(await screen.findByRole('dialog', { name: 'Run done' })).toHaveTextContent(
       '25 min quicker than usual',
     )
   })
 
-  it('says what the run got, in the category colours', async () => {
-    setupRunPage({
-      items: [
-        { description: 'Milk', category: 'Dairy' },
-        { description: 'Eggs', category: 'Dairy' },
-        { description: 'Bread', category: 'Bakery' },
-      ],
-    })
+  it('the check that finishes a run lets the stamp celebrate, not the confetti', async () => {
+    setupRunPage({ items: ['Milk', 'Eggs', 'Bread', 'Tea'] })
     await checkOff('Milk')
     await checkOff('Eggs')
     await checkOff('Bread')
-    const done = await screen.findByRole('status', { name: /Run done/ })
-    expect(done).toHaveTextContent('Dairy ×2')
-    expect(done).toHaveTextContent('Bakery ×1')
-    expect(done.querySelector('.cat-dairy')).not.toBeNull()
-    expect(done.querySelector('.cat-bakery')).not.toBeNull()
+    const before = confetti()
+    expect(before).toBeGreaterThan(0) // ordinary check-offs still throw confetti
+    await checkOff('Tea')
+    await screen.findByRole('dialog', { name: 'Run done' })
+    expect(confetti()).toBeLessThanOrEqual(before)
   })
 })

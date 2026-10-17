@@ -14,8 +14,6 @@ export const DEFAULT_RUN_HINT: RunHint = {
 export type RunState = {
   /** This visit's check times (ms) that still chain: no gap longer than the idle gap. */
   checks: number[]
-  /** The category of each check in `checks`, in step with it (undefined: none was set). */
-  categories: (string | undefined)[]
   active: boolean
   startedAt?: number
   runChecks: number
@@ -23,17 +21,11 @@ export type RunState = {
 }
 
 export type RunEvent =
-  | { type: 'check'; at: number; category?: string }
+  | { type: 'check'; at: number }
   | { type: 'tick'; at: number }
   | { type: 'stamped' }
 
-export const initialRun: RunState = {
-  checks: [],
-  categories: [],
-  active: false,
-  runChecks: 0,
-  stamped: false,
-}
+export const initialRun: RunState = { checks: [], active: false, runChecks: 0, stamped: false }
 
 const MIN = 60_000
 
@@ -51,20 +43,18 @@ export function runReducer(hint: RunHint) {
       case 'check': {
         const fresh = lapsed(e.at)
         const chain = fresh ? [e.at] : [...s.checks, e.at]
-        const categories = fresh ? [e.category] : [...s.categories, e.category]
         if (!fresh && s.active) {
-          return { ...s, checks: chain, categories, runChecks: chain.length }
+          return { ...s, checks: chain, runChecks: chain.length }
         }
         const k = Math.max(1, hint.checks_to_start)
-        if (chain.length < k) return { ...initialRun, checks: chain, categories }
+        if (chain.length < k) return { ...initialRun, checks: chain }
         // Checks faster than anyone shops are tidying up at home, not a run.
         const recent = chain.slice(-k)
         const tidying =
           recent.length > 1 && recent.every((t, i) => i === 0 || t - recent[i - 1] < burst)
-        if (tidying) return { ...initialRun, checks: chain, categories }
+        if (tidying) return { ...initialRun, checks: chain }
         return {
           checks: chain,
-          categories,
           active: true,
           startedAt: chain[0],
           runChecks: chain.length,
@@ -91,10 +81,15 @@ export function useShoppingRun(hint: RunHint | undefined) {
     return () => clearInterval(id)
   }, [state.active])
 
-  const check = useCallback(
-    (category?: string) => dispatch({ type: 'check', at: Date.now(), category }),
-    [],
-  )
+  const stateRef = useRef(state)
+  stateRef.current = state
+  /** Records a check-off; says whether a run is on once it counts (the reducer is pure, so this is
+   *  the state React will reach). */
+  const check = useCallback(() => {
+    const e = { type: 'check', at: Date.now() } as const
+    dispatch(e)
+    return runReducer(hintRef.current)(stateRef.current, e).active
+  }, [])
   const markStamped = useCallback(() => dispatch({ type: 'stamped' }), [])
   const last = state.checks[state.checks.length - 1]
   const minutes =
@@ -106,14 +101,13 @@ export function useShoppingRun(hint: RunHint | undefined) {
     runChecks: state.runChecks,
     minutes,
     stamped: state.stamped,
-    categories: state.categories,
     check,
     markStamped,
   }
 }
 
-/** What the run-done slip says. A run noticeably quicker than usual gets a word of praise; a slow
- *  one gets nothing (the slip is a reward, not a report card). */
+/** What the run-done announcement says. A run noticeably quicker than usual gets a word of praise; a slow
+ *  one gets nothing (it is a reward, not a report card). */
 export function runDoneLines(
   runChecks: number,
   minutes: number,
@@ -124,20 +118,4 @@ export function runDoneLines(
   const quicker = typical ? typical.minutes - minutes : 0
   if (quicker >= 3) lines.push(`${quicker} min quicker than usual`)
   return lines
-}
-
-/** What a run got, as categories with counts: biggest first, ties in the order first seen, at most
- *  four. A check with no category counts as General. */
-export function tallyCategories(
-  categories: (string | undefined)[],
-): { label: string; count: number }[] {
-  const counts = new Map<string, number>()
-  for (const c of categories) {
-    const label = c?.trim() || 'General'
-    counts.set(label, (counts.get(label) ?? 0) + 1)
-  }
-  return [...counts]
-    .map(([label, count]) => ({ label, count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 4)
 }

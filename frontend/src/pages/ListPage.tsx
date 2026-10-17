@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { Paper, PaperStack, Button, DoneSlip } from '@components/ui'
+import { Paper, PaperStack, Button, InkStamp, Sheet, SheetActions } from '@components/ui'
 import { errorMessage } from '@lib/errors'
 import { useLocation, useParams } from 'react-router-dom'
 import { useTransitionNavigate } from '@lib/viewTransition'
@@ -71,7 +71,7 @@ import { ItemRow, reorderLock } from '@components/ItemRow'
 import { AddItemBar } from '@components/AddItemBar'
 import { SuggestionStack, type SlipPhase } from '@components/SuggestionSlip'
 import { track } from '@lib/analytics'
-import { runDoneLines, tallyCategories, useShoppingRun } from '@lib/shoppingRun'
+import { runDoneLines, useShoppingRun } from '@lib/shoppingRun'
 import { TopNav } from '@components/TopNav'
 import { PillNav } from '@components/PillNav'
 import { HouseLoader } from '@components/HouseLoader'
@@ -79,8 +79,8 @@ import { RowSkeleton } from '@components/RowSkeleton'
 
 const CLEAR_TOAST_KEY = 'clear-completed'
 
-// How long the run-done slip waits for the check-off confetti to burst first.
-const RUN_DONE_DELAY_MS = 500
+// How long the run-done announcement waits, so the last checked row is seen to go first.
+const RUN_DONE_DELAY_MS = 350
 
 // Smart suggestions show one at a time: the server answers with the most confident, and after an
 // add or an ignore it is asked again (it pauses the list once two in a row are ignored).
@@ -198,23 +198,28 @@ export const ListPage: React.FC = () => {
   })
   const run = useShoppingRun(runHintQuery.data)
   const during = run.active ? ('run' as const) : undefined
-  // The run-done slip: lands once per run, on the last check or on Clear done, a beat after the
-  // check-off confetti so the two don't fight over the same spot.
-  const [runDone, setRunDone] = useState<{
-    lines: string[]
-    tags: { label: string; count: number }[]
-  } | null>(null)
+  // The run-done announcement: once per run, on the last check or on Clear done. The stamp is the
+  // celebration, so the check that finishes a run throws no confetti.
+  const [runDone, setRunDone] = useState<{ lines: string[]; date: string } | null>(null)
+  const [runDoneOpen, setRunDoneOpen] = useState(false)
   const runDoneTimer = useRef<ReturnType<typeof setTimeout>>()
   useEffect(() => () => clearTimeout(runDoneTimer.current), [])
   const landRunDone = useStableCallback(() => {
     if (!run.active || run.stamped) return
     run.markStamped()
-    const slip = {
+    const done = {
       lines: runDoneLines(run.runChecks, run.minutes, runHintQuery.data?.typical),
-      tags: tallyCategories(run.categories),
+      date: new Date().toLocaleDateString(undefined, {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+      }),
     }
     clearTimeout(runDoneTimer.current)
-    runDoneTimer.current = setTimeout(() => setRunDone(slip), RUN_DONE_DELAY_MS)
+    runDoneTimer.current = setTimeout(() => {
+      setRunDone(done)
+      setRunDoneOpen(true)
+    }, RUN_DONE_DELAY_MS)
     track('list.run_stamped', {
       subject: { type: 'list', id: listId },
       props: { items: run.runChecks, minutes: run.minutes },
@@ -595,10 +600,11 @@ export const ListPage: React.FC = () => {
     if (isTemp(it.item_id)) return
     if (savingItemId === it.item_id || editingItemId === it.item_id) return
     const next = !it.completed
-    if (next) run.check(it.category)
+    // The last item of a run gets the stamp instead of confetti.
+    const finishesRun = next ? run.check() && incompleteCount === 1 : false
     inFlight.current += 1
     // Confetti and UI update immediately; the request reconciles afterwards.
-    if (next) {
+    if (next && !finishesRun) {
       const rect = checkboxRefs.current[it.item_id]?.getBoundingClientRect()
       if (rect) {
         confettiAt(rect.left + rect.width / 2, rect.top + rect.height / 2, { durationMs: 2000 })
@@ -976,12 +982,25 @@ export const ListPage: React.FC = () => {
                   children: (
                     <>
                       {runDone && (
-                        <DoneSlip
-                          title={runDone.lines[0]}
-                          lines={runDone.lines.slice(1)}
-                          tags={runDone.tags}
-                          onDone={() => setRunDone(null)}
-                        />
+                        <Sheet
+                          variant="announce"
+                          open={runDoneOpen}
+                          label={runDone.lines[0]}
+                          onClose={() => setRunDoneOpen(false)}
+                          actions={
+                            <SheetActions>
+                              <Button kind="key" onClick={() => setRunDoneOpen(false)}>
+                                Nice
+                              </Button>
+                            </SheetActions>
+                          }
+                        >
+                          <InkStamp note={runDone.date}>{runDone.lines[0]}</InkStamp>
+                          <p className="run-done-line">{runDone.lines[1]}</p>
+                          {runDone.lines[2] && (
+                            <p className="run-done-praise">{runDone.lines[2]}</p>
+                          )}
+                        </Sheet>
                       )}
                       <SuggestionStack
                         suggestions={suggestions}

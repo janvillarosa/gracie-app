@@ -38,6 +38,8 @@
   --panel: #FFFFFF; /* paper: every sheet, slip and control face */
   --panel-subtle: #FAFAFA; /* a well: detail groups, tracks, stamps, pressed fills */
   --sheet-scrim: rgba(0, 0, 0, 0.35);
+  --announce-scrim: color-mix(in srgb, var(--bg) 45%, transparent); /* the desk behind an announcement: pale, not dark */
+  --announce-blur: 10px; /* ...and out of focus, so the moment is the only thing in focus */
 
   /* ---- Edges ------------------------------------------------------------------------- */
   --border: #E6E6E6; /* a hairline inside a sheet */
@@ -140,7 +142,8 @@
   --dur-fast: 160ms;
   --dur-base: 240ms;
   --dur-slow: 420ms;
-  --tag-i: 0; /* a tag's place in its row (set inline), so a row of tags arrives one after another */
+  --dur-ink: 360ms; /* an ink stamp pressing in: down hard, a hair past, then still */
+  --ink-tilt: -6deg; /* a hand-pressed stamp is never square to the paper */
 
   /* ---- Layout: sheets and the row grid ----------------------------------------------- */
   --sheet-inset: 20px;
@@ -1889,6 +1892,18 @@ h5.ant-typography {
   font-weight: var(--w-medium);
   color: var(--muted);
   font-size: var(--t-meta);
+}
+
+/* ---- Run done: the announcement's words under the ink stamp -------------------------------- */
+.run-done-line {
+  margin: var(--space-6) 0 0;
+  color: var(--ink);
+  font: var(--w-semibold) var(--t-lead) var(--font-body);
+}
+.run-done-praise {
+  margin: var(--space-1) 0 0;
+  color: var(--ok-ink);
+  font: var(--w-medium) var(--t-body) var(--font-body);
 }
 
 /* Confetti animation */

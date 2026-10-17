@@ -116,9 +116,7 @@ failure or an empty answer just shows nothing. Events: `nudge.shown|tapped|dismi
   `predict.RunMin` / `RunGap`).
 - **Run mode:** while a run is on, the suggestions query key gains `'run'` and asks `?during=run`; the slip says
   "Usually due in 3 days" (`due_in_days`) and Ignore posts `during: 'run'`.
-- **Run-done slip:** `DoneSlip` (`components/ui/`) lands once per run when the last unchecked item is checked or
-  on Clear done, with `runDoneLines` ("Run done", "14 items · 22 min", and "4 min quicker than usual" only when ≥ 3
-  min quicker than the hint's `typical`), plus the run's categories as `category-tag` chips with counts (`tallyCategories`; each check carries its item's category). Tracks `list.run_stamped {items, minutes}`.
+- **Run done:** once per run, on the last check or on Clear done, an `announce` Sheet with an `InkStamp` ("Run done", dated), "14 items · 22 min", and "4 min quicker than usual" only when ≥ 3 min quicker than the hint's `typical` (`runDoneLines`); its key is "Nice". The check that finishes a run throws no confetti (the stamp is the celebration; `useShoppingRun().check()` returns whether a run is on). It opens 350ms after the last check. Tracks `list.run_stamped {items, minutes}`.
 
 ## Behavior tracking (`lib/analytics/`)
 
@@ -292,7 +290,7 @@ each, styled by `ui/ui.css` from tokens on `:root` in `styles.css` (`--space-*`,
 |---|---|---|
 | `Paper` | `Paper.tsx` | One sheet: edge, white top highlight, grain, 16px corners and one of four heights (`lift` 0 resting, 1 on top, 2 overlay, 3 popover). `tone="tint"` for a well, `inset="flush"` to lay out its own padding, `as` for the element. Every panel is one (no Ant `Card`). |
 | `PaperStack` | `PaperStack.tsx` | Sheets bottom-up: each next one slides 20px over the last and lifts, the ones beneath lose their foot edge, `peek` (0/1/2) sheets show beneath a little off true, and the stack assembles bottom-up on arrival (`arrive={false}` for the next-stop deck, which deals its own cards). Used by House, List, Trip, the desk's Ideas column, settings, Account, no-House and sign-in. |
-| `Sheet` | `Sheet.tsx` | The one overlay. Variants `sheet`, `panel` (docked over the map), `slip`, `confirm`, `chips` (popover on wide, small sheet elsewhere, hangs from `anchor`). Header: phone drag handle + close key; closes with the key, Esc (innermost only), scrim and swipe-down; `dirty` asks "Discard this?"; focus trap and return. Slots `identity`, `actions`, `details`, `footer` always lay out in that order. |
+| `Sheet` | `Sheet.tsx` | The one overlay. Variants `sheet`, `panel` (docked over the map), `slip`, `confirm`, `chips` (popover on wide, small sheet elsewhere, hangs from `anchor`), `announce` (a centred dialog on every screen over a blurred desk, no close key, content then its one full-width yellow key that dismisses it; for rare moments like a run done). Header: phone drag handle + close key; closes with the key, Esc (innermost only), scrim and swipe-down; `dirty` asks "Discard this?"; focus trap and return. Slots `identity`, `actions`, `details`, `footer` always lay out in that order. |
 | `SheetIdentity`, `SheetTitle` | `SheetIdentity.tsx`, `SheetTitle.tsx` | Tier 1: leading mark, Outfit title (inline-editable, with the server's title limit), one muted context line. |
 | `SheetActions` | `SheetActions.tsx` | Tier 2: the one yellow key and at most one quiet button. |
 | `DetailGroup`, `NavRow` | `DetailGroup.tsx`, `NavRow.tsx` | Tier 3: a tinted group of 52px rows (label, value, chevron); a row is a button, link or opens a picker (`Sheet variant="chips"`). |
@@ -302,7 +300,7 @@ each, styled by `ui/ui.css` from tokens on `:root` in `styles.css` (`--space-*`,
 | `Field`, `Switch` | `Field.tsx`, `Switch.tsx` | Borderless text field (with inline problem text); the yellow switch. |
 | `Combobox` | `Combobox.tsx` | The one ARIA combobox: slips rise above an add bar, ↑/↓, Esc, Tab takes the ghost, polite count, `visualViewport` fit. Enter only picks a highlighted option, else `onSubmitText`. `AddItemBar` (pantry) and the trip `QuickAdd` (places) both use it; the draft stays in the bar. |
 | `Stamp`, `Pip` | `Stamp.tsx`, `Pip.tsx` | Category/state tag; the colour dot. |
-| `DoneSlip` | `DoneSlip.tsx` | A moment, not a control: the run-done slip, flat paper rising into the middle of the screen with a highlighted title (and a dashed tear and a word of praise when the run beat the usual); no scrim; tap or Esc dismisses; `role="status"`. |
+| `InkStamp` | `InkStamp.tsx` | A rubber-stamp impression in green "done" ink, double-ruled, dated, off true, pressed in once; the centrepiece of an `announce` Sheet. Not a tag (that is `Stamp`). |
 | `InlineWhen`, `InlineSelect`, `StampSelect` | `InlineWhen.tsx`, `InlineSelect.tsx`, `StampSelect.tsx` | The desktop inspector's in-place editors (variant `panel`; phones keep pickers). `InlineWhen`: a day select, a typed 24-hour time (`lib/trips/clock.ts` parses "9", "930", "2:30pm"; ↑/↓ ±15 min, Shift ±1 h; blank clears when allowed), and the length as segments. `InlineSelect`: a native select drawn like the paper (linked booking). `StampSelect`: stamps outlined in their colours, only the chosen one filled. The desktop Place rows (todo; booking From/To) are `InlinePlace` (Enter on typed text drops a pin from coordinates or keeps an address: `components/trips/typedPlace.ts`); phones keep `PlacePicker`. |
 | `Row` | `Row.tsx` | The row grid `[lead 24] 12 [time 48] 12 [title] [trail]`. |
 | `Note`, `SectionLabel`, `EmptyState` | `Note.tsx`, `SectionLabel.tsx`, `EmptyState.tsx` | Muted/warn one-liner (warn = amber text + glyph, no side rule), small caps label, friendly empty line. |

@@ -46,6 +46,8 @@
   --panel: #FFFFFF; /* paper: every sheet, slip and control face */
   --panel-subtle: #FAFAFA; /* a well: detail groups, tracks, stamps, pressed fills */
   --sheet-scrim: rgba(0, 0, 0, 0.35);
+  --announce-scrim: color-mix(in srgb, var(--bg) 45%, transparent); /* the desk behind an announcement: pale, not dark */
+  --announce-blur: 10px; /* ...and out of focus, so the moment is the only thing in focus */
 
   /* ---- Edges ------------------------------------------------------------------------- */
   --border: #E6E6E6; /* a hairline inside a sheet */
@@ -148,7 +150,8 @@
   --dur-fast: 160ms;
   --dur-base: 240ms;
   --dur-slow: 420ms;
-  --tag-i: 0; /* a tag's place in its row (set inline), so a row of tags arrives one after another */
+  --dur-ink: 360ms; /* an ink stamp pressing in: down hard, a hair past, then still */
+  --ink-tilt: -6deg; /* a hand-pressed stamp is never square to the paper */
 
   /* ---- Layout: sheets and the row grid ----------------------------------------------- */
   --sheet-inset: 20px;
@@ -237,16 +240,15 @@
 }
 </style><!-- /design-tokens -->
 <style>
-  .ds-done { display:grid; justify-items:start; gap:var(--space-1); width:min(100%,320px); padding:var(--space-6); border-radius:var(--radius-lg); background:var(--paper-fill); box-shadow:var(--paper-edge), var(--lift-3); }
-  .ds-done .t { position:relative; isolation:isolate; margin-bottom:var(--space-1); color:var(--ink); font:var(--w-bold) var(--t-title) var(--font-headings); }
-  .ds-done .t::before { content:''; position:absolute; z-index:-1; inset:46% calc(var(--space-1) * -1) 4%; border-radius:3px; background:var(--highlighter); }
-  .ds-done .l { color:var(--text); font:var(--w-medium) var(--t-body) var(--font-body); }
-  .ds-done .tags { display:flex; flex-wrap:wrap; gap:var(--space-2); margin-top:var(--space-2); }
-  .ds-done .tg { padding:1px 7px; border-radius:var(--radius-xs); font:var(--w-bold) var(--t-stamp) var(--font-body); letter-spacing:0.06em; text-transform:uppercase; }
-  .ds-done .tg.produce { background:color-mix(in srgb, var(--cat-produce) 12%, white); color:color-mix(in srgb, var(--cat-produce) 55%, var(--ink)); }
-  .ds-done .tg.dairy { background:color-mix(in srgb, var(--cat-dairy) 12%, white); color:color-mix(in srgb, var(--cat-dairy) 55%, var(--ink)); }
-  .ds-done .tg.bakery { background:color-mix(in srgb, var(--cat-bakery) 12%, white); color:color-mix(in srgb, var(--cat-bakery) 55%, var(--ink)); }
-  .ds-done .p { justify-self:stretch; margin-top:var(--space-3); padding-top:var(--space-3); border-top:2px dashed var(--border-strong); color:var(--ok-ink); font:var(--w-semibold) var(--t-body) var(--font-body); }
+  .ds-announce-desk { position:relative; display:grid; place-items:center; min-height:380px; padding:32px 16px; border-radius:var(--radius-lg); background:var(--desk-fill); overflow:hidden; }
+  .ds-announce-desk::before { content:''; position:absolute; inset:0; background:var(--announce-scrim); -webkit-backdrop-filter:blur(var(--announce-blur)); backdrop-filter:blur(var(--announce-blur)); }
+  .ds-announce { position:relative; display:grid; justify-items:center; width:min(100%,340px); padding:var(--space-7) var(--space-6) var(--space-6); border:1px solid var(--border-strong); border-radius:var(--radius-lg); background:var(--paper-fill); box-shadow:var(--paper-edge), var(--lift-3); text-align:center; }
+  .ds-ink { display:inline-grid; justify-items:center; gap:var(--space-1); padding:var(--space-3) var(--space-5) var(--space-4); border:3px solid currentColor; border-radius:var(--radius-sm); box-shadow:inset 0 0 0 3px var(--panel), inset 0 0 0 4.5px currentColor; color:var(--ok-ink); opacity:0.92; mix-blend-mode:multiply; transform:rotate(var(--ink-tilt)); }
+  .ds-ink .n { font:var(--w-bold) var(--t-label) var(--font-body); letter-spacing:0.16em; text-transform:uppercase; }
+  .ds-ink .w { font:var(--w-bold) var(--t-title) var(--font-headings); line-height:1; letter-spacing:0.1em; text-transform:uppercase; }
+  .ds-announce .l { margin:var(--space-6) 0 0; color:var(--ink); font:var(--w-semibold) var(--t-lead) var(--font-body); }
+  .ds-announce .p { margin:var(--space-1) 0 0; color:var(--ok-ink); font:var(--w-medium) var(--t-body) var(--font-body); }
+  .ds-announce .btn { justify-self:stretch; margin-top:var(--space-6); }
   /* Reference-page only: the app self-hosts the variable faces; this page loads the same families
      from Google Fonts, so it names them as Google does. */
   :root {
@@ -600,12 +602,12 @@
   <section class="part">
     <div class="part-head">
       <div>
-        <h2>A finished run is a slip</h2>
-        <p><code>DoneSlip</code> is a moment, not a control. When a shopping run ends (the last item checked, or Clear done, mid-run) a paper slip at popover height (<code>--lift-3</code>) rises into the middle of the screen: 16px corners, 320px wide, the title in Outfit 28px with the highlighter swiped under it as a new row's is, a plain line beneath, then what the run got as the list rows' own category tags with counts (Produce ×6, Dairy ×5: the page's colour, spent on meaning), and, when the run beat the house's usual, a dashed tear (as on the invite-code ticket) and one word of praise in <code>--ok-ink</code>. It is flat paper: no fill colour, no tilt, no extra chrome, so the page's one yellow key stays the only yellow. No scrim: the page stays usable and a tap or Esc dismisses it. It rises over <code>--dur-base</code>, the highlighter sweeps in over <code>--dur-slow</code>, it rests about 2.5s and lifts away. Reduced motion only fades. One per run, announced once, and it only ever praises, never scolds.</p>
+        <h2>Some moments are announced</h2>
+        <p><code>Sheet variant="announce"</code> is for the rare moment worth stopping for, such as a shopping run done. The desk goes pale and out of focus (<code>--announce-scrim</code>, <code>--announce-blur</code>), and a sheet at popover height sits in the middle of every screen, phones included. It has no close key or drag handle: it says its piece, then ends on its one yellow key, full width, which dismisses it (Esc and the scrim do too). The key takes focus. Its centrepiece is usually an <code>InkStamp</code>: a rubber-stamp impression in green "done" ink (<code>--ok-ink</code>), a double rule, a small dated note, set off true by <code>--ink-tilt</code>. The ink multiplies onto the paper so the grain shows through, and it presses in once over <code>--dur-ink</code>. Reduced motion: it is simply there. An announcement is rare by design, at most once per moment, and never for errors or questions (those are <code>confirm</code>).</p>
       </div>
     </div>
-    <div style="display:flex;justify-content:center;padding:32px 0">
-      <div class="ds-done"><span class="t">Run done</span><span class="l">14 items · 22 min</span><span class="tags"><span class="tg produce">Produce ×6</span><span class="tg dairy">Dairy ×5</span><span class="tg bakery">Bakery ×3</span></span><span class="p">4 min quicker than usual</span></div>
+    <div class="ds-announce-desk">
+      <div class="ds-announce"><span class="ds-ink"><span class="n">Sat 17 Oct</span><span class="w">Run done</span></span><p class="l">14 items · 22 min</p><p class="p">4 min quicker than usual</p><button class="btn key" type="button">Nice</button></div>
     </div>
   </section>
 </main>

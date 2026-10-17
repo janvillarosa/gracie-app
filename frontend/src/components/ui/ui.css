@@ -303,110 +303,51 @@ button.ui-note:focus-visible {
   color: var(--ink);
 }
 
-/* ---- DoneSlip: a paper slip rises into the middle of the screen --------------------------------- */
-/* Fixed to the screen's centre (portalled to the body, so a transformed sheet can't move it). No scrim:
-   the page stays usable around it, and only the slip takes a tap. Popover height. */
-.ui-done-anchor {
-  position: fixed;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  padding: var(--space-4);
-  pointer-events: none;
-  z-index: 40;
-}
-.ui-done {
-  pointer-events: auto;
-  cursor: pointer;
-  display: grid;
-  justify-items: start;
+/* ---- InkStamp: a rubber-stamp impression in green "done" ink -------------------------------- */
+/* A double rule (the border, a paper gap, a fine inner line), set off true. Multiply lets the paper's
+   grain show through the ink, as it would. It is pressed in once. */
+.ui-ink-stamp {
+  display: inline-grid;
+  justify-items: center;
   gap: var(--space-1);
-  width: min(100%, 320px);
-  padding: var(--space-6);
-  border-radius: var(--radius-lg);
-  background: var(--paper-fill);
-  box-shadow: var(--paper-edge), var(--lift-3);
-}
-/* The title is marked with the highlighter, as a new row is. */
-.ui-done-title {
-  position: relative;
-  isolation: isolate;
-  margin-bottom: var(--space-1);
-  color: var(--ink);
-  font: var(--w-bold) var(--t-title) var(--font-headings);
-}
-.ui-done-title::before {
-  content: '';
-  position: absolute;
-  z-index: -1;
-  inset: 46% calc(var(--space-1) * -1) 4%;
-  border-radius: 3px;
-  background: var(--highlighter);
-  transform-origin: left center;
-}
-.ui-done-line {
-  color: var(--text);
-  font: var(--w-medium) var(--t-body) var(--font-body);
-}
-/* What the run got: the list rows' own category tags, so the colour means what it means on the list. */
-.ui-done-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  margin-top: var(--space-2);
-}
-.ui-done-tag {
-  display: inline-block;
-}
-/* The ticket slip's tear (as in the invite code), then a word of praise. */
-.ui-done-praise {
-  justify-self: stretch;
-  margin-top: var(--space-3);
-  padding-top: var(--space-3);
-  border-top: 2px dashed var(--border-strong);
+  padding: var(--space-3) var(--space-5) var(--space-4);
+  border: 3px solid currentColor;
+  border-radius: var(--radius-sm);
+  box-shadow:
+    inset 0 0 0 3px var(--panel),
+    inset 0 0 0 4.5px currentColor;
   color: var(--ok-ink);
-  font: var(--w-semibold) var(--t-body) var(--font-body);
+  opacity: 0.92;
+  mix-blend-mode: multiply;
+  transform: rotate(var(--ink-tilt));
 }
-.ui-done.is-leaving {
-  opacity: 0;
-  transition: opacity var(--dur-fast) linear;
+.ui-ink-stamp-note {
+  font: var(--w-bold) var(--t-label) var(--font-body);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.ui-ink-stamp-words {
+  font: var(--w-bold) var(--t-title) var(--font-headings);
+  line-height: 1;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 @media (prefers-reduced-motion: no-preference) {
-  .ui-done:not(.is-still) {
-    animation: done-in var(--dur-base) var(--ease-out) both;
-  }
-  .ui-done:not(.is-still) .ui-done-tag {
-    animation: done-tag var(--dur-base) var(--ease-out) both;
-    animation-delay: calc(var(--dur-base) + var(--tag-i) * 70ms);
-  }
-  .ui-done:not(.is-still) .ui-done-title::before {
-    animation: done-swipe var(--dur-slow) var(--ease-out) 200ms both;
-  }
-  .ui-done.is-leaving:not(.is-still) {
-    animation: done-out var(--dur-fast) var(--ease-out) both;
+  .ui-ink-stamp {
+    animation: ink-press var(--dur-ink) var(--ease-out) var(--dur-fast) both;
   }
 }
-@keyframes done-in {
-  from {
+@keyframes ink-press {
+  0% {
     opacity: 0;
-    transform: translateY(var(--space-3));
+    transform: rotate(calc(var(--ink-tilt) * 2)) scale(1.7);
   }
-}
-@keyframes done-tag {
-  from {
-    opacity: 0;
-    transform: translateY(var(--space-1));
+  60% {
+    opacity: 0.92;
+    transform: rotate(var(--ink-tilt)) scale(0.95);
   }
-}
-@keyframes done-swipe {
-  from {
-    transform: scaleX(0);
-  }
-}
-@keyframes done-out {
-  to {
-    opacity: 0;
-    transform: translateY(calc(var(--space-2) * -1));
+  100% {
+    transform: rotate(var(--ink-tilt)) scale(1);
   }
 }
 
@@ -838,6 +779,29 @@ input.ui-sheet-title.has-error:focus-visible {
 }
 .ui-dialog .ant-modal-body {
   padding: 0;
+}
+/* Announce: a moment worth stopping for. The desk goes pale and out of focus; the sheet sits at
+   popover height with its content centred and ends on its one key, full width. */
+.ui-announce-scrim {
+  background: var(--announce-scrim) !important;
+  -webkit-backdrop-filter: blur(var(--announce-blur));
+  backdrop-filter: blur(var(--announce-blur));
+}
+.ui-dialog.is-announce .ant-modal-content {
+  box-shadow: var(--paper-edge), var(--lift-3);
+}
+.ui-sheet.is-announce .ui-sheet-scroll {
+  display: grid;
+  justify-items: center;
+  padding: var(--space-7) var(--space-6) var(--space-6);
+  text-align: center;
+}
+.ui-sheet.is-announce .ui-sheet-actions {
+  justify-self: stretch;
+  margin: var(--space-6) 0 0;
+}
+.ui-sheet.is-announce .ui-sheet-actions > * {
+  flex: 1;
 }
 .ui-sheet-panel {
   position: absolute;

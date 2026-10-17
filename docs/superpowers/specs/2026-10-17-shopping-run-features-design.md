@@ -126,34 +126,27 @@ nightly full pass fills the rest. No backfill is needed.
     not evidence the rhythm is wrong, so it must not lower the item's score. *(My call.)*
   - It skips that item for the rest of this run. It can return when it is actually due.
 
-## 2. Run-done slip
+## 2. Run done (announced, with an ink stamp)
 
-*Amended 2026-10-17 after review: it began as a rubber stamp. A yellow filled stamp competed with the
-page's one yellow key, and the tool, tilt and ink texture tried were gimmicks. It is now a plain paper
-slip, built from patterns Bauhouse already has.*
+*Amended 2026-10-17 after several rounds with Jan.* A floating yellow stamp read as clip-art and fought the
+page's one yellow key; a plain slip lost the delight; category tags and confetti cluttered it. Jan's call:
+keep the stamp, and give announcements their own primitive that blurs the screen and is dismissed by the
+yellow key.
 
-- **Trigger:** while a run is on (section 1), either the last unchecked item on the list gets
-  checked or the user taps Clear done. At most once per run.
-- **Content:** title "Run done", then "{n} items · {m} min" (n = checks in this run, m = minutes from
-  the first to the last check, rounded; under 1 minute, drop the minutes). When the hint carries
-  `typical` (≥ 5 runs learned) and this run was at least 3 minutes quicker than `typical.minutes`, a
-  dashed tear and one line of praise in `--ok-ink`: "4 min quicker than usual". Never "slower".
-  *(My call: the slip is a reward, not a report card.)*
-- **Colour (Jan: "add more color"):** what the run got, as the list rows' own category tags with counts
-  ("Produce ×3", "Dairy ×2"; `category-tag` + `cat-*`, at most four, biggest first, no category is
-  General), staggered in a beat after the slip. Colour keeps its meaning: it is the same category colour as on
-  the list, never decoration. The run records each check's category (`RunState.categories`).
-- **Look and behaviour:** flat paper at popover height (`--lift-3`), 320px wide, in the middle of the
-  screen (portalled to the body), no scrim, so the page stays usable. The title is Outfit 28px with the
-  highlighter swiped under it, as a new row's is. It rises over `--dur-base`, the highlighter sweeps in
-  over `--dur-slow`, it rests about 2.5s and lifts away. A tap or Esc dismisses it. Under
-  `prefers-reduced-motion` it only fades. `role="status"`. No fill colour, tilt, texture or tool.
-- **Client-built:** made from the page's own check times plus the run hint already fetched for run
-  detection. No extra request.
-- **Design system first:** `DoneSlip` is a primitive in `components/ui/` with its section on
-  `docs/design-system/index.html` and in DESIGN.md. It adds no tokens.
-- **Measurement:** client event `list.run_stamped {items, minutes}` (`Client: true`, int props), kept
-  under its original name so the stored event ids stay stable.
+- **New primitive: `Sheet variant="announce"`** (not a separate overlay: Sheet already owns the scrim,
+  focus trap, Esc and focus return). A centred dialog on every screen over a pale, blurred desk
+  (`--announce-scrim`, `--announce-blur`); no close key or handle; content first, then its one yellow
+  key, full width and focused, which dismisses it. For rare moments only, never errors or questions.
+- **New primitive: `InkStamp`.** A rubber-stamp impression in green "done" ink (`--ok-ink`), double-ruled,
+  with a small dated note, set off true (`--ink-tilt`), multiplied onto the paper so the grain shows
+  through, pressed in once (`--dur-ink`). Reduced motion: no press.
+- **Trigger:** while a run is on (section 1), the last unchecked item is checked or Clear done is tapped.
+  At most once per run. It opens 350ms after the last check.
+- **Content:** the stamp ("Run done", today's date), "{n} items · {m} min" (drop minutes under 1), and,
+  only when ≥ 5 runs are learned and this run was ≥ 3 min quicker than usual, "4 min quicker than usual"
+  in `--ok-ink`. Never "slower". The key says "Nice".
+- **One celebration:** the check that finishes a run throws no confetti; the stamp is the moment.
+- **Measurement:** client event `list.run_stamped {items, minutes}`, kept under its original name.
 
 ## 3. Usual quantity
 
