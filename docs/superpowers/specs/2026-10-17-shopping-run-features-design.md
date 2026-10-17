@@ -144,7 +144,8 @@ yellow key.
   At most once per run. It opens 350ms after the last check.
 - **Content:** the stamp ("Run done", today's date), "{n} items · {m} min" (drop minutes under 1), and,
   only when ≥ 5 runs are learned and this run was ≥ 3 min quicker than usual, "4 min quicker than usual"
-  in `--ok-ink`. Never "slower". The key says "Nice".
+  in `--ok-ink`. Never "slower". The key cheers, a different word each run (Jan's idea: "Nice!", "Huzzah!",
+  "Amazing!", "Woohoo!", "Ta-da!", "Sorted!", "Brilliant!", "All stocked!"), never the same twice in a row.
 - **One celebration:** the check that finishes a run throws no confetti; the stamp is the moment.
 - **Measurement:** client event `list.run_stamped {items, minutes}`, kept under its original name.
 

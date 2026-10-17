@@ -119,3 +119,40 @@ export function runDoneLines(
   if (quicker >= 3) lines.push(`${quicker} min quicker than usual`)
   return lines
 }
+
+/** What the run-done key says: a little cheer, different every run. */
+export const CHEERS = [
+  'Nice!',
+  'Huzzah!',
+  'Amazing!',
+  'Woohoo!',
+  'Ta-da!',
+  'Sorted!',
+  'Brilliant!',
+  'All stocked!',
+] as const
+
+/** A random cheer, never the one said last time. */
+export function pickCheer(rand: () => number = Math.random, previous?: string): string {
+  const pool = CHEERS.filter((c) => c !== previous)
+  return pool[Math.min(pool.length - 1, Math.floor(rand() * pool.length))]
+}
+
+const LAST_CHEER_KEY = 'gracie_last_cheer'
+
+/** The next cheer, remembered on this device so two runs in a row never say the same thing. */
+export function nextCheer(): string {
+  let previous: string | undefined
+  try {
+    previous = localStorage.getItem(LAST_CHEER_KEY) ?? undefined
+  } catch {
+    // storage blocked: any cheer will do
+  }
+  const cheer = pickCheer(Math.random, previous)
+  try {
+    localStorage.setItem(LAST_CHEER_KEY, cheer)
+  } catch {
+    // storage blocked: fine
+  }
+  return cheer
+}

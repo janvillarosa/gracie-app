@@ -4,6 +4,8 @@ import {
   initialRun,
   type RunState,
   runReducer,
+  CHEERS,
+  pickCheer,
   runDoneLines,
   useShoppingRun,
 } from '@lib/shoppingRun'
@@ -133,5 +135,25 @@ describe('runDoneLines', () => {
   it('never mentions a run that was only a little quicker, or slower', () => {
     expect(runDoneLines(14, 20, { minutes: 22 })).toHaveLength(2)
     expect(runDoneLines(14, 30, { minutes: 22 })).toHaveLength(2)
+  })
+})
+
+describe('pickCheer', () => {
+  it('says something from the list', () => {
+    expect(CHEERS).toEqual(expect.arrayContaining(['Nice!', 'Huzzah!', 'Amazing!']))
+    for (const r of [0, 0.3, 0.6, 0.999]) expect(CHEERS).toContain(pickCheer(() => r))
+  })
+
+  it('never says the same thing twice in a row', () => {
+    for (const previous of CHEERS) {
+      for (const r of [0, 0.25, 0.5, 0.75, 0.999]) {
+        expect(pickCheer(() => r, previous)).not.toBe(previous)
+      }
+    }
+  })
+
+  it('every cheer can come up', () => {
+    const seen = new Set(CHEERS.map((_, i) => pickCheer(() => i / CHEERS.length)))
+    expect(seen.size).toBe(CHEERS.length)
   })
 })

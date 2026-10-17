@@ -71,7 +71,7 @@ import { ItemRow, reorderLock } from '@components/ItemRow'
 import { AddItemBar } from '@components/AddItemBar'
 import { SuggestionStack, type SlipPhase } from '@components/SuggestionSlip'
 import { track } from '@lib/analytics'
-import { runDoneLines, useShoppingRun } from '@lib/shoppingRun'
+import { nextCheer, runDoneLines, useShoppingRun } from '@lib/shoppingRun'
 import { TopNav } from '@components/TopNav'
 import { PillNav } from '@components/PillNav'
 import { HouseLoader } from '@components/HouseLoader'
@@ -200,7 +200,9 @@ export const ListPage: React.FC = () => {
   const during = run.active ? ('run' as const) : undefined
   // The run-done announcement: once per run, on the last check or on Clear done. The stamp is the
   // celebration, so the check that finishes a run throws no confetti.
-  const [runDone, setRunDone] = useState<{ lines: string[]; date: string } | null>(null)
+  const [runDone, setRunDone] = useState<{ lines: string[]; date: string; cheer: string } | null>(
+    null,
+  )
   const [runDoneOpen, setRunDoneOpen] = useState(false)
   const runDoneTimer = useRef<ReturnType<typeof setTimeout>>()
   useEffect(() => () => clearTimeout(runDoneTimer.current), [])
@@ -214,6 +216,7 @@ export const ListPage: React.FC = () => {
         day: 'numeric',
         month: 'short',
       }),
+      cheer: nextCheer(),
     }
     clearTimeout(runDoneTimer.current)
     runDoneTimer.current = setTimeout(() => {
@@ -990,7 +993,7 @@ export const ListPage: React.FC = () => {
                           actions={
                             <SheetActions>
                               <Button kind="key" onClick={() => setRunDoneOpen(false)}>
-                                Nice
+                                {runDone.cheer}
                               </Button>
                             </SheetActions>
                           }

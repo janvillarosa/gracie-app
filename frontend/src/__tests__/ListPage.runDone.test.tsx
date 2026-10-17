@@ -1,6 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { tracker } from '@lib/analytics'
+import { CHEERS } from '@lib/shoppingRun'
 import { setupRunPage } from './listRun.helpers'
 
 const checkOff = async (name: string) =>
@@ -9,6 +10,19 @@ const announcement = () => screen.queryByRole('dialog', { name: 'Run done' })
 const confetti = () => document.querySelectorAll('.confetti-piece').length
 
 describe('ListPage run done', () => {
+  it('the key cheers, and two runs in a row never cheer the same', async () => {
+    localStorage.setItem('gracie_last_cheer', 'Nice!')
+    setupRunPage({ items: ['Milk', 'Eggs', 'Bread'] })
+    await checkOff('Milk')
+    await checkOff('Eggs')
+    await checkOff('Bread')
+    const key = within(await screen.findByRole('dialog', { name: 'Run done' })).getByRole('button')
+    expect(CHEERS).toContain(key.textContent)
+    expect(key).not.toHaveTextContent('Nice!')
+    expect(localStorage.getItem('gracie_last_cheer')).toBe(key.textContent)
+    await tracker.flush() // send this run's event here, not into the next test
+  })
+
   it('announces once per run: on the last check, dismissed by its key, not again on Clear done', async () => {
     const calls = setupRunPage({ items: ['Milk', 'Eggs', 'Bread'] })
     await checkOff('Milk')
@@ -17,7 +31,8 @@ describe('ListPage run done', () => {
     const dialog = await screen.findByRole('dialog', { name: 'Run done' })
     expect(dialog.querySelector('.ui-ink-stamp')).toHaveTextContent('Run done')
     expect(dialog).toHaveTextContent('3 items')
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Nice' }))
+    // The key says a different cheer each run ("Nice!", "Huzzah!"...): it is the dialog's one button.
+    await userEvent.click(within(dialog).getByRole('button'))
     await waitFor(() => expect(announcement()).not.toBeInTheDocument())
     await userEvent.click(await screen.findByRole('button', { name: 'More list actions' }))
     await userEvent.click(await screen.findByText('Clear completed'))
