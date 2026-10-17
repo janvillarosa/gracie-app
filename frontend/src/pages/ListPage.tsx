@@ -20,6 +20,7 @@ import {
   clearListItems,
   getRoomPantry,
   getListSuggestions,
+  getRunHint,
   ignoreListSuggestion,
 } from '@api/endpoints'
 import type { List, ListItem, ListSuggestion, PantryItem } from '@api/types'
@@ -70,6 +71,7 @@ import { ItemRow, reorderLock } from '@components/ItemRow'
 import { AddItemBar } from '@components/AddItemBar'
 import { SuggestionStack, type SlipPhase } from '@components/SuggestionSlip'
 import { track } from '@lib/analytics'
+import { useShoppingRun } from '@lib/shoppingRun'
 import { TopNav } from '@components/TopNav'
 import { PillNav } from '@components/PillNav'
 import { HouseLoader } from '@components/HouseLoader'
@@ -181,12 +183,26 @@ export const ListPage: React.FC = () => {
     staleTime: 5 * 60_000,
   })
 
-  // Smart suggestion: the one thing the house usually adds around now. The server decides
-  // (and answers with nothing when the feature is off); a failure just means no slip.
-  const suggestionsKey = ['suggestions', roomId, listId]
+  // Shopping run: check-offs on this visit, with thresholds learned from this person's (or the
+  // house's) habits. A failed or slow hint just means the default rule.
+  const runHintQuery = useQuery({
+    queryKey: ['run-hint', roomId, listId],
+    queryFn: () => getRunHint(apiKey!, roomId!, listId),
+    enabled: !!roomId && !!listId,
+    refetchOnWindowFocus: false,
+    retry: false,
+    staleTime: 600_000,
+  })
+  const run = useShoppingRun(runHintQuery.data)
+  const during = run.active ? ('run' as const) : undefined
+
+  // Smart suggestion: the one thing the house usually adds around now (mid-shop: what comes due
+  // before the next shop). The server decides (and answers with nothing when the feature is off);
+  // a failure just means no slip.
+  const suggestionsKey = ['suggestions', roomId, listId, during ?? 'normal']
   const suggestionsQuery = useQuery({
     queryKey: suggestionsKey,
-    queryFn: () => getListSuggestions(apiKey!, roomId!, listId),
+    queryFn: () => getListSuggestions(apiKey!, roomId!, listId, during),
     enabled: !!roomId && !!listId,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
@@ -466,7 +482,7 @@ export const ListPage: React.FC = () => {
     nudge('nudge.dismissed')
     await retireSuggestion(s, async () => {
       try {
-        await ignoreListSuggestion(apiKey!, roomId!, listId, s.key)
+        await ignoreListSuggestion(apiKey!, roomId!, listId, s.key, during)
       } catch {
         // fall through: the refetch puts the slip back if the ignore did not land
       }
@@ -549,6 +565,7 @@ export const ListPage: React.FC = () => {
     if (isTemp(it.item_id)) return
     if (savingItemId === it.item_id || editingItemId === it.item_id) return
     const next = !it.completed
+    if (next) run.check()
     inFlight.current += 1
     // Confetti and UI update immediately; the request reconciles afterwards.
     if (next) {
@@ -930,6 +947,7 @@ export const ListPage: React.FC = () => {
                     <>
                       <SuggestionStack
                         suggestions={suggestions}
+                        during={during}
                         phase={spent?.phase}
                         onAdd={onAddSuggestion}
                         onIgnore={onIgnoreSuggestion}

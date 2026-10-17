@@ -9,6 +9,8 @@ type Props = {
   suggestion: ListSuggestion
   onAdd: (s: ListSuggestion) => void
   onIgnore: (s: ListSuggestion) => void
+  /** Mid-shop: the slip offers what comes due before the next shop. */
+  during?: 'run'
 }
 
 type StackProps = {
@@ -16,11 +18,19 @@ type StackProps = {
   onAdd: (s: ListSuggestion) => void
   onIgnore: (s: ListSuggestion) => void
   phase?: SlipPhase
+  during?: 'run'
 }
 
 /** A taken or ignored slip keeps its slot: it pops out (leaving), stays invisible while the server
  *  answers (held), and the slot closes only when nothing follows (collapsing). */
 export type SlipPhase = 'leaving' | 'held' | 'collapsing'
+
+/** Run mode: grab it while you're there. */
+function dueLine(days: number | undefined): string {
+  if (!days || days <= 0) return 'Due now'
+  if (days === 1) return 'Usually due tomorrow'
+  return `Usually due in ${days} days`
+}
 
 function cadence(days: number): string {
   if (days <= 1) return 'You add it daily'
@@ -32,7 +42,7 @@ function cadence(days: number): string {
 
 /** What the house usually adds around now: one sheet of paper above the items (never inside the
  *  list). Its Add is the page's one yellow key, so the eye finds it without anything shouting. */
-export function SuggestionStack({ suggestions, onAdd, onIgnore, phase }: StackProps) {
+export function SuggestionStack({ suggestions, onAdd, onIgnore, phase, during }: StackProps) {
   if (suggestions.length === 0) return null
   return (
     // The wrappers only exist so the list below can glide down as the slip arrives (see styles.css).
@@ -41,7 +51,13 @@ export function SuggestionStack({ suggestions, onAdd, onIgnore, phase }: StackPr
         <section key={suggestions[0].key} className="suggestion-sheet" aria-label="Suggestion">
           <ul className="suggestion-rows">
             {suggestions.map((s) => (
-              <SuggestionSlip key={s.key} suggestion={s} onAdd={onAdd} onIgnore={onIgnore} />
+              <SuggestionSlip
+                key={s.key}
+                suggestion={s}
+                onAdd={onAdd}
+                onIgnore={onIgnore}
+                during={during}
+              />
             ))}
           </ul>
         </section>
@@ -51,7 +67,7 @@ export function SuggestionStack({ suggestions, onAdd, onIgnore, phase }: StackPr
 }
 
 /** One row: the thing and its rhythm, a quiet Add, and a round "not now". */
-export function SuggestionSlip({ suggestion, onAdd, onIgnore }: Props) {
+export function SuggestionSlip({ suggestion, onAdd, onIgnore, during }: Props) {
   const { description, quantity, unit } = suggestion
   const amount = [quantity, unit].filter(Boolean).join(' ')
   const label = amount ? `${description} (${amount})` : description
@@ -62,7 +78,9 @@ export function SuggestionSlip({ suggestion, onAdd, onIgnore }: Props) {
         <span className="suggestion-name" title={label}>
           {label}
         </span>
-        <span className="suggestion-cadence">{cadence(suggestion.every_days)}</span>
+        <span className="suggestion-cadence">
+          {during === 'run' ? dueLine(suggestion.due_in_days) : cadence(suggestion.every_days)}
+        </span>
       </div>
       <Button
         kind="key"
@@ -76,7 +94,7 @@ export function SuggestionSlip({ suggestion, onAdd, onIgnore }: Props) {
       </Button>
       <Button
         iconOnly
-        title="Not now"
+        title={during === 'run' ? 'Not this time' : 'Not now'}
         aria-label={`Ignore suggestion: ${description}`}
         onClick={() => onIgnore(suggestion)}
       >
