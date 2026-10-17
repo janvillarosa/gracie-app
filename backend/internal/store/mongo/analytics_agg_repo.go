@@ -153,8 +153,30 @@ func (r *AggRepo) ApplyBatch(ctx context.Context, b *analytics.Batch, owner stri
 				return err
 			}
 		}
+		for room := range b.Requeue {
+			if _, err := r.requeueRoom(txctx, room); err != nil {
+				return err
+			}
+		}
 		return nil
 	})
+}
+
+// RequeueRoomKeys marks every computed key of a room stale, so RefreshStale rebuilds it.
+func (r *AggRepo) RequeueRoomKeys(ctx context.Context, roomID string) (int, error) {
+	return r.requeueRoom(ctx, roomID)
+}
+
+// requeueRoom sets intervals.v = 0 on the room's keys that have intervals (one without is already
+// stale: StaleKeys matches a missing version). Served by the (room_id, subject_type, …) indexes.
+func (r *AggRepo) requeueRoom(ctx context.Context, roomID string) (int, error) {
+	res, err := r.keys().UpdateMany(ctx,
+		bson.D{{Key: "room_id", Value: roomID}, {Key: "intervals", Value: bson.D{{Key: "$exists", Value: true}}}},
+		bson.D{{Key: "$set", Value: bson.D{{Key: "intervals.v", Value: 0}}}})
+	if err != nil {
+		return 0, err
+	}
+	return int(res.ModifiedCount), nil
 }
 
 func (r *AggRepo) SetKeyIntervals(ctx context.Context, id string, iv analytics.KeyIntervals) error {

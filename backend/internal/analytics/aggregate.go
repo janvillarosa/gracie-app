@@ -27,10 +27,11 @@ type Batch struct {
 	Keys    map[string]*DocUpdate // key_stats docs
 	Dirty   map[string]struct{}   // subjects ("u:<id>", "h:<room>") whose profile needs recomputing
 	Touched map[string]KeyRef     // keys whose intervals need recomputing, by key_stats id
+	Requeue map[string]struct{}   // rooms whose every key is marked stale (RequeueRoom events)
 }
 
 func NewBatch() *Batch {
-	return &Batch{Periods: map[string]*DocUpdate{}, Keys: map[string]*DocUpdate{}, Dirty: map[string]struct{}{}, Touched: map[string]KeyRef{}}
+	return &Batch{Periods: map[string]*DocUpdate{}, Keys: map[string]*DocUpdate{}, Dirty: map[string]struct{}{}, Touched: map[string]KeyRef{}, Requeue: map[string]struct{}{}}
 }
 
 func (b *Batch) period(id string) *DocUpdate {
@@ -130,8 +131,9 @@ type AggregateRepository interface {
 	// AcquireLease takes the rollup lease for owner when it is free, expired or already
 	// held by owner, and returns the current watermark (zero time before the first fold).
 	AcquireLease(ctx context.Context, owner string, ttl time.Duration, now time.Time) (watermark time.Time, ok bool, err error)
-	// ApplyBatch writes the aggregates, marks subjects dirty and advances the watermark in
-	// ONE transaction, so a crash can never apply a window twice or skip one.
+	// ApplyBatch writes the aggregates, marks subjects dirty, requeues the batch's rooms
+	// (RequeueRoomKeys) and advances the watermark in ONE transaction, so a crash can never apply
+	// a window twice or skip one.
 	ApplyBatch(ctx context.Context, b *Batch, owner string, watermark time.Time) error
 	ReleaseLease(ctx context.Context, owner string) error
 	// SetKeyIntervals replaces the interval fields of one key_stats document.
@@ -155,6 +157,9 @@ type AggregateRepository interface {
 	// UpcomingKeys returns keys with a suggestion window that opens by opensBefore and is still open
 	// at now (opensBefore == now: open right now).
 	UpcomingKeys(ctx context.Context, roomID, subjectType string, now, opensBefore time.Time, minScore, maxCV float64, limit int) ([]KeyStat, error)
+	// RequeueRoomKeys marks every computed key of a room stale (intervals.v = 0), so RefreshStale
+	// rebuilds them. It returns how many it marked.
+	RequeueRoomKeys(ctx context.Context, roomID string) (int, error)
 	// StaleKeys returns up to limit keys whose intervals were computed with an older (or no)
 	// ForecastVersion than version.
 	StaleKeys(ctx context.Context, version, limit int) ([]KeyRef, error)

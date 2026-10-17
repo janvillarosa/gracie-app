@@ -250,3 +250,63 @@ func TestEventRepoInsertNewCountsOnlyNewEvents(t *testing.T) {
 		t.Fatalf("all duplicates: n=%d err=%v", n, err)
 	}
 }
+
+func TestMongoRequeueRoomKeysOnlyTouchesThatRoom(t *testing.T) {
+	c := connectOrSkip(t)
+	ctx := context.Background()
+	aggs := NewAggRepo(c, NewTx(c))
+	if err := aggs.EnsureIndexes(ctx); err != nil {
+		t.Fatal(err)
+	}
+	roomA, roomB := "ra_"+randHex(6), "rb_"+randHex(6)
+	owner := "w_" + randHex(6)
+	now := time.Now().UTC()
+	if _, ok, err := aggs.AcquireLease(ctx, owner, 5*time.Minute, now); err != nil || !ok {
+		t.Fatalf("lease: %v %v", ok, err)
+	}
+	defer func() { _ = aggs.ReleaseLease(ctx, owner) }()
+	wm, _, _ := aggs.AcquireLease(ctx, owner, 5*time.Minute, now)
+	b := analytics.NewBatch()
+	for _, ref := range []analytics.KeyRef{{RoomID: roomA, SubjectType: "item", Key: "milk"}, {RoomID: roomA, SubjectType: "item", Key: "eggs"}, {RoomID: roomB, SubjectType: "item", Key: "milk"}} {
+		u := &analytics.DocUpdate{ID: ref.ID(), Inc: map[string]int64{"counts.added": 1}, Set: map[string]any{"room_id": ref.RoomID, "subject_type": ref.SubjectType, "key": ref.Key}}
+		b.Keys[ref.ID()] = u
+	}
+	b.Keys[roomA+":item:bread"] = &analytics.DocUpdate{ID: roomA + ":item:bread", Set: map[string]any{"room_id": roomA, "subject_type": "item", "key": "bread"}}
+	if err := aggs.ApplyBatch(ctx, b, owner, wm); err != nil {
+		t.Fatal(err)
+	}
+	for _, id := range []string{roomA + ":item:milk", roomA + ":item:eggs", roomB + ":item:milk"} {
+		if err := aggs.SetKeyIntervals(ctx, id, analytics.KeyIntervals{N: 3, LastAt: now, ComputedAt: now, Version: analytics.ForecastVersion}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	req := analytics.NewBatch()
+	req.Requeue[roomA] = struct{}{}
+	if err := aggs.ApplyBatch(ctx, req, owner, wm); err != nil {
+		t.Fatal(err)
+	}
+	stale, err := aggs.StaleKeys(ctx, analytics.ForecastVersion, 10000)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]bool{}
+	for _, ref := range stale {
+		if ref.RoomID == roomA || ref.RoomID == roomB {
+			got[ref.ID()] = true
+		}
+	}
+	if !got[roomA+":item:milk"] || !got[roomA+":item:eggs"] || !got[roomA+":item:bread"] || got[roomB+":item:milk"] {
+		t.Fatalf("only room A's keys are stale: %v", got)
+	}
+	var bread map[string]any
+	if err := aggs.keys().FindOne(ctx, map[string]any{"_id": roomA + ":item:bread"}).Decode(&bread); err != nil {
+		t.Fatal(err)
+	}
+	if _, has := bread["intervals"]; has {
+		t.Fatal("a key without intervals must not get a stub intervals document")
+	}
+	if n, err := aggs.RequeueRoomKeys(ctx, roomB); err != nil || n != 1 {
+		t.Fatalf("RequeueRoomKeys(B) = %d %v", n, err)
+	}
+}

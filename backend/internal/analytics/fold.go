@@ -32,6 +32,13 @@ func Fold(reg *Registry, events []Event) *Batch {
 		if !ok || def.Skip {
 			continue
 		}
+		if def.RequeueRoom {
+			if e.RoomID != "" {
+				b.Requeue[e.RoomID] = struct{}{}
+				b.Dirty["h:"+e.RoomID] = struct{}{} // the house's run rhythm is measured in home time too
+			}
+			continue
+		}
 		st := SubjectType(def.Name)
 		verb := strings.TrimPrefix(def.Name, st+".")
 		path := st + "." + verb

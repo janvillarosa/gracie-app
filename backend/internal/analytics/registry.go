@@ -45,6 +45,10 @@ type EventDef struct {
 	Role   Role
 	// Skip excludes high-volume noise (item.reordered) from rollups; it is still stored.
 	Skip bool
+	// RequeueRoom makes the event a signal, not behavior: folding it counts nothing and marks every
+	// key of its room stale, so the room's forecasts are rebuilt (trip.away_changed: the house's away
+	// calendar moved, so its home time did too).
+	RequeueRoom bool
 }
 
 // Registry holds event definitions and aliases (old name -> current name).

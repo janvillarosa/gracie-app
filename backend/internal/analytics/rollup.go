@@ -48,6 +48,7 @@ type Worker struct {
 	reg    *Registry
 	owner  string
 	now    func() time.Time
+	away   AwayCalendar // nil: nobody is ever away
 }
 
 func NewWorker(events EventRepository, aggs AggregateRepository, reg *Registry) *Worker {
