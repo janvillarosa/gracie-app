@@ -93,9 +93,11 @@ type Suggestion struct {
 	DueInDays int `json:"due_in_days"`
 }
 
-// SuggestionService turns the precomputed add forecasts into suggestions for one list. It
+// AutopilotService is the one service behind the house's autopilot: it proposes (suggestions),
+// tells the List page how to spot a run, and, in assist mode, applies in-app actions. It turns the
+// precomputed add forecasts into suggestions for one list. It
 // keeps no state of its own: every answer is derived from analytics and the live list.
-type SuggestionService struct {
+type AutopilotService struct {
 	emitter
 	rooms  store.RoomRepository
 	lists  store.ListRepository
@@ -106,19 +108,19 @@ type SuggestionService struct {
 	now    func() time.Time
 }
 
-// NewSuggestionService takes a nil reader or event repository when analytics is disabled;
+// NewAutopilotService takes a nil reader or event repository when analytics is disabled;
 // the service then always answers with nothing.
-func NewSuggestionService(rooms store.RoomRepository, lists store.ListRepository, items store.ListItemRepository, reader *analytics.Reader, events analytics.EventRepository, mode SuggestionMode) *SuggestionService {
-	return &SuggestionService{rooms: rooms, lists: lists, items: items, reader: reader, events: events, mode: mode, now: time.Now}
+func NewAutopilotService(rooms store.RoomRepository, lists store.ListRepository, items store.ListItemRepository, reader *analytics.Reader, events analytics.EventRepository, mode SuggestionMode) *AutopilotService {
+	return &AutopilotService{rooms: rooms, lists: lists, items: items, reader: reader, events: events, mode: mode, now: time.Now}
 }
 
 // WithClock replaces the clock (tests move through a forecast window with it).
-func (s *SuggestionService) WithClock(now func() time.Time) *SuggestionService {
+func (s *AutopilotService) WithClock(now func() time.Time) *AutopilotService {
 	s.now = now
 	return s
 }
 
-func (s *SuggestionService) checkList(ctx context.Context, user *models.User, roomID, listID string) (*models.Room, error) {
+func (s *AutopilotService) checkList(ctx context.Context, user *models.User, roomID, listID string) (*models.Room, error) {
 	if err := ensureRoomMembership(ctx, s.rooms, user, roomID); err != nil {
 		return nil, err
 	}
@@ -139,10 +141,10 @@ type candidate struct {
 	duringRn bool
 }
 
-// ForList returns up to limit suggestions for a list, most confident first. during "run" widens
+// Suggestions returns up to limit suggestions for a list, most confident first. during "run" widens
 // the window to what comes due before the house's next run on this list (open ones first, then
 // soonest); with no learned run rhythm for the list there is nothing to suggest in run mode.
-func (s *SuggestionService) ForList(ctx context.Context, user *models.User, roomID, listID string, limit int, during string) ([]Suggestion, error) {
+func (s *AutopilotService) Suggestions(ctx context.Context, user *models.User, roomID, listID string, limit int, during string) ([]Suggestion, error) {
 	if !validDuring(during) {
 		return nil, derr.ErrBadRequest
 	}
@@ -231,7 +233,7 @@ func (s *SuggestionService) ForList(ctx context.Context, user *models.User, room
 
 // runLookahead is how far run mode looks ahead on a list: the house's learned run interval there,
 // capped at maxRunLookahead; 0 when no run rhythm has been learned yet.
-func (s *SuggestionService) runLookahead(ctx context.Context, roomID, listID string) (time.Duration, error) {
+func (s *AutopilotService) runLookahead(ctx context.Context, roomID, listID string) (time.Duration, error) {
 	p, err := s.reader.HouseProfile(ctx, roomID)
 	if err != nil || p == nil {
 		return 0, err
@@ -266,12 +268,12 @@ func daysUntilOpen(a *analytics.AddForecast, now time.Time) int {
 }
 
 // Ignore turns down the suggestion for key on this list for the current cycle. It is
-// recorded as an analytics event: the next forecast counts it as a miss, and ForList skips
+// recorded as an analytics event: the next forecast counts it as a miss, and Suggestions skips
 // the key until the house adds it again.
 //
 // A run-mode ignore (during "run") still counts toward pausing the list, but not against the
 // forecast, and it only hides the key from run mode: it comes back when it is actually due.
-func (s *SuggestionService) Ignore(ctx context.Context, user *models.User, roomID, listID, key, during string) error {
+func (s *AutopilotService) Ignore(ctx context.Context, user *models.User, roomID, listID, key, during string) error {
 	if !validDuring(during) {
 		return derr.ErrBadRequest
 	}
@@ -306,7 +308,7 @@ func (s *SuggestionService) Ignore(ctx context.Context, user *models.User, roomI
 // pausedByIgnores reports whether the house's last pauseAfterIgnores reactions to suggestions on
 // this list were all ignores. It reads only events (ignores and accepted adds), so there is no
 // state to reset: an accepted suggestion ends the streak, and the pause lapses on its own.
-func (s *SuggestionService) pausedByIgnores(ctx context.Context, roomID, listID string, now time.Time) (bool, error) {
+func (s *AutopilotService) pausedByIgnores(ctx context.Context, roomID, listID string, now time.Time) (bool, error) {
 	evs, err := s.events.ListByContainer(ctx, roomID, "list", listID,
 		[]string{"item.suggestion_ignored", "item.suggestion_accepted"}, now.Add(-pauseFor), pauseAfterIgnores)
 	if err != nil || len(evs) < pauseAfterIgnores {
@@ -320,7 +322,7 @@ func (s *SuggestionService) pausedByIgnores(ctx context.Context, roomID, listID 
 	return true, nil
 }
 
-func (s *SuggestionService) keysOnList(ctx context.Context, listID string) (map[string]bool, error) {
+func (s *AutopilotService) keysOnList(ctx context.Context, listID string) (map[string]bool, error) {
 	items, err := s.items.ListByList(ctx, listID)
 	if err != nil {
 		return nil, err
@@ -390,7 +392,7 @@ func isHomeList(containers map[string]int64, listID string) bool {
 // currentCycleIsOpen reads the raw events for the key (they are fresher than the rollup) and
 // says no when the house ignored the suggestion this cycle, or already added or checked the
 // thing since the forecast was computed (the rollup has not caught up yet).
-func (s *SuggestionService) currentCycleIsOpen(ctx context.Context, roomID string, c candidate) (bool, error) {
+func (s *AutopilotService) currentCycleIsOpen(ctx context.Context, roomID string, c candidate) (bool, error) {
 	evs, err := s.events.ListForKey(ctx, roomID, "item", c.stat.Key, 50)
 	if err != nil {
 		return false, err
@@ -424,7 +426,7 @@ func (s *SuggestionService) currentCycleIsOpen(ctx context.Context, roomID strin
 
 // recordPrediction stores one measurement record per key and cycle (the id is derived from
 // both, so repeated list views write the same event and the store keeps one).
-func (s *SuggestionService) recordPrediction(ctx context.Context, user *models.User, roomID, listID string, c candidate) {
+func (s *AutopilotService) recordPrediction(ctx context.Context, user *models.User, roomID, listID string, c candidate) {
 	seed := roomID + "\x00" + c.stat.Key + "\x00" + c.add.LastAt.UTC().Format(time.RFC3339Nano)
 	if c.duringRn {
 		seed += "\x00" + DuringRun // a run-mode prediction is measured on its own

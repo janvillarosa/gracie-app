@@ -54,8 +54,8 @@ func main() {
 	var rollup *analytics.Worker
 	var purger *analytics.Purger
 	var insights *handlers.InsightsHandler
-	var suggestReader *analytics.Reader
-	var suggestEvents analytics.EventRepository
+	var analyticsReader *analytics.Reader
+	var analyticsEvents analytics.EventRepository
 	if cfg.AnalyticsEnabled {
 		eventsRepo := mongostore.NewEventRepo(mcli)
 		if err := eventsRepo.EnsureIndexes(ctx); err != nil {
@@ -73,7 +73,7 @@ func main() {
 				purger = analytics.NewPurger(eventsRepo, aggRepo)
 				reader := analytics.NewReader(aggRepo).WithAway(awayCal)
 				insights = handlers.NewInsightsHandler(services.NewInsightsService(roomsRepo, reader))
-				suggestReader, suggestEvents = reader, eventsRepo
+				analyticsReader, analyticsEvents = reader, eventsRepo
 			}
 		}
 	}
@@ -116,7 +116,7 @@ func main() {
 	if legacyMode {
 		log.Printf("suggestions: SUGGESTIONS_MODE=%s is retired, running as on", cfg.SuggestionsMode)
 	}
-	suggestSvc := services.NewSuggestionService(roomsRepo, listsRepo, itemsRepo, suggestReader, suggestEvents, suggestMode)
+	autopilotSvc := services.NewAutopilotService(roomsRepo, listsRepo, itemsRepo, analyticsReader, analyticsEvents, suggestMode)
 	log.Printf("suggestions: mode %s", suggestMode)
 
 	// Coordinates -> time zone for Google places sent without one. The tzf dataset
@@ -128,7 +128,7 @@ func main() {
 		log.Fatalf("auth service: %v", err)
 	}
 
-	for _, svc := range []interface{ UseRecorder(analytics.Recorder) }{userSvc, roomSvc, listSvc, tripSvc, authSvc, suggestSvc} {
+	for _, svc := range []interface{ UseRecorder(analytics.Recorder) }{userSvc, roomSvc, listSvc, tripSvc, authSvc, autopilotSvc} {
 		svc.UseRecorder(recorder)
 	}
 	if purger != nil {
@@ -145,7 +145,7 @@ func main() {
 
 	eventsHandler := handlers.NewEventsHandler(recorder, analyticsReg, ratelimit.New(cfg.AnalyticsEventsRPS, ratelimit.Burst(cfg.AnalyticsEventsRPS)))
 
-	r := router.NewRouter(usersRepo, router.Handlers{Auth: authHandler, User: userHandler, Room: roomHandler, List: listHandler, Trip: tripHandler, Events: eventsHandler, Insights: insights, Suggestions: handlers.NewSuggestionsHandler(suggestSvc)})
+	r := router.NewRouter(usersRepo, router.Handlers{Auth: authHandler, User: userHandler, Room: roomHandler, List: listHandler, Trip: tripHandler, Events: eventsHandler, Insights: insights, Autopilot: handlers.NewAutopilotHandler(autopilotSvc)})
 
 	// Google Maps Platform allows storing coordinates for 30 days: purge stale ones at startup
 	// and daily (plus up to an hour of jitter so instances do not fire together).

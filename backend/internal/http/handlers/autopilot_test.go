@@ -27,8 +27,8 @@ func newSuggestionsRouter(t *testing.T) (http.Handler, memstore.Repos) {
 	_ = m.Lists.Put(ctx, &models.List{ListID: "list_1", RoomID: room, Name: "Groceries"})
 	users := map[string]*models.User{"mia": {UserID: "mia", RoomID: &room}, "zed": {UserID: "zed", RoomID: &other}}
 
-	svc := services.NewSuggestionService(m.Rooms, m.Lists, m.Items, analytics.NewReader(m.Aggs), m.Events, services.SuggestionsOn)
-	h := NewSuggestionsHandler(svc)
+	svc := services.NewAutopilotService(m.Rooms, m.Lists, m.Items, analytics.NewReader(m.Aggs), m.Events, services.SuggestionsOn)
+	h := NewAutopilotHandler(svc)
 	r := chi.NewRouter()
 	r.Use(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
@@ -38,7 +38,7 @@ func newSuggestionsRouter(t *testing.T) (http.Handler, memstore.Repos) {
 			next.ServeHTTP(w, req)
 		})
 	})
-	r.Get("/rooms/{room_id}/lists/{list_id}/suggestions", h.ForList)
+	r.Get("/rooms/{room_id}/lists/{list_id}/suggestions", h.Suggestions)
 	r.Post("/rooms/{room_id}/lists/{list_id}/suggestions/ignore", h.Ignore)
 	r.Get("/rooms/{room_id}/lists/{list_id}/run-hint", h.RunHint)
 	return r, m
@@ -139,5 +139,22 @@ func TestSuggestionsRejectUnknownDuring(t *testing.T) {
 	}
 	if w := call(r, "mia", http.MethodPost, "/rooms/room_1/lists/list_1/suggestions/ignore", `{"key":"milk","during":"x"}`); w.Code != http.StatusBadRequest {
 		t.Fatalf("ignore: %d", w.Code)
+	}
+}
+
+func TestDeprecatedRoutesCarryHeader(t *testing.T) {
+	r, _ := newSuggestionsRouter(t)
+	for _, c := range []struct{ method, path, body string }{
+		{http.MethodGet, "/rooms/room_1/lists/list_1/suggestions", ""},
+		{http.MethodGet, "/rooms/room_1/lists/list_1/run-hint", ""},
+		{http.MethodPost, "/rooms/room_1/lists/list_1/suggestions/ignore", `{"key":"milk"}`},
+	} {
+		w := call(r, "mia", c.method, c.path, c.body)
+		if w.Header().Get("Deprecation") != "true" {
+			t.Errorf("%s %s: no Deprecation header", c.method, c.path)
+		}
+		if got := w.Header().Get("Link"); got != `</rooms/room_1/lists/list_1/autopilot>; rel="successor-version"` {
+			t.Errorf("%s %s: Link %q", c.method, c.path, got)
+		}
 	}
 }

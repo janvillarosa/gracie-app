@@ -89,7 +89,7 @@ func TestComputeRunHintUsesTheProfileTimezone(t *testing.T) {
 	}
 }
 
-func TestRunHintFor(t *testing.T) {
+func TestRunHint(t *testing.T) {
 	r := newSuggestRig(t, SuggestionsOn)
 	ctx := context.Background()
 	_ = r.m.Aggs.PutProfile(ctx, &analytics.Profile{ID: "u:" + r.user.UserID, TZ: "UTC", Containers: map[string]analytics.ContainerRhythm{
@@ -99,16 +99,16 @@ func TestRunHintFor(t *testing.T) {
 			return h
 		}()},
 	}})
-	h, err := r.svc.RunHintFor(ctx, r.user, r.roomID, r.list)
+	h, err := r.svc.RunHint(ctx, r.user, r.roomID, r.list)
 	if err != nil || h.Likely != "expected" {
 		t.Fatalf("own habit: %+v %v", h, err)
 	}
 	stranger := &models.User{UserID: "zed"}
-	if _, err := r.svc.RunHintFor(ctx, stranger, r.roomID, r.list); !errors.Is(err, derr.ErrForbidden) {
+	if _, err := r.svc.RunHint(ctx, stranger, r.roomID, r.list); !errors.Is(err, derr.ErrForbidden) {
 		t.Fatalf("not a member: %v", err)
 	}
-	bare := NewSuggestionService(r.m.Rooms, r.m.Lists, r.m.Items, nil, nil, SuggestionsOn)
-	if h, err := bare.RunHintFor(ctx, r.user, r.roomID, r.list); err != nil || h != DefaultRunHint() {
+	bare := NewAutopilotService(r.m.Rooms, r.m.Lists, r.m.Items, nil, nil, SuggestionsOn)
+	if h, err := bare.RunHint(ctx, r.user, r.roomID, r.list); err != nil || h != DefaultRunHint() {
 		t.Fatalf("analytics off: %+v %v", h, err)
 	}
 }

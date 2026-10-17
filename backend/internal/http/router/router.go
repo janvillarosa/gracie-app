@@ -23,8 +23,8 @@ type Handlers struct {
 	Events *handlers.EventsHandler
 	// Insights is optional: when nil, the insights routes are not mounted.
 	Insights *handlers.InsightsHandler
-	// Suggestions is optional: when nil, the suggestion routes are not mounted.
-	Suggestions *handlers.SuggestionsHandler
+	// Autopilot is optional: when nil, the autopilot and suggestion routes are not mounted.
+	Autopilot *handlers.AutopilotHandler
 }
 
 // redactPlacesQuery keeps /places/* query strings (search text, exact coordinates) out of
@@ -110,10 +110,13 @@ func NewRouter(userFinder authmw.UserFinder, h Handlers) http.Handler {
 		ar.Patch("/rooms/{room_id}/lists/{list_id}/items/{item_id}", h.List.UpdateItem)
 		ar.Patch("/rooms/{room_id}/lists/{list_id}/items/{item_id}/position", h.List.UpdateItemPosition)
 		ar.Delete("/rooms/{room_id}/lists/{list_id}/items/{item_id}", h.List.DeleteItem)
-		if h.Suggestions != nil {
-			ar.Get("/rooms/{room_id}/lists/{list_id}/suggestions", h.Suggestions.ForList)
-			ar.Post("/rooms/{room_id}/lists/{list_id}/suggestions/ignore", h.Suggestions.Ignore)
-			ar.Get("/rooms/{room_id}/lists/{list_id}/run-hint", h.Suggestions.RunHint)
+		if h.Autopilot != nil {
+			// Deprecated: served by the autopilot service, kept at their paths until the List page
+			// reads GET .../autopilot for suggestions and the run hint. Each answer carries a
+			// Deprecation header naming that successor.
+			ar.Get("/rooms/{room_id}/lists/{list_id}/suggestions", h.Autopilot.Suggestions)
+			ar.Post("/rooms/{room_id}/lists/{list_id}/suggestions/ignore", h.Autopilot.Ignore)
+			ar.Get("/rooms/{room_id}/lists/{list_id}/run-hint", h.Autopilot.RunHint)
 		}
 		if h.Insights != nil {
 			ar.Get("/me/insights", h.Insights.Mine)
