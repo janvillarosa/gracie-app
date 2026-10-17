@@ -998,6 +998,81 @@ h5.ant-typography {
   flex: none;
 }
 
+/* Autopilot (assist mode). The slip says what it added for the next run: a resting slip on the
+   list's sheet like the suggestion slip, but with no key and no warm edge, since nothing waits on
+   anyone. Its glyph is the autopilot mark, the same one each added row carries. */
+.autopilot-slip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
+  background: var(--paper-fill);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--slip-rest);
+}
+
+.autopilot-slip-mark {
+  flex: none;
+  width: var(--icon-md);
+  height: var(--icon-md);
+  color: var(--muted);
+}
+
+.autopilot-slip-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.autopilot-slip-title {
+  color: var(--ink);
+  font-weight: var(--w-medium);
+  line-height: 1.35;
+}
+
+.autopilot-slip-undo {
+  flex: none;
+  white-space: nowrap;
+}
+
+.autopilot-slip-names {
+  color: var(--muted);
+  font-size: var(--t-meta);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+/* The autopilot mark on a row: a pencil-grey glyph in a small round target. Tapping it shows why,
+   under the item's words. */
+.item-row .item-autopilot {
+  flex: none;
+  width: var(--control-sm);
+  height: var(--control-sm);
+  min-width: var(--control-sm);
+  color: var(--muted);
+}
+
+.item-row .item-autopilot svg {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+}
+
+.item-row .item-autopilot[aria-expanded='true'] {
+  color: var(--ink);
+}
+
+.item-why {
+  display: block;
+  flex-basis: 100%;
+  color: var(--muted);
+  font-size: var(--t-meta);
+  line-height: 1.35;
+}
+
 /* Arrival. The slip is the one thing here that wants a tap, so it gets one authored moment and then
    rests: it settles in while the list below glides down (no jump), its warm edge flashes and fades, and
    the plus on the key turns once. Nothing loops. */

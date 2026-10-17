@@ -90,6 +90,10 @@ export async function startMockTrips() {
     unit?: string
     completed?: boolean
     archived?: boolean
+    // Assist mode: autopilot put it there (action id), and why (every N days).
+    source?: 'autopilot'
+    action?: string
+    days?: number
   }
   const groceries: Row[] = [
     { description: 'Oregano', category: 'Produce' },
@@ -98,7 +102,45 @@ export async function startMockTrips() {
     { description: 'Sourdough loaf from the corner bakery', category: 'Bakery' },
     { description: 'Kitchen roll', category: 'Household', quantity: '4' },
     { description: 'Basmati rice', quantity: '1', unit: 'kg' },
+    // Autopilot (assist mode) put these on for the next run. ?autopilot=suggest|off hides them.
+    {
+      description: 'Whole milk',
+      category: 'Dairy',
+      quantity: '2',
+      unit: 'L',
+      source: 'autopilot',
+      action: 'act_milk',
+      days: 6,
+    },
+    {
+      description: 'Bananas',
+      category: 'Produce',
+      quantity: '6',
+      source: 'autopilot',
+      action: 'act_bananas',
+      days: 5,
+    },
+    {
+      description: 'Coffee beans',
+      category: 'Pantry',
+      source: 'autopilot',
+      action: 'act_coffee',
+      days: 13,
+    },
   ]
+  const modeParam = new URLSearchParams(window.location.search).get('autopilot')
+  let autopilotMode: 'off' | 'suggest' | 'assist' =
+    modeParam === 'off' || modeParam === 'suggest' ? modeParam : 'assist'
+  if (autopilotMode !== 'assist') {
+    for (const row of groceries) if (row.source) row.archived = true
+  }
+  // The run autopilot planned for: the coming Saturday, 10:00.
+  const nextRun = (() => {
+    const d = new Date()
+    d.setDate(d.getDate() + ((6 - d.getDay() + 7) % 7 || 7))
+    d.setHours(10, 0, 0, 0)
+    return d.toISOString()
+  })()
   // A queue of suggestions, so the hand-off between slips (and the slot closing after the
   // last) can be seen. Taking or ignoring one moves to the next.
   const suggestionQueue = [
@@ -128,8 +170,51 @@ export async function startMockTrips() {
         members_meta: srv.membersMeta(),
         created_at: now,
         updated_at: now,
+        autopilot_mode: autopilotMode,
+        suggestions_off: autopilotMode === 'off',
       }),
     ),
+    http.put('/api/rooms/settings', async ({ request }) => {
+      const body = (await request.json().catch(() => ({}))) as {
+        autopilot_mode?: typeof autopilotMode
+      }
+      if (body.autopilot_mode) autopilotMode = body.autopilot_mode
+      return HttpResponse.json({
+        display_name: 'The Villarosa House (synthetic)',
+        members: ['Jan', 'Mia'],
+        autopilot_mode: autopilotMode,
+      })
+    }),
+    http.get('/api/rooms/:roomId/lists/:listId/autopilot', () =>
+      HttpResponse.json({
+        mode: autopilotMode,
+        applied:
+          autopilotMode === 'assist'
+            ? groceries.flatMap((row, i) =>
+                row.source && !row.archived
+                  ? [
+                      {
+                        action_id: row.action,
+                        item_id: `item_groc_${i}`,
+                        key: row.description.toLowerCase(),
+                        state: row.completed ? 'confirmed' : 'applied',
+                        run_at: nextRun,
+                        reason: { code: 'every_days', params: { days: row.days } },
+                        confidence: 0.82,
+                      },
+                    ]
+                  : [],
+              )
+            : [],
+        suggestions: [],
+      }),
+    ),
+    http.post('/api/rooms/:roomId/lists/:listId/autopilot/:actionId/undo', ({ params }) => {
+      const row = groceries.find((r) => r.action === params.actionId)
+      if (!row) return new HttpResponse(null, { status: 404 })
+      row.archived = true
+      return new HttpResponse(null, { status: 204 })
+    }),
     http.get('/api/rooms/:roomId/lists', () => HttpResponse.json(lists)),
     http.get('/api/rooms/:roomId/pantry', () => HttpResponse.json([])),
     http.get('/api/rooms/:roomId/lists/:listId/items', ({ params, request }) => {
@@ -178,7 +263,9 @@ export async function startMockTrips() {
       return new HttpResponse(null, { status: 204 })
     }),
     http.post('/api/rooms/:roomId/lists/:listId/items', async ({ params, request }) => {
-      const body = (await request.json().catch(() => ({}))) as Row & { source?: string }
+      const body = (await request.json().catch(() => ({}))) as Omit<Row, 'source'> & {
+        source?: string
+      }
       const row: Row = {
         description: body.description,
         category: body.category,

@@ -19,11 +19,14 @@ import {
   updateList,
   clearListItems,
   getRoomPantry,
+  getListAutopilot,
   getListSuggestions,
   getRunHint,
   ignoreListSuggestion,
+  undoAutopilotAction,
 } from '@api/endpoints'
 import type { List, ListItem, ListSuggestion, PantryItem } from '@api/types'
+import { autopilotModeOf } from '@api/types'
 import {
   Typography,
   Space,
@@ -71,6 +74,8 @@ import { useDocumentTitle } from '@lib/useDocumentTitle'
 import { ItemRow, reorderLock } from '@components/ItemRow'
 import { AddItemBar } from '@components/AddItemBar'
 import { SuggestionStack, type SlipPhase } from '@components/SuggestionSlip'
+import { AutopilotSlip } from '@components/AutopilotSlip'
+import { latestRun, markRunSeen, reasonText, seenRun } from '@lib/autopilot'
 import { track } from '@lib/analytics'
 import { nextCheer, runDoneLines, useShoppingRun } from '@lib/shoppingRun'
 import { TopNav } from '@components/TopNav'
@@ -258,6 +263,59 @@ export const ListPage: React.FC = () => {
 
   // Always derive items and sorted views before any early returns to keep hook order stable
   const items = itemsQuery.data ?? []
+
+  // Autopilot (assist mode): what it put on this list, why, and the once-per-run slip. Only asked
+  // for when the House is on assist; a failure just means no marks' reasons and no slip.
+  const assist = !!houseQuery.data && autopilotModeOf(houseQuery.data) === 'assist'
+  const autopilotKey = ['autopilot', roomId, listId]
+  const autopilotQuery = useQuery({
+    queryKey: autopilotKey,
+    queryFn: () => getListAutopilot(apiKey!, roomId!, listId),
+    enabled: !!roomId && !!listId && assist,
+    refetchOnWindowFocus: false,
+    retry: false,
+    staleTime: 60_000,
+  })
+  const autopilotApplied = autopilotQuery.data?.applied
+  const reasons = useMemo(() => {
+    const m = new Map<string, string>()
+    for (const a of autopilotApplied ?? []) m.set(a.item_id, reasonText(a.reason))
+    return m
+  }, [autopilotApplied])
+  const [seenRunAt, setSeenRunAt] = useState(() => seenRun(listId))
+  const [undoingAll, setUndoingAll] = useState(false)
+  const autopilotRun = useMemo(() => latestRun(autopilotApplied ?? []), [autopilotApplied])
+  const slipItems = autopilotRun
+    ? autopilotRun.actions
+        .map((a) => items.find((it) => it.item_id === a.item_id && !it.completed))
+        .filter((it): it is ListItem => !!it)
+    : []
+  const showAutopilotSlip =
+    assist && !!autopilotRun && autopilotRun.runAt !== seenRunAt && slipItems.length > 0
+  const dismissAutopilotSlip = () => {
+    if (!autopilotRun) return
+    markRunSeen(listId, autopilotRun.runAt)
+    setSeenRunAt(autopilotRun.runAt)
+  }
+  const onUndoAllAutopilot = async () => {
+    if (!autopilotRun || !roomId) return
+    setUndoingAll(true)
+    try {
+      for (const a of autopilotRun.actions) {
+        await undoAutopilotAction(apiKey!, roomId, listId, a.action_id)
+      }
+      dismissAutopilotSlip()
+      show('Taken off the list.')
+    } catch (e) {
+      msgApi.error(errorMessage(e, 'Couldn’t undo that. Try again.'))
+    } finally {
+      setUndoingAll(false)
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ['list-items', listId] }),
+        qc.invalidateQueries({ queryKey: autopilotKey }),
+      ])
+    }
+  }
   const sortedItems = useMemo(() => {
     const copy = [...items]
     // Filter by completion, then by order
@@ -901,6 +959,7 @@ export const ListPage: React.FC = () => {
       onStartEdit={startEdit}
       onSubmitEdit={submitEdit}
       registerAnchor={registerAnchor}
+      reason={reasons.get(it.item_id)}
     />
   )
 
@@ -1007,6 +1066,16 @@ export const ListPage: React.FC = () => {
                             <p className="run-done-praise">{runDone.lines[2]}</p>
                           )}
                         </Sheet>
+                      )}
+                      {showAutopilotSlip && autopilotRun && (
+                        <AutopilotSlip
+                          names={slipItems.map((it) => it.description)}
+                          runAt={new Date(autopilotRun.runAt)}
+                          now={new Date()}
+                          undoing={undoingAll}
+                          onUndoAll={() => void onUndoAllAutopilot()}
+                          onDismiss={dismissAutopilotSlip}
+                        />
                       )}
                       <SuggestionStack
                         suggestions={suggestions}
