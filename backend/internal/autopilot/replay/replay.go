@@ -60,6 +60,21 @@ func (r Report) StapleRecall() float64 { return ratio(r.Hits, r.Staples) }
 // OpenRecall is hits over what was bought but not yet on the list when assist planned.
 func (r Report) OpenRecall() float64 { return ratio(r.Hits, r.Open) }
 
+// F1Goal is where assist should get to: the harmonic mean of precision and open recall at 70%.
+// It is a target, not a gate (the gate is precision >= 85% and <= 1 removal per house-week);
+// TestGoldenAssistF1Floor ratchets the floor up toward it.
+const F1Goal = 0.70
+
+// F1 is the harmonic mean of precision and open recall (what assist could have saved someone from
+// writing down): high only when assist is both right and actually useful.
+func (r Report) F1() float64 {
+	p, rc := r.Precision(), r.OpenRecall()
+	if p+rc == 0 {
+		return 0
+	}
+	return 2 * p * rc / (p + rc)
+}
+
 // Removals counts adds not bought in their run: a person would delete them or they expire.
 func (r Report) Removals() int { return r.Added - r.Hits }
 

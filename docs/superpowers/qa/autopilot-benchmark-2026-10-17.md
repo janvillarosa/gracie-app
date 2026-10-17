@@ -38,16 +38,32 @@ or too little history) and get nothing added. Wall time and home time give the s
 
 **Gate (precision ≥ 85%, ≤ 1 removal per house-week): PASS.**
 
+## Goal: F1 ≥ 70%
+
+F1 is the harmonic mean of precision and open recall: high only when assist is both right and useful.
+Today it is **52.6%** (`replay.F1Goal` = 0.70; `TestGoldenAssistF1Floor` ratchets the floor, now 0.52, and
+must only go up). Loosening the bar does not get there: the best F1 in the sweep is 64.5% (score ≥ 0.65,
+need ≥ 0.9), and that drops precision to 83.5%, below the gate. The gap is recall, and the levers are:
+
+1. The score ceiling: an 8-cycle Wilson bound tops out near 0.83, so steady staples with a short record never
+   clear 0.80. A bar on hit rate with a minimum number of trials, or more recent cycles, would let them in.
+2. Look-alike merging in the replay (the server already merges spellings; the replay does not, which
+   understates the lookalikes persona at 20% open recall).
+3. Planning closer to the run (a shorter lead sees more of what is about to run out).
+4. Things added at the store mid-run are counted as "open" but no pre-run plan could catch them; a fairer
+   denominator may move the number without changing behaviour, so change it only with a reason.
+
 ## Bar sweep
 
-| score ≥ | need ≥ | adds | precision | open recall | removals / wk |
-|---:|---:|---:|---:|---:|---:|
-| 0.65 | 0.70 | 87 | 81.6% | 52.6% | 0.06 |
-| 0.70 | 0.50 | 58 | 87.9% | 37.8% | 0.03 |
-| 0.75 | 0.70 | 56 | 89.3% | 37.0% | 0.02 |
-| **0.80** | **0.70** | **55** | **90.9%** | **37.0%** | **0.02** |
-| 0.80 | 0.90 | 54 | 92.6% | 37.0% | 0.01 |
-| 0.85 | any | 0 | n/a | 0% | 0 |
+| score ≥ | need ≥ | adds | precision | open recall | F1 | removals / wk |
+|---:|---:|---:|---:|---:|---:|---:|
+| 0.65 | 0.70 | 87 | 81.6% | 52.6% | 64.0% | 0.06 |
+| 0.65 | 0.90 | 85 | 83.5% | 52.6% | 64.5% | 0.05 |
+| 0.70 | 0.50 | 58 | 87.9% | 37.8% | 52.8% | 0.03 |
+| 0.75 | 0.70 | 56 | 89.3% | 37.0% | 52.4% | 0.02 |
+| **0.80** | **0.70** | **55** | **90.9%** | **37.0%** | **52.6%** | **0.02** |
+| 0.80 | 0.90 | 54 | 92.6% | 37.0% | 52.9% | 0.01 |
+| 0.85 | any | 0 | n/a | 0% | 0% | 0 |
 
 ## Findings
 

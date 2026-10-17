@@ -85,6 +85,10 @@ _Backend paths are relative to `backend/`; packages live under `backend/internal
 Assist is offered while precision ≥ 85% and removals ≤ 1 per house-week; `TestGoldenAssistMeetsGate` pins it
 (2026-10-17: 90.9% precision, 37% open recall, 0.02 removals per house-week).
 
+**Goal: F1 ≥ 70%** (precision × open recall, harmonic mean; `replay.F1Goal`). Today 52.6%;
+`TestGoldenAssistF1Floor` holds the floor (0.52) and is raised as changes lift it, never lowered. Reaching it
+needs recall (the score ceiling, look-alikes, the lead), not a looser bar; see the benchmark note.
+
 ## Frontend
 
 _Frontend paths are relative to `frontend/src/`._

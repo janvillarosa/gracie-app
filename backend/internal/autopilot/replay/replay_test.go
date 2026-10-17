@@ -28,6 +28,19 @@ func TestGoldenAssistMeetsGate(t *testing.T) {
 	}
 }
 
+// F1 (precision x open recall) is ratcheted: it may only go up, toward F1Goal (70%). Raise the
+// floor when a change lifts it; never lower it.
+func TestGoldenAssistF1Floor(t *testing.T) {
+	const floor = 0.52 // 2026-10-17: 52.6% at the default bar
+	w := households.Golden()
+	o := DefaultOptions()
+	o.Away = w.Away()
+	total, _ := Replay(w.Events, o)
+	if total.F1() < floor {
+		t.Fatalf("F1 %.3f fell below the floor %.2f (goal %.2f)", total.F1(), floor, F1Goal)
+	}
+}
+
 // A stricter bar never adds more.
 func TestSweepIsMonotone(t *testing.T) {
 	w := households.Golden()
