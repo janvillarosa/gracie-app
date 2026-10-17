@@ -126,3 +126,47 @@ func TestConfidenceAndMedian(t *testing.T) {
 		t.Fatal("empty median")
 	}
 }
+
+func TestRunSpansMeasureEachRun(t *testing.T) {
+	d := time.Date(2026, 10, 3, 10, 0, 0, 0, time.UTC)
+	times := []time.Time{
+		d, d.Add(5 * time.Minute), d.Add(12 * time.Minute), // a run: 3 checks over 12 minutes
+		d.Add(2 * time.Hour), d.Add(2*time.Hour + time.Minute), // two only: not a run
+	}
+	got := RunSpans(times)
+	if len(got) != 1 {
+		t.Fatalf("spans: %+v", got)
+	}
+	s := got[0]
+	if !s.Start.Equal(d) || s.End.Sub(s.Start) != 12*time.Minute || s.Count != 3 ||
+		len(s.Gaps) != 2 || s.Gaps[0] != 5*time.Minute || s.Gaps[1] != 7*time.Minute {
+		t.Fatalf("span: %+v", s)
+	}
+}
+
+func TestRunSpansCrossMidnight(t *testing.T) {
+	d := time.Date(2026, 10, 3, 23, 50, 0, 0, time.UTC)
+	got := RunSpans([]time.Time{d, d.Add(8 * time.Minute), d.Add(16 * time.Minute)})
+	if len(got) != 1 || got[0].Count != 3 {
+		t.Fatalf("a run past midnight is one run: %+v", got)
+	}
+}
+
+func TestRunsAreTheStartsOfRunSpans(t *testing.T) {
+	d := time.Date(2026, 10, 3, 10, 0, 0, 0, time.UTC)
+	var times []time.Time
+	at := d
+	for _, gap := range []int{0, 3, 50, 2, 2, 90, 1, 1, 1, 40, 46, 5, 5} {
+		at = at.Add(time.Duration(gap) * time.Minute)
+		times = append(times, at)
+	}
+	runs, spans := Runs(times), RunSpans(times)
+	if len(runs) != len(spans) {
+		t.Fatalf("runs %v spans %+v", runs, spans)
+	}
+	for i := range runs {
+		if !runs[i].Equal(spans[i].Start) {
+			t.Fatalf("run %d: %v vs %v", i, runs[i], spans[i].Start)
+		}
+	}
+}
