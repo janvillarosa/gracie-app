@@ -1,7 +1,7 @@
 import React from 'react'
 import { Button } from '@components/ui'
 import { Checkbox, List as AntList, Tag } from 'antd'
-import { DotsSixVertical, Repeat, Trash } from '@phosphor-icons/react'
+import { CallBell, DotsSixVertical, Trash } from '@phosphor-icons/react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import type { ListItem } from '@api/types'
@@ -265,13 +265,13 @@ export const ItemRow = React.memo<Props>(function ItemRow({
               aria-label={`Added by autopilot. Why ${it.description}?`}
               aria-expanded={why}
               aria-controls={why ? whyId : undefined}
+              title="Added by autopilot"
               onClick={(e) => {
                 e.stopPropagation()
                 setWhy((w) => !w)
               }}
             >
-              <Repeat weight="bold" aria-hidden />
-              Autopilot
+              <CallBell weight="bold" aria-hidden />
             </button>
           )}
         </span>

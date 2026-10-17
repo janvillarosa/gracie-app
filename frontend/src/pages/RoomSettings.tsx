@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Lightbulb, Moon, Repeat } from '@phosphor-icons/react'
+import { CallBell, Lightbulb, Moon } from '@phosphor-icons/react'
 import { message } from 'antd'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { errorMessage } from '@lib/errors'
@@ -28,12 +28,12 @@ import { useDocumentTitle } from '@lib/useDocumentTitle'
 
 const nameProblem = (v: string) => (v && !isValidDisplayName(v) ? NAME_RULE : '')
 
-// Low to high: how much of the shopping the House hands to autopilot. Assist's glyph is the same
-// mark its items carry on a list.
+// Low to high: how much of the shopping the House hands to autopilot. Assist's glyph, the service
+// bell (autopilot at your service), is the same mark its items carry on a list.
 const AUTOPILOT_STEPS: { value: AutopilotMode; label: string; icon: React.ReactNode }[] = [
   { value: 'off', label: 'Off', icon: <Moon weight="bold" /> },
   { value: 'suggest', label: 'Suggest', icon: <Lightbulb weight="bold" /> },
-  { value: 'assist', label: 'Assist', icon: <Repeat weight="bold" /> },
+  { value: 'assist', label: 'Assist', icon: <CallBell weight="bold" /> },
 ]
 
 // One line under the chosen mode, in the House's words.

@@ -2,7 +2,7 @@
 // Sheet variant, at phone and desktop widths side by side. Keep it in step with components/ui.
 import React, { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Airplane, Bed, Lightbulb, Moon, Repeat, Train } from '@phosphor-icons/react'
+import { Airplane, Bed, CallBell, Lightbulb, Moon, Train } from '@phosphor-icons/react'
 import {
   Button,
   Chip,
@@ -35,7 +35,7 @@ const DevStepSlider: React.FC = () => {
       steps={[
         { value: 'off', label: 'Off', icon: <Moon weight="bold" /> },
         { value: 'suggest', label: 'Suggest', icon: <Lightbulb weight="bold" /> },
-        { value: 'assist', label: 'Assist', icon: <Repeat weight="bold" /> },
+        { value: 'assist', label: 'Assist', icon: <CallBell weight="bold" /> },
       ]}
     />
   )
@@ -111,7 +111,7 @@ const Gallery: React.FC = () => {
           steps={[
             { value: 'off', label: 'Off', icon: <Moon weight="bold" /> },
             { value: 'suggest', label: 'Suggest', icon: <Lightbulb weight="bold" /> },
-            { value: 'assist', label: 'Assist', icon: <Repeat weight="bold" /> },
+            { value: 'assist', label: 'Assist', icon: <CallBell weight="bold" /> },
           ]}
         />
       </Block>

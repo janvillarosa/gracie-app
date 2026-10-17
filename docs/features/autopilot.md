@@ -97,12 +97,12 @@ on). 2026-10-17: 97.8% precision, 64.4% open recall, **F1 77.7%**, 0.01 removals
 _Frontend paths are relative to `frontend/src/`._
 
 - **House settings** (`RoomSettings`): "Autopilot" as a `StepSlider` (Off · Suggest · Assist, low to high; glyphs
-  moon, lightbulb and the autopilot mark), saved on choice with a rollback, and one line under the chosen mode
+  moon, lightbulb and the service bell, autopilot's one mark), saved on choice with a rollback, and one line under the chosen mode
   (`AUTOPILOT_HELP`) that fades in as the key lands. `autopilotModeOf` reads older
   servers' `suggestions_off`.
 - **List page:** on assist only, it reads `GET .../autopilot` (`['autopilot', roomId, listId]`). Rows with
-  `source: 'autopilot'` carry the autopilot stamp (`ItemRow`, an ink-outlined "Autopilot" state stamp with the
-  repeat glyph, beside the category stamp); tapping it says why
+  `source: 'autopilot'` carry the autopilot stamp (`ItemRow`, an icon-only, ink-outlined state stamp holding the
+  service bell, beside the category stamp); tapping it says why
   (`reasonText`: "You buy it about every 9 days"). Once per planned run `AutopilotSlip` reads "Added 3 for
   Saturday" (`addedLine`) with Undo all (one undo per action) and Got it; it folds away on Got it or a successful Undo all, and the
   undone rows leave only after it has; the run it was closed for is kept

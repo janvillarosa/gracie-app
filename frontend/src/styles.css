@@ -1111,9 +1111,9 @@ h5.ant-typography {
   }
 }
 
-/* The autopilot stamp on a row: a state stamp (like "Used"), outlined in ink with the repeat glyph,
-   so a row autopilot added reads at a glance beside the pastel category stamps without borrowing
-   yellow, red or blue. It sits with the category stamp; tapping it opens why, under the words. */
+/* The autopilot stamp on a row: an icon-only state stamp outlined in ink, holding the service bell
+   (autopilot, at your service), so a row autopilot added reads at a glance beside the pastel category
+   stamps without borrowing yellow, red or blue. Tapping it opens why, under the words. */
 .item-stamps {
   flex: none;
   display: inline-flex;
@@ -1131,10 +1131,10 @@ h5.ant-typography {
 }
 .item-auto {
   position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  padding: 0 6px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  width: 24px;
   height: 18px;
   border: 1px solid var(--ink);
   border-radius: var(--radius-xs);
@@ -1150,7 +1150,7 @@ h5.ant-typography {
 .item-auto::before {
   content: '';
   position: absolute;
-  inset: -13px -4px;
+  inset: -13px -10px;
 }
 .item-auto svg {
   width: var(--icon-xs);

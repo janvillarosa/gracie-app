@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Repeat, X } from '@phosphor-icons/react'
+import { CallBell, X } from '@phosphor-icons/react'
 import { Button } from '@components/ui'
 import { addedLine } from '@lib/autopilot'
 
@@ -53,7 +53,7 @@ export function AutopilotSlip({ names, runAt, now, onUndoAll, onDismiss }: Props
       <div className="autopilot-clip">
         <section className="autopilot-slip" aria-label="Added by autopilot">
           <span className="autopilot-slip-mark" aria-hidden>
-            <Repeat weight="bold" />
+            <CallBell weight="bold" />
           </span>
           <div className="autopilot-slip-text">
             <span className="autopilot-slip-title">{addedLine(names.length, runAt, now)}</span>
