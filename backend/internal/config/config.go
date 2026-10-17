@@ -31,7 +31,7 @@ type Config struct {
 	AnalyticsEventsRPS     float64
 	AnalyticsFoldEvery     time.Duration
 	AnalyticsProfileEvery  time.Duration
-	// SuggestionsMode is off, shadow (computed and measured, never shown) or on.
+	// SuggestionsMode is off or on (default). A retired "shadow" value runs as on.
 	SuggestionsMode string
 }
 
@@ -64,7 +64,7 @@ func Load() (*Config, error) {
 	cfg.AnalyticsEventsRPS = getEnvFloat("ANALYTICS_EVENTS_RPS", 2)
 	cfg.AnalyticsFoldEvery = getEnvDuration("ANALYTICS_FOLD_EVERY", 15*time.Minute)
 	cfg.AnalyticsProfileEvery = getEnvDuration("ANALYTICS_PROFILE_EVERY", time.Hour)
-	cfg.SuggestionsMode = getEnv("SUGGESTIONS_MODE", "shadow")
+	cfg.SuggestionsMode = getEnv("SUGGESTIONS_MODE", "on")
 
 	if cfg.MongoURI == "" || cfg.MongoDB == "" {
 		return nil, fmt.Errorf("missing Mongo configuration (MONGODB_URI, MONGODB_DB)")

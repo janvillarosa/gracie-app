@@ -270,12 +270,12 @@ func TestChecksOnlyHouseStillGetsSuggestions(t *testing.T) {
 	}
 }
 
-func TestShadowModeRecordsButNeverShows(t *testing.T) {
-	r := newSuggestRig(t, SuggestionsShadow)
+func TestOnModeShowsAndRecordsOncePerCycle(t *testing.T) {
+	r := newSuggestRig(t, SuggestionsOn)
 	r.weekly("whole milk", r.list)
 	r.fold()
-	if got := r.suggest(); len(got) != 0 {
-		t.Fatalf("shadow shows nothing: %+v", got)
+	if got := r.suggest(); len(got) != 1 {
+		t.Fatalf("a confident forecast shows: %+v", got)
 	}
 	_ = r.suggest() // a second view of the same cycle records nothing new
 	evs, _ := r.m.Events.ListForKey(context.Background(), r.roomID, "item", "whole milk", 100)
@@ -285,7 +285,7 @@ func TestShadowModeRecordsButNeverShows(t *testing.T) {
 			predicted = append(predicted, e)
 		}
 	}
-	if len(predicted) != 1 || predicted[0].Props["mode"] != "shadow" || predicted[0].Props["series"] != "added" {
+	if len(predicted) != 1 || predicted[0].Props["mode"] != "on" || predicted[0].Props["series"] != "added" {
 		t.Fatalf("predictions: %+v", predicted)
 	}
 }
@@ -322,10 +322,17 @@ func TestOffModeAndHouseSettingAndNoAnalytics(t *testing.T) {
 	}
 }
 
-func TestParseSuggestionModeDefaultsToShadow(t *testing.T) {
-	for in, want := range map[string]SuggestionMode{"on": SuggestionsOn, " OFF ": SuggestionsOff, "shadow": SuggestionsShadow, "": SuggestionsShadow, "yes": SuggestionsShadow} {
-		if got := ParseSuggestionMode(in); got != want {
-			t.Errorf("%q: %s want %s", in, got, want)
+func TestParseSuggestionMode(t *testing.T) {
+	type want struct {
+		mode   SuggestionMode
+		legacy bool
+	}
+	for in, w := range map[string]want{
+		"off": {SuggestionsOff, false}, "on": {SuggestionsOn, false}, "": {SuggestionsOn, false},
+		"shadow": {SuggestionsOn, true}, " ON ": {SuggestionsOn, false}, "junk": {SuggestionsOn, false},
+	} {
+		if got, legacy := ParseSuggestionMode(in); got != w.mode || legacy != w.legacy {
+			t.Errorf("%q: (%s, %v) want (%s, %v)", in, got, legacy, w.mode, w.legacy)
 		}
 	}
 }

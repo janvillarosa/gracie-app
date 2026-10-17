@@ -5,7 +5,7 @@ import "github.com/janvillarosa/gracie-app/backend/internal/analytics"
 var nudgeProps = map[string]analytics.PropSpec{"kind": {Kind: analytics.PropString, MaxLen: 32}}
 
 var predictedProps = map[string]analytics.PropSpec{
-	"mode":      {Kind: analytics.PropEnum, Values: []string{"shadow", "on"}},
+	"mode":      {Kind: analytics.PropEnum, Values: []string{"shadow", "on"}}, // "shadow": events from before shadow mode was retired
 	"score_pct": {Kind: analytics.PropInt},
 	"opens_at":  {Kind: analytics.PropString, MaxLen: 32},
 	"closes_at": {Kind: analytics.PropString, MaxLen: 32},
@@ -34,7 +34,7 @@ func RegisterAnalyticsEvents(reg *analytics.Registry) {
 		analytics.EventDef{Name: "item.deleted"},
 		analytics.EventDef{Name: "item.reordered", Skip: true},
 		// Smart suggestions. An ignore counts against the item's forecast; a prediction is a
-		// shadow-mode measurement record, stored for suggest-eval and never rolled up.
+		// measurement record, stored for suggest-eval and never rolled up.
 		analytics.EventDef{Name: "item.suggestion_ignored", Role: analytics.RoleDismiss},
 		analytics.EventDef{Name: "item.suggestion_predicted", Skip: true, Props: predictedProps},
 		// An add that came from tapping a suggestion. With the ignores, it is what decides whether the

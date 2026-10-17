@@ -110,8 +110,12 @@ func main() {
 	listSvc := services.NewListService(usersRepo, roomsRepo, listsRepo, itemsRepo, categorizers["grocery"])
 	tripSvc := services.NewTripService(roomsRepo, tripsRepo, listSvc, listsRepo)
 	// Smart suggestions answer with nothing while analytics is off (nil reader).
-	suggestSvc := services.NewSuggestionService(roomsRepo, listsRepo, itemsRepo, suggestReader, suggestEvents, services.ParseSuggestionMode(cfg.SuggestionsMode))
-	log.Printf("suggestions: mode %s", services.ParseSuggestionMode(cfg.SuggestionsMode))
+	suggestMode, legacyMode := services.ParseSuggestionMode(cfg.SuggestionsMode)
+	if legacyMode {
+		log.Printf("suggestions: SUGGESTIONS_MODE=%s is retired, running as on", cfg.SuggestionsMode)
+	}
+	suggestSvc := services.NewSuggestionService(roomsRepo, listsRepo, itemsRepo, suggestReader, suggestEvents, suggestMode)
+	log.Printf("suggestions: mode %s", suggestMode)
 
 	// Coordinates -> time zone for Google places sent without one. The tzf dataset
 	// (~34 MB heap, ~150 ms) loads lazily on the first such place, never at startup.

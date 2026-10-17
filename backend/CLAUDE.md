@@ -213,10 +213,12 @@ the analytics aggregates and the live list; the only state is `Room.SuggestionsO
   this cycle, raw events newer than the rollup win) and `Ignore` (emits `item.suggestion_ignored`, a
   `RoleDismiss` event that counts against the forecast). Routes: `GET .../lists/{id}/suggestions`,
   `POST .../suggestions/ignore {key}`.
-- **Mode** `SUGGESTIONS_MODE=off|shadow|on` (default shadow). Shadow records `item.suggestion_predicted`
-  (`Skip: true`, never rolled up; deterministic id per house, item and cycle) and returns nothing.
+- **Mode** `SUGGESTIONS_MODE=off|on` (default on; a retired `shadow` value runs as on and logs it). There is
+  no shadow mode: the only gate is enough history, i.e. `Forecast.Confident` (MinScore, MaxCV). Every shown
+  suggestion records `item.suggestion_predicted` (`Skip: true`, never rolled up; deterministic id per house,
+  item and cycle) so live precision stays measurable.
 - **`cmd/suggest-eval`** `backtest | shadow | backfill [-apply]`, backed by `analytics/eval` (pure, shared
-  with the tests). Go-live gate: shadow precision >= 70% over >= 50 settled predictions across >= 2 weeks.
+  with the tests). `shadow` scores the live `item.suggestion_predicted` records against what happened next.
 - **Pause:** two `item.suggestion_ignored` in a row on a list (no `item.suggestion_accepted` between, within
   14 days) stop suggestions there (`pausedByIgnores`, via `EventRepository.ListByContainer`). Ignore is
   written with `emitSync` (`analytics.SyncRecorder`) so the client's immediate refetch sees it.

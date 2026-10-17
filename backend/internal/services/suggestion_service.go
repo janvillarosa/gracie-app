@@ -17,24 +17,26 @@ import (
 	"github.com/janvillarosa/gracie-app/backend/internal/store"
 )
 
-// SuggestionMode is the rollout switch for smart suggestions (SUGGESTIONS_MODE).
+// SuggestionMode is the switch for smart suggestions (SUGGESTIONS_MODE). There is no shadow
+// mode: a suggestion shows as soon as its forecast clears the confidence bar (Forecast.Confident),
+// so the only gate is enough history to be sure.
 type SuggestionMode string
 
 const (
-	SuggestionsOff    SuggestionMode = "off"    // nothing is computed
-	SuggestionsShadow SuggestionMode = "shadow" // computed and recorded for suggest-eval, never shown
-	SuggestionsOn     SuggestionMode = "on"     // shown, and still recorded so live precision stays visible
+	SuggestionsOff SuggestionMode = "off" // nothing is computed
+	SuggestionsOn  SuggestionMode = "on"  // shown, and recorded so live precision stays visible
 )
 
-// ParseSuggestionMode falls back to shadow: measure before anyone sees a suggestion.
-func ParseSuggestionMode(s string) SuggestionMode {
+// ParseSuggestionMode falls back to on. legacy reports a retired "shadow" value, which now runs
+// as on, so the caller can log that a stale setting is being ignored.
+func ParseSuggestionMode(s string) (mode SuggestionMode, legacy bool) {
 	switch SuggestionMode(strings.ToLower(strings.TrimSpace(s))) {
 	case SuggestionsOff:
-		return SuggestionsOff
-	case SuggestionsOn:
-		return SuggestionsOn
+		return SuggestionsOff, false
+	case "shadow":
+		return SuggestionsOn, true
 	}
-	return SuggestionsShadow
+	return SuggestionsOn, false
 }
 
 // AddSourceSuggestion marks an item.added that came from tapping a suggestion.
@@ -178,10 +180,6 @@ func (s *SuggestionService) ForList(ctx context.Context, user *models.User, room
 			continue
 		}
 		s.recordPrediction(ctx, user, roomID, listID, c)
-		if s.mode == SuggestionsShadow {
-			out = append(out, Suggestion{Key: c.stat.Key})
-			continue
-		}
 		if display == nil {
 			items, err := s.items.ListByRoom(ctx, roomID)
 			if err != nil {
@@ -190,9 +188,6 @@ func (s *SuggestionService) ForList(ctx context.Context, user *models.User, room
 			display, _ = pantryByKey(items)
 		}
 		out = append(out, toSuggestion(c, displayFor(display, c.stat.Key)))
-	}
-	if s.mode == SuggestionsShadow {
-		return []Suggestion{}, nil
 	}
 	sort.SliceStable(out, func(i, j int) bool { return out[i].Score > out[j].Score })
 	return out, nil
