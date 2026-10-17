@@ -104,15 +104,26 @@ export async function startMockTrips() {
     http.get('/api/rooms/:roomId/pantry', () => HttpResponse.json([])),
     http.get('/api/rooms/:roomId/lists/:listId/items', ({ params }) => {
       const pack = params.listId === srv.listId
-      const names = pack
-        ? ['Passport', 'Charger', 'Sun cream', 'Walking shoes']
-        : ['Oregano', 'Dill plant']
+      // Groceries carries stamps, amounts and a long name, so narrow layouts can be checked.
+      const rows: { description: string; category?: string; quantity?: string; unit?: string }[] =
+        pack
+          ? ['Passport', 'Charger', 'Sun cream', 'Walking shoes'].map((description) => ({
+              description,
+            }))
+          : [
+              { description: 'Oregano', category: 'Produce' },
+              { description: 'Dill plant', category: 'Produce' },
+              { description: 'Oat milk', category: 'Dairy', quantity: '2', unit: 'L' },
+              { description: 'Sourdough loaf from the corner bakery', category: 'Bakery' },
+              { description: 'Kitchen roll', category: 'Household', quantity: '4' },
+              { description: 'Basmati rice', quantity: '1', unit: 'kg' },
+            ]
       return HttpResponse.json(
-        names.map((description, i) => ({
+        rows.map((row, i) => ({
+          ...row,
           item_id: `item_${pack ? 'pack' : 'groc'}_${i}`,
           list_id: params.listId,
           room_id: ROOM,
-          description,
           completed: false,
           order: i + 1,
           created_at: now,
