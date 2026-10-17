@@ -1000,11 +1000,19 @@ h5.ant-typography {
 
 /* Autopilot (assist mode). The slip says what it added for the next run: a resting slip on the
    list's sheet like the suggestion slip, but with no key and no warm edge, since nothing waits on
-   anyone. Its glyph is the autopilot mark, the same one each added row carries. */
+   anyone. It settles in once; when it goes it folds its space away (grid rows 1fr to 0fr) so the
+   list closes up instead of jumping. Its disc holds the autopilot mark each added row carries. */
+.autopilot-reveal {
+  display: grid;
+  grid-template-rows: 1fr;
+}
+.autopilot-clip {
+  min-height: 0;
+}
 .autopilot-slip {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-3);
   margin: 0 0 var(--space-3);
   padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
   background: var(--paper-fill);
@@ -1015,9 +1023,15 @@ h5.ant-typography {
 
 .autopilot-slip-mark {
   flex: none;
-  width: var(--icon-md);
-  height: var(--icon-md);
-  color: var(--muted);
+  display: grid;
+  place-items: center;
+  width: var(--control-sm);
+  height: var(--control-sm);
+  border-radius: var(--radius-pill);
+  background: var(--well-fill);
+  box-shadow: var(--well);
+  color: var(--ink);
+  font-size: var(--icon-sm);
 }
 
 .autopilot-slip-text {
@@ -1039,21 +1053,81 @@ h5.ant-typography {
   white-space: nowrap;
 }
 
+/* The names stay on one line (two on a narrow phone) so the slip keeps one height. */
 .autopilot-slip-names {
   color: var(--muted);
   font-size: var(--t-meta);
   line-height: 1.35;
+  overflow: hidden;
   overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
 }
 
-/* The autopilot mark on a row: a pencil-grey glyph in a small round target. Tapping it shows why,
-   under the item's words. */
+@media (max-width: 400px) {
+  .autopilot-slip {
+    gap: var(--space-2);
+  }
+  .autopilot-slip-names {
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .autopilot-slip {
+    animation: autopilot-settle var(--dur-slow) var(--ease-out) both;
+  }
+  .autopilot-reveal {
+    transition: grid-template-rows var(--dur-base) var(--ease-out);
+  }
+  .autopilot-reveal.is-leaving .autopilot-slip {
+    transition:
+      opacity var(--dur-fast) ease,
+      transform var(--dur-fast) ease;
+  }
+}
+.autopilot-reveal.is-leaving {
+  grid-template-rows: 0fr;
+}
+.autopilot-reveal.is-leaving .autopilot-clip {
+  overflow: hidden;
+}
+.autopilot-reveal.is-leaving .autopilot-slip {
+  opacity: 0;
+  transform: scale(0.98);
+}
+
+@keyframes autopilot-settle {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* The autopilot mark on a row: a pencil-grey glyph in a small round target that still reaches
+   the 44px touch target. Tapping it opens why, under the item's words, and turns the glyph ink. */
 .item-row .item-autopilot {
+  position: relative;
   flex: none;
+  vertical-align: middle;
+  margin: -6px 0 -6px var(--space-1);
   width: var(--control-sm);
   height: var(--control-sm);
   min-width: var(--control-sm);
   color: var(--muted);
+}
+
+.item-row .item-autopilot::before {
+  content: '';
+  position: absolute;
+  inset: calc((var(--control-lg) - var(--control-sm)) / -2);
 }
 
 .item-row .item-autopilot svg {
@@ -1068,9 +1142,39 @@ h5.ant-typography {
 .item-why {
   display: block;
   flex-basis: 100%;
+  margin-top: 2px;
   color: var(--muted);
   font-size: var(--t-meta);
+  font-weight: var(--w-regular);
   line-height: 1.35;
+}
+
+/* House settings: Autopilot's name, the slider, then one line about the chosen step that fades in
+   as the key lands. */
+.autopilot-pref {
+  display: grid;
+  gap: var(--space-2);
+}
+.autopilot-help > span {
+  display: block;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .item-why {
+    animation: autopilot-why var(--dur-fast) var(--ease-out) both;
+  }
+  .autopilot-help > span {
+    animation: autopilot-why var(--dur-base) var(--ease-out) both;
+  }
+}
+@keyframes autopilot-why {
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 /* Arrival. The slip is the one thing here that wants a tap, so it gets one authored moment and then
@@ -3645,4 +3749,12 @@ textarea.notes-textarea {
   :root[data-motion='lite'] .house-loader .hm-pane {
     animation: hl-glow 1600ms ease-in-out infinite alternate;
   }
+}
+
+/* Lite tier: the autopilot slip appears and goes without the settle or the fold. */
+:root[data-motion='lite'] .autopilot-slip {
+  animation: none;
+}
+:root[data-motion='lite'] .autopilot-reveal {
+  transition: none;
 }

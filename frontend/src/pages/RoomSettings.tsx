@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { Lightbulb, Moon, Repeat } from '@phosphor-icons/react'
 import { message } from 'antd'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { errorMessage } from '@lib/errors'
@@ -13,12 +14,12 @@ import { HouseLoader } from '@components/HouseLoader'
 import { TopNav } from '@components/TopNav'
 import {
   Button,
-  ChipGroup,
   DetailGroup,
   Field,
   NavRow,
   SectionLabel,
   SheetIdentity,
+  StepSlider,
   Paper,
   PaperStack,
 } from '@components/ui'
@@ -27,10 +28,12 @@ import { useDocumentTitle } from '@lib/useDocumentTitle'
 
 const nameProblem = (v: string) => (v && !isValidDisplayName(v) ? NAME_RULE : '')
 
-const AUTOPILOT_OPTIONS: { value: AutopilotMode; label: string }[] = [
-  { value: 'off', label: 'Off' },
-  { value: 'suggest', label: 'Suggest' },
-  { value: 'assist', label: 'Assist' },
+// Low to high: how much of the shopping the House hands to autopilot. Assist's glyph is the same
+// mark its items carry on a list.
+const AUTOPILOT_STEPS: { value: AutopilotMode; label: string; icon: React.ReactNode }[] = [
+  { value: 'off', label: 'Off', icon: <Moon weight="bold" /> },
+  { value: 'suggest', label: 'Suggest', icon: <Lightbulb weight="bold" /> },
+  { value: 'assist', label: 'Assist', icon: <Repeat weight="bold" /> },
 ]
 
 // One line under the chosen mode, in the House's words.
@@ -194,19 +197,20 @@ export const RoomSettings: React.FC = () => {
 
           <SectionLabel>Lists</SectionLabel>
           <DetailGroup label="Lists">
-            <div className="pref">
-              <span className="pref-label" id="autopilot-label">
+            <div className="pref autopilot-pref">
+              <span className="pref-label" aria-hidden>
                 Autopilot
               </span>
-              <ChipGroup
+              <StepSlider
                 label="Autopilot"
-                columns={3}
                 value={autopilotMode}
-                options={AUTOPILOT_OPTIONS}
+                steps={AUTOPILOT_STEPS}
+                describedBy="autopilot-help"
                 onChange={(m) => void onAutopilotMode(m)}
               />
-              <p className="pref-help" aria-live="polite">
-                {AUTOPILOT_HELP[autopilotMode]}
+              <p className="pref-help autopilot-help" id="autopilot-help" aria-live="polite">
+                {/* Keyed so the new line fades in as the key lands. */}
+                <span key={autopilotMode}>{AUTOPILOT_HELP[autopilotMode]}</span>
               </p>
             </div>
           </DetailGroup>

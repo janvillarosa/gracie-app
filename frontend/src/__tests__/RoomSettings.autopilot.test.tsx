@@ -1,6 +1,6 @@
 import { http } from 'msw'
 import { server } from '../testServer'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -42,40 +42,31 @@ const setup = (initial: Room, fail = false) => {
   return puts
 }
 
-const group = () => screen.findByRole('group', { name: 'Autopilot' })
+const slider = () => screen.findByRole('slider', { name: 'Autopilot' })
 
 describe('House settings: autopilot', () => {
-  it('shows Off · Suggest · Assist with Suggest chosen by default', async () => {
+  it('is a slider from Off to Assist, on Suggest by default', async () => {
     setup({})
-    const g = await group()
-    const options = within(g)
-      .getAllByRole('button')
-      .map((b) => b.textContent)
-    expect(options).toEqual(['Off', 'Suggest', 'Assist'])
-    expect(within(g).getByRole('button', { name: 'Suggest' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    )
+    const s = await slider()
+    expect(s).toHaveAttribute('aria-valuetext', 'Suggest')
+    expect(s).toHaveAttribute('aria-describedby', 'autopilot-help')
+    for (const name of ['Off', 'Suggest', 'Assist'])
+      expect(screen.getByText(name)).toBeInTheDocument()
     expect(screen.getByText(/Nothing changes until someone taps/)).toBeInTheDocument()
   })
 
   it('reads a House that turned suggestions off before modes as Off', async () => {
     setup({ suggestions_off: true })
-    const g = await group()
-    expect(within(g).getByRole('button', { name: 'Off' })).toHaveAttribute('aria-pressed', 'true')
+    expect(await slider()).toHaveAttribute('aria-valuetext', 'Off')
   })
 
-  it('choosing Assist saves at once and says what it does', async () => {
+  it('sliding to Assist saves at once and says what it does', async () => {
     const puts = setup({ autopilot_mode: 'suggest' })
-    const g = await group()
-    await userEvent.click(within(g).getByRole('button', { name: 'Assist' }))
+    const s = await slider()
+    s.focus()
+    await userEvent.keyboard('{ArrowRight}')
     await waitFor(() => expect(puts).toEqual([{ autopilot_mode: 'assist' }]))
-    await waitFor(() =>
-      expect(within(g).getByRole('button', { name: 'Assist' })).toHaveAttribute(
-        'aria-pressed',
-        'true',
-      ),
-    )
+    await waitFor(() => expect(s).toHaveAttribute('aria-valuetext', 'Assist'))
     expect(
       screen.getByText(
         'Adds things to your lists before you shop. You can always undo. It never buys or books anything.',
@@ -85,13 +76,9 @@ describe('House settings: autopilot', () => {
 
   it('goes back to the saved mode when the save fails', async () => {
     setup({ autopilot_mode: 'suggest' }, true)
-    const g = await group()
-    await userEvent.click(within(g).getByRole('button', { name: 'Off' }))
-    await waitFor(() =>
-      expect(within(g).getByRole('button', { name: 'Suggest' })).toHaveAttribute(
-        'aria-pressed',
-        'true',
-      ),
-    )
+    const s = await slider()
+    s.focus()
+    await userEvent.keyboard('{Home}')
+    await waitFor(() => expect(s).toHaveAttribute('aria-valuetext', 'Suggest'))
   })
 })

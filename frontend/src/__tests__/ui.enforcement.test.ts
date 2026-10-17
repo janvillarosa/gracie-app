@@ -142,7 +142,7 @@ describe('trip and ui styles use tokens, not literals', () => {
       ),
     ]
     // Local custom properties a component sets itself.
-    const local = new Set(['--cols', '--pip', '--tcol'])
+    const local = new Set(['--cols', '--pip', '--tcol', '--i', '--pos', '--steps'])
     expect(used.filter((v) => !defined.has(v) && !local.has(v))).toEqual([])
   })
 

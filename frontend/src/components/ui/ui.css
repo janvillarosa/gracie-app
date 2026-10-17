@@ -1118,6 +1118,184 @@ input.ui-sheet-title.has-error:focus-visible {
   opacity: 0.6;
 }
 
+/* StepSlider: a few stops on one scale. A paper key rides a groove pressed into the sheet; the
+   groove fills with key yellow up to the key's centre. The key and the fill each ride a carriage the
+   width of the key's travel, moved by transform, so nothing is laid out per frame. */
+.ui-steps {
+  display: grid;
+  gap: var(--space-1);
+  width: 100%;
+}
+.ui-steps-track {
+  position: relative;
+  height: var(--control-lg);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  touch-action: none;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.ui-steps-track[aria-disabled='true'] {
+  cursor: default;
+  opacity: 0.6;
+}
+.ui-steps-groove {
+  position: absolute;
+  inset-inline: 0;
+  top: calc(50% - 5px);
+  height: 10px;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: var(--well-fill);
+  box-shadow: var(--well);
+}
+.ui-steps-rail {
+  position: absolute;
+  inset-block: 0;
+  inset-inline: calc(var(--control-md) / 2);
+  container-type: inline-size;
+}
+/* The key's carriage has no width of its own (so it never widens the page as it travels): it moves
+   by the rail's width, read as a container unit. */
+.ui-steps-rail .ui-steps-carriage {
+  width: 0;
+  transform: translateX(calc(var(--pos) * 100cqw));
+}
+.ui-steps-carriage {
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  width: 100%;
+  transform: translateX(calc(var(--pos) * 100%));
+}
+.ui-steps-groove .ui-steps-carriage {
+  left: calc(var(--control-md) / 2);
+  width: calc(100% - var(--control-md));
+}
+/* Ends at the carriage's left edge, which is the key's centre; the groove clips the rest. */
+.ui-steps-fill {
+  position: absolute;
+  inset-block: 0;
+  right: 100%;
+  width: calc(100% + var(--control-md));
+  background: var(--brand-yellow);
+  box-shadow: inset 0 -1px 0 var(--brand-yellow-deep);
+}
+.ui-steps-stop {
+  position: absolute;
+  z-index: 1;
+  top: calc(50% - 2px);
+  left: calc(var(--control-md) / 2 + (100% - var(--control-md)) * var(--i) / (var(--steps) - 1) - 2px);
+  width: 4px;
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--border-strong);
+}
+.ui-steps-stop[data-reached] {
+  background: var(--brand-yellow-deep);
+}
+.ui-steps-key {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  display: grid;
+  width: var(--control-md);
+  height: var(--control-md);
+  margin: calc(var(--control-md) / -2) 0 0 calc(var(--control-md) / -2);
+  place-items: center;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--paper-fill);
+  color: var(--ink);
+  box-shadow: var(--slip-rest);
+}
+.ui-steps-key[data-step='0'] {
+  color: var(--muted);
+}
+/* The stops' glyphs share the key; the chosen one is shown and turns a quarter as it lands. */
+.ui-steps-glyph {
+  grid-area: 1 / 1;
+  display: grid;
+  place-items: center;
+  font-size: var(--icon-sm);
+  opacity: 0;
+  transform: rotate(-90deg) scale(0.6);
+}
+.ui-steps-glyph[data-on] {
+  opacity: 1;
+  transform: none;
+}
+.ui-steps-track:focus-visible .ui-steps-key {
+  box-shadow: var(--slip-rest), var(--focus-ring);
+}
+.ui-steps.is-dragging .ui-steps-key,
+.ui-steps-track:active .ui-steps-key {
+  transform: translateY(var(--key-travel));
+  box-shadow: var(--slip-press);
+}
+.ui-steps-names {
+  display: grid;
+  grid-template-columns: repeat(var(--steps), minmax(0, 1fr));
+}
+.ui-steps-name {
+  min-height: var(--control-md);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: var(--t-meta);
+  font-weight: var(--w-semibold);
+  text-align: center;
+  cursor: pointer;
+}
+.ui-steps-name:first-child {
+  text-align: start;
+}
+.ui-steps-name:last-child {
+  text-align: end;
+}
+.ui-steps-name[data-on] {
+  color: var(--ink);
+}
+.ui-steps-name:disabled {
+  cursor: default;
+}
+@media (hover: hover) {
+  .ui-steps-track:not([aria-disabled='true']):hover .ui-steps-key {
+    box-shadow: var(--slip-hover);
+  }
+  .ui-steps-name:not(:disabled):hover {
+    color: var(--ink);
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .ui-steps-carriage {
+    transition: transform var(--dur-base) var(--ease-out);
+  }
+  .ui-steps.is-dragging .ui-steps-carriage {
+    transition: none;
+  }
+  .ui-steps-key {
+    transition:
+      transform var(--dur-press) ease,
+      box-shadow var(--dur-fast) ease;
+  }
+  .ui-steps-glyph {
+    transition:
+      opacity var(--dur-fast) ease,
+      transform var(--dur-slow) var(--ease-out);
+  }
+  .ui-steps-name {
+    transition: color var(--dur-fast) ease;
+  }
+}
+/* Lite tier: the key still slides (one transform), the glyphs simply swap. */
+:root[data-motion='lite'] .ui-steps-glyph {
+  transition: opacity var(--dur-fast) ease;
+  transform: none;
+}
+
 /* Category: outlined stamps in their own colours; only the chosen one is filled. */
 .ui-stampselect {
   display: flex;

@@ -96,12 +96,15 @@ on). 2026-10-17: 97.8% precision, 64.4% open recall, **F1 77.7%**, 0.01 removals
 
 _Frontend paths are relative to `frontend/src/`._
 
-- **House settings** (`RoomSettings`): "Autopilot" as a `ChipGroup` (Off · Suggest · Assist), saved on choice
-  with a rollback, and one line under the chosen mode (`AUTOPILOT_HELP`). `autopilotModeOf` reads older
+- **House settings** (`RoomSettings`): "Autopilot" as a `StepSlider` (Off · Suggest · Assist, low to high; glyphs
+  moon, lightbulb and the autopilot mark), saved on choice with a rollback, and one line under the chosen mode
+  (`AUTOPILOT_HELP`) that fades in as the key lands. `autopilotModeOf` reads older
   servers' `suggestions_off`.
 - **List page:** on assist only, it reads `GET .../autopilot` (`['autopilot', roomId, listId]`). Rows with
-  `source: 'autopilot'` carry the autopilot mark (`ItemRow`, a muted repeat glyph); tapping it says why
+  `source: 'autopilot'` carry the autopilot mark (`ItemRow`, a muted repeat glyph inline after the item's words);
+  tapping it says why
   (`reasonText`: "You buy it about every 9 days"). Once per planned run `AutopilotSlip` reads "Added 3 for
-  Saturday" (`addedLine`) with Undo all (one undo per action) and Got it; the run it was closed for is kept
+  Saturday" (`addedLine`) with Undo all (one undo per action) and Got it; it folds away on Got it or a successful Undo all, and the
+  undone rows leave only after it has; the run it was closed for is kept
   in `localStorage` `gracie_autopilot_seen_<listId>`. Suggest mode keeps today's suggestion slip unchanged.
 - The mock (`VITE_MOCK_TRIPS=1`) starts on assist with three autopilot items; `?autopilot=suggest|off`.

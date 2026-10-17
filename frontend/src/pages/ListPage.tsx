@@ -283,7 +283,6 @@ export const ListPage: React.FC = () => {
     return m
   }, [autopilotApplied])
   const [seenRunAt, setSeenRunAt] = useState(() => seenRun(listId))
-  const [undoingAll, setUndoingAll] = useState(false)
   const autopilotRun = useMemo(() => latestRun(autopilotApplied ?? []), [autopilotApplied])
   const slipItems = autopilotRun
     ? autopilotRun.actions
@@ -292,29 +291,43 @@ export const ListPage: React.FC = () => {
     : []
   const showAutopilotSlip =
     assist && !!autopilotRun && autopilotRun.runAt !== seenRunAt && slipItems.length > 0
+  const refreshAfterUndo = () =>
+    Promise.all([
+      qc.invalidateQueries({ queryKey: ['list-items', listId] }),
+      qc.invalidateQueries({ queryKey: autopilotKey }),
+    ])
+  // Undo all leaves the items in place until the slip has folded away, so the slip goes first and
+  // the rows follow; this flag says the refresh is waiting.
+  const undonePending = useRef(false)
   const dismissAutopilotSlip = () => {
     if (!autopilotRun) return
     markRunSeen(listId, autopilotRun.runAt)
     setSeenRunAt(autopilotRun.runAt)
+    if (undonePending.current) {
+      undonePending.current = false
+      void refreshAfterUndo()
+    }
   }
-  const onUndoAllAutopilot = async () => {
-    if (!autopilotRun || !roomId) return
-    setUndoingAll(true)
+  // Undo all: every add of the run comes off the list. The slip folds away on success (it then
+  // calls dismissAutopilotSlip); a failure keeps it, so the person can try again.
+  const onUndoAllAutopilot = async (): Promise<boolean> => {
+    if (!autopilotRun || !roomId) return false
     try {
       for (const a of autopilotRun.actions) {
         await undoAutopilotAction(apiKey!, roomId, listId, a.action_id)
       }
-      dismissAutopilotSlip()
-      show('Taken off the list.')
     } catch (e) {
-      msgApi.error(errorMessage(e, 'Couldn’t undo that. Try again.'))
-    } finally {
-      setUndoingAll(false)
-      await Promise.all([
-        qc.invalidateQueries({ queryKey: ['list-items', listId] }),
-        qc.invalidateQueries({ queryKey: autopilotKey }),
-      ])
+      msgApi.error(errorMessage(e, 'Couldn’t take them off. Try again.'))
+      await refreshAfterUndo() // some may have come off before the failure
+      return false
     }
+    show(
+      autopilotRun.actions.length === 1
+        ? 'Taken off the list.'
+        : `${autopilotRun.actions.length} taken off the list.`,
+    )
+    undonePending.current = true
+    return true
   }
   const sortedItems = useMemo(() => {
     const copy = [...items]
@@ -1072,8 +1085,7 @@ export const ListPage: React.FC = () => {
                           names={slipItems.map((it) => it.description)}
                           runAt={new Date(autopilotRun.runAt)}
                           now={new Date()}
-                          undoing={undoingAll}
-                          onUndoAll={() => void onUndoAllAutopilot()}
+                          onUndoAll={onUndoAllAutopilot}
                           onDismiss={dismissAutopilotSlip}
                         />
                       )}

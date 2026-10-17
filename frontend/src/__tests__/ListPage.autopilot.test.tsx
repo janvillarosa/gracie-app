@@ -133,7 +133,9 @@ describe('ListPage autopilot', () => {
     const calls = setup('assist')
     const slip = await screen.findByRole('region', { name: 'Added by autopilot' })
     await userEvent.click(within(slip).getByRole('button', { name: 'Got it' }))
-    expect(screen.queryByRole('region', { name: 'Added by autopilot' })).toBeNull()
+    await waitFor(() =>
+      expect(screen.queryByRole('region', { name: 'Added by autopilot' })).toBeNull(),
+    )
     expect(screen.getByText('Whole milk')).toBeInTheDocument()
     expect(calls.undone).toEqual([])
   })
