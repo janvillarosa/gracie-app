@@ -371,18 +371,22 @@ func TestMongoKeyIntervalsWeeklyRoundtripsAndClears(t *testing.T) {
 		t.Fatal(err)
 	}
 	wk := predict.Weekly{EveryWeeks: 2, Weekday: 2, Hour: 20, Share: 1}
-	if err := aggs.SetKeyIntervals(ctx, ref.ID(), analytics.KeyIntervals{N: 10, LastAt: now, ComputedAt: now, Version: analytics.ForecastVersion, Weekly: &wk}); err != nil {
+	if err := aggs.SetKeyIntervals(ctx, ref.ID(), analytics.KeyIntervals{N: 10, LastAt: now, ComputedAt: now, Version: analytics.ForecastVersion, Weekly: &wk,
+		LastBy: "u_b", Turns: []string{"u_b", "u_a", "u_b"}}); err != nil {
 		t.Fatal(err)
 	}
 	got, err := aggs.GetKeyStats(ctx, room, "item", []string{ref.Key})
 	if err != nil || got[ref.Key].Intervals == nil || got[ref.Key].Intervals.Weekly == nil || *got[ref.Key].Intervals.Weekly != wk {
 		t.Fatalf("weekly lost: %+v %v", got[ref.Key].Intervals, err)
 	}
+	if iv := got[ref.Key].Intervals; iv.LastBy != "u_b" || len(iv.Turns) != 3 || iv.Turns[1] != "u_a" {
+		t.Fatalf("turns lost: %+v", iv)
+	}
 	if err := aggs.SetKeyIntervals(ctx, ref.ID(), analytics.KeyIntervals{N: 10, LastAt: now, ComputedAt: now, Version: analytics.ForecastVersion}); err != nil {
 		t.Fatal(err)
 	}
 	got, _ = aggs.GetKeyStats(ctx, room, "item", []string{ref.Key})
-	if got[ref.Key].Intervals.Weekly != nil {
-		t.Fatal("a pattern no longer detected must be cleared")
+	if got[ref.Key].Intervals.Weekly != nil || got[ref.Key].Intervals.LastBy != "" || got[ref.Key].Intervals.Turns != nil {
+		t.Fatal("a pattern no longer detected, and turns no longer known, must be cleared")
 	}
 }

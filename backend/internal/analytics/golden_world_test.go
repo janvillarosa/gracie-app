@@ -68,6 +68,7 @@ type keyRow struct {
 	Confident bool            `json:"confident"`
 	Due       string          `json:"due,omitempty"`
 	Weekly    *predict.Weekly `json:"weekly,omitempty"`
+	NextTurn  string          `json:"next_turn,omitempty"`
 }
 
 type houseRow struct {
@@ -86,7 +87,8 @@ func snapshot(w households.World, aggs *memstore.AggRepo) []houseRow {
 		for _, e := range h.Expect {
 			doc := aggs.Key(h.Room + ":item:" + e.Key)
 			iv, _ := doc["intervals"].(analytics.KeyIntervals)
-			k := keyRow{Key: e.Key, Kind: string(e.Kind), N: iv.N, Source: iv.Source, Days: round(iv.EWMADays), CV: round(iv.CV), Weekly: iv.Weekly}
+			k := keyRow{Key: e.Key, Kind: string(e.Kind), N: iv.N, Source: iv.Source, Days: round(iv.EWMADays), CV: round(iv.CV), Weekly: iv.Weekly,
+				NextTurn: predict.NextTurn(iv.Turns, h.Members)}
 			if iv.Add != nil {
 				f := predict.Forecast{Trials: iv.Add.Trials, Score: iv.Add.Score, CV: iv.Add.CV}
 				k.Series, k.Clock, k.Score, k.Confident = iv.Add.Series, iv.Add.Clock, round(iv.Add.Score), f.Confident(predict.DefaultParams)
@@ -168,6 +170,16 @@ func TestGoldenWorldBehaves(t *testing.T) {
 					confident++
 				}
 			case households.Calendar:
+				if len(e.Turns) > 0 {
+					last := iv.LastBy
+					want := e.Turns[0]
+					if last == e.Turns[0] {
+						want = e.Turns[1]
+					}
+					if got := predict.NextTurn(iv.Turns, h.Members); got != want {
+						t.Errorf("%s/%s: %s did it last, so it is %s's turn; got %q (turns %v)", h.Persona, e.Key, last, want, got, iv.Turns)
+					}
+				}
 				wk := iv.Weekly
 				if wk == nil || wk.EveryWeeks != e.EveryWeeks || wk.Weekday != e.Weekday || wk.Hour != e.Hour {
 					t.Errorf("%s/%s should follow the calendar %d/%d/%d: %+v", h.Persona, e.Key, e.EveryWeeks, e.Weekday, e.Hour, wk)

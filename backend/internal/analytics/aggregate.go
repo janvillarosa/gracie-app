@@ -86,6 +86,10 @@ type KeyIntervals struct {
 	// Weekly is set when the thing follows the calendar (bin day): done on one local weekday every
 	// one or two weeks. Learned from completions, or requests when completions are thin.
 	Weekly *predict.Weekly `bson:"weekly,omitempty" json:"weekly,omitempty"`
+	// LastBy is who completed it last and Turns who completed it, newest first (up to
+	// predict.MaxTurns; real people only, system:* actors are left out). predict.NextTurn reads them.
+	LastBy string   `bson:"last_by,omitempty" json:"last_by,omitempty"`
+	Turns  []string `bson:"turns,omitempty" json:"turns,omitempty"`
 }
 
 // AddForecast is a stored predict.Forecast: when the thing is next expected to be added, the

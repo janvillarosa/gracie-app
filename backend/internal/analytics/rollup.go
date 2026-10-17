@@ -201,6 +201,7 @@ func (w *Worker) recomputeKey(ctx context.Context, ref KeyRef, cache awayCache) 
 	}
 	var done, asked []time.Time
 	var doneOcc, askedOcc []predict.Occurrence
+	var completers []Event
 	var wDone, wAsked, wIgnored []weighted
 	classify := func(evs []Event, weight float64, own bool) {
 		for _, e := range evs {
@@ -213,6 +214,9 @@ func (w *Worker) recomputeKey(ctx context.Context, ref KeyRef, cache awayCache) 
 				if own {
 					done = append(done, e.OccurredAt)
 					doneOcc = append(doneOcc, predict.Occurrence{At: e.OccurredAt, HOW: e.Local.HOW})
+					if isRealUser(e.ActorID) {
+						completers = append(completers, e)
+					}
 				}
 				wDone = append(wDone, weighted{e.OccurredAt, weight})
 			case RoleRequest:
@@ -260,6 +264,10 @@ func (w *Worker) recomputeKey(ctx context.Context, ref KeyRef, cache awayCache) 
 	if wk, ok := predict.DetectWeekly(occ, away); ok {
 		iv.Weekly = &wk
 	}
+	iv.Turns = turnsOf(completers)
+	if len(iv.Turns) > 0 {
+		iv.LastBy = iv.Turns[0]
+	}
 	if f, ok := predict.DefaultParams.PredictAway(timesOf(wAsked), timesOf(wDone), timesOf(wIgnored), away); ok {
 		certainty := meanWeight(wAsked)
 		if f.Series == predict.SeriesChecked {
@@ -273,6 +281,19 @@ func (w *Worker) recomputeKey(ctx context.Context, ref KeyRef, cache awayCache) 
 		}
 	}
 	return sibs, w.aggs.SetKeyIntervals(ctx, ref.ID(), iv)
+}
+
+// turnsOf lists who completed the key, newest first, up to predict.MaxTurns.
+func turnsOf(evs []Event) []string {
+	sort.SliceStable(evs, func(i, j int) bool { return evs[i].OccurredAt.After(evs[j].OccurredAt) })
+	var out []string
+	for _, e := range evs {
+		if len(out) == predict.MaxTurns {
+			break
+		}
+		out = append(out, e.ActorID)
+	}
+	return out
 }
 
 // RefreshStale rebuilds up to limit forecasts computed by older logic (or before forecasts were

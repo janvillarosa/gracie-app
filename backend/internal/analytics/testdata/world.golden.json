@@ -38,7 +38,8 @@
       "weekday": 6,
       "hour": 10,
       "share": 1
-     }
+     },
+     "next_turn": "room_weekend-couple_a"
     },
     {
      "key": "eggs",
@@ -56,7 +57,8 @@
       "weekday": 6,
       "hour": 10,
       "share": 1
-     }
+     },
+     "next_turn": "room_weekend-couple_b"
     },
     {
      "key": "bread",
@@ -74,7 +76,8 @@
       "weekday": 6,
       "hour": 10,
       "share": 1
-     }
+     },
+     "next_turn": "room_weekend-couple_b"
     },
     {
      "key": "coffee",
@@ -92,7 +95,8 @@
       "weekday": 6,
       "hour": 10,
       "share": 1
-     }
+     },
+     "next_turn": "room_weekend-couple_b"
     },
     {
      "key": "olive oil",
@@ -104,7 +108,8 @@
      "series": "added",
      "score": 0.196,
      "confident": false,
-     "due": "2026-09-19T08:41:32Z"
+     "due": "2026-09-19T08:41:32Z",
+     "next_turn": "room_weekend-couple_a"
     },
     {
      "key": "bananas",
@@ -122,7 +127,8 @@
       "weekday": 6,
       "hour": 10,
       "share": 1
-     }
+     },
+     "next_turn": "room_weekend-couple_a"
     },
     {
      "key": "chocolate",
@@ -140,7 +146,8 @@
       "weekday": 6,
       "hour": 10,
       "share": 1
-     }
+     },
+     "next_turn": "room_weekend-couple_b"
     },
     {
      "key": "duct tape",
@@ -149,7 +156,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_weekend-couple_b"
     },
     {
      "key": "wrapping paper",
@@ -158,7 +166,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_weekend-couple_a"
     },
     {
      "key": "hand warmers",
@@ -167,7 +176,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_weekend-couple_b"
     },
     {
      "key": "birthday candles",
@@ -176,7 +186,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_weekend-couple_a"
     },
     {
      "key": "paint brush",
@@ -185,7 +196,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_weekend-couple_b"
     },
     {
      "key": "doormat",
@@ -194,7 +206,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_weekend-couple_a"
     },
     {
      "key": "bike pump",
@@ -203,7 +216,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_weekend-couple_a"
     },
     {
      "key": "kettle descaler",
@@ -212,7 +226,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_weekend-couple_a"
     },
     {
      "key": "picnic blanket",
@@ -221,7 +236,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_weekend-couple_a"
     },
     {
      "key": "picture hook",
@@ -230,7 +246,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_weekend-couple_b"
     },
     {
      "key": "ice cube tray",
@@ -239,7 +256,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_weekend-couple_a"
     },
     {
      "key": "candle",
@@ -248,7 +266,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_weekend-couple_a"
     },
     {
      "key": "plant pot",
@@ -257,7 +276,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_weekend-couple_a"
     },
     {
      "key": "laundry basket",
@@ -266,7 +286,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_weekend-couple_b"
     },
     {
      "key": "padlock",
@@ -275,7 +296,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_weekend-couple_b"
     },
     {
      "key": "batteries",
@@ -284,7 +306,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_weekend-couple_a"
     },
     {
      "key": "garden gloves",
@@ -293,7 +316,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_weekend-couple_a"
     },
     {
      "key": "envelopes",
@@ -302,7 +326,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_weekend-couple_a"
     },
     {
      "key": "corkscrew",
@@ -311,7 +336,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_weekend-couple_a"
     },
     {
      "key": "water filter",
@@ -320,7 +346,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_weekend-couple_a"
     },
     {
      "key": "napkins",
@@ -329,7 +356,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_weekend-couple_b"
     },
     {
      "key": "glue",
@@ -338,7 +366,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_weekend-couple_a"
     },
     {
      "key": "spatula",
@@ -347,7 +376,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_weekend-couple_b"
     },
     {
      "key": "sewing kit",
@@ -356,7 +386,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_weekend-couple_a"
     },
     {
      "key": "torch",
@@ -365,7 +396,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_weekend-couple_a"
     }
    ],
    "runs": {
@@ -397,7 +429,8 @@
       "weekday": 2,
       "hour": 20,
       "share": 1
-     }
+     },
+     "next_turn": "room_bin-day_a"
     },
     {
      "key": "recycling",
@@ -415,7 +448,8 @@
       "weekday": 2,
       "hour": 20,
       "share": 1
-     }
+     },
+     "next_turn": "room_bin-day_b"
     },
     {
      "key": "milk",
@@ -433,7 +467,8 @@
       "weekday": 0,
       "hour": 11,
       "share": 1
-     }
+     },
+     "next_turn": "room_bin-day_b"
     },
     {
      "key": "cereal",
@@ -451,7 +486,8 @@
       "weekday": 0,
       "hour": 11,
       "share": 1
-     }
+     },
+     "next_turn": "room_bin-day_b"
     }
    ]
   },
@@ -569,7 +605,8 @@
      "series": "added",
      "score": 0.661,
      "confident": true,
-     "due": "2026-10-02T11:19:25Z"
+     "due": "2026-10-02T11:19:25Z",
+     "next_turn": "room_habit-changer_b"
     },
     {
      "key": "coffee",
@@ -581,7 +618,8 @@
      "series": "added",
      "score": 0.524,
      "confident": false,
-     "due": "2026-09-28T16:34:24Z"
+     "due": "2026-09-28T16:34:24Z",
+     "next_turn": "room_habit-changer_a"
     },
     {
      "key": "rice",
@@ -593,7 +631,8 @@
      "series": "added",
      "score": 0.403,
      "confident": false,
-     "due": "2026-10-15T02:42:26Z"
+     "due": "2026-10-15T02:42:26Z",
+     "next_turn": "room_habit-changer_b"
     }
    ],
    "runs": {
@@ -625,7 +664,8 @@
       "weekday": 6,
       "hour": 10,
       "share": 1
-     }
+     },
+     "next_turn": "room_lookalikes_a"
     },
     {
      "key": "tomatoes",
@@ -643,7 +683,8 @@
       "weekday": 6,
       "hour": 10,
       "share": 1
-     }
+     },
+     "next_turn": "room_lookalikes_a"
     },
     {
      "key": "kombucha",
@@ -661,7 +702,8 @@
       "weekday": 6,
       "hour": 10,
       "share": 1
-     }
+     },
+     "next_turn": "room_lookalikes_a"
     },
     {
      "key": "cheese",
@@ -679,7 +721,8 @@
       "weekday": 6,
       "hour": 10,
       "share": 1
-     }
+     },
+     "next_turn": "room_lookalikes_a"
     }
    ],
    "runs": {
@@ -711,7 +754,8 @@
       "weekday": 6,
       "hour": 9,
       "share": 1
-     }
+     },
+     "next_turn": "room_frequent-travellers_a"
     },
     {
      "key": "sourdough",
@@ -730,7 +774,8 @@
       "weekday": 6,
       "hour": 9,
       "share": 1
-     }
+     },
+     "next_turn": "room_frequent-travellers_a"
     },
     {
      "key": "coffee beans",
@@ -748,7 +793,8 @@
       "weekday": 6,
       "hour": 9,
       "share": 1
-     }
+     },
+     "next_turn": "room_frequent-travellers_b"
     }
    ],
    "runs": {
@@ -773,7 +819,8 @@
      "cv": 0.001,
      "series": "added",
      "confident": false,
-     "due": "2026-10-02T03:53:47Z"
+     "due": "2026-10-02T03:53:47Z",
+     "next_turn": "room_new-house_b"
     },
     {
      "key": "bread",
@@ -784,7 +831,8 @@
      "cv": 0.001,
      "series": "added",
      "confident": false,
-     "due": "2026-10-02T03:53:47Z"
+     "due": "2026-10-02T03:53:47Z",
+     "next_turn": "room_new-house_b"
     },
     {
      "key": "eggs",
@@ -795,7 +843,8 @@
      "cv": 0.001,
      "series": "added",
      "confident": false,
-     "due": "2026-10-02T03:53:47Z"
+     "due": "2026-10-02T03:53:47Z",
+     "next_turn": "room_new-house_b"
     }
    ],
    "runs": {
@@ -827,7 +876,8 @@
       "weekday": 5,
       "hour": 18,
       "share": 1
-     }
+     },
+     "next_turn": "room_bursty_a"
     },
     {
      "key": "apples",
@@ -845,7 +895,8 @@
       "weekday": 5,
       "hour": 18,
       "share": 1
-     }
+     },
+     "next_turn": "room_bursty_b"
     }
    ],
    "runs": {
@@ -877,7 +928,8 @@
       "weekday": 0,
       "hour": 16,
       "share": 1
-     }
+     },
+     "next_turn": "room_big-family_b"
     },
     {
      "key": "drinking water",
@@ -895,7 +947,8 @@
       "weekday": 0,
       "hour": 16,
       "share": 1
-     }
+     },
+     "next_turn": "room_big-family_d"
     },
     {
      "key": "eggs",
@@ -913,7 +966,8 @@
       "weekday": 0,
       "hour": 16,
       "share": 1
-     }
+     },
+     "next_turn": "room_big-family_d"
     },
     {
      "key": "chicken",
@@ -931,7 +985,8 @@
       "weekday": 0,
       "hour": 16,
       "share": 1
-     }
+     },
+     "next_turn": "room_big-family_d"
     },
     {
      "key": "dish soap",
@@ -943,7 +998,8 @@
      "series": "added",
      "score": 0.403,
      "confident": false,
-     "due": "2026-10-10T08:08:54Z"
+     "due": "2026-10-10T08:08:54Z",
+     "next_turn": "room_big-family_d"
     },
     {
      "key": "vitamins",
@@ -955,7 +1011,8 @@
      "series": "added",
      "score": 0.83,
      "confident": true,
-     "due": "2026-10-02T16:12:29Z"
+     "due": "2026-10-02T16:12:29Z",
+     "next_turn": "room_big-family_a"
     },
     {
      "key": "paracetamol",
@@ -967,7 +1024,8 @@
      "series": "added",
      "score": 0.322,
      "confident": false,
-     "due": "2026-09-30T23:20:46Z"
+     "due": "2026-09-30T23:20:46Z",
+     "next_turn": "room_big-family_d"
     },
     {
      "key": "fly spray",
@@ -976,7 +1034,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_big-family_a"
     },
     {
      "key": "thermometer",
@@ -985,7 +1044,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_big-family_a"
     },
     {
      "key": "shoe polish",
@@ -994,7 +1054,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_big-family_a"
     },
     {
      "key": "extension cord",
@@ -1003,7 +1064,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_big-family_a"
     },
     {
      "key": "sunscreen",
@@ -1012,7 +1074,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_big-family_a"
     },
     {
      "key": "measuring tape",
@@ -1021,7 +1084,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_big-family_b"
     },
     {
      "key": "notebook",
@@ -1030,7 +1094,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_big-family_a"
     },
     {
      "key": "first aid kit",
@@ -1039,7 +1104,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_big-family_b"
     },
     {
      "key": "lunch box",
@@ -1048,7 +1114,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_big-family_a"
     },
     {
      "key": "tea towels",
@@ -1057,7 +1124,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_big-family_b"
     },
     {
      "key": "umbrella",
@@ -1066,7 +1134,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_big-family_a"
     },
     {
      "key": "phone charger",
@@ -1075,7 +1144,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_big-family_a"
     },
     {
      "key": "duct tape",
@@ -1084,7 +1154,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_big-family_a"
     },
     {
      "key": "wrapping paper",
@@ -1093,7 +1164,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_big-family_b"
     },
     {
      "key": "hand warmers",
@@ -1102,7 +1174,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_big-family_b"
     },
     {
      "key": "birthday candles",
@@ -1111,7 +1184,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_big-family_a"
     },
     {
      "key": "paint brush",
@@ -1120,7 +1194,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_big-family_a"
     },
     {
      "key": "doormat",
@@ -1129,7 +1204,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_big-family_a"
     },
     {
      "key": "bike pump",
@@ -1138,7 +1214,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_big-family_a"
     },
     {
      "key": "kettle descaler",
@@ -1147,7 +1224,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_big-family_a"
     },
     {
      "key": "picnic blanket",
@@ -1156,7 +1234,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_big-family_a"
     },
     {
      "key": "picture hook",
@@ -1165,7 +1244,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_big-family_a"
     },
     {
      "key": "ice cube tray",
@@ -1174,7 +1254,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_big-family_a"
     },
     {
      "key": "candle",
@@ -1183,7 +1264,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_big-family_a"
     },
     {
      "key": "plant pot",
@@ -1192,7 +1274,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_big-family_a"
     },
     {
      "key": "laundry basket",
@@ -1201,7 +1284,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_big-family_a"
     },
     {
      "key": "padlock",
@@ -1210,7 +1294,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_big-family_b"
     },
     {
      "key": "batteries",
@@ -1219,7 +1304,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_big-family_a"
     },
     {
      "key": "garden gloves",
@@ -1228,7 +1314,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_big-family_a"
     },
     {
      "key": "envelopes",
@@ -1237,7 +1324,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_big-family_b"
     },
     {
      "key": "corkscrew",
@@ -1246,7 +1334,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_big-family_a"
     },
     {
      "key": "water filter",
@@ -1255,7 +1344,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_big-family_a"
     },
     {
      "key": "napkins",
@@ -1264,7 +1354,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_big-family_b"
     },
     {
      "key": "glue",
@@ -1273,7 +1364,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_big-family_a"
     },
     {
      "key": "spatula",
@@ -1282,7 +1374,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_big-family_b"
     },
     {
      "key": "sewing kit",
@@ -1291,7 +1384,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_big-family_b"
     },
     {
      "key": "torch",
@@ -1300,7 +1394,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_big-family_a"
     },
     {
      "key": "cookie cutters",
@@ -1309,7 +1404,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_big-family_a"
     },
     {
      "key": "light bulb",
@@ -1318,7 +1414,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_big-family_a"
     },
     {
      "key": "party hats",
@@ -1327,7 +1424,8 @@
      "source": "complete",
      "days": 0,
      "cv": 0,
-     "confident": false
+     "confident": false,
+     "next_turn": "room_big-family_a"
     }
    ],
    "runs": {
