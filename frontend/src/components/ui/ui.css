@@ -1151,6 +1151,7 @@ input.ui-sheet-title.has-error:focus-visible {
 }
 .ui-steps-rail {
   position: absolute;
+  z-index: 1;
   inset-block: 0;
   inset-inline: calc(var(--control-md) / 2);
   container-type: inline-size;
@@ -1181,9 +1182,10 @@ input.ui-sheet-title.has-error:focus-visible {
   background: var(--brand-yellow);
   box-shadow: inset 0 -1px 0 var(--brand-yellow-deep);
 }
+/* The stops come after the fill in the groove, so they paint over the fill without a z-index (one
+   would lift them over the key too, as a dot in its middle). */
 .ui-steps-stop {
   position: absolute;
-  z-index: 1;
   top: calc(50% - 2px);
   left: calc(var(--control-md) / 2 + (100% - var(--control-md)) * var(--i) / (var(--steps) - 1) - 2px);
   width: 4px;
