@@ -37,6 +37,10 @@ const (
 	RoleRequest       // the thing was asked for (item.added)
 	RoleComplete      // the thing was done (item.checked, recipe.cooked)
 	RoleDismiss       // a suggestion for the thing was turned down; it counts against that forecast
+	// RoleAutomated: automation asked for the thing on the house's behalf (an autopilot add). It
+	// is never a request, or forecasts would confirm themselves; a key with one in its recent
+	// cycles forecasts from completions instead, which keep coming whoever put it on the list.
+	RoleAutomated
 )
 
 // EventDef declares one event name. Domains register theirs at startup.

@@ -199,7 +199,7 @@ func (w *Worker) recomputeKey(ctx context.Context, ref KeyRef, cache awayCache) 
 	if err != nil {
 		return nil, err
 	}
-	var done, asked []time.Time
+	var done, asked, automated []time.Time
 	var doneOcc, askedOcc []predict.Occurrence
 	var completers []Event
 	var wDone, wAsked, wIgnored []weighted
@@ -225,6 +225,10 @@ func (w *Worker) recomputeKey(ctx context.Context, ref KeyRef, cache awayCache) 
 					askedOcc = append(askedOcc, predict.Occurrence{At: e.OccurredAt, HOW: e.Local.HOW})
 				}
 				wAsked = append(wAsked, weighted{e.OccurredAt, weight})
+			case RoleAutomated:
+				if own {
+					automated = append(automated, e.OccurredAt)
+				}
 			case RoleDismiss:
 				// Turned down mid-shop, days before it was due: not evidence the rhythm is wrong.
 				if e.Props["during"] == DuringRun {
@@ -268,7 +272,13 @@ func (w *Worker) recomputeKey(ctx context.Context, ref KeyRef, cache awayCache) 
 	if len(iv.Turns) > 0 {
 		iv.LastBy = iv.Turns[0]
 	}
-	if f, ok := predict.DefaultParams.PredictAway(timesOf(wAsked), timesOf(wDone), timesOf(wIgnored), away); ok {
+	requests := timesOf(wAsked)
+	if automatedRecently(automated, done) {
+		// The house's own adds have stopped because automation adds it now: forecast from
+		// completions (predictOn falls back to them when there are no requests).
+		requests = nil
+	}
+	if f, ok := predict.DefaultParams.PredictAway(requests, timesOf(wDone), timesOf(wIgnored), away); ok {
 		certainty := meanWeight(wAsked)
 		if f.Series == predict.SeriesChecked {
 			certainty = meanWeight(wDone)
@@ -281,6 +291,31 @@ func (w *Worker) recomputeKey(ctx context.Context, ref KeyRef, cache awayCache) 
 		}
 	}
 	return sibs, w.aggs.SetKeyIntervals(ctx, ref.ID(), iv)
+}
+
+// automatedRecently reports whether automation asked for the thing within its recent cycles: the
+// span of its last predict.DefaultParams.RecentCycles completions (all of them when there are fewer).
+func automatedRecently(automated, done []time.Time) bool {
+	if len(automated) == 0 {
+		return false
+	}
+	kept := predict.Collapse(sortedCopy(done))
+	var since time.Time
+	if n := predict.DefaultParams.RecentCycles; n > 0 && len(kept) > n {
+		since = kept[len(kept)-n-1]
+	}
+	for _, t := range automated {
+		if t.After(since) {
+			return true
+		}
+	}
+	return false
+}
+
+func sortedCopy(ts []time.Time) []time.Time {
+	out := append([]time.Time(nil), ts...)
+	sort.Slice(out, func(i, j int) bool { return out[i].Before(out[j]) })
+	return out
 }
 
 // turnsOf lists who completed the key, newest first, up to predict.MaxTurns.

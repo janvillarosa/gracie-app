@@ -382,3 +382,54 @@ func TestRunModeIgnoresDoNotCountAgainstTheForecast(t *testing.T) {
 		t.Fatalf("forecast: %+v", a)
 	}
 }
+
+// On assist the house stops adding milk by hand: autopilot adds it and they check it off. The
+// automated adds never count as requests, and the forecast keeps its weekly rhythm from the checks.
+func TestAutomatedAddsKeepRhythm(t *testing.T) {
+	r := newRig(t0.Add(200 * 24 * time.Hour))
+	for i := 0; i < 6; i++ { // six weeks of the house adding and buying it themselves
+		at := t0.AddDate(0, 0, 7*i)
+		r.add(ev("item.added", "mia", "room_1", "milk", at), ev("item.checked", "sam", "room_1", "milk", at.Add(26*time.Hour)))
+	}
+	for i := 6; i < 16; i++ { // then ten cycles on assist
+		at := t0.AddDate(0, 0, 7*i)
+		r.add(ev("item.autopilot_added", "system:autopilot", "room_1", "milk", at), ev("item.checked", "sam", "room_1", "milk", at.Add(26*time.Hour)))
+	}
+	r.now = t0.AddDate(0, 0, 7*16)
+	if _, err := r.worker.FoldOnce(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	doc := r.aggs.Key("room_1:item:milk")
+	iv := doc["intervals"].(analytics.KeyIntervals)
+	a := iv.Add
+	if a == nil || a.Series != "checked" || a.EWMADays < 6.5 || a.EWMADays > 7.5 || a.Score < 0.65 {
+		t.Fatalf("forecast drifted: %+v", a)
+	}
+	if want := t0.AddDate(0, 0, 7*15).Add(26 * time.Hour); !a.LastAt.Equal(want) {
+		t.Fatalf("cycle starts at the last purchase %v, got %v", want, a.LastAt)
+	}
+	if n := num(doc, "counts.added"); n != 6 {
+		t.Fatalf("autopilot adds counted as requests: %d adds", n)
+	}
+	// Autopilot is not a person: it never shows up as whose turn it is.
+	for _, who := range iv.Turns {
+		if who == "system:autopilot" {
+			t.Fatalf("turns name autopilot: %v", iv.Turns)
+		}
+	}
+}
+
+// Without automation the forecast still prefers the house's own adds (no behaviour change).
+func TestNoAutomationKeepsTheAddSeries(t *testing.T) {
+	r := newRig(t0.Add(120 * 24 * time.Hour))
+	for i := 0; i < 8; i++ {
+		at := t0.AddDate(0, 0, 7*i)
+		r.add(ev("item.added", "mia", "room_1", "milk", at), ev("item.checked", "sam", "room_1", "milk", at.Add(26*time.Hour)))
+	}
+	if _, err := r.worker.FoldOnce(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if a := addForecast(t, r, "milk"); a == nil || a.Series != "added" {
+		t.Fatalf("forecast: %+v", a)
+	}
+}
