@@ -54,3 +54,19 @@ func (h *SuggestionsHandler) Ignore(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
+
+// RunHint handles GET /rooms/{room_id}/lists/{list_id}/run-hint: the thresholds the List page uses
+// to spot a shopping run, learned from this person's and the house's habits.
+func (h *SuggestionsHandler) RunHint(w http.ResponseWriter, r *http.Request) {
+	u, ok := api.UserFrom(r.Context())
+	if !ok {
+		api.WriteJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+		return
+	}
+	hint, err := h.svc.RunHintFor(r.Context(), u, chi.URLParam(r, "room_id"), chi.URLParam(r, "list_id"))
+	if err != nil {
+		api.WriteJSON(w, statusFromErr(err), map[string]string{"error": err.Error()})
+		return
+	}
+	api.WriteJSON(w, http.StatusOK, map[string]any{"run_hint": hint})
+}

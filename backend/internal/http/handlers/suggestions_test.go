@@ -40,6 +40,7 @@ func newSuggestionsRouter(t *testing.T) (http.Handler, memstore.Repos) {
 	})
 	r.Get("/rooms/{room_id}/lists/{list_id}/suggestions", h.ForList)
 	r.Post("/rooms/{room_id}/lists/{list_id}/suggestions/ignore", h.Ignore)
+	r.Get("/rooms/{room_id}/lists/{list_id}/run-hint", h.RunHint)
 	return r, m
 }
 
@@ -106,6 +107,24 @@ func TestIgnoreAcceptsAKnownKey(t *testing.T) {
 		t.Fatal(err)
 	}
 	if w := call(r, "mia", http.MethodPost, "/rooms/room_1/lists/list_1/suggestions/ignore", `{"key":"2% milk"}`); w.Code != http.StatusNoContent {
+		t.Fatalf("%d %s", w.Code, w.Body.String())
+	}
+}
+
+func TestRunHintEndpoint(t *testing.T) {
+	r, _ := newSuggestionsRouter(t)
+	base := "/rooms/room_1/lists/list_1/run-hint"
+	if w := call(r, "", http.MethodGet, base, ""); w.Code != http.StatusUnauthorized {
+		t.Fatalf("anonymous: %d", w.Code)
+	}
+	if w := call(r, "zed", http.MethodGet, base, ""); w.Code != http.StatusForbidden {
+		t.Fatalf("other house: %d", w.Code)
+	}
+	w := call(r, "mia", http.MethodGet, base, "")
+	var body struct {
+		RunHint services.RunHint `json:"run_hint"`
+	}
+	if w.Code != http.StatusOK || json.Unmarshal(w.Body.Bytes(), &body) != nil || body.RunHint != services.DefaultRunHint() {
 		t.Fatalf("%d %s", w.Code, w.Body.String())
 	}
 }
