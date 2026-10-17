@@ -10,7 +10,7 @@ import (
 // Plan turns a snapshot's open candidates into restock proposals: the usual wording and quantity,
 // the reason, and the cycle that makes it one action per thing per cycle. It is pure.
 func Plan(s Snapshot, p Policy) []Proposal {
-	if s.Paused || s.NoRun || s.Away {
+	if s.Paused || s.NoRun || s.Away || s.NotYet {
 		return nil
 	}
 	out := make([]Proposal, 0, len(s.Open))

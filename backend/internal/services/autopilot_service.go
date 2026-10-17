@@ -93,14 +93,17 @@ type AutopilotService struct {
 	// The executor (assist mode): the action log and the list service that creates items.
 	actions store.AutopilotActionRepository
 	listSvc *ListService
-	mode    SuggestionMode
-	now     func() time.Time
+	// The ticker: its lease owner id and how close a run must be before assist plans for it.
+	owner string
+	lead  time.Duration
+	mode  SuggestionMode
+	now   func() time.Time
 }
 
 // NewAutopilotService takes a nil reader or event repository when analytics is disabled;
 // the service then always answers with nothing.
 func NewAutopilotService(rooms store.RoomRepository, lists store.ListRepository, items store.ListItemRepository, reader *analytics.Reader, events analytics.EventRepository, mode SuggestionMode) *AutopilotService {
-	return &AutopilotService{rooms: rooms, lists: lists, items: items, reader: reader, events: events, mode: mode, policy: autopilot.DefaultPolicy, now: time.Now}
+	return &AutopilotService{rooms: rooms, lists: lists, items: items, reader: reader, events: events, mode: mode, policy: autopilot.DefaultPolicy, owner: newTickerOwner(), now: time.Now}
 }
 
 // UseAwayCalendar tells the planner when the whole house is away (trips), so assist plans no

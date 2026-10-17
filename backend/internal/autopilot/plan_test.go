@@ -210,3 +210,21 @@ func TestPlanAssistOrdersByNeedAndCaps(t *testing.T) {
 		t.Fatalf("proposals: %v", keys(prs))
 	}
 }
+
+func TestPlanWaitsForTheLead(t *testing.T) {
+	rp := runPlan() // next run in 10 h
+	f := &autopilottest.Signals{Plan: rp, Cands: []autopilot.Candidate{autopilottest.Weekly("eggs", list, now)}}
+	q := autopilot.Query{RoomID: "room_1", ListID: list, Horizon: autopilot.HorizonRunAfterNext, Now: now, Lead: 6 * time.Hour}
+	s, _ := autopilot.Gather(context.Background(), f, q, autopilot.DefaultPolicy)
+	if !s.NotYet || len(autopilot.Plan(s, autopilot.DefaultPolicy)) != 0 {
+		t.Fatalf("planned 10 h out with a 6 h lead: %+v", s)
+	}
+	q.Lead = 18 * time.Hour
+	if s, _ := autopilot.Gather(context.Background(), f, q, autopilot.DefaultPolicy); s.NotYet {
+		t.Fatal("did not plan within the lead")
+	}
+	q.Now = rp.Next.Start.Add(time.Minute) // the run is under way: too late to add
+	if s, _ := autopilot.Gather(context.Background(), f, q, autopilot.DefaultPolicy); !s.NotYet {
+		t.Fatal("planned for a run already under way")
+	}
+}

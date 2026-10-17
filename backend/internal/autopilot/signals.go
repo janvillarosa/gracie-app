@@ -81,6 +81,9 @@ type Query struct {
 	Now            time.Time
 	// Limit is how many open candidates to keep (the slip asks for 1; assist for MaxPerRun).
 	Limit int
+	// Lead, for the assist horizon, is how close the next run must be before anything is planned
+	// for it (the ticker's AUTOPILOT_LEAD); zero plans for it however far off it is.
+	Lead time.Duration
 }
 
 // Snapshot is what the planner knows about one list at one moment. Gather builds it.
@@ -90,6 +93,7 @@ type Snapshot struct {
 	Run    *RunPlan  // the run assist plans for (nil for the other horizons, or none learned)
 	NoRun  bool      // a run-based horizon with no usable run rhythm
 	Away   bool      // the next run starts while the whole house is away
+	NotYet bool      // the next run is further off than Query.Lead, or already under way
 	Until  time.Time // the horizon's end
 	Open   []Ranked  // candidates that passed every filter, in order
 	Usual  map[string]Usual
@@ -140,6 +144,10 @@ func Gather(ctx context.Context, sig Signals, q Query, p Policy) (Snapshot, erro
 			return s, nil
 		}
 		s.Run = rp
+		if q.Lead > 0 && (rp.Next.Start.Sub(q.Now) > q.Lead || !rp.Next.Start.After(q.Now)) {
+			s.NotYet = true
+			return s, nil
+		}
 		if s.Spans, err = sig.Away(ctx, q.RoomID); err != nil {
 			return s, err
 		}

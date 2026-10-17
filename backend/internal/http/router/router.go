@@ -111,6 +111,8 @@ func NewRouter(userFinder authmw.UserFinder, h Handlers) http.Handler {
 		ar.Patch("/rooms/{room_id}/lists/{list_id}/items/{item_id}/position", h.List.UpdateItemPosition)
 		ar.Delete("/rooms/{room_id}/lists/{list_id}/items/{item_id}", h.List.DeleteItem)
 		if h.Autopilot != nil {
+			ar.Get("/rooms/{room_id}/lists/{list_id}/autopilot", h.Autopilot.View)
+			ar.Post("/rooms/{room_id}/lists/{list_id}/autopilot/{action_id}/undo", h.Autopilot.Undo)
 			// Deprecated: served by the autopilot service, kept at their paths until the List page
 			// reads GET .../autopilot for suggestions and the run hint. Each answer carries a
 			// Deprecation header naming that successor.

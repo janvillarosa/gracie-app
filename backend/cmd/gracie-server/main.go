@@ -60,6 +60,7 @@ func main() {
 	var insights *handlers.InsightsHandler
 	var analyticsReader *analytics.Reader
 	var analyticsEvents analytics.EventRepository
+	var awayCalendar analytics.AwayCalendar
 	if cfg.AnalyticsEnabled {
 		eventsRepo := mongostore.NewEventRepo(mcli)
 		if err := eventsRepo.EnsureIndexes(ctx); err != nil {
@@ -77,7 +78,7 @@ func main() {
 				purger = analytics.NewPurger(eventsRepo, aggRepo)
 				reader := analytics.NewReader(aggRepo).WithAway(awayCal)
 				insights = handlers.NewInsightsHandler(services.NewInsightsService(roomsRepo, reader))
-				analyticsReader, analyticsEvents = reader, eventsRepo
+				analyticsReader, analyticsEvents, awayCalendar = reader, eventsRepo, awayCal
 			}
 		}
 	}
@@ -124,6 +125,14 @@ func main() {
 	}
 	autopilotSvc := services.NewAutopilotService(roomsRepo, listsRepo, itemsRepo, analyticsReader, analyticsEvents, suggestMode)
 	log.Printf("suggestions: mode %s", suggestMode)
+	// Assist mode: the planner knows when the house is away, applies through the action log and
+	// the list service, and hears back when its items are checked or removed.
+	if awayCalendar != nil {
+		autopilotSvc.UseAwayCalendar(awayCalendar)
+	}
+	autopilotSvc.UseExecutor(autopilotRepo, listSvc)
+	autopilotSvc.UseLead(cfg.AutopilotLead)
+	listSvc.UseItemHooks(autopilotSvc)
 
 	// Coordinates -> time zone for Google places sent without one. The tzf dataset
 	// (~34 MB heap, ~150 ms) loads lazily on the first such place, never at startup.
@@ -158,6 +167,9 @@ func main() {
 	purgeCtx, stopPurge := context.WithCancel(context.Background())
 	defer stopPurge()
 	go tripSvc.RunCoordsPurge(purgeCtx, 24*time.Hour, time.Hour)
+	// Assist mode: plan and apply before each house's runs. The lease makes it safe on any number
+	// of instances; it does nothing while analytics is off.
+	go autopilotSvc.RunTicker(purgeCtx, cfg.AutopilotTickEvery, cfg.AutopilotTickEvery/10)
 	if rollup != nil {
 		// Fold raw events into aggregates; the lease makes it safe on any number of instances.
 		go rollup.RunFold(purgeCtx, cfg.AnalyticsFoldEvery, cfg.AnalyticsFoldEvery/10)

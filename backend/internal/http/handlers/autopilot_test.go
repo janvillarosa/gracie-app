@@ -41,6 +41,8 @@ func newSuggestionsRouter(t *testing.T) (http.Handler, memstore.Repos) {
 	r.Get("/rooms/{room_id}/lists/{list_id}/suggestions", h.Suggestions)
 	r.Post("/rooms/{room_id}/lists/{list_id}/suggestions/ignore", h.Ignore)
 	r.Get("/rooms/{room_id}/lists/{list_id}/run-hint", h.RunHint)
+	r.Get("/rooms/{room_id}/lists/{list_id}/autopilot", h.View)
+	r.Post("/rooms/{room_id}/lists/{list_id}/autopilot/{action_id}/undo", h.Undo)
 	return r, m
 }
 
@@ -156,5 +158,37 @@ func TestDeprecatedRoutesCarryHeader(t *testing.T) {
 		if got := w.Header().Get("Link"); got != `</rooms/room_1/lists/list_1/autopilot>; rel="successor-version"` {
 			t.Errorf("%s %s: Link %q", c.method, c.path, got)
 		}
+	}
+}
+
+func TestAutopilotViewAndUndoAuth(t *testing.T) {
+	r, _ := newSuggestionsRouter(t)
+	base := "/rooms/room_1/lists/list_1/autopilot"
+	if w := call(r, "", http.MethodGet, base, ""); w.Code != http.StatusUnauthorized {
+		t.Fatalf("anonymous: %d", w.Code)
+	}
+	if w := call(r, "zed", http.MethodGet, base, ""); w.Code != http.StatusForbidden {
+		t.Fatalf("another house: %d", w.Code)
+	}
+	w := call(r, "mia", http.MethodGet, base, "")
+	if w.Code != http.StatusOK {
+		t.Fatalf("member: %d %s", w.Code, w.Body)
+	}
+	var v struct {
+		Mode        string            `json:"mode"`
+		Applied     []json.RawMessage `json:"applied"`
+		Suggestions []json.RawMessage `json:"suggestions"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &v); err != nil || v.Mode != "suggest" || v.Applied == nil || v.Suggestions == nil {
+		t.Fatalf("view: %s", w.Body)
+	}
+	if w.Header().Get("Deprecation") != "" {
+		t.Fatal("the successor route is not deprecated")
+	}
+	if w := call(r, "zed", http.MethodPost, base+"/act_x/undo", ""); w.Code != http.StatusForbidden {
+		t.Fatalf("undo from another house: %d", w.Code)
+	}
+	if w := call(r, "mia", http.MethodPost, base+"/act_x/undo", ""); w.Code != http.StatusNotFound {
+		t.Fatalf("unknown action: %d", w.Code)
 	}
 }

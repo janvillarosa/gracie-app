@@ -33,6 +33,10 @@ type Config struct {
 	AnalyticsProfileEvery  time.Duration
 	// SuggestionsMode is off or on (default). A retired "shadow" value runs as on.
 	SuggestionsMode string
+	// AutopilotTickEvery is how often the assist ticker runs; AutopilotLead how close a house's
+	// next run must be before assist plans for it.
+	AutopilotTickEvery time.Duration
+	AutopilotLead      time.Duration
 }
 
 func getEnv(key, def string) string {
@@ -65,6 +69,8 @@ func Load() (*Config, error) {
 	cfg.AnalyticsFoldEvery = getEnvDuration("ANALYTICS_FOLD_EVERY", 15*time.Minute)
 	cfg.AnalyticsProfileEvery = getEnvDuration("ANALYTICS_PROFILE_EVERY", time.Hour)
 	cfg.SuggestionsMode = getEnv("SUGGESTIONS_MODE", "on")
+	cfg.AutopilotTickEvery = getEnvDuration("AUTOPILOT_TICK_EVERY", 15*time.Minute)
+	cfg.AutopilotLead = getEnvDuration("AUTOPILOT_LEAD", 18*time.Hour)
 
 	if cfg.MongoURI == "" || cfg.MongoDB == "" {
 		return nil, fmt.Errorf("missing Mongo configuration (MONGODB_URI, MONGODB_DB)")

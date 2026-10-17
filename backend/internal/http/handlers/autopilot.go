@@ -82,3 +82,33 @@ func (h *AutopilotHandler) RunHint(w http.ResponseWriter, r *http.Request) {
 	}
 	api.WriteJSON(w, http.StatusOK, map[string]any{"run_hint": hint})
 }
+
+// View handles GET /rooms/{room_id}/lists/{list_id}/autopilot: the house's mode, what autopilot
+// applied to the list lately, and its suggestions. It never applies anything.
+func (h *AutopilotHandler) View(w http.ResponseWriter, r *http.Request) {
+	u, ok := api.UserFrom(r.Context())
+	if !ok {
+		api.WriteJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+		return
+	}
+	v, err := h.svc.View(r.Context(), u, chi.URLParam(r, "room_id"), chi.URLParam(r, "list_id"))
+	if err != nil {
+		api.WriteJSON(w, statusFromErr(err), map[string]string{"error": err.Error()})
+		return
+	}
+	api.WriteJSON(w, http.StatusOK, v)
+}
+
+// Undo handles POST /rooms/{room_id}/lists/{list_id}/autopilot/{action_id}/undo.
+func (h *AutopilotHandler) Undo(w http.ResponseWriter, r *http.Request) {
+	u, ok := api.UserFrom(r.Context())
+	if !ok {
+		api.WriteJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+		return
+	}
+	if err := h.svc.Undo(r.Context(), u, chi.URLParam(r, "room_id"), chi.URLParam(r, "list_id"), chi.URLParam(r, "action_id")); err != nil {
+		api.WriteJSON(w, statusFromErr(err), map[string]string{"error": err.Error()})
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
