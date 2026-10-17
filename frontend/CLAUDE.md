@@ -66,11 +66,12 @@ why the config forces a single fork.
 - **Motion/shape tokens** live on `:root` in `styles.css` (`--ease-out`,
   `--dur-*`, `--shadow-key`, `--focus-ring`). Reuse them; animations stay behind
   `prefers-reduced-motion: no-preference`.
-- **Motion tier** (`lib/motion.ts`, set on `<html data-motion>` before mount): `full` everywhere
-  unless the device can't keep up, then `lite`. Static signals (Save-Data, ≤2 cores, ≤2 GB, or
-  4 GB with ≤4 cores; Safari reports none) or a frame check: each CSS `animationstart` times
-  500ms of frames, and 3 janky windows of the last 6 switch to lite for a week (20 smooth in a
-  row end the check). `?motion=full|lite` pins it. Lite skips the View Transition, halves
+- **Motion tier** (`lib/motion.ts`, set on `<html data-motion>` before mount): `lite` on every
+  iPhone (any iOS browser; WebKit hides the model, and the full arrival is visibly slow even on an
+  iPhone 15/16), on Save-Data, ≤4 cores or ≤4 GB; `full` on desktops, iPads and capable Android
+  phones unless a frame check says otherwise: each CSS `animationstart` times 500ms of frames, a
+  window is janky past 1/5 frames missed, and 2 janky windows of the last 6 switch to lite for a
+  week (20 smooth in a row end the check). `?motion=full|lite` pins it. Lite skips the View Transition, halves
   confetti, stops `useScrollProgress`, and trims overlap in CSS (`:root[data-motion='lite']`
   blocks at the end of `styles.css` and in `ui.css`). **Rule for new motion:** animate
   `transform`/`opacity` only (fade a second layer in or out instead of animating a colour,

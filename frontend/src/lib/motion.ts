@@ -1,15 +1,18 @@
-// Motion tier. Every device gets the full choreography unless it shows it can't keep up; then
-// `<html data-motion="lite">` trims what runs at once (styles.css and ui.css, "Motion tier:
-// lite") and the JS effects scale down (no View Transition, a smaller confetti burst, no
-// scroll-linked landing motion). Nothing changes on a device that holds its frame rate.
+// Motion tier. Desktops, iPads and capable Android phones get the full choreography unless they
+// show they can't keep up; then `<html data-motion="lite">` trims what runs at once (styles.css
+// and ui.css, "Motion tier: lite") and the JS effects scale down (no View Transition, a smaller
+// confetti burst, no scroll-linked landing motion).
 //
 // Two ways in:
-// - Static signals, read once at boot, for phones that are plainly small: Save-Data, two or
-//   fewer cores, or Chromium's deviceMemory of 2 GB or less (4 GB with four or fewer cores).
-//   Safari reports none of these, so iPhones only ever go lite by the frame check below.
+// - Static signals, read once at boot:
+//   - Every iPhone. Mobile Safari composites the full arrival (a View Transition plus a dozen
+//     sheets, slips and stamps at 3x) visibly slower than it runs elsewhere, even on an iPhone
+//     15 or 16, and WebKit hides the model, cores and memory, so a newer Pro can't be told apart
+//     from the phones that struggle. iPads and Macs report as Macs and stay full.
+//   - Save-Data, four or fewer cores, or Chromium's deviceMemory of 4 GB or less.
 // - The frame check: when a CSS animation starts, frames are timed for a short window. A
-//   window counts as janky when more than a third of its frames were missed against the
-//   screen's own cadence. Three janky windows out of the last six switch the tier to lite,
+//   window counts as janky when more than a fifth of its frames were missed against the
+//   screen's own cadence. Two janky windows out of the last six switch the tier to lite,
 //   remembered for a week (a hot or Low Power phone recovers). Twenty smooth windows in a row
 //   end the check, so a fast device stops paying for it.
 //
@@ -19,6 +22,9 @@ export type MotionTier = 'full' | 'lite'
 
 const KEY = 'gracie_motion'
 const LITE_FOR_MS = 7 * 24 * 60 * 60 * 1000
+
+/** An iPhone (or iPod), in any iOS browser: they all run WebKit and say so in the user agent. */
+export const isIPhone = (ua: string) => /\b(iPhone|iPod)\b/.test(ua)
 
 type Nav = Navigator & {
   deviceMemory?: number
@@ -31,11 +37,11 @@ export function staticTier(
 ): MotionTier {
   if (!nav) return 'full'
   if (nav.connection?.saveData) return 'lite'
+  if (isIPhone(nav.userAgent ?? '')) return 'lite'
   const cores = nav.hardwareConcurrency ?? 0
   const mem = nav.deviceMemory ?? 0
-  if (cores > 0 && cores <= 2) return 'lite'
-  if (mem > 0 && mem <= 2) return 'lite'
-  if (mem > 0 && mem <= 4 && cores > 0 && cores <= 4) return 'lite'
+  if (cores > 0 && cores <= 4) return 'lite'
+  if (mem > 0 && mem <= 4) return 'lite'
   return 'full'
 }
 
@@ -85,10 +91,10 @@ export function missedShare(deltas: number[]): number {
   return missed / (missed + deltas.length)
 }
 
-export const JANK_SHARE = 1 / 3
+export const JANK_SHARE = 1 / 5
 const WINDOW_MS = 500
 const RECENT = 6
-const JANKY_TO_LITE = 3
+const JANKY_TO_LITE = 2
 const SMOOTH_TO_STOP = 20
 
 /** Keeps the last few windows and decides. Pure, so it can be tested without frames. */
