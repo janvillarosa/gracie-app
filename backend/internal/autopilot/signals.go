@@ -104,6 +104,8 @@ type Snapshot struct {
 type Ranked struct {
 	Candidate
 	DueInDays int
+	// Basis is which bar picked it for assist (empty at the other horizons).
+	Basis Basis
 }
 
 // pauseWindow is how far back the pause rule looks for ignores in a row.
@@ -165,30 +167,25 @@ func Gather(ctx context.Context, sig Signals, q Query, p Policy) (Snapshot, erro
 	if err != nil {
 		return s, err
 	}
-	assist := q.Horizon == HorizonRunAfterNext
-	for _, r := range Rank(cands, q.ListID, q.Horizon, onList, q.Now, p) {
-		// The slip stops reading once it has enough; assist judges every candidate by its run fit,
-		// then Plan keeps the most needed.
-		if !assist && q.Limit > 0 && len(s.Open) >= q.Limit {
-			break
-		}
-		evs, err := sig.KeyEvents(ctx, q.RoomID, r.Key)
-		if err != nil {
+	read := func(key string) ([]KeyEvent, error) { return sig.KeyEvents(ctx, q.RoomID, key) }
+	if q.Horizon == HorizonRunAfterNext {
+		if s.Open, err = AssistOpen(cands, q.ListID, onList, *s.Run, q.Now, s.Spans, p, read); err != nil {
 			return s, err
 		}
-		if !CycleOpen(r, evs, q.Horizon) {
-			continue
-		}
-		if assist {
-			var ok bool
-			if r, ok = Assess(r, evs, *s.Run, s.Spans); !ok {
-				continue
+	} else {
+		for _, r := range Rank(cands, q.ListID, q.Horizon, onList, q.Now, p) {
+			// The slip stops reading once it has enough.
+			if q.Limit > 0 && len(s.Open) >= q.Limit {
+				break
+			}
+			evs, err := read(r.Key)
+			if err != nil {
+				return s, err
+			}
+			if CycleOpen(r, evs, q.Horizon) {
+				s.Open = append(s.Open, r)
 			}
 		}
-		s.Open = append(s.Open, r)
-	}
-	if assist {
-		s.Open = BestOfLookAlikes(s.Open)
 	}
 	if len(s.Open) == 0 {
 		return s, nil

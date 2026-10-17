@@ -12,7 +12,10 @@ Plan: `docs/superpowers/plans/2026-10-17-autopilot-engine.md` (v4, with diagrams
 |---|---|
 | `off` | Nothing is proposed or done. |
 | `suggest` | **The default.** Proposes only: a slip someone taps to accept. Nothing changes until a person acts. Exactly today's smart suggestions. |
-| `assist` | Puts things on lists by itself, before the shop: in-app and reversible, each marked, with a reason and Undo. What it is less sure about stays a suggestion. It never acts outside Bauhouse. |
+| `assist` | Puts things on lists by itself, before the shop: in-app and reversible, each marked, with a reason and Undo. **It never suggests:** if something is good enough to suggest, assist adds it. It never acts outside Bauhouse. |
+
+**The modes do not mix.** A house is in exactly one, and only Suggest shows suggestions: on assist the
+suggestions endpoint answers with nothing and the List page shows only the autopilot slip.
 
 Full autopilot (buying, booking, messaging for the house) is **not a mode**: it needs a new mode and the
 house's explicit consent. `autopilot.Effect` has only in-app values and the executor refuses anything else
@@ -40,14 +43,17 @@ _Backend paths are relative to `backend/`; packages live under `backend/internal
   (`run_after_next`). `services/autopilot_signals.go` implements `Signals` over `Reader.Upcoming` (now and
   run mode, unchanged), `Reader.NeedsBefore` (assist; its odds are `predict.NeedBy`), `Reader.RunPlan`,
   `services.AwayCalendar` (a house is away only when every member is), the raw events and the live list.
-- **Two independent bars** (`autopilot.DefaultPolicy`, set by the eval): a **suggestion** is judged by its add
-  forecast, `Forecast.Confident` (score ≥ 0.65, CV ≤ 0.5). **Assist** is judged by the thing's **run fit**
+- **Two bars** (`autopilot.DefaultPolicy`, set by the eval). The **suggest bar** is the add forecast,
+  `Forecast.Confident` (score ≥ 0.65, CV ≤ 0.5). The **run-fit bar** is the thing's **run fit**
   (`FitRun`, applied by `Assess` on the assist horizon from its own check-offs): run score ≥ 0.50 (a Wilson
   lower bound over the last 12 cycles that landed in the run their rhythm pointed to, ± half a run interval)
   **and** need ≥ 0.60 (the chance it runs out by this run, given it was not bought since; 1 when it is
   overdue by less than two rhythms). Assist asks "will it be bought in this run?", not "when will someone
-  add it?". What assist does not apply but clears the suggest bar stays a suggestion. Look-alike spellings
-  are each judged, then the most needed is kept (`BestOfLookAlikes`).
+  add it?". Suggest mode uses only the suggest bar. **Assist adds what either bar picks** (`AssistOpen`):
+  first what Suggest would show in run mode now (a confident forecast whose window opens within a run
+  interval; `Basis` forecast), then anything else whose run fit clears the run-fit bar (`Basis` run), one name
+  per look-alike cluster. `Decide` in assist checks each proposal against the bar of its `Basis` and never
+  returns Suggest.
 - **Ticker** (`TickOnce`, every `AUTOPILOT_TICK_EVERY`, default 15m): takes the `autopilot_state` lease, visits
   houses that stored `assist` (re-reading the mode per house), and for each live list whose next run starts
   within `AUTOPILOT_LEAD` (default 18h), has not started, and is not while the house is away, plans and
@@ -79,18 +85,22 @@ _Backend paths are relative to `backend/`; packages live under `backend/internal
   is a normal `item.checked`.
 - **Suggestions stay stateless; only applied actions are stored**, because "did we already add this?" must
   be exact and the recorder may drop events.
-- **Suggest mode is today's suggestions** (the ported suggestion suite and `TestSuggestionsParityAcrossModes`).
+- **Suggest mode is today's suggestions** (the ported suggestion suite), and **only suggest mode suggests**
+  (`TestSuggestionsOnlyInSuggestMode`, `TestDecideModesDoNotMix`). If it is good enough to suggest, assist adds
+  it (`TestAssistAddsWhatWouldBeSuggested`, `TestAssistPicksByEitherBar`).
 - **Never external** (`TestExecutorRefusesExternalEffects`).
 
 ## Eval gate
 
 `go run ./cmd/suggest-eval autopilot -synthetic -away-from-trips` replays the golden households (and, without
 `-synthetic`, a database) at every past run minus the lead, through the same forecasts, `NeedBy` and planner.
-**Ship bar:** precision ≥ 85%, removals ≤ 1 per house-week and **F1 ≥ 70%** (precision × open recall, harmonic
-mean; `replay.F1Goal`). Pinned by `TestGoldenAssistMeetsGate`, `TestGoldenAssistF1Floor` (floor 0.77, raised
-as changes lift it, never lowered) and `TestHoldOutSeedsMeetGoal` (five households seeds the bar was not tuned
-on). 2026-10-17: 97.8% precision, 64.4% open recall, **F1 77.7%**, 0.01 removals per house-week; hold-out F1
-76.7–78.9%. See `docs/superpowers/qa/autopilot-benchmark-2026-10-17.md`.
+**Ship bar:** precision ≥ 75% (`replay.PrecisionGate`), removals ≤ 1 per house-week and **F1 ≥ 70%** (precision ×
+open recall, harmonic mean; `replay.F1Goal`). Pinned by `TestGoldenAssistMeetsGate`, `TestGoldenAssistF1Floor`
+(floor 0.76) and `TestHoldOutSeedsMeetGoal` (five households seeds the bar was not tuned on). 2026-10-17, with
+both bars: 83.9% precision, 69.6% open recall, **F1 76.1%**, 0.07 removals per house-week; hold-out F1
+75.3–80.8%, precision 79.5–89.2%. (The run-fit bar alone scored 97.8% / 64.4% / 77.7%, but then what it did not
+add was suggested, so the modes mixed; Jan chose exclusive modes, trading precision for open recall.) See
+`docs/superpowers/qa/autopilot-benchmark-2026-10-17.md`.
 
 ## Frontend
 
@@ -106,5 +116,6 @@ _Frontend paths are relative to `frontend/src/`._
   (`reasonText`: "You buy it about every 9 days"). Once per planned run `AutopilotSlip` reads "Added 3 for
   Saturday" (`addedLine`) with Undo all (one undo per action) and Got it; it folds away on Got it or a successful Undo all, and the
   undone rows leave only after it has; the run it was closed for is kept
-  in `localStorage` `gracie_autopilot_seen_<listId>`. Suggest mode keeps today's suggestion slip unchanged.
+  in `localStorage` `gracie_autopilot_seen_<listId>`. On assist the page never asks for suggestions (it waits
+  for the House's mode first), so the two slips never stack. Suggest mode keeps today's suggestion slip unchanged.
 - The mock (`VITE_MOCK_TRIPS=1`) starts on assist with three autopilot items; `?autopilot=suggest|off`.

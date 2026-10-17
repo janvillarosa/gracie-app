@@ -82,7 +82,7 @@ Full behavior lives in [docs/features/](../docs/features/README.md). The rules y
   exception is the autopilot action log: only **applied** (assist) actions are stored, because "did we already
   add this?" must be exact.
 - **Autopilot** ([autopilot.md](../docs/features/autopilot.md)): the mode is a house setting (`off|suggest|assist`,
-  no server ceiling). `internal/autopilot` is pure; `AutopilotService` is the only service for suggestions,
+  no server ceiling). The modes do not mix: only suggest suggests, and assist adds what either bar picks. `internal/autopilot` is pure; `AutopilotService` is the only service for suggestions,
   the run hint and assist. Every effect is in-app (`autopilot.Effect`); anything external needs a new mode and
   consent. Autopilot adds are `RoleAutomated`, never requests, and act as `system:autopilot`.
 

@@ -98,7 +98,7 @@ func (s *AutopilotService) tickHouse(ctx context.Context, roomID string, now tim
 		}
 		for _, pr := range autopilot.Plan(snap, s.policy) {
 			if autopilot.Decide(autopilot.ModeAssist, pr, s.policy) != autopilot.Apply {
-				continue // between the bars: the slip offers it instead
+				continue // neither bar cleared, or not in-app
 			}
 			a, err := s.Apply(ctx, roomID, pr)
 			if err != nil {

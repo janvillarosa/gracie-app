@@ -8,7 +8,13 @@
   assist now judges each thing by its **run fit** (`autopilot.FitRun`/`Assess`: run score and need from its own
   check-offs against the run rhythm), the assist and suggest bars are independent in `Decide`, look-alikes are
   judged before they are merged, and the bar is run score ≥ 0.50, need ≥ 0.60. F1 52.6% → 77.7% at 97.8%
-  precision; hold-out seeds 76.7–78.9%. Diagram 4 shows the new `Decide`.
+  precision; hold-out seeds 76.7–78.9%.
+- **Exclusive modes (2026-10-17, Jan):** a mode cannot be both. Assist never suggests: "if it's good enough to
+  suggest, it should be applied in assist mode". Assist adds what either bar picks (`AssistOpen`: what Suggest
+  would show, then run-fit picks; `Proposal.Basis`), `Decide` in assist never returns Suggest, the suggestions
+  endpoint answers with nothing on assist, and the List page never asks for suggestions there. F1 77.7% → 76.1%
+  (precision 83.9%, open recall 69.6%); the precision gate is 75%, the F1 floor 0.76. Diagrams 4 and 11 show it;
+  the bullets below about falling back to a suggestion are superseded.
 - **As built (2026-10-17):** deleting an item already checked off is tidying, not a miss, so only an *applied*
   action can become removed (diagrams 7 and 8). An unchecked item expires 30 h after its run started. The
   benchmark (`docs/superpowers/qa/autopilot-benchmark-2026-10-17.md`) passes the gate at the default bar,
@@ -280,14 +286,18 @@ classDiagram
 flowchart TD
     P([Proposal]) --> M{House mode}
     M -- off --> DROP[Drop]
-    M -- suggest --> B1{"score ≥ 0.65<br/>and CV ≤ 0.5?"}
+    M -- suggest --> B1{"score ≥ 0.65?"}
     M -- assist --> E{"Effect is in-app?"}
     B1 -- no --> DROP
     B1 -- yes --> SUG[Suggest]
-    E -- no --> B1
-    E -- yes --> B3{"run score ≥ 0.50<br/>and need ≥ 0.60?"}
-    B3 -- no --> B1
-    B3 -- yes --> APPLY[Apply]
+    E -- no --> DROP
+    E -- yes --> BASIS{"Picked by?"}
+    BASIS -- "forecast<br/>(would be suggested)" --> B2{"score ≥ 0.65?"}
+    BASIS -- run fit --> B3{"run score ≥ 0.50<br/>and need ≥ 0.60?"}
+    B2 -- yes --> APPLY[Apply]
+    B3 -- yes --> APPLY
+    B2 -- no --> DROP
+    B3 -- no --> DROP
 ```
 
 ### 5. Planning one list (`Plan`: the shared candidate filters)
@@ -501,7 +511,7 @@ flowchart TD
     AP --> SLIP{"Applied actions for the<br/>next run, not seen yet?"}
     SLIP -- yes --> S["Slip: 'Added 4 for Saturday'<br/>Undo all"]
     S --> UA["POST .../undo per action<br/>rows leave"]
-    AP --> FB["Suggestions between the bars<br/>(same items) use today's slip"]
+    AP --> FB["No suggestion slip on assist:<br/>what would be suggested is added"]
 ```
 
 ---

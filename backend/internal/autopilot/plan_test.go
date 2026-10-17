@@ -31,11 +31,12 @@ func keys(prs []autopilot.Proposal) []string {
 	return out
 }
 
-func TestDecideModesByBand(t *testing.T) {
+func TestDecideModesDoNotMix(t *testing.T) {
 	p := autopilot.DefaultPolicy
-	band := func(score, need float64) autopilot.Proposal {
-		return autopilot.Proposal{Confidence: score, Need: need, Effect: autopilot.EffectAddToList}
+	pick := func(b autopilot.Basis, score, need float64) autopilot.Proposal {
+		return autopilot.Proposal{Basis: b, Confidence: score, Need: need, Effect: autopilot.EffectAddToList}
 	}
+	fc, run := autopilot.BasisForecast, autopilot.BasisRun
 	off, sug, ast := autopilot.ModeOff, autopilot.ModeSuggest, autopilot.ModeAssist
 	type want = map[autopilot.Mode]autopilot.Disposition
 	cases := []struct {
@@ -43,11 +44,11 @@ func TestDecideModesByBand(t *testing.T) {
 		pr   autopilot.Proposal
 		want want
 	}{
-		{"below both bars", band(0.3, 0.99), want{off: autopilot.Drop, sug: autopilot.Drop, ast: autopilot.Drop}},
-		{"assist bar only (run fit), not the suggest bar", band(0.55, 0.9), want{off: autopilot.Drop, sug: autopilot.Drop, ast: autopilot.Apply}},
-		{"both bars", band(0.85, 0.75), want{off: autopilot.Drop, sug: autopilot.Suggest, ast: autopilot.Apply}},
-		{"suggest bar, need too low for assist", band(0.95, 0.4), want{off: autopilot.Drop, sug: autopilot.Suggest, ast: autopilot.Suggest}},
-		{"external effect never applies", autopilot.Proposal{Confidence: 0.99, Need: 0.99, Effect: "buy"}, want{off: autopilot.Drop, sug: autopilot.Suggest, ast: autopilot.Suggest}},
+		{"forecast below the suggest bar", pick(fc, 0.5, 0.99), want{off: autopilot.Drop, sug: autopilot.Drop, ast: autopilot.Drop}},
+		{"good enough to suggest is good enough to add", pick(fc, 0.7, 0.2), want{off: autopilot.Drop, sug: autopilot.Suggest, ast: autopilot.Apply}},
+		{"run fit clears the run-fit bar", pick(run, 0.55, 0.9), want{off: autopilot.Drop, ast: autopilot.Apply}},
+		{"run fit, need too low", pick(run, 0.95, 0.4), want{off: autopilot.Drop, ast: autopilot.Drop}},
+		{"external effect never applies", autopilot.Proposal{Basis: fc, Confidence: 0.99, Need: 0.99, Effect: "buy"}, want{off: autopilot.Drop, sug: autopilot.Suggest, ast: autopilot.Drop}},
 	}
 	for _, c := range cases {
 		for m, want := range c.want {
@@ -240,5 +241,34 @@ func TestPlanWaitsForTheLead(t *testing.T) {
 	q.Now = rp.Next.Start.Add(time.Minute) // the run is under way: too late to add
 	if s, _ := autopilot.Gather(context.Background(), f, q, autopilot.DefaultPolicy); !s.NotYet {
 		t.Fatal("planned for a run already under way")
+	}
+}
+
+// Assist adds what either bar picks: what Suggest would show (a confident forecast), then anything
+// whose run fit clears the run-fit bar, one name per look-alike cluster.
+func TestAssistPicksByEitherBar(t *testing.T) {
+	shaky := func(key string) autopilot.Candidate {
+		c := autopilottest.Weekly(key, list, now)
+		c.Score, c.CV = 0.3, 0.9
+		return c
+	}
+	weekly := autopilottest.Buys(7*24*time.Hour, 12, now.Add(-6*24*time.Hour)) // due about now
+	f := &autopilottest.Signals{Plan: runPlan(), Cands: []autopilot.Candidate{
+		autopilottest.Weekly("yogurt", list, now), // would be suggested; no purchases to fit
+		shaky("flour"),   // would not be suggested, but fits the runs
+		shaky("yogurts"), // fits the runs, but a look-alike of yogurt is already picked
+		shaky("cake"),    // neither
+	}, Events: map[string][]autopilot.KeyEvent{"flour": weekly, "yogurts": weekly}}
+	prs := autopilot.Plan(gather(t, f, autopilot.HorizonRunAfterNext, 0), autopilot.DefaultPolicy)
+	basis := map[string]autopilot.Basis{}
+	for _, pr := range prs {
+		basis[pr.Key] = pr.Basis
+		if autopilot.Decide(autopilot.ModeAssist, pr, autopilot.DefaultPolicy) != autopilot.Apply {
+			t.Errorf("%s picked but not applied: %+v", pr.Key, pr)
+		}
+	}
+	want := map[string]autopilot.Basis{"yogurt": autopilot.BasisForecast, "flour": autopilot.BasisRun}
+	if len(basis) != len(want) || basis["yogurt"] != want["yogurt"] || basis["flour"] != want["flour"] {
+		t.Fatalf("picks: %v, want %v", basis, want)
 	}
 }

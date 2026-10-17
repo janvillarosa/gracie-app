@@ -176,20 +176,21 @@ func TestViewNeverApplies(t *testing.T) {
 	}
 }
 
-// Between the bars assist adds nothing; the same item is offered as a suggestion instead.
-func TestAssistFallbackIsSameItem(t *testing.T) {
+// If it is good enough to suggest, assist adds it: a thing with too short a run record for the
+// run-fit bar, but a confident add forecast, is added, and nothing is left to suggest.
+func TestAssistAddsWhatWouldBeSuggested(t *testing.T) {
 	r := assistRig(t)
 	ctx := context.Background()
 	r.history("item.added", "yogurt", r.list, 56, 49, 42, 35, 28, 21, 14, 7) // a short record: score ~0.7
 	r.fold()
 	r.setRun(10 * time.Hour)
 	_ = r.m.Rooms.SetAutopilotMode(ctx, r.roomID, r.user.UserID, "assist", r.now)
-	if n := r.tick(); n != 0 {
-		t.Fatalf("applied below the assist bar: %d", n)
+	if n := r.tick(); n != 1 {
+		t.Fatalf("added %d, want the suggestion's thing", n)
 	}
 	v, err := r.svc.View(ctx, r.user, r.roomID, r.list)
-	if err != nil || len(v.Suggestions) != 1 || v.Suggestions[0].Key != "yogurt" {
-		t.Fatalf("fallback: %+v %v", v, err)
+	if err != nil || len(v.Suggestions) != 0 || len(v.Applied) != 1 || v.Applied[0].Key != "yogurt" {
+		t.Fatalf("view: %+v %v", v, err)
 	}
 }
 

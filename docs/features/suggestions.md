@@ -54,7 +54,7 @@ the analytics aggregates and the live list; the only state is `Room.SuggestionsO
   week ±1 holds ≥ 50% of the `run_how` peak), 3 (`unknown`), 4 (`unlikely`: < 10% of the peak); `idle_end_min` =
   clamp(4 × `run_gap_sec`, 15, 45 min); `burst_sec` = clamp(`run_gap_sec`/5, 5, 30 s); `typical` from 5 runs. Own
   rhythm at ≥ 3 runs, else the house's. Analytics off or the house setting off: the default 3 / 45 / 15.
-- **House setting:** the autopilot mode (`off` hides suggestions; `suggest` and `assist` show them). See
+- **House setting:** the autopilot mode (only `suggest` shows suggestions; `off` shows nothing and `assist` adds what it would have suggested instead). See
   [autopilot.md](autopilot.md). `suggestions_off` is still accepted and returned for one release.
 - **Deprecated routes:** `GET .../suggestions`, `POST .../suggestions/ignore` and `GET .../run-hint` keep their
   paths and answers but send `Deprecation: true` with a successor link to `GET .../autopilot`.

@@ -17,7 +17,7 @@ func Plan(s Snapshot, p Policy) []Proposal {
 	for _, r := range s.Open {
 		every := max(1, int(math.Round(r.EveryDays)))
 		pr := Proposal{
-			Kind: KindRestock, ListID: s.ListID, Key: r.Key, Display: capitalizeFirst(r.Key), Category: r.Category,
+			Kind: KindRestock, Basis: r.Basis, ListID: s.ListID, Key: r.Key, Display: capitalizeFirst(r.Key), Category: r.Category,
 			Confidence: r.Score, Need: r.NeedBy, EveryDays: every, DueInDays: r.DueInDays,
 			Reason: Reason{Code: ReasonEveryDays, Params: map[string]any{"days": every}},
 			Cycle:  r.LastAt.UTC().Format("2006-01-02"), Effect: EffectAddToList,

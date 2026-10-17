@@ -56,6 +56,15 @@ const (
 	HorizonRunAfterNext Horizon = "run_after_next" // what is needed before the run after next (assist)
 )
 
+// Basis is which bar picked a proposal: a confident add forecast (what Suggest would show) or the
+// thing's fit to the house's runs (FitRun). Assist adds what either bar picks.
+type Basis string
+
+const (
+	BasisForecast Basis = "forecast" // the suggest bar: today's Forecast.Confident
+	BasisRun      Basis = "run"      // the run-fit bar: Policy.AssistMinScore and AssistMinNeed
+)
+
 // Reason says why, in data the app turns into words ("You buy it about every 9 days").
 type Reason struct {
 	Code   string         `json:"code"`
@@ -74,8 +83,10 @@ type Proposal struct {
 	Quantity string
 	Unit     string
 	Category string
-	// Confidence is the forecast's backtested score; Need the probability the thing is needed
-	// before the horizon (0 for the "now" horizons, which do not ask).
+	// Confidence is the score of the bar that picked it (Basis): the forecast's backtested score, or
+	// the run fit's. Need is the probability the thing is needed before the horizon (0 for the
+	// "now" horizons, which do not ask).
+	Basis      Basis
 	Confidence float64
 	Need       float64
 	EveryDays  int

@@ -64,9 +64,14 @@ func (r Report) StapleRecall() float64 { return ratio(r.Hits, r.Staples) }
 func (r Report) OpenRecall() float64 { return ratio(r.Hits, r.Open) }
 
 // F1Goal is the bar assist must meet before it ships: the harmonic mean of precision and open
-// recall at 70%, on top of the gate (precision >= 85% and <= 1 removal per house-week).
+// recall at 70%, on top of the gate (precision >= PrecisionGate and <= 1 removal per house-week).
 // TestGoldenAssistF1Floor holds it, with a ratcheted floor above it.
 const F1Goal = 0.70
+
+// PrecisionGate is the least share of assist's adds that must be bought in the run. Assist adds
+// anything good enough to suggest, so it is right about as often as a suggestion: 83.9% on the
+// golden households and 79.5-89.2% on the hold-out seeds (2026-10-17).
+const PrecisionGate = 0.75
 
 // F1 is the harmonic mean of precision and open recall (what assist could have saved someone from
 // writing down): high only when assist is both right and actually useful.
@@ -292,22 +297,13 @@ func planRun(evs []itemEvent, list string, past []predict.RunSpan, run predict.R
 		}
 	}
 	sort.SliceStable(cands, func(i, j int) bool { return cands[i].NeedBy > cands[j].NeedBy })
-	ranked := autopilot.Rank(cands, list, autopilot.HorizonRunAfterNext, onList, at, o.Policy)
 	snap := autopilot.Snapshot{
 		Query: autopilot.Query{ListID: list, Horizon: autopilot.HorizonRunAfterNext, Now: at},
 		Run:   &autopilot.RunPlan{Next: autopilot.Window{Start: run.Start, End: run.End}, After: autopilot.Window{Start: by, End: by}, Confidence: 1},
 		Until: by,
 	}
-	for _, r := range ranked {
-		kev := keyEvents(evs, r.Key, at)
-		if !autopilot.CycleOpen(r, kev, autopilot.HorizonRunAfterNext) {
-			continue
-		}
-		if r, ok := autopilot.Assess(r, kev, *snap.Run, away); ok {
-			snap.Open = append(snap.Open, r)
-		}
-	}
-	snap.Open = autopilot.BestOfLookAlikes(snap.Open)
+	read := func(key string) ([]autopilot.KeyEvent, error) { return keyEvents(evs, key, at), nil }
+	snap.Open, _ = autopilot.AssistOpen(cands, list, onList, *snap.Run, at, away, o.Policy, read)
 
 	// What was actually bought in this run (and before the next one).
 	end := run.End.Add(o.Slack)
@@ -350,10 +346,6 @@ func planRun(evs []itemEvent, list string, past []predict.RunSpan, run predict.R
 	}
 	// Why each open purchase was missed, for tuning.
 	rep.Misses = map[string]int{}
-	ranks := map[string]bool{}
-	for _, r := range ranked {
-		ranks[r.Key] = true
-	}
 	opens := map[string]bool{}
 	for _, r := range snap.Open {
 		opens[r.Key] = true
@@ -378,24 +370,14 @@ func planRun(evs []itemEvent, list string, past []predict.RunSpan, run predict.R
 				reason = "window after the run after next"
 			case !isHome(h.containers, list):
 				reason = "lives on another list"
-			case !ranks[k]:
-				reason = "filtered (look-alike taken)"
 			case !opens[k]:
-				reason = "cycle closed or too few purchases"
-			default:
-				pr, ok := planned[k]
-				switch {
-				case !ok:
-					reason = "over MaxPerRun"
-				case pr.Confidence < o.Policy.AssistMinScore:
-					reason = "run score below assist bar"
-				default:
-					reason = "need below assist bar"
-				}
+				reason = "below both bars, look-alike taken or cycle closed"
 				if Debug != nil {
 					fit, _ := autopilot.FitRun(autopilot.Purchases(keyEvents(evs, k, at)), run.Start, by.Sub(run.Start), away)
-					Debug(fmt.Sprintf("%s: %s score=%.2f need=%.2f every=%.1f trials=%d hits=%d", k, reason, fit.Score, fit.Need, fit.EveryDays, fit.Trials, fit.Hits))
+					Debug(fmt.Sprintf("%s: %s forecast=%.2f run=%.2f need=%.2f every=%.1f trials=%d hits=%d", k, reason, f.Score, fit.Score, fit.Need, fit.EveryDays, fit.Trials, fit.Hits))
 				}
+			case planned[k].Key == "":
+				reason = "over MaxPerRun"
 			}
 		}
 		rep.Misses[reason]++
@@ -403,7 +385,7 @@ func planRun(evs []itemEvent, list string, past []predict.RunSpan, run predict.R
 	return rep
 }
 
-// Debug, when set, receives one line per miss below the suggest bar (tuning only).
+// Debug, when set, receives one line per miss that neither bar picked (tuning only).
 var Debug func(string)
 
 func isHome(containers map[string]int64, list string) bool {

@@ -147,30 +147,58 @@ func Assess(r Ranked, evs []KeyEvent, run RunPlan, away predict.Away) (Ranked, b
 	return r, true
 }
 
-// BestOfLookAlikes keeps one name per look-alike cluster ("yogurt", "yogurts"): the one most surely
-// needed, then the best run fit. Order is otherwise kept.
-func BestOfLookAlikes(rs []Ranked) []Ranked {
-	better := func(a, b Ranked) bool {
-		if a.NeedBy != b.NeedBy {
-			return a.NeedBy > b.NeedBy
-		}
-		return a.Score > b.Score
-	}
-	out := make([]Ranked, 0, len(rs))
-	for _, r := range rs {
-		dup := -1
-		for i, o := range out {
-			if likeAny(r.Key, []string{o.Key}) {
-				dup = i
-				break
-			}
-		}
-		switch {
-		case dup < 0:
-			out = append(out, r)
-		case better(r, out[dup]):
-			out[dup] = r
+// AssistOpen picks what assist adds for the house's next run, from the list's candidates for the
+// run after next (most needed first). If it is good enough to suggest, assist adds it, so it takes
+// two picks, one name per look-alike cluster:
+//
+//  1. Forecast picks: what Suggest would show in run mode now (a confident add forecast whose
+//     window opens within a run interval, home on the list, still open this cycle).
+//  2. Run picks: anything else whose run fit (Assess) clears the run-fit bar.
+//
+// read returns a thing's raw events (fresher than the rollup). It is pure apart from read.
+func AssistOpen(cands []Candidate, listID string, onList []string, run RunPlan, now time.Time, away predict.Away, p Policy, read func(key string) ([]KeyEvent, error)) ([]Ranked, error) {
+	var out []Ranked
+	var taken []string
+	interval := run.After.Start.Sub(run.Next.Start)
+	until := now.Add(min(interval, maxRunLookahead))
+	soon := make([]Candidate, 0, len(cands))
+	for _, c := range cands {
+		if !c.OpensAt.After(until) {
+			soon = append(soon, c)
 		}
 	}
-	return out
+	// Most confident first, like the slip's candidates, so a look-alike cluster keeps its best.
+	sort.SliceStable(soon, func(i, j int) bool { return soon[i].Score > soon[j].Score })
+	for _, r := range Rank(soon, listID, HorizonNextRun, onList, now, p) {
+		evs, err := read(r.Key)
+		if err != nil {
+			return nil, err
+		}
+		if !CycleOpen(r, evs, HorizonNextRun) {
+			continue
+		}
+		r.Basis = BasisForecast
+		out = append(out, r)
+		taken = append(taken, r.Key)
+	}
+	for _, r := range Rank(cands, listID, HorizonRunAfterNext, onList, now, p) {
+		if likeAny(r.Key, taken) {
+			continue
+		}
+		evs, err := read(r.Key)
+		if err != nil {
+			return nil, err
+		}
+		if !CycleOpen(r, evs, HorizonRunAfterNext) {
+			continue
+		}
+		r, ok := Assess(r, evs, run, away)
+		if !ok || r.Score < p.AssistMinScore || r.NeedBy < p.AssistMinNeed {
+			continue
+		}
+		r.Basis = BasisRun
+		out = append(out, r)
+		taken = append(taken, r.Key)
+	}
+	return out, nil
 }

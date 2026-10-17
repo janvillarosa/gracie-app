@@ -395,7 +395,7 @@ func personas(w households.World) map[string]string {
 }
 
 // autopilotReport replays assist mode (internal/autopilot/replay) and sweeps its bars. The gate
-// for making assist available: precision >= 0.85 and at most 1 removal per house-week.
+// for making assist available: precision >= replay.PrecisionGate and at most 1 removal per house-week.
 func autopilotReport(evs []analytics.Event, away map[string]predict.Away, names map[string]string) {
 	o := replay.DefaultOptions()
 	o.Away = away
@@ -405,8 +405,8 @@ func autopilotReport(evs []analytics.Event, away map[string]predict.Away, names 
 	fmt.Printf("  precision %.1f%%  recall %.1f%%  open recall %.1f%%  removals %.2f per house-week\n",
 		100*total.Precision(), 100*total.Recall(), 100*total.OpenRecall(), total.RemovalsPerWeek())
 	fmt.Printf("  F1 (precision x open recall) %.1f%%  goal %.0f%%\n", 100*total.F1(), 100*replay.F1Goal)
-	gate := total.Precision() >= 0.85 && total.RemovalsPerWeek() <= 1 && total.F1() >= replay.F1Goal
-	fmt.Printf("  gate (precision >= 85%%, removals <= 1/week, F1 >= %.0f%%): %v\n", 100*replay.F1Goal, map[bool]string{true: "PASS", false: "MISS"}[gate])
+	gate := total.Precision() >= replay.PrecisionGate && total.RemovalsPerWeek() <= 1 && total.F1() >= replay.F1Goal
+	fmt.Printf("  gate (precision >= %.0f%%, removals <= 1/week, F1 >= %.0f%%): %v\n", 100*replay.PrecisionGate, 100*replay.F1Goal, map[bool]string{true: "PASS", false: "MISS"}[gate])
 	fmt.Printf("  misses by reason: %v\n\n", total.Misses)
 	rooms := make([]string, 0, len(per))
 	for r := range per {

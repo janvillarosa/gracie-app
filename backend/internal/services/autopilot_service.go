@@ -144,8 +144,8 @@ func (s *AutopilotService) checkList(ctx context.Context, user *models.User, roo
 // Suggestions returns up to limit suggestions for a list, most confident first. during "run" widens
 // the window to what comes due before the house's next run on this list (open ones first, then
 // soonest); with no learned run rhythm for the list there is nothing to suggest in run mode. It is
-// the shared pipeline (Gather, Plan, Decide) at the "now" or "next_run" horizon, and never writes:
-// in assist mode what would be applied is shown too until the ticker applies it.
+// the shared pipeline (Gather, Plan, Decide) at the "now" or "next_run" horizon, and never writes.
+// Only suggest mode suggests: off shows nothing, and assist adds instead.
 func (s *AutopilotService) Suggestions(ctx context.Context, user *models.User, roomID, listID string, limit int, during string) ([]Suggestion, error) {
 	if !validDuring(during) {
 		return nil, derr.ErrBadRequest
@@ -156,7 +156,8 @@ func (s *AutopilotService) Suggestions(ctx context.Context, user *models.User, r
 	}
 	out := []Suggestion{}
 	mode := houseMode(room)
-	if !s.enabled() || mode == autopilot.ModeOff {
+	// The modes do not mix: on assist, what would be suggested is added instead (by the ticker).
+	if !s.enabled() || mode != autopilot.ModeSuggest {
 		return out, nil
 	}
 	h := autopilot.HorizonNow

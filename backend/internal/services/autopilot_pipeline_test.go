@@ -11,8 +11,9 @@ import (
 	"github.com/janvillarosa/gracie-app/backend/internal/autopilot"
 )
 
-// Suggest mode is today's suggestions; assist shows the same slip (only the ticker writes).
-func TestSuggestionsParityAcrossModes(t *testing.T) {
+// The modes do not mix: suggest mode is today's suggestions; off and assist suggest nothing (assist
+// adds instead, on the ticker).
+func TestSuggestionsOnlyInSuggestMode(t *testing.T) {
 	r := newSuggestRig(t, SuggestionsOn)
 	r.twoDue()
 	ctx := context.Background()
@@ -20,19 +21,19 @@ func TestSuggestionsParityAcrossModes(t *testing.T) {
 	if len(base) == 0 {
 		t.Fatal("fixture suggests nothing")
 	}
-	for _, mode := range []string{"suggest", "assist"} {
+	if err := r.m.Rooms.SetAutopilotMode(ctx, r.roomID, r.user.UserID, "suggest", r.now); err != nil {
+		t.Fatal(err)
+	}
+	if got := r.suggest(); !reflect.DeepEqual(got, base) {
+		t.Errorf("suggest: %+v, want %+v", got, base)
+	}
+	for _, mode := range []string{"assist", "off"} {
 		if err := r.m.Rooms.SetAutopilotMode(ctx, r.roomID, r.user.UserID, mode, r.now); err != nil {
 			t.Fatal(err)
 		}
-		if got := r.suggest(); !reflect.DeepEqual(got, base) {
-			t.Errorf("%s: %+v, want %+v", mode, got, base)
+		if got := r.suggest(); len(got) != 0 {
+			t.Errorf("%s: %+v", mode, got)
 		}
-	}
-	if err := r.m.Rooms.SetAutopilotMode(ctx, r.roomID, r.user.UserID, "off", r.now); err != nil {
-		t.Fatal(err)
-	}
-	if got := r.suggest(); len(got) != 0 {
-		t.Errorf("off: %+v", got)
 	}
 }
 
