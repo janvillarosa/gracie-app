@@ -70,6 +70,10 @@ Full behavior lives in [docs/features/](../docs/features/README.md). The rules y
 - **Analytics** ([analytics.md](../docs/features/analytics.md)): emit **after** the domain write
   succeeded, only on a real state change; the recorder never slows or fails a user write. No raw item
   text, notes, places or IPs in events. A rename is an `Alias`, never an edit of stored events.
+  `internal/analytics` and `analytics/predict` know no feature: they never import `trips`,
+  `services` or `models`. Features reach them only by registering events and through ports such as
+  `analytics.AwayCalendar` (implemented by `services.AwayCalendar`). Test against the golden
+  households (`internal/testutil/households`).
 - **Suggestions** ([suggestions.md](../docs/features/suggestions.md)): no suggestion state that is not
   derivable from events and aggregates; bump `analytics.ForecastVersion` when forecast logic changes.
 

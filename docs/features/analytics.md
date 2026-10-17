@@ -33,6 +33,40 @@ own events.
   `ANALYTICS_PROFILE_EVERY`) recomputes profiles for subjects the fold marked dirty. Both are safe
   to run on every instance. **Standalone Mongo has no transactions** (the Tx runner falls back to
   running without one), so exactly-once only holds on a replica set.
+- **Away calendar and home time (plan `2026-10-17-analytics-anticipation.md`):** trips reach analytics
+  only through the `AwayCalendar` port (`HouseAway` / `MemberAway`), implemented by
+  `services.AwayCalendar` (room members, the room's trips, the House zone = the first member's
+  last-seen zone) and wired with `Worker.WithAway` / `Reader.WithAway` (nil: nobody is ever away).
+  `predict.Away` is sorted away spans with home-time arithmetic (`HomeBetween`, `AddHome`,
+  `NextHome`). Forecasts are made on both clocks and keep **home time** only when it backtests
+  strictly better (`Forecast.Clock`, stored as `AddForecast.Clock = "home"`): things used up at home
+  pause while the House is away, but Houses that shop on a fixed day buy on the calendar, and home
+  time would read their 7/14-day gaps across a trip as irregular. Either way no suggestion window
+  opens while the House is away. Run rhythms (`BuildProfileAway`) use the House's spans for `h:`
+  profiles and the person's for `u:`. The worker asks the calendar once per room per fold tick.
+  `trip.away_changed` is registered with `RequeueRoom`: folding it counts nothing, dirties the
+  House profile and sets `intervals.v = 0` on that room's keys in the same transaction
+  (`RequeueRoomKeys`), so `RefreshStale` rebuilds only that House on the same tick.
+- **Anticipation reads:** `predict.NeedBy(forecast, t, away)` is the probability a thing is needed
+  before `t` (log-normal over the cadence, median the rhythm, spread from its CV, on the forecast's
+  clock; capped at 0.5 unless `Confident`). `Reader.NeedsBefore(room, "list:<id>", by, away, limit)`
+  ranks a list's things by it (one indexed query, `ForecastKeys`); `Reader.RunPlan(room,
+  "list:<id>", now)` is the next two runs (the second a run interval of home time later).
+  `KeyIntervals.Weekly` (`predict.DetectWeekly`: >= 4 occurrences, >= 80% on one local weekday,
+  median home gap 7 or 14 days ± 1) marks things that follow the calendar, such as bin day.
+  `KeyIntervals.LastBy` / `Turns` (completers newest first, max 8, real people only) feed
+  `predict.NextTurn` (strict alternation of the last four, else fewest of the last eight; "" when
+  unsure; people who left never returned).
+- **Quantity:** `item.added` carries `qty` (thousandths, 0-1,000,000) and `unit` (canonical enum,
+  `parse.AmountUnits`, `count` for a bare number) when `parse.ParseAmount` understands the item's
+  amount; otherwise neither (never typed text). Nothing reads them yet.
+- **Golden households:** `internal/testutil/households` is a seeded, deterministic year of ten
+  personas (weekend runs, bin rota, irregular top-ups, habit change, look-alikes and ignores,
+  frequent travellers, a new House, double taps, a big family, a monthly stocker) with per-key
+  expectations. `TestGoldenWorld` pins what the engine learns from it in
+  `analytics/testdata/world.golden.json` (rerun with `-update` and review the diff when a change is
+  intended); `TestGoldenWorldBehaves` asserts the intent. Use it for new analytics tests;
+  `suggest-eval backtest -synthetic [-away-from-trips]` replays it.
 - **Run shape:** each `ContainerRhythm` also stores `run_minutes`, `run_items` and `run_gap_sec` (medians over
   `predict.RunSpans`), which the run hint scales its thresholds by.
 - **Reads:** `analytics.Reader` and `GET /me/insights`, `GET /rooms/{id}/insights`,

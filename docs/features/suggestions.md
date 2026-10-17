@@ -30,6 +30,13 @@ the analytics aggregates and the live list; the only state is `Room.SuggestionsO
   minimum). The fold merges look-alikes' history into an item's add forecast and scales its score by
   `NameCertainty`; `ForList` keeps one name per cluster, treats a look-alike on the list as on it, and shows
   the most recent wording.
+- **Home time (ForecastVersion 3):** forecasts leave out the spans the whole House was away on trips
+  when that backtests better (`PredictAway`, see analytics.md), and no window opens while the House
+  is away, so a holiday neither stretches a rhythm nor leaves a burst of overdue suggestions on the
+  way home. Houses that never travel get byte-identical forecasts (golden files in
+  `analytics/predict/testdata`). `suggest-eval backtest -away-from-trips` replays in home time from
+  the House's trips; on the golden households: wall 562/609 hits (92.3%, 27 items), home 566/615
+  (92.0%, 28 items).
 - **Forecast version:** `analytics.ForecastVersion` is stamped on every `KeyIntervals`. **Bump it whenever the
   rhythm or add-forecast logic changes** (or after a backfill folded by older code): each fold tick then rebuilds
   every older forecast from stored history (`Worker.RefreshStale`, 500 per tick), no new events needed.
