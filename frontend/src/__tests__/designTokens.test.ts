@@ -172,3 +172,33 @@ describe('the app draws only with tokens', () => {
     ).toEqual([])
   })
 })
+
+describe('the desk under the browser bars', () => {
+  // Browsers tint their bars and overscroll with the flat canvas colour, never the grain, so the
+  // canvas and theme-color must be the desk's averaged tone or the bars read as a second grey.
+  const styles = read(join(SRC, 'styles.css'))
+  const tone = styles.match(/--desk-tone:\s*(#[0-9A-F]{6})/i)?.[1]
+
+  it('paints the canvas the desk tone and the grained desk as a fixed layer over it', () => {
+    expect(styles).toMatch(/\nhtml \{\n\s*background: var\(--desk-tone\);/)
+    expect(styles).toMatch(/body::before \{[^}]*background: var\(--desk-fill\);/)
+  })
+
+  it('tells the browser the same colour', () => {
+    expect(tone).toBeDefined()
+    const html = read(join(SRC, '..', 'index.html'))
+    expect(html).toContain(`<meta name="theme-color" content="${tone}" />`)
+    const manifest = JSON.parse(read(join(SRC, 'assets', 'site.webmanifest')))
+    expect(manifest.theme_color.toLowerCase()).toBe(tone?.toLowerCase())
+  })
+})
+
+describe('the suggestion slip', () => {
+  // It lies on the list's sheet, so it rests a hair above the page; a lift's ream and long drop
+  // would bleed over the rows below it.
+  it('rests as a slip, not a paper height', () => {
+    const rule = read(join(SRC, 'styles.css')).match(/\.suggestion-sheet \{[^}]*\}/)?.[0]
+    expect(rule).toContain('box-shadow: var(--slip-rest);')
+    expect(rule).not.toMatch(/--lift-\d/)
+  })
+})

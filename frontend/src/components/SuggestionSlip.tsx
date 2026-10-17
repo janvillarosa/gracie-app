@@ -1,6 +1,9 @@
 import { Plus, X } from '@phosphor-icons/react'
 import type { ListSuggestion } from '@api/types'
-import { Button } from '@components/ui'
+import { Button, useMedia } from '@components/ui'
+
+/** A narrow phone: the Add key goes round (a plus) so the name keeps the room. */
+export const NARROW_SLIP = '(max-width: 400px)'
 
 type Props = {
   suggestion: ListSuggestion
@@ -52,6 +55,7 @@ export function SuggestionSlip({ suggestion, onAdd, onIgnore }: Props) {
   const { description, quantity, unit } = suggestion
   const amount = [quantity, unit].filter(Boolean).join(' ')
   const label = amount ? `${description} (${amount})` : description
+  const narrow = useMedia(NARROW_SLIP)
   return (
     <li className="suggestion-row">
       <div className="suggestion-text">
@@ -62,12 +66,13 @@ export function SuggestionSlip({ suggestion, onAdd, onIgnore }: Props) {
       </div>
       <Button
         kind="key"
+        iconOnly={narrow}
         className="suggestion-add"
         icon={<Plus size={16} weight="bold" aria-hidden />}
         aria-label={`Add ${description}`}
         onClick={() => onAdd(suggestion)}
       >
-        Add
+        {narrow ? null : 'Add'}
       </Button>
       <Button
         iconOnly

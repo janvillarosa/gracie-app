@@ -343,6 +343,7 @@ A near-monochrome paper-and-ink palette with one saturated yellow, plus function
 - **Text** (`--text`): running text. There is no heading ink or 70% secondary text any more: titles are ink, secondary lines are muted.
 - **Muted** (`--muted`): context lines, labels, placeholders, times, empty values and icon buttons. It is a cool grey so it reads as pencil, not as faded ink. 5.3:1 on paper; it never sits on yellow (3.7:1).
 - **Desk** (`--bg`): the page background the paper sits on.
+- **Desk Tone** (`--desk-tone`): the desk as it reads from arm's length, its grain averaged over `--bg` (#EAEAEA). It is the canvas colour and `theme-color`, because browsers tint their own bars (iOS Safari's top and bottom, Android's status bar) and paint overscroll with the flat background colour, never the grain; the grained desk is a fixed layer over it.
 - **Paper** (`--panel`): every sheet, card, dialog, map pill and control face.
 - **Paper Tint** (`--panel-subtle`): detail groups, the add-bar input, the PillNav track, list icons and quiet hover fills.
 - **Hairline** (`--border`) and **Edge** (`--border-strong`): hairlines divide rows inside a sheet. The edge outlines a sheet of paper, a quiet button, the PillNav track, the composer and the dashed slot of an empty day. **The ream** (`--edge-soft`, `--edge-deep`) draws a sheet's thickness at its foot.
@@ -387,7 +388,7 @@ Icons and emoji have their own scale (`--icon-xs` 12 … `--icon-2xl` 28), never
 
 Spacing runs on a 4px base: `--space-1` … `--space-7` (4, 8, 12, 16, 20, 24, 32). Sheets inset their content 20px (`--sheet-inset`). Detail rows inset 16px (`--detail-inset`). Controls are 36px (`--control-md`: chips, quiet buttons, segments) or 44px (`--control-lg`: keys, text actions, the PillNav track), and a detail row is 52px (`--row-h`).
 
-**Phone and tablet (below 1024px).** One centred column of paper on the desk. The list page uses a 720px container with 24px padding. A trip's plan is one column with the Plan · Ideas · Bookings pills; below 768px the trip page drops to 12px side padding. The map is a full-screen, read-only view opened from a "Map" pill (history `#map`), with its stop card below the map, never over Google's logo. Overlays are bottom sheets.
+**Phone and tablet (below 1024px).** One centred column of paper on the desk. The list page uses a 720px container with 24px padding; at 480px and narrower its sides drop to 16px, and so do a sheet's (`.paper-body`), so rows aren't squeezed between two 24px margins. A trip's plan is one column with the Plan · Ideas · Bookings pills; below 768px the trip page drops to 12px side padding. The map is a full-screen, read-only view opened from a "Map" pill (history `#map`), with its stop card below the map, never over Google's logo. Overlays are bottom sheets.
 
 **The planning desk (1024px and wider).** The trip becomes a desk inside a centred frame (`max-width: 1440px`). The window does not scroll; each column scrolls on its own and keeps its position per trip.
 - **1200px and wider: three columns.** Ideas (300px), Days (fills the rest) and Map (420px, or 360px between 1200 and 1359px), with 20px gaps. The map column appears only when the trip has a place and the device is online. Before that, the place shows "Places you add show up here".
@@ -397,7 +398,7 @@ Spacing runs on a 4px base: `--space-1` … `--space-7` (4, 8, 12, 16, 20, 24, 3
 - The one add bar becomes a floating **composer**, fixed 24px above the window's bottom and centred on the Days column, 24px in from its sides.
 - An open item is an **inspector**: it takes the right column at 1200px and wider (the map returns when it closes), and is a 440px fixed overlay panel, 16px from the window's edges, at 1024–1199px. Opening, switching or closing it never moves the Days column.
 
-Breakpoints are `480px` (tighter PillNav tabs), `640px` (paper-modal keys go full width), `767/768px` (phone vs tablet: heading size, side padding), `1024px` (`WIDE` in `useMedia.ts`: the desk, dialogs, popovers and the inspector replace bottom sheets) and `1200px` (the third column).
+Breakpoints are `480px` (tighter PillNav tabs; 16px page and sheet sides), `640px` (paper-modal keys go full width), `767/768px` (phone vs tablet: heading size, side padding), `1024px` (`WIDE` in `useMedia.ts`: the desk, dialogs, popovers and the inspector replace bottom sheets) and `1200px` (the third column).
 
 **The row grid.** Every line in a plan shares one grid: a 24px lead (checkbox or icon), a 12px gap, a 48px tabular time column, a 12px gap, the title, and a trailing slot. This covers todo rows, booking stubs, the Now marker, empty-day text and the next-stop card. A day or list without times sets the time column (`--tcol`) to 0, so text lines up with the title column across Plan, Ideas and Bookings. Pips and leading glyphs are centred on the title's first line (`--row-first-line`, 22px).
 
@@ -415,6 +416,8 @@ Depth is paper height, and paper has body. Every sheet has a 1px edge, a white t
 - `--lift-1`: the sheet on top of a stack.
 - `--lift-2`: bottom sheets, dialogs, the inspector, the composer and a dragged row.
 - `--lift-3`: popovers, menus, toasts, tooltips and suggestion slips.
+
+A lift is for paper on the desk or floating over it. Paper lying on a sheet (the smart-suggestion slip above a list's items) is not a new height: it rests a hair above the page with `--slip-rest`, the same as a quiet slip. A lift's ream and long drop inside a sheet would bleed over the rows below it.
 
 The desk has its own, coarser grain (`--grain-desk`), so paper and desk read as two materials. Because both are grained, nothing inside a sheet is filled with flat colour: an in-sheet fill is `--paper-fill` (or `--well-fill` for a tint), and anything that must cover the desk is `--desk-fill`; a flat fill would read as a patch stuck on the paper.
 
@@ -474,7 +477,7 @@ One family (`Button`), each kind paper at a known height.
 - **Paper** (`Paper`): white with grain, a 1px edge, 16px corners, the paper-edge highlight and one of the four lifts. Every panel is one; there are no Ant cards (enforced).
 - **Stack** (`PaperStack`): the only way sheets are piled; see Elevation. Every page is a stack, even a one-sheet one (settings, Account, no-House, sign-in), so nothing is a lone card floating on the desk.
 - **Detail group** (`DetailGroup`): a well (Paper Tint, pressed in) with 16px corners, holding 52px nav rows separated by hairlines inset 16px. No border; never a card.
-- **Internal padding:** sheets 20px at the sides and 24px at the bottom; list cards 24px; the Ideas column 16px.
+- **Internal padding:** sheets 20px at the sides and 24px at the bottom; list cards 24px (16px at the sides at 480px and narrower); the Ideas column 16px.
 
 ### Inputs / Fields
 - **Field:** borderless text on the paper, 16px, 12px vertical padding and a muted placeholder. Focus draws the shared focus ring around it. An error draws a 2px Stamp Red ring with a 13px red line of problem text beneath.

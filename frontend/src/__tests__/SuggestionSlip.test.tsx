@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { vi } from 'vitest'
-import { SuggestionSlip, SuggestionStack } from '@components/SuggestionSlip'
+import { NARROW_SLIP, SuggestionSlip, SuggestionStack } from '@components/SuggestionSlip'
 import type { ListSuggestion } from '@api/types'
 
 const milk: ListSuggestion = {
@@ -40,6 +40,22 @@ describe('SuggestionSlip', () => {
     expect(onAdd).toHaveBeenCalledWith(milk)
     await userEvent.click(screen.getByRole('button', { name: 'Ignore suggestion: Whole milk' }))
     expect(onIgnore).toHaveBeenCalledWith(milk)
+  })
+
+  it('turns Add into a round plus on a narrow phone, keeping its name', () => {
+    const real = window.matchMedia
+    window.matchMedia = ((query: string) => ({
+      ...real(query),
+      matches: query === NARROW_SLIP,
+    })) as typeof window.matchMedia
+    try {
+      render(<SuggestionSlip suggestion={milk} onAdd={vi.fn()} onIgnore={vi.fn()} />)
+      const add = screen.getByRole('button', { name: 'Add Whole milk' })
+      expect(add).not.toHaveTextContent('Add')
+      expect(add).toHaveClass('is-key', 'is-icon')
+    } finally {
+      window.matchMedia = real
+    }
   })
 
   it('stacks several slips in one labelled region, each with its own buttons', async () => {
