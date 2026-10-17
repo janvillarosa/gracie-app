@@ -90,8 +90,11 @@ type AutopilotService struct {
 	events analytics.EventRepository
 	away   analytics.AwayCalendar
 	policy autopilot.Policy
-	mode   SuggestionMode
-	now    func() time.Time
+	// The executor (assist mode): the action log and the list service that creates items.
+	actions store.AutopilotActionRepository
+	listSvc *ListService
+	mode    SuggestionMode
+	now     func() time.Time
 }
 
 // NewAutopilotService takes a nil reader or event repository when analytics is disabled;

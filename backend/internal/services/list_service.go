@@ -22,8 +22,19 @@ type ListService struct {
 	lists       store.ListRepository
 	items       store.ListItemRepository
 	categorizer categorization.Categorizer
+	hooks       ItemHooks
 	emitter
 }
+
+// ItemHooks hears about outcomes on items a system put on the list (Source set): the autopilot
+// records whether its adds were wanted. Hooks run after the write and never fail it.
+type ItemHooks interface {
+	ItemChecked(ctx context.Context, actorID string, it *models.ListItem)
+	ItemDeleted(ctx context.Context, actorID string, it *models.ListItem)
+}
+
+// UseItemHooks injects the outcome hooks (optional).
+func (s *ListService) UseItemHooks(h ItemHooks) { s.hooks = h }
 
 func NewListService(users store.UserRepository, rooms store.RoomRepository, lists store.ListRepository, items store.ListItemRepository, categorizer categorization.Categorizer) *ListService {
 	return &ListService{users: users, rooms: rooms, lists: lists, items: items, categorizer: categorizer}
@@ -186,6 +197,37 @@ func (s *ListService) CreateItem(ctx context.Context, user *models.User, roomID,
 	if err := s.ensureRoomMembership(ctx, user, roomID); err != nil {
 		return nil, err
 	}
+	it, err := s.insertItem(ctx, user.UserID, "", roomID, listID, description, quantity, unit, category)
+	if err != nil {
+		return nil, err
+	}
+	s.emitItem(ctx, "item.added", user, it)
+	return it, nil
+}
+
+// CreateSystemItem puts an item on a list for a system actor (actorID "system:autopilot"), marked
+// with source. It skips the membership check (no person is acting) but still requires a live list
+// in the house. It emits <source>_added, never item.added: a system's add is not a request.
+func (s *ListService) CreateSystemItem(ctx context.Context, actorID, source, roomID, listID, description, quantity, unit, category string) (*models.ListItem, error) {
+	it, err := s.insertItem(ctx, actorID, source, roomID, listID, description, quantity, unit, category)
+	if err != nil {
+		return nil, err
+	}
+	s.emitItem(ctx, "item."+source+"_added", &models.User{UserID: actorID}, it)
+	return it, nil
+}
+
+// RemoveSystemItem deletes an item a system added (Undo), without running the outcome hooks: the
+// caller records the outcome itself.
+func (s *ListService) RemoveSystemItem(ctx context.Context, actorID string, it *models.ListItem) error {
+	if err := s.items.Delete(ctx, it.ItemID); err != nil {
+		return err
+	}
+	s.emitItem(ctx, "item.deleted", &models.User{UserID: actorID}, it)
+	return nil
+}
+
+func (s *ListService) insertItem(ctx context.Context, actorID, source, roomID, listID, description, quantity, unit, category string) (*models.ListItem, error) {
 	l, err := s.lists.GetByID(ctx, listID)
 	if err != nil {
 		return nil, err
@@ -221,7 +263,8 @@ func (s *ListService) CreateItem(ctx context.Context, user *models.User, roomID,
 		Unit:        unit,
 		Category:    category,
 		Completed:   false,
-		CreatedBy:   user.UserID,
+		Source:      source,
+		CreatedBy:   actorID,
 		CreatedAt:   now,
 		UpdatedAt:   now,
 	}
@@ -237,7 +280,6 @@ func (s *ListService) CreateItem(ctx context.Context, user *models.User, roomID,
 	if err := s.items.Put(ctx, it); err != nil {
 		return nil, err
 	}
-	s.emitItem(ctx, "item.added", user, it)
 	return it, nil
 }
 
@@ -346,6 +388,9 @@ func (s *ListService) UpdateItem(ctx context.Context, user *models.User, roomID,
 			name = "item.checked"
 		}
 		s.emitItem(ctx, name, user, latest)
+		if *completed && latest.Source != "" && s.hooks != nil {
+			s.hooks.ItemChecked(ctx, user.UserID, latest)
+		}
 	}
 	if starred != nil && *starred != wasStarred {
 		name := "item.unstarred"
@@ -515,6 +560,9 @@ func (s *ListService) DeleteItem(ctx context.Context, user *models.User, roomID,
 		return err
 	}
 	s.emitItem(ctx, "item.deleted", user, it)
+	if it.Source != "" && s.hooks != nil {
+		s.hooks.ItemDeleted(ctx, user.UserID, it)
+	}
 	return nil
 }
 
