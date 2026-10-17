@@ -3,6 +3,8 @@ package predict
 import (
 	"encoding/json"
 	"flag"
+	"fmt"
+	"math"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -83,9 +85,71 @@ func checkGolden(t *testing.T, name string, rows any) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if string(got) != string(want) {
-		t.Fatalf("%s differs from the golden (a house that never travels must get byte-identical forecasts)", path)
+	var g, w any
+	if err := json.Unmarshal(got, &g); err != nil {
+		t.Fatal(err)
 	}
+	if err := json.Unmarshal(want, &w); err != nil {
+		t.Fatal(err)
+	}
+	if diff := sameJSON("", g, w); diff != "" {
+		t.Fatalf("%s differs from the golden at %s (a house that never travels must get the same forecasts)", path, diff)
+	}
+}
+
+// sameJSON compares two decoded JSON trees exactly, except that numbers may differ by one part in
+// a billion and timestamps by a microsecond: arm64 fuses multiply-adds and amd64 does not, so the
+// last bit of a float (and a nanosecond of a time computed from one) differs between a Mac and CI.
+// It returns the path of the first difference, or "".
+func sameJSON(path string, a, b any) string {
+	switch x := a.(type) {
+	case map[string]any:
+		y, ok := b.(map[string]any)
+		if !ok || len(x) != len(y) {
+			return path
+		}
+		for k, v := range x {
+			if d := sameJSON(path+"."+k, v, y[k]); d != "" {
+				return d
+			}
+		}
+	case []any:
+		y, ok := b.([]any)
+		if !ok || len(x) != len(y) {
+			return path
+		}
+		for i := range x {
+			if d := sameJSON(fmt.Sprintf("%s[%d]", path, i), x[i], y[i]); d != "" {
+				return d
+			}
+		}
+	case float64:
+		y, ok := b.(float64)
+		if !ok || math.Abs(x-y) > 1e-9*math.Max(1, math.Max(math.Abs(x), math.Abs(y))) {
+			return path
+		}
+	case string:
+		y, ok := b.(string)
+		if !ok {
+			return path
+		}
+		if x == y {
+			return ""
+		}
+		tx, err1 := time.Parse(time.RFC3339Nano, x)
+		ty, err2 := time.Parse(time.RFC3339Nano, y)
+		if err1 != nil || err2 != nil {
+			return path
+		}
+		if d := tx.Sub(ty); d > time.Microsecond || d < -time.Microsecond {
+			return path
+		}
+	default:
+		if a != b {
+			return path
+		}
+	}
+	return ""
 }
 
 // TestPredictNoAwayUnchanged pins the forecasts of houses that never travel.
@@ -125,4 +189,28 @@ func rhythmRows(intervals func([]time.Time) Rhythm, due func(Rhythm) (time.Time,
 // TestRhythmNoAwayUnchanged pins rhythms, due dates and next windows of houses that never travel.
 func TestRhythmNoAwayUnchanged(t *testing.T) {
 	checkGolden(t, "rhythm", rhythmRows(Intervals, Rhythm.Due, NextWindow))
+}
+
+func TestSameJSONToleratesOnlyFloatNoise(t *testing.T) {
+	dec := func(s string) any {
+		var v any
+		if err := json.Unmarshal([]byte(s), &v); err != nil {
+			t.Fatal(err)
+		}
+		return v
+	}
+	base := `{"d":1.118808362787764,"t":"2026-02-26T10:12:56.332921335Z","s":"added","ok":true}`
+	if d := sameJSON("", dec(base), dec(`{"d":1.1188083627877643,"t":"2026-02-26T10:12:56.332921336Z","s":"added","ok":true}`)); d != "" {
+		t.Fatalf("last-bit noise must pass, failed at %s", d)
+	}
+	for _, other := range []string{
+		`{"d":1.1189,"t":"2026-02-26T10:12:56.332921335Z","s":"added","ok":true}`,
+		`{"d":1.118808362787764,"t":"2026-02-26T10:12:57.332921335Z","s":"added","ok":true}`,
+		`{"d":1.118808362787764,"t":"2026-02-26T10:12:56.332921335Z","s":"checked","ok":true}`,
+		`{"d":1.118808362787764,"t":"2026-02-26T10:12:56.332921335Z","s":"added","ok":false}`,
+	} {
+		if sameJSON("", dec(base), dec(other)) == "" {
+			t.Fatalf("a real change must fail: %s", other)
+		}
+	}
 }
