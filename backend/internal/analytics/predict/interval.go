@@ -24,7 +24,11 @@ type Rhythm struct {
 }
 
 // Intervals computes a Rhythm from occurrence times in ascending order.
-func Intervals(times []time.Time) Rhythm {
+func Intervals(times []time.Time) Rhythm { return IntervalsAway(times, nil) }
+
+// IntervalsAway is Intervals with the gaps measured in home time: a gap that spans a holiday
+// counts only the days the house was home.
+func IntervalsAway(times []time.Time, away Away) Rhythm {
 	kept := Collapse(times)
 	r := Rhythm{N: len(kept)}
 	if len(kept) == 0 {
@@ -36,7 +40,7 @@ func Intervals(times []time.Time) Rhythm {
 	}
 	gaps := make([]float64, 0, len(kept)-1)
 	for i := 1; i < len(kept); i++ {
-		gaps = append(gaps, kept[i].Sub(kept[i-1]).Hours()/24)
+		gaps = append(gaps, away.homeDays(kept[i-1], kept[i]))
 	}
 	ewma, sum := gaps[0], 0.0
 	for i, g := range gaps {
@@ -69,9 +73,13 @@ func Collapse(times []time.Time) []time.Time {
 }
 
 // Due returns when the next occurrence is expected, or false when there is too little history.
-func (r Rhythm) Due() (time.Time, bool) {
+func (r Rhythm) Due() (time.Time, bool) { return r.DueAway(nil) }
+
+// DueAway projects the due time in home time: the smoothed gap counts only days at home, so a
+// trip in the way pushes it back by the trip's length.
+func (r Rhythm) DueAway(away Away) (time.Time, bool) {
 	if r.N < MinOccurrences || r.EWMADays <= 0 {
 		return time.Time{}, false
 	}
-	return r.Last.Add(time.Duration(r.EWMADays * 24 * float64(time.Hour))), true
+	return away.addDays(r.Last, r.EWMADays), true
 }

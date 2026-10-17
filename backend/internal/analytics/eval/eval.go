@@ -96,21 +96,30 @@ func target(s Series) (times []time.Time, series string) {
 // Replay walks every series forward one occurrence at a time. At each step it forecasts the
 // next occurrence from what came before, and when that forecast clears the bar it checks
 // whether the occurrence landed inside the suggestion window.
-func Replay(all []Series, p predict.Params) Report {
+func Replay(all []Series, p predict.Params) Report { return ReplayAway(all, p, nil) }
+
+// ReplayAway is Replay in home time: away holds each house's away spans (by room id; a house
+// missing from it is never away). An occurrence while the house was away is not judged (nothing
+// would have been shown), but it still counts as history for the forecasts after it.
+func ReplayAway(all []Series, p predict.Params, away map[string]predict.Away) Report {
 	rep := Report{Params: p}
 	for _, s := range all {
 		times, kind := target(s)
+		ha := away[s.Room]
 		replayed, qualified := false, false
 		for i := predict.MinOccurrences + 1; i < len(times); i++ {
 			replayed = true
+			if ha.Contains(times[i]) {
+				continue
+			}
 			prefix := times[:i]
 			var f predict.Forecast
 			var ok bool
 			ign := before(s.Ignore, times[i-1])
 			if kind == predict.SeriesAdded {
-				f, ok = p.Predict(prefix, nil, ign)
+				f, ok = p.PredictAway(prefix, nil, ign, ha)
 			} else {
-				f, ok = p.Predict(nil, prefix, ign)
+				f, ok = p.PredictAway(nil, prefix, ign, ha)
 			}
 			if !ok || !f.Confident(p) {
 				continue
@@ -158,11 +167,16 @@ func before(ts []time.Time, t time.Time) []time.Time {
 
 // Sweep replays history for each minimum score so a threshold can be picked from evidence.
 func Sweep(all []Series, base predict.Params, minScores []float64) []Report {
+	return SweepAway(all, base, minScores, nil)
+}
+
+// SweepAway is Sweep in home time (see ReplayAway).
+func SweepAway(all []Series, base predict.Params, minScores []float64, away map[string]predict.Away) []Report {
 	out := make([]Report, 0, len(minScores))
 	for _, m := range minScores {
 		p := base
 		p.MinScore = m
-		out = append(out, Replay(all, p))
+		out = append(out, ReplayAway(all, p, away))
 	}
 	return out
 }

@@ -55,6 +55,36 @@ func (a Away) Contains(t time.Time) bool {
 	return false
 }
 
+// NextHome is the first home moment at or after t: t itself, or the end of the away span it is in.
+func (a Away) NextHome(t time.Time) time.Time {
+	for _, sp := range a {
+		if t.Before(sp.Opens) {
+			return t
+		}
+		if t.Before(sp.Closes) {
+			return sp.Closes
+		}
+	}
+	return t
+}
+
+// homeDays is the home time between two moments, in days.
+func (a Away) homeDays(from, to time.Time) float64 {
+	if a == nil {
+		return to.Sub(from).Hours() / 24
+	}
+	return a.HomeBetween(from, to).Hours() / 24
+}
+
+// addDays moves t by a number of days of home time.
+func (a Away) addDays(t time.Time, days float64) time.Time {
+	d := time.Duration(days * 24 * float64(time.Hour))
+	if a == nil {
+		return t.Add(d)
+	}
+	return a.AddHome(t, d)
+}
+
 // HomeBetween is the home time from `from` to `to`: the wall-clock duration minus the part spent
 // away. Negative when to is before from.
 func (a Away) HomeBetween(from, to time.Time) time.Duration {

@@ -64,6 +64,10 @@ func (w *Worker) WithClock(now func() time.Time) *Worker {
 // FoldOnce runs one fold pass and returns how many events it folded. Only the instance
 // holding the lease does work, so any number of instances can run it safely.
 func (w *Worker) FoldOnce(ctx context.Context) (int, error) {
+	return w.foldOnce(ctx, awayCache{})
+}
+
+func (w *Worker) foldOnce(ctx context.Context, cache awayCache) (int, error) {
 	now := w.now().UTC()
 	watermark, ok, err := w.aggs.AcquireLease(ctx, w.owner, leaseTTL, now)
 	if err != nil || !ok {
@@ -102,7 +106,7 @@ func (w *Worker) FoldOnce(ctx context.Context) (int, error) {
 	var also []KeyRef
 	for _, ref := range batch.Touched {
 		done[ref.ID()] = true
-		sibs, err := w.recomputeKey(ctx, ref)
+		sibs, err := w.recomputeKey(ctx, ref, cache)
 		if err != nil {
 			log.Printf("analytics: recompute %s: %v", ref.ID(), err)
 		}
@@ -113,7 +117,7 @@ func (w *Worker) FoldOnce(ctx context.Context) (int, error) {
 			continue
 		}
 		done[ref.ID()] = true
-		if _, err := w.recomputeKey(ctx, ref); err != nil {
+		if _, err := w.recomputeKey(ctx, ref, cache); err != nil {
 			log.Printf("analytics: recompute %s: %v", ref.ID(), err)
 		}
 	}
@@ -182,8 +186,15 @@ func (w *Worker) similarKeys(ctx context.Context, ref KeyRef) ([]KeyRef, []float
 // recomputeKey rebuilds one key's rhythm from its newest events: completions first, and
 // requests when there are too few completions to say anything. The add forecast also learns
 // from look-alike names ("oranges" for "orange"), and its score is scaled by how sure it is that
-// the merged history is one thing. It returns the look-alikes, whose forecasts share this history.
-func (w *Worker) recomputeKey(ctx context.Context, ref KeyRef) ([]KeyRef, error) {
+// the merged history is one thing. Rhythms and forecasts are measured in the house's home time
+// (see predict.Away). It returns the look-alikes, whose forecasts share this history.
+func (w *Worker) recomputeKey(ctx context.Context, ref KeyRef, cache awayCache) ([]KeyRef, error) {
+	// Without the house's away spans the forecast would be wrong, so a calendar failure skips
+	// the recompute (the key stays as it was and is retried with its next event or refresh).
+	away, err := w.houseAway(ctx, cache, ref.RoomID)
+	if err != nil {
+		return nil, err
+	}
 	evs, err := w.events.ListForKey(ctx, ref.RoomID, ref.SubjectType, ref.Key, keyEvents)
 	if err != nil {
 		return nil, err
@@ -229,17 +240,17 @@ func (w *Worker) recomputeKey(ctx context.Context, ref KeyRef) ([]KeyRef, error)
 		classify(sevs, sims[i], false)
 	}
 
-	source, rhythm := "complete", predict.Intervals(done)
+	source, rhythm := "complete", predict.IntervalsAway(done, away)
 	if rhythm.N < predict.MinOccurrences {
-		if alt := predict.Intervals(asked); alt.N > rhythm.N {
+		if alt := predict.IntervalsAway(asked, away); alt.N > rhythm.N {
 			source, rhythm = "request", alt
 		}
 	}
 	iv := KeyIntervals{N: rhythm.N, Source: source, EWMADays: rhythm.EWMADays, CV: rhythm.CV, LastAt: rhythm.Last, ComputedAt: w.now().UTC(), Version: ForecastVersion}
-	if due, ok := rhythm.Due(); ok {
+	if due, ok := rhythm.DueAway(away); ok {
 		iv.DueAt = &due
 	}
-	if f, ok := predict.DefaultParams.Predict(timesOf(wAsked), timesOf(wDone), timesOf(wIgnored)); ok {
+	if f, ok := predict.DefaultParams.PredictAway(timesOf(wAsked), timesOf(wDone), timesOf(wIgnored), away); ok {
 		certainty := meanWeight(wAsked)
 		if f.Series == predict.SeriesChecked {
 			certainty = meanWeight(wDone)
@@ -258,13 +269,17 @@ func (w *Worker) recomputeKey(ctx context.Context, ref KeyRef) ([]KeyRef, error)
 // versioned) from their stored history. Recomputing is idempotent, so any number of instances may
 // run it; it returns how many were rebuilt.
 func (w *Worker) RefreshStale(ctx context.Context, limit int) (int, error) {
+	return w.refreshStale(ctx, limit, awayCache{})
+}
+
+func (w *Worker) refreshStale(ctx context.Context, limit int, cache awayCache) (int, error) {
 	refs, err := w.aggs.StaleKeys(ctx, ForecastVersion, limit)
 	if err != nil {
 		return 0, err
 	}
 	n := 0
 	for _, ref := range refs {
-		if _, err := w.recomputeKey(ctx, ref); err != nil {
+		if _, err := w.recomputeKey(ctx, ref, cache); err != nil {
 			log.Printf("analytics: refresh %s: %v", ref.ID(), err)
 			continue
 		}
@@ -276,14 +291,15 @@ func (w *Worker) RefreshStale(ctx context.Context, limit int) (int, error) {
 // RunFold folds on a jittered timer until ctx ends, like the coordinate purge.
 func (w *Worker) RunFold(ctx context.Context, every, jitter time.Duration) {
 	for {
-		if n, err := w.FoldOnce(ctx); err != nil {
+		cache := awayCache{} // one tick: the fold and the refresh share each room's away spans
+		if n, err := w.foldOnce(ctx, cache); err != nil {
 			log.Printf("analytics: fold: %v", err)
 		} else if n > 0 {
 			log.Printf("analytics: folded %d events", n)
 		}
 		// After a deploy that changed the forecast logic, the first tick brings every older
 		// forecast up to date (in batches), with no new events needed.
-		if n, err := w.RefreshStale(ctx, staleBatch); err != nil {
+		if n, err := w.refreshStale(ctx, staleBatch, cache); err != nil {
 			log.Printf("analytics: refresh stale forecasts: %v", err)
 		} else if n > 0 {
 			log.Printf("analytics: rebuilt %d stale forecasts", n)

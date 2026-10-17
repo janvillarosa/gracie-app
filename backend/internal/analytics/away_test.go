@@ -2,10 +2,12 @@ package analytics_test
 
 import (
 	"context"
+	"math"
 	"testing"
 	"time"
 
 	"github.com/janvillarosa/gracie-app/backend/internal/analytics"
+	"github.com/janvillarosa/gracie-app/backend/internal/analytics/predict"
 	"github.com/janvillarosa/gracie-app/backend/internal/trips"
 )
 
@@ -63,5 +65,62 @@ func TestAwayChangeRequeuesOnlyThatRoom(t *testing.T) {
 	}
 	if n, err := r.worker.RefreshStale(ctx, 500); err != nil || n != 1 {
 		t.Fatalf("one stale forecast rebuilt in the same tick, got %d %v", n, err)
+	}
+}
+
+type countingCalendar struct {
+	calls map[string]int
+	away  predict.Away
+}
+
+func (c *countingCalendar) HouseAway(_ context.Context, roomID string) (predict.Away, error) {
+	c.calls[roomID]++
+	return c.away, nil
+}
+
+func (c *countingCalendar) MemberAway(_ context.Context, roomID, userID string) (predict.Away, error) {
+	return nil, nil
+}
+
+func TestAwayCalendarIsAskedOncePerRoomPerTick(t *testing.T) {
+	r := newRig(t0.Add(40 * 24 * time.Hour))
+	cal := &countingCalendar{calls: map[string]int{}}
+	r.worker = r.worker.WithAway(cal)
+	for i := 0; i < 5; i++ {
+		at := t0.Add(time.Duration(i) * 7 * 24 * time.Hour)
+		r.add(ev("item.added", "mia", "room_a", "milk", at), ev("item.added", "mia", "room_a", "eggs", at),
+			ev("item.added", "sam", "room_b", "milk", at))
+	}
+	if _, err := r.worker.FoldOnce(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if cal.calls["room_a"] != 1 || cal.calls["room_b"] != 1 {
+		t.Fatalf("one lookup per room per tick: %v", cal.calls)
+	}
+	r.add(ev("item.added", "mia", "room_a", "milk", r.now.Add(-time.Minute))) // ingested after the watermark
+	r.now = r.now.Add(5 * time.Minute)
+	if _, err := r.worker.FoldOnce(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if cal.calls["room_a"] != 2 {
+		t.Fatalf("the cache lasts one tick only: %v", cal.calls)
+	}
+}
+
+func TestForecastIsLearnedInHomeTime(t *testing.T) {
+	r := newRig(t0.Add(120 * 24 * time.Hour))
+	// weekly adds, a 10 day holiday after the 6th, then weekly again a week of home time later
+	trip := predict.Away{{Opens: t0.Add(36 * 24 * time.Hour), Closes: t0.Add(46 * 24 * time.Hour)}}
+	r.worker = r.worker.WithAway(&countingCalendar{calls: map[string]int{}, away: trip})
+	for i := 0; i < 6; i++ {
+		r.add(ev("item.added", "mia", "room_a", "milk", t0.Add(time.Duration(7*i)*24*time.Hour)))
+		r.add(ev("item.added", "mia", "room_a", "milk", t0.Add(time.Duration(52+7*i)*24*time.Hour)))
+	}
+	if _, err := r.worker.FoldOnce(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	iv := r.aggs.Key("room_a:item:milk")["intervals"].(analytics.KeyIntervals)
+	if iv.Version != 3 || iv.Add == nil || iv.Add.EWMADays != 7 || iv.Add.CV > 1e-9 || math.Abs(iv.EWMADays-7) > 1e-9 {
+		t.Fatalf("home-time forecast: %+v add %+v", iv, iv.Add)
 	}
 }

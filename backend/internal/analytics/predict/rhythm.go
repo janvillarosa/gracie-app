@@ -124,10 +124,35 @@ func Confidence(n int, cv float64) float64 {
 // the smoothed gap, the hours from this person's own habit on that weekday. A rhythm that is
 // overdue is expected "today, at the usual hour" (tomorrow if that hour has passed).
 func NextWindow(r Rhythm, how Histogram, loc *time.Location, now time.Time) (Window, bool) {
-	if _, ok := r.Due(); !ok {
+	return NextWindowAway(r, how, loc, now, nil)
+}
+
+// NextWindowAway is NextWindow in home time: the due day is projected past the away spans, and a
+// window that would fall while the house is away moves to the first usual hour after it is back.
+func NextWindowAway(r Rhythm, how Histogram, loc *time.Location, now time.Time, away Away) (Window, bool) {
+	w, ok := nextWindow(r, how, loc, now, away)
+	for tries := 0; ok && away.Contains(w.Start) && tries < 3; tries++ {
+		back := away.NextHome(w.Start)
+		w, ok = nextWindow(r, how, loc, maxTime(now, back), away)
+		if ok && w.Start.Before(back) && back.Before(w.End) {
+			w.Start = back.UTC() // home part way through the usual hours
+		}
+	}
+	return w, ok
+}
+
+func maxTime(a, b time.Time) time.Time {
+	if a.After(b) {
+		return a
+	}
+	return b
+}
+
+func nextWindow(r Rhythm, how Histogram, loc *time.Location, now time.Time, away Away) (Window, bool) {
+	due, ok := r.DueAway(away)
+	if !ok {
 		return Window{}, false
 	}
-	due, _ := r.Due()
 	day := due.In(loc)
 	today := now.In(loc)
 	dayStart := time.Date(day.Year(), day.Month(), day.Day(), 0, 0, 0, 0, loc)

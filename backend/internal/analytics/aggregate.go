@@ -63,7 +63,9 @@ func (k KeyRef) ID() string { return k.RoomID + ":" + k.SubjectType + ":" + k.Ke
 // ForecastVersion is the version of the logic that builds KeyIntervals (rhythm and add forecast).
 // Bump it whenever that logic changes: the worker then rebuilds every older forecast from the
 // stored history, so a change takes effect without waiting for each key's next event.
-const ForecastVersion = 2 // 2: skip-aware, recent-cycle forecasts with repeating windows
+// 2: skip-aware, recent-cycle forecasts with repeating windows.
+// 3: home time: gaps, due dates and windows leave out the spans the whole house was away (trips).
+const ForecastVersion = 3
 
 // KeyIntervals is the recomputed rhythm of one key.
 type KeyIntervals struct {

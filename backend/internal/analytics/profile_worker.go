@@ -6,6 +6,8 @@ import (
 	"math/rand"
 	"strings"
 	"time"
+
+	"github.com/janvillarosa/gracie-app/backend/internal/analytics/predict"
 )
 
 const (
@@ -57,7 +59,34 @@ func (w *Worker) recomputeProfile(ctx context.Context, id string, now time.Time)
 	if err != nil {
 		return err
 	}
-	return w.aggs.PutProfile(ctx, BuildProfile(w.reg, id, evs, now))
+	away, err := w.subjectAway(ctx, scope, owner, evs)
+	if err != nil {
+		return err
+	}
+	return w.aggs.PutProfile(ctx, BuildProfileAway(w.reg, id, evs, now, away))
+}
+
+// subjectAway is when a profile's subject was away: the whole house for "h:", the person in
+// their current house (the room of their latest event) for "u:".
+func (w *Worker) subjectAway(ctx context.Context, scope, owner string, evs []Event) (predict.Away, error) {
+	if w.away == nil {
+		return nil, nil
+	}
+	if scope == "h" {
+		a, err := w.away.HouseAway(ctx, owner)
+		return a.Normalize(), err
+	}
+	room, at := "", time.Time{}
+	for _, e := range evs {
+		if e.RoomID != "" && !e.OccurredAt.Before(at) {
+			room, at = e.RoomID, e.OccurredAt
+		}
+	}
+	if room == "" {
+		return nil, nil
+	}
+	a, err := w.away.MemberAway(ctx, room, owner)
+	return a.Normalize(), err
 }
 
 // RunProfiles recomputes profiles on a jittered timer until ctx ends.

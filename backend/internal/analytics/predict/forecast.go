@@ -122,9 +122,9 @@ type cadence struct {
 	ok       bool
 }
 
-func (p Params) cadence(times []time.Time) cadence {
+func (p Params) cadence(times []time.Time, away Away) cadence {
 	if !p.MedianCadence {
-		r := Intervals(times)
+		r := IntervalsAway(times, away)
 		_, ok := r.Due()
 		return cadence{n: r.N, days: r.EWMADays, cv: r.CV, last: r.Last, ok: ok}
 	}
@@ -139,7 +139,7 @@ func (p Params) cadence(times []time.Time) cadence {
 	}
 	gaps := make([]float64, 0, len(kept)-1)
 	for i := 1; i < len(kept); i++ {
-		gaps = append(gaps, kept[i].Sub(kept[i-1]).Hours()/24)
+		gaps = append(gaps, away.homeDays(kept[i-1], kept[i]))
 	}
 	if p.RecentGaps > 0 && len(gaps) > p.RecentGaps {
 		gaps = gaps[len(gaps)-p.RecentGaps:]
@@ -186,11 +186,17 @@ func median(xs []float64) float64 {
 }
 
 // windows are the cycle's windows: one at the due time, and one per tolerated skip after it.
-func (p Params) windows(c cadence) []Span {
+// Due times are projected in home time; a window that would open while the house is away opens
+// when it is back, and its grace does not run while it is away.
+func (p Params) windows(c cadence, away Away) []Span {
 	out := make([]Span, 0, p.Skips+1)
 	for m := 1; m <= p.Skips+1; m++ {
-		due := c.last.Add(time.Duration(float64(m) * c.days * 24 * float64(time.Hour)))
+		due := away.addDays(c.last, float64(m)*c.days)
 		opens, closes := p.Window(due, c.days, c.cv)
+		if away != nil {
+			opens = away.NextHome(opens)
+			closes = away.AddHome(due, closes.Sub(due))
+		}
 		out = append(out, Span{opens, closes})
 	}
 	return out
@@ -246,6 +252,12 @@ func (p Params) Window(due time.Time, ewmaDays, cv float64) (opens, closes time.
 // suggestion would have been on screen right when it was needed. An ignore inside a cycle
 // makes that cycle a miss: the house told us the suggestion was wrong.
 func (p Params) Backtest(times, ignores []time.Time) (trials, hits int) {
+	return p.BacktestAway(times, ignores, nil)
+}
+
+// BacktestAway is Backtest in home time. A cycle whose occurrence happened while the house was
+// away is not a trial: nothing would have been shown to anyone.
+func (p Params) BacktestAway(times, ignores []time.Time, away Away) (trials, hits int) {
 	kept := Collapse(times)
 	type cycle struct {
 		shown int
@@ -253,12 +265,15 @@ func (p Params) Backtest(times, ignores []time.Time) (trials, hits int) {
 	}
 	var cycles []cycle
 	for i := MinOccurrences; i < len(kept); i++ {
-		c := p.cadence(kept[:i])
+		actual := kept[i]
+		if away.Contains(actual) {
+			continue
+		}
+		c := p.cadence(kept[:i], away)
 		if !c.ok {
 			continue
 		}
-		actual := kept[i]
-		shown, hit, _ := p.Judge(p.windows(c), actual)
+		shown, hit, _ := p.Judge(p.windows(c, away), actual)
 		cycles = append(cycles, cycle{shown, hit && !ignoredBetween(ignores, kept[i-1], actual)})
 	}
 	if p.RecentCycles > 0 && len(cycles) > p.RecentCycles {
@@ -298,19 +313,25 @@ func Wilson(hits, trials int, z float64) float64 {
 // Predict forecasts the next add from adds when there are enough of them, and from checks
 // otherwise. ok is false when neither history is long enough to give a due time.
 func (p Params) Predict(added, checked, ignores []time.Time) (Forecast, bool) {
+	return p.PredictAway(added, checked, ignores, nil)
+}
+
+// PredictAway is Predict in home time: gaps between occurrences leave out the house's away
+// spans, and the due time and windows are projected past them. A nil away is Predict.
+func (p Params) PredictAway(added, checked, ignores []time.Time, away Away) (Forecast, bool) {
 	series, times := SeriesAdded, added
 	if adds := Collapse(added); len(adds) < MinSeries && len(Collapse(checked)) > len(adds) {
 		series, times = SeriesChecked, checked
 	}
-	c := p.cadence(times)
+	c := p.cadence(times, away)
 	if !c.ok {
 		return Forecast{}, false
 	}
-	ws := p.windows(c)
-	due := c.last.Add(time.Duration(c.days * 24 * float64(time.Hour)))
+	ws := p.windows(c, away)
+	due := away.addDays(c.last, c.days)
 	f := Forecast{Series: series, N: c.n, EWMADays: c.days, CV: c.cv, LastAt: c.last, DueAt: due, Windows: ws}
 	f.OpensAt, f.ClosesAt = ws[0].Opens, ws[0].Closes
-	f.Trials, f.Hits = p.Backtest(times, ignores)
+	f.Trials, f.Hits = p.BacktestAway(times, ignores, away)
 	f.Score = Wilson(f.Hits, f.Trials, WilsonZ)
 	return f, true
 }
