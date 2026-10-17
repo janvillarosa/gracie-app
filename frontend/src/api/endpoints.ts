@@ -7,6 +7,7 @@ import type {
   ListItem,
   ListIcon,
   ListSuggestion,
+  RunHint,
   PantryItem,
 } from './types'
 
@@ -232,9 +233,10 @@ export async function getListSuggestions(
   apiKey: string,
   roomId: string,
   listId: string,
+  during?: 'run',
 ): Promise<ListSuggestion[]> {
   const r = await apiFetch<{ suggestions: ListSuggestion[] }>(
-    `/rooms/${roomId}/lists/${listId}/suggestions?limit=1`,
+    `/rooms/${roomId}/lists/${listId}/suggestions?limit=1${during ? `&during=${during}` : ''}`,
     { apiKey },
   )
   return r.suggestions
@@ -245,12 +247,20 @@ export async function ignoreListSuggestion(
   roomId: string,
   listId: string,
   key: string,
+  during?: 'run',
 ): Promise<void> {
   await apiFetch<void>(`/rooms/${roomId}/lists/${listId}/suggestions/ignore`, {
     method: 'POST',
     apiKey,
-    body: JSON.stringify({ key }),
+    body: JSON.stringify(during ? { key, during } : { key }),
   })
+}
+
+export async function getRunHint(apiKey: string, roomId: string, listId: string): Promise<RunHint> {
+  const r = await apiFetch<{ run_hint: RunHint }>(`/rooms/${roomId}/lists/${listId}/run-hint`, {
+    apiKey,
+  })
+  return r.run_hint
 }
 
 export async function updateListItem(

@@ -82,6 +82,17 @@ export type ListSuggestion = {
   category?: string
   every_days: number
   score: number
+  // Run mode only: 0 when it is due now, else days until it usually is.
+  due_in_days?: number
+}
+
+// How the List page spots a shopping run, learned from this person's (or the house's) habits.
+export type RunHint = {
+  likely: 'expected' | 'unknown' | 'unlikely'
+  checks_to_start: number
+  idle_end_min: number
+  burst_sec: number
+  typical?: { minutes: number; items: number }
 }
 
 export type ListIcon =

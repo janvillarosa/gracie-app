@@ -173,6 +173,18 @@ export async function startMockTrips() {
         suggestions: params.listId === 'list_groceries' && next ? [next] : [],
       })
     }),
+    // Dev: a habitual shopper, so two check-offs start a run and the run-done stamp can be seen.
+    http.get('/api/rooms/:roomId/lists/:listId/run-hint', () =>
+      HttpResponse.json({
+        run_hint: {
+          likely: 'expected',
+          checks_to_start: 2,
+          idle_end_min: 20,
+          burst_sec: 5,
+          typical: { minutes: 25, items: 10 },
+        },
+      }),
+    ),
     http.post('/api/rooms/:roomId/lists/:listId/suggestions/ignore', async ({ request }) => {
       const body = (await request.json().catch(() => ({}))) as { key?: string }
       if (body.key) spent.add(body.key)
