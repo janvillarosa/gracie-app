@@ -20,7 +20,8 @@ type Props = {
   listId?: string
 }
 
-const MAX_SLIPS = 5
+// Three keep the slips inside the room above the bar on a short phone with the keyboard up.
+const MAX_SLIPS = 3
 
 const slipUsual = (item: PantryItem) => [item.quantity, item.unit].filter(Boolean).join(' ')
 const slipKey = (s: Suggestion) => s.item.description

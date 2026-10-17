@@ -1104,9 +1104,13 @@ h5.ant-typography {
   border: 1px solid var(--border);
   border-radius: 18px;
   box-shadow: var(--lift-3);
+  /* The Combobox caps the height to the room above the bar; scroll rather than spill past it. */
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .pantry-slip {
+  flex: none;
   display: flex;
   align-items: center;
   gap: 10px;
