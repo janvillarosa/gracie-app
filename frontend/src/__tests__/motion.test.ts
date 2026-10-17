@@ -1,7 +1,8 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   createJudge,
   initMotion,
+  isIPhone,
   isLiteMotion,
   JANK_SHARE,
   missedShare,
@@ -18,20 +19,39 @@ afterEach(() => {
   delete (document as { startViewTransition?: unknown }).startViewTransition
 })
 
+const IPHONE_SAFARI =
+  'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1'
+const IPHONE_CHROME =
+  'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/129.0 Mobile/15E148 Safari/604.1'
+const IPAD_DESKTOP =
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15'
+const ANDROID =
+  'Mozilla/5.0 (Linux; Android 14; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0 Mobile Safari/537.36'
+
 describe('staticTier', () => {
-  it('keeps the full tier when the device says nothing (Safari) or is capable', () => {
+  it('keeps the full tier on a capable desktop, iPad or Android phone', () => {
     expect(staticTier(nav({}))).toBe('full')
+    expect(staticTier(nav({ userAgent: IPAD_DESKTOP, hardwareConcurrency: 8 }))).toBe('full')
+    expect(staticTier(nav({ userAgent: ANDROID, hardwareConcurrency: 8, deviceMemory: 8 }))).toBe(
+      'full',
+    )
     expect(staticTier(nav({ hardwareConcurrency: 6 }))).toBe('full')
-    expect(staticTier(nav({ hardwareConcurrency: 8, deviceMemory: 8 }))).toBe('full')
-    expect(staticTier(nav({ hardwareConcurrency: 8, deviceMemory: 4 }))).toBe('full')
-    expect(staticTier(nav({ hardwareConcurrency: 4 }))).toBe('full')
   })
 
-  it('goes lite for Save-Data, two cores, 2 GB, or 4 GB with four cores', () => {
+  it('goes lite on every iPhone, in any iOS browser', () => {
+    expect(isIPhone(IPHONE_SAFARI)).toBe(true)
+    expect(isIPhone(IPHONE_CHROME)).toBe(true)
+    expect(isIPhone(IPAD_DESKTOP)).toBe(false)
+    expect(isIPhone(ANDROID)).toBe(false)
+    // WebKit reports no memory and a capped core count, so the model never matters.
+    expect(staticTier(nav({ userAgent: IPHONE_SAFARI, hardwareConcurrency: 8 }))).toBe('lite')
+  })
+
+  it('goes lite for Save-Data, four or fewer cores, or 4 GB or less', () => {
     expect(staticTier(nav({ connection: { saveData: true } }))).toBe('lite')
-    expect(staticTier(nav({ hardwareConcurrency: 2 }))).toBe('lite')
+    expect(staticTier(nav({ hardwareConcurrency: 4 }))).toBe('lite')
+    expect(staticTier(nav({ hardwareConcurrency: 8, deviceMemory: 4 }))).toBe('lite')
     expect(staticTier(nav({ hardwareConcurrency: 8, deviceMemory: 2 }))).toBe('lite')
-    expect(staticTier(nav({ hardwareConcurrency: 4, deviceMemory: 4 }))).toBe('lite')
   })
 })
 
@@ -57,17 +77,23 @@ describe('missedShare', () => {
 })
 
 describe('createJudge', () => {
-  it('switches to lite after three janky windows among the last six', () => {
+  it('switches to lite after two janky windows among the last six', () => {
     const j = createJudge()
-    expect(j.add(0.5)).toBe('more')
+    expect(j.add(0.25)).toBe('more')
     expect(j.add(0)).toBe('more')
-    expect(j.add(0.5)).toBe('more')
-    expect(j.add(0.5)).toBe('lite')
+    expect(j.add(0.25)).toBe('lite')
+  })
+
+  it('counts a window as janky once more than a fifth of its frames were missed', () => {
+    const j = createJudge()
+    expect(j.add(0.2)).toBe('more')
+    expect(j.add(0.2)).toBe('more')
+    expect(j.add(0.21)).toBe('more')
+    expect(j.add(0.21)).toBe('lite')
   })
 
   it('forgets janky windows older than the last six', () => {
     const j = createJudge()
-    j.add(0.5)
     j.add(0.5)
     for (let i = 0; i < 6; i++) expect(j.add(0)).toBe('more')
     expect(j.add(0.5)).toBe('more')
@@ -81,6 +107,14 @@ describe('createJudge', () => {
 })
 
 describe('initMotion', () => {
+  // jsdom reports the host's cores; a small CI runner must not read as a small phone.
+  beforeEach(() => {
+    Object.defineProperty(navigator, 'hardwareConcurrency', { value: 8, configurable: true })
+  })
+  afterEach(() => {
+    delete (navigator as { hardwareConcurrency?: number }).hardwareConcurrency
+  })
+
   it('starts on the full tier on a capable device', () => {
     initMotion()
     expect(document.documentElement.dataset.motion).toBe('full')
