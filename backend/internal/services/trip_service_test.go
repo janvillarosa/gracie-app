@@ -272,3 +272,29 @@ func TestSyncBoundsAndAccess(t *testing.T) {
 		t.Fatalf("non-member: %v", err)
 	}
 }
+
+func TestApplyOpsRejectsTravellersWhoAreNotMembers(t *testing.T) {
+	e := newTripEnv(t)
+	ctx := context.Background()
+	resp, err := e.svc.ApplyOps(ctx, e.ua, "room_1", []json.RawMessage{
+		opJSON(t, "dev-a", 1, "trip.create", "", map[string]any{"title": "Japan", "travellers": []string{"user_a"}}),
+		opJSON(t, "dev-a", 2, "trip.update", "", map[string]any{"travellers": []string{"user_a", "user_c"}}),
+		opJSON(t, "dev-a", 3, "trip.update", "", map[string]any{"travellers": []string{"user_b"}}),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r := resp.Results[0]; r.Status != models.OpApplied {
+		t.Fatalf("create: %+v", r)
+	}
+	if r := resp.Results[1]; r.Status != models.OpRejected || r.Code != models.CodeInvalid {
+		t.Fatalf("a non-member must be rejected: %+v", r)
+	}
+	if r := resp.Results[2]; r.Status != models.OpApplied {
+		t.Fatalf("update: %+v", r)
+	}
+	got, _ := e.repos.Trips.Get(ctx, svcTripID)
+	if len(got.Travellers) != 1 || got.Travellers[0] != "user_b" {
+		t.Fatalf("travellers=%v", got.Travellers)
+	}
+}

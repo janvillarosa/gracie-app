@@ -458,6 +458,36 @@ describe('trip fields', () => {
     expect(state()?.fields.stops).toEqual([])
   })
 
+  // apply_trip_test.go TestTravellers*, trip_service_test.go TestApplyOpsRejectsTravellersWhoAreNotMembers
+  it('sets travellers as a whole list, null clears to the whole house, shape is validated', () => {
+    mk()
+    expect(
+      run('dev-a', 'trip.update', undefined, { travellers: ['user_a', 'user_b'] }).status,
+    ).toBe('applied')
+    expect(state()?.fields.travellers).toEqual(['user_a', 'user_b'])
+    run('dev-a', 'trip.update', undefined, { travellers: null })
+    expect(state()?.fields.travellers).toBeUndefined()
+    const many = Array.from({ length: 21 }, (_, i) => `user_${i}`)
+    for (const bad of [many, ['user_a', 'user_a'], [''], [1]])
+      expect(stateRec(run('dev-a', 'trip.update', undefined, { travellers: bad }))).toBe(
+        'rejected/invalid',
+      )
+  })
+
+  it('rejects travellers who are not members of the house', () => {
+    srv.members = [
+      { user_id: 'user_a', name: 'A', avatar_key: 'a' },
+      { user_id: 'user_b', name: 'B', avatar_key: 'b' },
+    ]
+    mk()
+    expect(stateRec(run('dev-a', 'trip.update', undefined, { travellers: ['user_c'] }))).toBe(
+      'rejected/invalid',
+    )
+    expect(run('dev-a', 'trip.update', undefined, { travellers: ['user_b'] }).status).toBe(
+      'applied',
+    )
+  })
+
   it('caps day labels at 60 (per-patch key limit is invalid, the running total is cap)', () => {
     mk()
     const date = (i: number) => new Date(Date.UTC(2026, 0, 1 + i)).toISOString().slice(0, 10)

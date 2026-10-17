@@ -474,7 +474,7 @@ One family (`Button`), each kind paper at a known height.
 ### Chips, choices and segments
 - **Chip:** a white 36px pill with a 1px hairline border, 15px text and a small muted glyph. It opens a picker. An empty chip shows muted text ("+ Time").
 - **Open:** a Key Yellow fill, a deep-yellow border, the key shadow and an ink glyph.
-- **Choice tiles** (`ChipGroup`): a grid of 56px tiles (6 columns by default) with 12px corners, an icon above a 12px weight-600 label in muted grey. Pressed (`aria-pressed="true"`) turns Key Yellow with the key shadow.
+- **Choice tiles** (`ChipGroup`): a grid of 56px tiles (6 columns by default) with 12px corners, an icon above a 12px weight-600 label in muted grey. Pressed (`aria-pressed="true"`) turns Key Yellow with the key shadow. With `values` several can be pressed at once (Trip settings' "Who's going": Everyone, or any of the members); the caller decides what a press toggles.
 - **Segments** (the inspector's duration): 36px, 12px corners, 13px weight-600 muted labels; pressed is Key Yellow with a deep-yellow border and no shadow.
 - **Stamp select** (the inspector's category): every stamp outlined 1.5px in its own ink at 78% opacity. Only the chosen one is filled with its tint.
 

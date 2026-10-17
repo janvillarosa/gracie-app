@@ -29,9 +29,11 @@ const (
 	maxTripTitle          = 120
 	maxItemTitle          = 200
 	maxTripNotes          = 16384
+	maxUserID             = 64
 	maxItemNotes          = 2048
 	maxConfirmation       = 64
 	MaxStops              = 12
+	MaxTravellers         = 20
 	MaxDays               = 60
 	maxDayLabel           = 40
 	MaxDayClocks          = 4 * MaxDays // live labels plus recently removed ones awaiting clock pruning
@@ -145,6 +147,9 @@ func validTripPatch(p TripPatch, create bool, now time.Time) bool {
 			}
 		}
 	}
+	if p.Travellers.Set && p.Travellers.Val != nil && !validTravellers(*p.Travellers.Val) {
+		return false
+	}
 	if len(p.Days) > MaxDays {
 		return false
 	}
@@ -157,6 +162,22 @@ func validTripPatch(p TripPatch, create bool, now time.Time) bool {
 		return false
 	}
 	return p.TZ == nil || validTZ(*p.TZ)
+}
+
+// validTravellers checks shape only (cap, no blanks or duplicates). Whether the IDs are members
+// of the house is checked by the service, which knows the house.
+func validTravellers(ids []string) bool {
+	if len(ids) > MaxTravellers {
+		return false
+	}
+	seen := make(map[string]bool, len(ids))
+	for _, id := range ids {
+		if id == "" || len(id) > maxUserID || seen[id] {
+			return false
+		}
+		seen[id] = true
+	}
+	return true
 }
 
 func validTodoPatch(p TodoPatch, create bool, now time.Time) bool {

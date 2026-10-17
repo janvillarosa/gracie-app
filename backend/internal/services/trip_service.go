@@ -64,6 +64,10 @@ func (s *TripService) ApplyOps(ctx context.Context, user *models.User, roomID st
 	if err := ensureRoomMembership(ctx, s.rooms, user, roomID); err != nil {
 		return nil, err
 	}
+	rm, err := s.rooms.GetByID(ctx, roomID)
+	if err != nil {
+		return nil, err
+	}
 	if len(raws) == 0 || len(raws) > MaxOpsPerBatch {
 		return nil, derr.ErrBadRequest
 	}
@@ -86,7 +90,7 @@ func (s *TripService) ApplyOps(ctx context.Context, user *models.User, roomID st
 	}
 	deltas := []models.TripDelta{}
 	for _, id := range order {
-		d, err := s.applyGroup(ctx, user, roomID, now, ops, orderBySeq(ops, groups[id]), results)
+		d, err := s.applyGroup(ctx, user, roomID, rm.MemberIDs, now, ops, orderBySeq(ops, groups[id]), results)
 		if err != nil {
 			return nil, err
 		}
@@ -133,7 +137,7 @@ func storageFailure(ctx context.Context, tripID string, err error, ops []models.
 }
 
 // applyGroup applies the ops of one trip with a compare-and-swap retry loop.
-func (s *TripService) applyGroup(ctx context.Context, user *models.User, roomID string, now time.Time, ops []models.Op, idx []int, results []models.OpResult) (*models.TripDelta, error) {
+func (s *TripService) applyGroup(ctx context.Context, user *models.User, roomID string, members []string, now time.Time, ops []models.Op, idx []int, results []models.OpResult) (*models.TripDelta, error) {
 	tripID := ops[idx[0]].TripID
 	for attempt := 0; attempt < maxCASAttempts; attempt++ {
 		t, err := s.trips.Get(ctx, tripID)
@@ -151,7 +155,7 @@ func (s *TripService) applyGroup(ctx context.Context, user *models.User, roomID 
 			return nil, nil
 		}
 		base := t.Version
-		c := trips.Ctx{Actor: user.UserID, Now: now, NewV: base + 1, TZ: s.tzFunc()}
+		c := trips.Ctx{Actor: user.UserID, Now: now, NewV: base + 1, TZ: s.tzFunc(), Members: append([]string{}, members...)}
 		dirty, bump := false, false
 		var pending []analytics.Event // emitted only once this attempt is persisted
 		newClients := map[string]bool{}
