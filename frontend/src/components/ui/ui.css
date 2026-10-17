@@ -22,6 +22,12 @@
     transition: transform var(--dur-press) var(--ease-out), box-shadow var(--dur-fast) ease;
   }
 }
+/* Lite motion tier: the key still sinks; its shadow changes at once instead of re-blurring. */
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-motion='lite'] .ui-btn {
+    transition: transform var(--dur-press) var(--ease-out);
+  }
+}
 /* Disabled is paper with faded ink, never a grey pill and never see-through. */
 .ui-btn:disabled {
   cursor: default;
@@ -1282,5 +1288,266 @@ input.ui-sheet-title.has-error:focus-visible {
   }
   .paper-stack:not(.is-still)::before {
     animation: sheet-peek 520ms var(--ease-out) 240ms both;
+  }
+}
+/* Lite motion tier (lib/motion.ts): the top sheets still assemble; the sheets peeking beneath are
+   simply there, so a page's arrival is two animations instead of four. */
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-motion='lite'] .paper-stack:not(.is-still)::before,
+  :root[data-motion='lite'] .paper-stack:not(.is-still)::after {
+    animation: none;
+  }
+}
+
+/* ---- PrintSheet: what a page prints -------------------------------------------------------------
+   A document, not a screenshot. Hidden on screen. When printing it is the only thing on the page:
+   every other child of body (the app's root, toasts, menus) is hidden, and the desk shell's fixed
+   height lets go so long trips run onto more pages. Plain ink on the printer's white: no paper,
+   grain or shadow. The Bauhouse look is the mark, Outfit headings, the ink rule with its yellow tip,
+   and small caps labels. Rules are borders, which print even with "background graphics" off. */
+.print-sheet {
+  display: none;
+}
+@page {
+  margin: 18mm 16mm 20mm;
+  /* The browser's page footer (Chrome, Edge): the title (see PrintSheet) and the page count. */
+  @bottom-left {
+    font-family: var(--font-body);
+    font-size: var(--t-stamp);
+    color: var(--muted);
+  }
+  @bottom-right {
+    content: 'Page ' counter(page) ' of ' counter(pages);
+    font-family: var(--font-body);
+    font-size: var(--t-stamp);
+    color: var(--muted);
+  }
+}
+@media print {
+  html,
+  body,
+  html.trip-desk-shell,
+  html.trip-desk-shell body {
+    height: auto;
+    overflow: visible;
+    /* The desk's tone and grain would print as a grey wash. */
+    background: none !important;
+  }
+  body::before,
+  body > *:not(.print-sheet) {
+    display: none !important;
+  }
+  .print-sheet {
+    display: block;
+    counter-reset: section;
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: var(--t-body);
+    line-height: 1.4;
+  }
+
+  /* Masthead: the mark and name on the left, what kind of document on the right, then the rule. */
+  .print-masthead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .print-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-family: var(--font-headings);
+    font-size: var(--t-lead);
+    font-weight: var(--w-bold);
+  }
+  .print-kicker {
+    margin: 0;
+    color: var(--muted);
+    font-size: var(--t-stamp);
+    font-weight: var(--w-bold);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .print-rule {
+    position: relative;
+    margin: var(--space-3) 0 var(--space-5);
+    border-top: 4px solid var(--ink);
+  }
+  .print-rule::before {
+    content: '';
+    position: absolute;
+    top: -4px;
+    left: 0;
+    width: 72px;
+    border-top: 4px solid var(--brand-yellow);
+  }
+  .print-title {
+    margin: 0;
+    font-family: var(--font-headings);
+    font-size: var(--t-title);
+    font-weight: var(--w-bold);
+    line-height: 1.15;
+  }
+  .print-meta {
+    margin: var(--space-1) 0 var(--space-5);
+    color: var(--text);
+    font-size: var(--t-body);
+  }
+
+  /* The summary: label over value, two to a row, ruled like a form. */
+  .print-facts {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    margin: var(--space-5) 0 var(--space-6);
+    border-top: 1px solid var(--border-strong);
+  }
+  .print-fact {
+    padding: var(--space-2) var(--space-3) var(--space-2) 0;
+    border-bottom: 1px solid var(--border);
+    break-inside: avoid;
+  }
+  .print-fact dt {
+    color: var(--muted);
+    font-size: var(--t-stamp);
+    font-weight: var(--w-bold);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .print-fact dd {
+    margin: 2px 0 0;
+    font-weight: var(--w-medium);
+  }
+
+  /* Numbered sections, each with its table. */
+  .print-section {
+    margin-bottom: var(--space-6);
+  }
+  .print-section-title {
+    margin: 0 0 var(--space-2);
+    padding-bottom: var(--space-1);
+    border-bottom: 1.5px solid var(--ink);
+    font-family: var(--font-headings);
+    font-size: var(--t-heading);
+    font-weight: var(--w-semibold);
+    break-after: avoid;
+  }
+  .print-section-title::before {
+    counter-increment: section;
+    content: counter(section) '.';
+    margin-right: var(--space-2);
+    color: var(--muted);
+    font-weight: var(--w-regular);
+  }
+  .print-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--t-body);
+  }
+  .print-table thead {
+    display: table-header-group; /* repeats at the top of each page */
+  }
+  .print-table th {
+    padding: var(--space-2) var(--space-3) var(--space-1) 0;
+    border-bottom: 1px solid var(--border-strong);
+    color: var(--muted);
+    font-size: var(--t-stamp);
+    font-weight: var(--w-bold);
+    letter-spacing: 0.08em;
+    text-align: left;
+    text-transform: uppercase;
+  }
+  .print-table td,
+  .print-table tbody th {
+    padding: var(--space-2) var(--space-3) var(--space-2) 0;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  .print-table tr {
+    break-inside: avoid;
+  }
+  .print-table .is-num {
+    text-align: right;
+    padding-right: 0;
+  }
+  .print-sub {
+    display: block;
+    color: var(--muted);
+    font-size: var(--t-meta);
+  }
+
+  /* The plan: a day heading over a time column and what happens. */
+  .print-day {
+    margin-bottom: var(--space-4);
+    break-inside: avoid; /* a day never splits across pages */
+  }
+  .print-day-title {
+    margin: var(--space-4) 0 0;
+    font-family: var(--font-headings);
+    font-size: var(--t-lead);
+    font-weight: var(--w-semibold);
+    break-after: avoid;
+  }
+  .print-day-date,
+  .print-day-label {
+    color: var(--text);
+    font-weight: var(--w-regular);
+  }
+  .print-table.is-plan tbody th {
+    width: 7.5em;
+    color: var(--text);
+    font-size: var(--t-body);
+    font-weight: var(--w-medium);
+    letter-spacing: 0;
+    text-transform: none;
+    font-variant-numeric: tabular-nums;
+  }
+  .print-empty,
+  .print-note,
+  .print-foot {
+    margin: var(--space-2) 0 0;
+    color: var(--muted);
+    font-size: var(--t-meta);
+  }
+  .print-foot {
+    margin-top: var(--space-6);
+    padding-top: var(--space-2);
+    border-top: 1px solid var(--border);
+    font-size: var(--t-stamp);
+  }
+
+  /* A list: groups with a box to tick by pen. */
+  .print-group {
+    margin-bottom: var(--space-5);
+    break-inside: avoid-page;
+  }
+  .print-group-title {
+    margin: 0 0 var(--space-2);
+    padding-bottom: var(--space-1);
+    border-bottom: 1.5px solid var(--ink);
+    font-family: var(--font-headings);
+    font-size: var(--t-heading);
+    font-weight: var(--w-semibold);
+    break-after: avoid;
+  }
+  .print-checks {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .print-checks li {
+    display: flex;
+    gap: var(--space-3);
+    padding: var(--space-1) 0;
+    border-bottom: 1px solid var(--border);
+    break-inside: avoid;
+  }
+  .print-checks li::before {
+    content: '';
+    flex: none;
+    width: 1.1em;
+    height: 1.1em;
+    margin-top: 0.1em;
+    border: 1px solid var(--ink);
+    border-radius: var(--radius-xs);
   }
 }

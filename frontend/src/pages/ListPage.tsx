@@ -41,6 +41,7 @@ import {
   DotsThreeVertical,
   FloppyDisk,
   Broom,
+  Printer,
   Eraser,
   ArrowCounterClockwise,
   Check,
@@ -76,6 +77,7 @@ import { TopNav } from '@components/TopNav'
 import { PillNav } from '@components/PillNav'
 import { HouseLoader } from '@components/HouseLoader'
 import { RowSkeleton } from '@components/RowSkeleton'
+import { ListPrint } from '@components/ListPrint'
 
 const CLEAR_TOAST_KEY = 'clear-completed'
 
@@ -866,6 +868,7 @@ export const ListPage: React.FC = () => {
 
   const menuItems = [
     { key: 'clear-completed', label: 'Clear completed', icon: <Broom size={18} /> },
+    { key: 'print', label: 'Print', icon: <Printer size={18} /> },
     { type: 'divider' as const },
     ...(myVote(listMeta)
       ? [{ key: 'cancel', label: 'Cancel delete vote', danger: true }]
@@ -873,6 +876,7 @@ export const ListPage: React.FC = () => {
   ]
   const onMenuClick = ({ key }: { key: string }) => {
     if (key === 'clear-completed') onClearCompleted()
+    if (key === 'print') window.print()
     if (key === 'vote') {
       onVoteDelete()
       show('Vote recorded. The list is deleted once every housemate votes.')
@@ -910,6 +914,7 @@ export const ListPage: React.FC = () => {
         }
       />
       {contextHolder}
+      <ListPrint name={listMeta.name} items={items} house={houseQuery.data?.display_name} />
       <PaperStack>
         {/* Bottom sheet: title + details + actions */}
         <Paper className="paper-meta">

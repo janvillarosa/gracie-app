@@ -6,8 +6,16 @@ BACKEND  := backend
 FRONTEND := frontend
 GOLANGCI_VERSION := v2.12.2
 
+# Build Go the way the deploy images do (pure Go, no cgo). This also keeps Go off the system C
+# linker, which fails on some macOS SDKs ("ld: tapi error: malformed file"). Override with
+# CGO_ENABLED=1 if you ever need cgo (e.g. -race).
+export CGO_ENABLED ?= 0
+
+# The main checkout, when running inside a git worktree (else this checkout).
+MAIN_CHECKOUT := $(shell dirname "$$(cd "$$(git rev-parse --git-common-dir)" && pwd)")
+
 .DEFAULT_GOAL := help
-.PHONY: help setup fmt fmt-check lint typecheck vet build test-unit test-integration cover check golangci-lint-bin
+.PHONY: help setup bootstrap fmt fmt-check lint typecheck vet build test-unit test-integration cover check golangci-lint-bin
 
 help: ## List available targets
 	@grep -hE '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -16,6 +24,13 @@ help: ## List available targets
 setup: ## Install backend + frontend dependencies
 	cd $(BACKEND) && go mod download
 	cd $(FRONTEND) && pnpm install --frozen-lockfile
+
+bootstrap: setup golangci-lint-bin ## Make a fresh clone/worktree ready for `make check` (deps, linter, local env)
+	@if [ ! -f $(FRONTEND)/.env.development.local ] && [ -f "$(MAIN_CHECKOUT)/$(FRONTEND)/.env.development.local" ] \
+	  && [ "$(MAIN_CHECKOUT)" != "$(CURDIR)" ]; then \
+	  cp "$(MAIN_CHECKOUT)/$(FRONTEND)/.env.development.local" $(FRONTEND)/.env.development.local; \
+	  echo "copied $(FRONTEND)/.env.development.local from the main checkout"; fi
+	@echo "✓ bootstrap done; next: make check"
 
 check: fmt-check vet lint typecheck build test-unit ## Fast pre-commit gate (no external services)
 	@echo "✓ make check passed"
