@@ -2739,13 +2739,13 @@
   background: var(--paper-fill);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-pill);
-  box-shadow: var(--paper-edge), var(--lift-2);
+  box-shadow: var(--paper-edge), var(--lift-bar);
 }
 .trip-composer .add-bar:focus-within {
   border-color: var(--brand-yellow-deep);
   box-shadow:
     var(--paper-edge),
-    var(--lift-2),
+    var(--lift-bar),
     0 0 0 3px color-mix(in srgb, var(--brand-yellow) 55%, transparent);
 }
 .trip-composer .add-row,
@@ -2763,9 +2763,10 @@
 .trip-composer .trip-target-chip {
   min-height: 32px;
 }
-/* The composer's round key is a size up from the add bar's. */
+/* The composer's round key sits inside the pill, 8px clear of its edge on every side (38px in a
+   56px pill); its hit area still reaches 46px. */
 .trip-composer .add-btn {
-  --key-size: 48px;
+  --key-size: calc(var(--composer-h) - 2px - 2 * var(--space-2));
 }
 /* A muted "/" at the right of an empty, unfocused field (a keyboard in hand). */
 @media (hover: hover) and (pointer: fine) {
