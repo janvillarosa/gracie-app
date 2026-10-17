@@ -200,6 +200,7 @@ func (w *Worker) recomputeKey(ctx context.Context, ref KeyRef, cache awayCache) 
 		return nil, err
 	}
 	var done, asked []time.Time
+	var doneOcc, askedOcc []predict.Occurrence
 	var wDone, wAsked, wIgnored []weighted
 	classify := func(evs []Event, weight float64, own bool) {
 		for _, e := range evs {
@@ -211,11 +212,13 @@ func (w *Worker) recomputeKey(ctx context.Context, ref KeyRef, cache awayCache) 
 			case RoleComplete:
 				if own {
 					done = append(done, e.OccurredAt)
+					doneOcc = append(doneOcc, predict.Occurrence{At: e.OccurredAt, HOW: e.Local.HOW})
 				}
 				wDone = append(wDone, weighted{e.OccurredAt, weight})
 			case RoleRequest:
 				if own {
 					asked = append(asked, e.OccurredAt)
+					askedOcc = append(askedOcc, predict.Occurrence{At: e.OccurredAt, HOW: e.Local.HOW})
 				}
 				wAsked = append(wAsked, weighted{e.OccurredAt, weight})
 			case RoleDismiss:
@@ -249,6 +252,13 @@ func (w *Worker) recomputeKey(ctx context.Context, ref KeyRef, cache awayCache) 
 	iv := KeyIntervals{N: rhythm.N, Source: source, EWMADays: rhythm.EWMADays, CV: rhythm.CV, LastAt: rhythm.Last, ComputedAt: w.now().UTC(), Version: ForecastVersion}
 	if due, ok := rhythm.DueAway(away); ok {
 		iv.DueAt = &due
+	}
+	occ := doneOcc
+	if source == "request" {
+		occ = askedOcc
+	}
+	if wk, ok := predict.DetectWeekly(occ, away); ok {
+		iv.Weekly = &wk
 	}
 	if f, ok := predict.DefaultParams.PredictAway(timesOf(wAsked), timesOf(wDone), timesOf(wIgnored), away); ok {
 		certainty := meanWeight(wAsked)

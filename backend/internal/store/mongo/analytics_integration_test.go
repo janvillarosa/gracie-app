@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/janvillarosa/gracie-app/backend/internal/analytics"
+	"github.com/janvillarosa/gracie-app/backend/internal/analytics/predict"
 	"github.com/janvillarosa/gracie-app/backend/internal/models"
 	"go.mongodb.org/mongo-driver/bson"
 )
@@ -349,5 +350,39 @@ func TestMongoForecastKeysAnySubjectOpeningBy(t *testing.T) {
 	}
 	if len(got) != 2 || got[0].Key != "milk" || got[1].Key != "bins" || got[0].Containers["list:l1"] != 1 || got[0].Intervals.Add.Clock != "home" {
 		t.Fatalf("got %+v", got)
+	}
+}
+
+func TestMongoKeyIntervalsWeeklyRoundtripsAndClears(t *testing.T) {
+	c := connectOrSkip(t)
+	ctx := context.Background()
+	aggs := NewAggRepo(c, NewTx(c))
+	room, owner := "rw_"+randHex(6), "w_"+randHex(6)
+	now := time.Now().UTC().Truncate(time.Millisecond)
+	wm, ok, err := aggs.AcquireLease(ctx, owner, 5*time.Minute, now)
+	if err != nil || !ok {
+		t.Fatalf("lease %v %v", ok, err)
+	}
+	defer func() { _ = aggs.ReleaseLease(ctx, owner) }()
+	ref := analytics.KeyRef{RoomID: room, SubjectType: "item", Key: "bin bags"}
+	b := analytics.NewBatch()
+	b.Keys[ref.ID()] = &analytics.DocUpdate{ID: ref.ID(), Set: map[string]any{"room_id": room, "subject_type": "item", "key": ref.Key}}
+	if err := aggs.ApplyBatch(ctx, b, owner, wm); err != nil {
+		t.Fatal(err)
+	}
+	wk := predict.Weekly{EveryWeeks: 2, Weekday: 2, Hour: 20, Share: 1}
+	if err := aggs.SetKeyIntervals(ctx, ref.ID(), analytics.KeyIntervals{N: 10, LastAt: now, ComputedAt: now, Version: analytics.ForecastVersion, Weekly: &wk}); err != nil {
+		t.Fatal(err)
+	}
+	got, err := aggs.GetKeyStats(ctx, room, "item", []string{ref.Key})
+	if err != nil || got[ref.Key].Intervals == nil || got[ref.Key].Intervals.Weekly == nil || *got[ref.Key].Intervals.Weekly != wk {
+		t.Fatalf("weekly lost: %+v %v", got[ref.Key].Intervals, err)
+	}
+	if err := aggs.SetKeyIntervals(ctx, ref.ID(), analytics.KeyIntervals{N: 10, LastAt: now, ComputedAt: now, Version: analytics.ForecastVersion}); err != nil {
+		t.Fatal(err)
+	}
+	got, _ = aggs.GetKeyStats(ctx, room, "item", []string{ref.Key})
+	if got[ref.Key].Intervals.Weekly != nil {
+		t.Fatal("a pattern no longer detected must be cleared")
 	}
 }

@@ -56,17 +56,18 @@ func learnedWorld(t *testing.T) (households.World, *memstore.AggRepo) {
 }
 
 type keyRow struct {
-	Key       string  `json:"key"`
-	Kind      string  `json:"kind"`
-	N         int     `json:"n"`
-	Source    string  `json:"source"`
-	Days      float64 `json:"days"`
-	CV        float64 `json:"cv"`
-	Series    string  `json:"series,omitempty"`
-	Clock     string  `json:"clock,omitempty"`
-	Score     float64 `json:"score,omitempty"`
-	Confident bool    `json:"confident"`
-	Due       string  `json:"due,omitempty"`
+	Key       string          `json:"key"`
+	Kind      string          `json:"kind"`
+	N         int             `json:"n"`
+	Source    string          `json:"source"`
+	Days      float64         `json:"days"`
+	CV        float64         `json:"cv"`
+	Series    string          `json:"series,omitempty"`
+	Clock     string          `json:"clock,omitempty"`
+	Score     float64         `json:"score,omitempty"`
+	Confident bool            `json:"confident"`
+	Due       string          `json:"due,omitempty"`
+	Weekly    *predict.Weekly `json:"weekly,omitempty"`
 }
 
 type houseRow struct {
@@ -85,7 +86,7 @@ func snapshot(w households.World, aggs *memstore.AggRepo) []houseRow {
 		for _, e := range h.Expect {
 			doc := aggs.Key(h.Room + ":item:" + e.Key)
 			iv, _ := doc["intervals"].(analytics.KeyIntervals)
-			k := keyRow{Key: e.Key, Kind: string(e.Kind), N: iv.N, Source: iv.Source, Days: round(iv.EWMADays), CV: round(iv.CV)}
+			k := keyRow{Key: e.Key, Kind: string(e.Kind), N: iv.N, Source: iv.Source, Days: round(iv.EWMADays), CV: round(iv.CV), Weekly: iv.Weekly}
 			if iv.Add != nil {
 				f := predict.Forecast{Trials: iv.Add.Trials, Score: iv.Add.Score, CV: iv.Add.CV}
 				k.Series, k.Clock, k.Score, k.Confident = iv.Add.Series, iv.Add.Clock, round(iv.Add.Score), f.Confident(predict.DefaultParams)
@@ -165,6 +166,11 @@ func TestGoldenWorldBehaves(t *testing.T) {
 				staples++
 				if ok {
 					confident++
+				}
+			case households.Calendar:
+				wk := iv.Weekly
+				if wk == nil || wk.EveryWeeks != e.EveryWeeks || wk.Weekday != e.Weekday || wk.Hour != e.Hour {
+					t.Errorf("%s/%s should follow the calendar %d/%d/%d: %+v", h.Persona, e.Key, e.EveryWeeks, e.Weekday, e.Hour, wk)
 				}
 			case households.Irregular, households.Thin, households.OneOff:
 				if ok {

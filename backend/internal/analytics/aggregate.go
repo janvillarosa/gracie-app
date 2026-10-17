@@ -83,6 +83,9 @@ type KeyIntervals struct {
 	// Add forecasts the next time the thing is asked for, with its backtested track record.
 	// Nil until there is enough history. Smart suggestions read only this.
 	Add *AddForecast `bson:"add,omitempty" json:"add,omitempty"`
+	// Weekly is set when the thing follows the calendar (bin day): done on one local weekday every
+	// one or two weeks. Learned from completions, or requests when completions are thin.
+	Weekly *predict.Weekly `bson:"weekly,omitempty" json:"weekly,omitempty"`
 }
 
 // AddForecast is a stored predict.Forecast: when the thing is next expected to be added, the

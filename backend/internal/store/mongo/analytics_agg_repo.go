@@ -203,6 +203,11 @@ func (r *AggRepo) SetKeyIntervals(ctx context.Context, id string, iv analytics.K
 	} else {
 		unset = append(unset, bson.E{Key: "intervals.add", Value: ""})
 	}
+	if iv.Weekly != nil {
+		set = append(set, bson.E{Key: "intervals.weekly", Value: *iv.Weekly})
+	} else {
+		unset = append(unset, bson.E{Key: "intervals.weekly", Value: ""})
+	}
 	update := bson.D{{Key: "$set", Value: set}}
 	if len(unset) > 0 {
 		update = append(update, bson.E{Key: "$unset", Value: unset})
