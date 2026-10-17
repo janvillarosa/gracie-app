@@ -401,15 +401,24 @@ type PantryItem struct {
 // A house with fewer distinct items than this also gets the common grocery set.
 const pantrySeedThreshold = 60
 
+// usualQtyWindow is how many of an item's latest adds decide its usual quantity.
+const usualQtyWindow = 10
+
 // pantryByKey groups items (newest first, as ListByRoom returns them) by normalized key, so
-// the first sighting of a key carries its most recent description, category, quantity and
-// unit. order lists keys in first-seen order.
+// the first sighting of a key carries its most recent description and category. Quantity and
+// unit are the usual pair: the most common among the latest usualQtyWindow adds, ties to the
+// most recent (an add without a quantity counts too, so "milk" typed bare stays bare). order
+// lists keys in first-seen order.
 func pantryByKey(items []models.ListItem) (byKey map[string]*PantryItem, order []string) {
 	byKey = make(map[string]*PantryItem)
+	recent := make(map[string][][2]string) // key -> latest (quantity, unit) pairs, newest first
 	for _, it := range items {
 		key := parse.NormalizeKey(it.Description)
 		if key == "" {
 			continue
+		}
+		if len(recent[key]) < usualQtyWindow {
+			recent[key] = append(recent[key], [2]string{it.Quantity, it.Unit})
 		}
 		if p, ok := byKey[key]; ok {
 			p.TimesAdded++
@@ -418,14 +427,32 @@ func pantryByKey(items []models.ListItem) (byKey map[string]*PantryItem, order [
 		byKey[key] = &PantryItem{
 			Description: it.Description,
 			Category:    it.Category,
-			Quantity:    it.Quantity,
-			Unit:        it.Unit,
 			TimesAdded:  1,
 			LastAddedAt: it.CreatedAt,
 		}
 		order = append(order, key)
 	}
+	for key, pairs := range recent {
+		usual := mostCommon(pairs)
+		byKey[key].Quantity, byKey[key].Unit = usual[0], usual[1]
+	}
 	return byKey, order
+}
+
+// mostCommon returns the pair seen most often; on a tie, the one seen first (the most recent).
+func mostCommon(pairs [][2]string) [2]string {
+	counts := make(map[[2]string]int, len(pairs))
+	var best [2]string
+	for _, p := range pairs {
+		counts[p]++
+	}
+	top := 0
+	for _, p := range pairs {
+		if counts[p] > top {
+			best, top = p, counts[p]
+		}
+	}
+	return best
 }
 
 func (s *ListService) GetPantry(ctx context.Context, user *models.User, roomID string) ([]PantryItem, error) {

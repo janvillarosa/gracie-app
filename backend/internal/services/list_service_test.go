@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"testing"
+	"time"
 
 	derr "github.com/janvillarosa/gracie-app/backend/internal/errors"
 	"github.com/janvillarosa/gracie-app/backend/internal/models"
@@ -112,4 +113,53 @@ func TestGetPantryRanksHouseHistoryAndSeedsCommon(t *testing.T) {
 			t.Fatalf("common set duplicated a house item: %+v", p)
 		}
 	}
+}
+
+// usualOf builds same-key items newest first from "qty unit" pairs ("" for none) and returns the
+// pantry entry pantryByKey makes of them.
+func usualOf(t *testing.T, pairs ...[2]string) *PantryItem {
+	t.Helper()
+	base := time.Date(2026, 10, 1, 9, 0, 0, 0, time.UTC)
+	items := make([]models.ListItem, len(pairs))
+	for i, p := range pairs {
+		items[i] = models.ListItem{Description: "Milk", Category: "Dairy", Quantity: p[0], Unit: p[1], CreatedAt: base.Add(-time.Duration(i) * 24 * time.Hour)}
+	}
+	items[0].Category = "Fridge" // the newest add's category must win
+	byKey, _ := pantryByKey(items)
+	return byKey["milk"]
+}
+
+func TestPantryUsualQuantity(t *testing.T) {
+	q := func(s string) [2]string { return [2]string{s, ""} }
+	cases := []struct {
+		name      string
+		pairs     [][2]string
+		qty, unit string
+	}{
+		{"most common wins", [][2]string{q("6"), q("2"), q("2"), q("2")}, "2", ""},
+		{"tie goes to the most recent", [][2]string{q("6"), q("2"), q("6"), q("2")}, "6", ""},
+		{"usually typed without a quantity", [][2]string{q("2"), q(""), q(""), q("")}, "", ""},
+		{"only the last 10 adds count", append(repeat([2]string{"1", "kg"}, 10), [2]string{"5", "kg"}, [2]string{"5", "kg"}), "1", "kg"},
+		{"older habit outside the window", append(repeat([2]string{"1", "l"}, 3), repeat([2]string{"2", "l"}, 9)...), "2", "l"},
+		{"unit is part of the pair", [][2]string{{"1", "l"}, {"1", "gal"}, {"1", "gal"}}, "1", "gal"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			p := usualOf(t, c.pairs...)
+			if p == nil || p.Quantity != c.qty || p.Unit != c.unit {
+				t.Fatalf("got %+v want %q %q", p, c.qty, c.unit)
+			}
+			if p.Category != "Fridge" || p.TimesAdded != len(c.pairs) {
+				t.Fatalf("description/category from the newest add, all adds counted: %+v", p)
+			}
+		})
+	}
+}
+
+func repeat(p [2]string, n int) [][2]string {
+	out := make([][2]string, n)
+	for i := range out {
+		out[i] = p
+	}
+	return out
 }
