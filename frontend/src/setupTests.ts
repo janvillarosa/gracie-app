@@ -42,3 +42,28 @@ Object.defineProperty(window, 'getComputedStyle', {
   writable: true,
   value: () => ({ getPropertyValue: () => '' }) as any,
 })
+
+// jsdom runs every requestAnimationFrame callback off one setInterval, made when a frame is asked for
+// with none pending and kept until none are. It takes setInterval from the global at that moment, so a
+// frame asked for while a test fakes timers gets a fake interval; once real timers are back it never
+// fires, and while that frame stays pending no new interval is made. From then on no frame runs, in
+// this file or a later one (the single fork shares one window across files). Give each frame its own
+// timer from whichever clock is current, so a faked clock can't outlive the test that faked it.
+{
+  const frames = new Map<number, () => void>()
+  let lastFrame = 0
+  window.requestAnimationFrame = (cb: FrameRequestCallback) => {
+    const id = ++lastFrame
+    const clear = globalThis.clearTimeout
+    const timer = globalThis.setTimeout(() => {
+      frames.delete(id)
+      cb(performance.now())
+    }, 1000 / 60)
+    frames.set(id, () => clear(timer))
+    return id
+  }
+  window.cancelAnimationFrame = (id: number) => {
+    frames.get(id)?.()
+    frames.delete(id)
+  }
+}

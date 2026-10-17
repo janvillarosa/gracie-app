@@ -39,6 +39,12 @@ why the config forces a single fork.
   `findBy*` queries to await state — sleeps are flaky. (Some older tests still use
   sleeps; replace them when you touch those files.)
 - Assert on user-visible behavior (roles/text), not implementation details.
+- **One window for the whole run.** The single fork shares one jsdom window across every test file,
+  so global state a test leaves behind (stubs, `document.title`, pending timers) reaches later files.
+- **`requestAnimationFrame` is ours, not jsdom's** (`setupTests.ts`): each frame is a ~16ms timeout
+  on whichever clock is current, so fake timers drive frames while installed and can't leave frames
+  dead afterwards (jsdom's shared frame interval could, which broke rAF-driven focus and sign-out in
+  later files; `__tests__/testEnv.test.ts`).
 
 ## Performance conventions (low-end devices)
 
