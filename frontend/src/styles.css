@@ -68,6 +68,7 @@
   --space-5: 20px;
   --space-6: 24px;
   --space-7: 32px;
+  --paper-pad-x: var(--space-6); /* a sheet's side padding (16px on a phone); edge-to-edge bars bleed by it */
 
   /* ---- Controls and rows ------------------------------------------------------------- */
   --control-sm: 32px; /* a target chip, a small round slip */
@@ -494,6 +495,13 @@ h5.ant-typography {
   padding: 24px;
 }
 
+/* A phone keeps a 16px gutter, so the sheet (and the rows on it) get the width back. */
+@media (max-width: 480px) {
+  .container {
+    padding-inline: var(--space-4);
+  }
+}
+
 /* Brand logo alignment: sits above the main panel, aligned left */
 .brand-logo {
   /* Shared element: the logo glides between login and the app during a view transition */
@@ -814,13 +822,14 @@ h5.ant-typography {
 
 /* Add bar: pinned to the bottom of the viewport while the list scrolls under it, and
    docked flush to the card's bottom edge once you reach the end. The negative margins
-   cancel the card body's 24px padding so the bar spans the card edge to edge. */
+   cancel the card body's padding (its sides are --paper-pad-x, narrower on a phone) so the bar
+   spans the card edge to edge and its field lines up with the rows above. */
 .add-bar {
   position: sticky;
   bottom: 0;
   background: var(--paper-fill);
-  margin: 16px -24px -24px;
-  padding: 12px 24px calc(12px + env(safe-area-inset-bottom, 0px));
+  margin: 16px calc(-1 * var(--paper-pad-x)) calc(-1 * var(--space-6));
+  padding: 12px var(--paper-pad-x) calc(12px + env(safe-area-inset-bottom, 0px));
   border-top: 1px solid var(--border);
   border-radius: 0 0 calc(var(--radius-lg) - 1px) calc(var(--radius-lg) - 1px);
   box-shadow: var(--shadow-up);
@@ -917,8 +926,9 @@ h5.ant-typography {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  /* Tall enough for a wrapped rhythm line too, so every slip is the same height. */
-  min-height: 68px;
+  /* Tall enough for a two-line name (or a wrapped rhythm line) too, so every slip is the same
+     height and the list never moves when one hands off to the next. */
+  min-height: 76px;
   padding: var(--space-2) 0 var(--space-2) var(--space-1);
 }
 
@@ -940,13 +950,17 @@ h5.ant-typography {
   gap: 1px;
 }
 
+/* The name wraps to a second line before it is cut, so a narrow screen still shows all of it. */
 .suggestion-name {
   color: var(--ink);
   font-weight: var(--w-medium);
   line-height: 1.35;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
 .suggestion-cadence {
@@ -964,6 +978,8 @@ h5.ant-typography {
    the plus on the key turns once. Nothing loops. */
 .suggestion-reveal {
   display: grid;
+  /* minmax(0, 1fr): the slip takes the list's width and its name ellipsizes, never pushes past. */
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: 1fr;
 }
 
@@ -1242,7 +1258,9 @@ h5.ant-typography {
 /* The item's words win the row: they keep at least a readable width, and the stamp gives way
    (shrinks with an ellipsis) before they do. */
 .item-row .item-text {
-  flex: 1 1 auto;
+  /* Basis 0, not auto: a long name wraps beside its checkbox instead of the whole name breaking
+     onto a line of its own when the row wraps for its stamp. */
+  flex: 1 1 0;
   min-width: 0;
   white-space: normal;
   overflow-wrap: anywhere;
@@ -1780,9 +1798,13 @@ h5.ant-typography {
   container-type: inline-size;
 }
 @container (max-width: 440px) {
+  /* The two lines sit together in the middle of the row, so the stamp needs no pull-up and never
+     covers a name that wraps to a second line. */
   .items-list .item-row:has(.item-cat) {
     flex-wrap: wrap;
+    align-content: center;
     row-gap: 0;
+    padding-block: var(--space-2);
   }
   /* A zero-height break after the first line, so the stamp always starts the second one. */
   .items-list .item-row:has(.item-cat)::after {
@@ -1793,7 +1815,7 @@ h5.ant-typography {
   }
   .items-list .item-row .item-cat {
     order: 4;
-    margin: -8px 0 12px calc(22px + 14px) !important;
+    margin: var(--space-1) 0 0 calc(22px + 14px) !important;
   }
 }
 

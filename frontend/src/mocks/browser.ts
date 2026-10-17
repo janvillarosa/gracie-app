@@ -81,7 +81,30 @@ export async function startMockTrips() {
       updated_at: now,
     },
   ]
-  let ignored = false
+  // Groceries carries stamps, amounts and a long name, so narrow layouts can be checked. Adds
+  // are kept, so taking a suggestion shows up in the list.
+  type Row = { description: string; category?: string; quantity?: string; unit?: string }
+  const groceries: Row[] = [
+    { description: 'Oregano', category: 'Produce' },
+    { description: 'Dill plant', category: 'Produce' },
+    { description: 'Oat milk', category: 'Dairy', quantity: '2', unit: 'L' },
+    { description: 'Sourdough loaf from the corner bakery', category: 'Bakery' },
+    { description: 'Kitchen roll', category: 'Household', quantity: '4' },
+    { description: 'Basmati rice', quantity: '1', unit: 'kg' },
+  ]
+  // A queue of suggestions, so the hand-off between slips (and the slot closing after the
+  // last) can be seen. Taking or ignoring one moves to the next.
+  const suggestionQueue = [
+    { key: 'cherry tomatoes', description: 'Cherry tomatoes', every_days: 7, score: 0.9 },
+    { key: 'greek yogurt', description: 'Greek yogurt', quantity: '2', every_days: 14, score: 0.8 },
+    {
+      key: 'free-range eggs',
+      description: 'Free-range eggs from the farmers market',
+      every_days: 10,
+      score: 0.7,
+    },
+  ]
+  const spent = new Set<string>()
   const handlers = [
     ...tripHandlers(srv, { latencyMs: 80 }),
     http.get('/api/me', () => HttpResponse.json(user())),
@@ -104,20 +127,11 @@ export async function startMockTrips() {
     http.get('/api/rooms/:roomId/pantry', () => HttpResponse.json([])),
     http.get('/api/rooms/:roomId/lists/:listId/items', ({ params }) => {
       const pack = params.listId === srv.listId
-      // Groceries carries stamps, amounts and a long name, so narrow layouts can be checked.
-      const rows: { description: string; category?: string; quantity?: string; unit?: string }[] =
-        pack
-          ? ['Passport', 'Charger', 'Sun cream', 'Walking shoes'].map((description) => ({
-              description,
-            }))
-          : [
-              { description: 'Oregano', category: 'Produce' },
-              { description: 'Dill plant', category: 'Produce' },
-              { description: 'Oat milk', category: 'Dairy', quantity: '2', unit: 'L' },
-              { description: 'Sourdough loaf from the corner bakery', category: 'Bakery' },
-              { description: 'Kitchen roll', category: 'Household', quantity: '4' },
-              { description: 'Basmati rice', quantity: '1', unit: 'kg' },
-            ]
+      const rows: Row[] = pack
+        ? ['Passport', 'Charger', 'Sun cream', 'Walking shoes'].map((description) => ({
+            description,
+          }))
+        : groceries
       return HttpResponse.json(
         rows.map((row, i) => ({
           ...row,
@@ -131,24 +145,37 @@ export async function startMockTrips() {
         })),
       )
     }),
-    // One smart suggestion on Groceries, so the slip above the items can be seen in dev.
-    http.get('/api/rooms/:roomId/lists/:listId/suggestions', ({ params }) =>
-      HttpResponse.json({
-        suggestions:
-          params.listId === 'list_groceries' && !ignored
-            ? [
-                {
-                  key: 'cherry tomatoes',
-                  description: 'Cherry tomatoes',
-                  every_days: 7,
-                  score: 0.9,
-                },
-              ]
-            : [],
-      }),
-    ),
-    http.post('/api/rooms/:roomId/lists/:listId/suggestions/ignore', () => {
-      ignored = true
+    http.post('/api/rooms/:roomId/lists/:listId/items', async ({ params, request }) => {
+      const body = (await request.json().catch(() => ({}))) as Row & { source?: string }
+      const row: Row = {
+        description: body.description,
+        category: body.category,
+        quantity: body.quantity,
+        unit: body.unit,
+      }
+      groceries.push(row)
+      const key = row.description.toLowerCase()
+      if (body.source === 'suggestion') spent.add(key)
+      return HttpResponse.json({
+        ...row,
+        item_id: `item_groc_${groceries.length - 1}`,
+        list_id: params.listId,
+        room_id: ROOM,
+        completed: false,
+        order: groceries.length,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+    }),
+    http.get('/api/rooms/:roomId/lists/:listId/suggestions', ({ params }) => {
+      const next = suggestionQueue.find((s) => !spent.has(s.key))
+      return HttpResponse.json({
+        suggestions: params.listId === 'list_groceries' && next ? [next] : [],
+      })
+    }),
+    http.post('/api/rooms/:roomId/lists/:listId/suggestions/ignore', async ({ request }) => {
+      const body = (await request.json().catch(() => ({}))) as { key?: string }
+      if (body.key) spent.add(body.key)
       return new HttpResponse(null, { status: 204 })
     }),
   ]

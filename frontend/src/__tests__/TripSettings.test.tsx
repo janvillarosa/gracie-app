@@ -235,7 +235,7 @@ describe('Trip settings: When', () => {
     settings(makeTrip(7).trip_id)
     await userEvent.click((await screen.findByText('When')).closest('button') as HTMLElement)
     const sheet = await screen.findByRole('dialog')
-    const label = (d: string) => new RegExp(shortDay(d).replace(/\s/, '.*'))
+    const label = (d: string) => new RegExp(`${shortDay(d).replace(/\s/, '.*\\b')}\\b`)
     await userEvent.click(within(sheet).getByRole('button', { name: label(rel(1)) }))
     const t = () => tripServer.trips.get(makeTrip(7).trip_id)?.fields
     // The first tap is already a one-day trip.
@@ -261,7 +261,7 @@ describe('Trip settings: When', () => {
     // The footer row exists from the start; its keys are only hidden until needed.
     expect(foot()).toBeInTheDocument()
     expect(within(sheet).queryByRole('button', { name: 'Done' })).not.toBeInTheDocument()
-    const label = (d: string) => new RegExp(shortDay(d).replace(/\s/, '.*'))
+    const label = (d: string) => new RegExp(`${shortDay(d).replace(/\s/, '.*\\b')}\\b`)
     await userEvent.click(within(sheet).getByRole('button', { name: label(rel(1)) }))
     expect(grid().children.length).toBe(cells)
     expect(sheet.querySelector('.trip-cal-foot')).toBe(foot())
