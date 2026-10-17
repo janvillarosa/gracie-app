@@ -66,6 +66,16 @@ why the config forces a single fork.
 - **Motion/shape tokens** live on `:root` in `styles.css` (`--ease-out`,
   `--dur-*`, `--shadow-key`, `--focus-ring`). Reuse them; animations stay behind
   `prefers-reduced-motion: no-preference`.
+- **Motion tier** (`lib/motion.ts`, set on `<html data-motion>` before mount): `full` everywhere
+  unless the device can't keep up, then `lite`. Static signals (Save-Data, ≤2 cores, ≤2 GB, or
+  4 GB with ≤4 cores; Safari reports none) or a frame check: each CSS `animationstart` times
+  500ms of frames, and 3 janky windows of the last 6 switch to lite for a week (20 smooth in a
+  row end the check). `?motion=full|lite` pins it. Lite skips the View Transition, halves
+  confetti, stops `useScrollProgress`, and trims overlap in CSS (`:root[data-motion='lite']`
+  blocks at the end of `styles.css` and in `ui.css`). **Rule for new motion:** animate
+  `transform`/`opacity` only (fade a second layer in or out instead of animating a colour,
+  border or shadow); anything that must lay out or repaint per frame, or that plays on top of a
+  page's arrival, gets a lite override that removes it.
 
 ## Loading and motion under latency
 
@@ -98,7 +108,8 @@ page's one key; a round plus at 400px and narrower, `NARROW_SLIP`, so the name k
 with `source: 'suggestion'`; Ignore posts the key. Both pop the slip at once and the server is asked for the
 next one; after two ignores in a row it answers with nothing (the list is paused).
 Motion: one authored arrival, then rest, nothing loops (`styles.css`, "Arrival"). The slip settles in while the list
-below glides down (`.suggestion-reveal` grid rows 0fr to 1fr, clipped only during the grow), its warm edge flashes and
+below glides down (`.suggestion-reveal` grid rows 0fr to 1fr, clipped only during the grow; on the lite motion tier the
+slot opens at once), its warm edge (an `::after` border, faded by opacity) flashes and
 fades, and a beat later the plus on the key turns a quarter once and rests
 (it is symmetric, so it ends looking as it began). No gloss, no pulsing, no loop. A taken or ignored slip pops out but keeps its slot (`spent` phases leaving, held, collapsing), so going
 through suggestions swaps the card in place and the list never moves; the slot closes once, only when nothing follows.

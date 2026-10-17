@@ -1,3 +1,5 @@
+import { isLiteMotion } from './motion'
+
 export function confettiAt(
   x: number,
   y: number,
@@ -6,10 +8,13 @@ export function confettiAt(
   if (typeof document === 'undefined') return
   if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
   const colors = opts?.colors || ['#A094F2', '#7D6EF0', '#F3F78A', '#C7B090', '#FF7A90', '#74E0A6']
-  // Fewer particles on low-core devices keeps the burst at 60fps.
-  const lowEnd = (navigator.hardwareConcurrency ?? 8) <= 4
-  const count = opts?.count ?? (lowEnd ? 16 : 40)
-  const duration = opts?.durationMs ?? 2000
+  // Fewer particles on low-core devices keeps the burst at 60fps; the lite motion tier halves
+  // what's left (asked-for counts included) and shortens the fall.
+  const lite = isLiteMotion()
+  const lowEnd = lite || (navigator.hardwareConcurrency ?? 8) <= 4
+  const asked = opts?.count ?? (lowEnd ? 16 : 40)
+  const count = lite ? Math.ceil(asked / 2) : asked
+  const duration = Math.min(opts?.durationMs ?? 2000, lite ? 1200 : Number.POSITIVE_INFINITY)
   const gravity = 1600 // px/s^2, stronger gravity for visible arcs
   const drag = 0.98 // air resistance factor per frame
 
