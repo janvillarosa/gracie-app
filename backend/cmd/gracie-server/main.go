@@ -68,10 +68,10 @@ func main() {
 				log.Printf("analytics: aggregate indexes failed: %v (rollups disabled)", err)
 			} else {
 				// Trips reach analytics only through this port: away time is not time for a rhythm.
-				rollup = analytics.NewWorker(eventsRepo, aggRepo, analyticsReg).
-					WithAway(services.NewAwayCalendar(roomsRepo, usersRepo, tripsRepo))
+				awayCal := services.NewAwayCalendar(roomsRepo, usersRepo, tripsRepo)
+				rollup = analytics.NewWorker(eventsRepo, aggRepo, analyticsReg).WithAway(awayCal)
 				purger = analytics.NewPurger(eventsRepo, aggRepo)
-				reader := analytics.NewReader(aggRepo)
+				reader := analytics.NewReader(aggRepo).WithAway(awayCal)
 				insights = handlers.NewInsightsHandler(services.NewInsightsService(roomsRepo, reader))
 				suggestReader, suggestEvents = reader, eventsRepo
 			}

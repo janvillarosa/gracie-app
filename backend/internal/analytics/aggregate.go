@@ -4,6 +4,8 @@ import (
 	"context"
 	"strings"
 	"time"
+
+	"github.com/janvillarosa/gracie-app/backend/internal/analytics/predict"
 )
 
 // DocUpdate is a storage-agnostic update to one aggregate document. Every operation is
@@ -109,6 +111,16 @@ type AddForecast struct {
 	Windows []ForecastWindow `bson:"windows,omitempty" json:"windows,omitempty"`
 }
 
+// Forecast turns the stored forecast back into the predict form (for NeedBy).
+func (a AddForecast) Forecast() predict.Forecast {
+	f := predict.Forecast{Series: a.Series, Clock: a.Clock, N: a.N, EWMADays: a.EWMADays, CV: a.CV, LastAt: a.LastAt,
+		DueAt: a.DueAt, OpensAt: a.OpensAt, ClosesAt: a.ClosesAt, Trials: a.Trials, Hits: a.Hits, Score: a.Score}
+	for _, w := range a.Windows {
+		f.Windows = append(f.Windows, predict.Span{Opens: w.Opens, Closes: w.Closes})
+	}
+	return f
+}
+
 // ForecastWindow is one suggestion window.
 type ForecastWindow struct {
 	Opens  time.Time `bson:"opens" json:"opens"`
@@ -165,6 +177,9 @@ type AggregateRepository interface {
 	// RequeueRoomKeys marks every computed key of a room stale (intervals.v = 0), so RefreshStale
 	// rebuilds them. It returns how many it marked.
 	RequeueRoomKeys(ctx context.Context, roomID string) (int, error)
+	// ForecastKeys returns up to limit keys of a room (any subject type) with an add forecast whose
+	// first window opens by opensBefore, soonest first.
+	ForecastKeys(ctx context.Context, roomID string, opensBefore time.Time, limit int) ([]KeyStat, error)
 	// StaleKeys returns up to limit keys whose intervals were computed with an older (or no)
 	// ForecastVersion than version.
 	StaleKeys(ctx context.Context, version, limit int) ([]KeyRef, error)

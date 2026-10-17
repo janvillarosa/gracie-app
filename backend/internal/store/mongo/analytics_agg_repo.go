@@ -39,6 +39,7 @@ func (r *AggRepo) EnsureIndexes(ctx context.Context) error {
 		{Keys: bson.D{{Key: "room_id", Value: 1}, {Key: "subject_type", Value: 1}, {Key: "intervals.due_at", Value: 1}}},
 		{Keys: bson.D{{Key: "room_id", Value: 1}, {Key: "subject_type", Value: 1}, {Key: "last_at.added", Value: -1}}},
 		{Keys: bson.D{{Key: "room_id", Value: 1}, {Key: "subject_type", Value: 1}, {Key: "intervals.add.opens_at", Value: 1}}},
+		{Keys: bson.D{{Key: "room_id", Value: 1}, {Key: "intervals.add.opens_at", Value: 1}}}, // ForecastKeys (any subject)
 	})
 	return err
 }
@@ -362,6 +363,20 @@ func (r *AggRepo) UpcomingKeys(ctx context.Context, roomID, subjectType string, 
 			bson.D{{Key: "intervals.add.windows", Value: bson.D{{Key: "$elemMatch", Value: bson.D{{Key: "opens", Value: open}, {Key: "closes", Value: notClosed}}}}}},
 		}}}
 	cur, err := r.keys().Find(ctx, filter, options.Find().SetSort(bson.D{{Key: "intervals.add.score", Value: -1}, {Key: "key", Value: 1}}).SetLimit(int64(limit)))
+	if err != nil {
+		return nil, err
+	}
+	var out []analytics.KeyStat
+	if err := cur.All(ctx, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (r *AggRepo) ForecastKeys(ctx context.Context, roomID string, opensBefore time.Time, limit int) ([]analytics.KeyStat, error) {
+	filter := bson.D{{Key: "room_id", Value: roomID}, {Key: "intervals.add.opens_at", Value: bson.D{{Key: "$lte", Value: opensBefore.UTC()}}}}
+	cur, err := r.keys().Find(ctx, filter, options.Find().
+		SetSort(bson.D{{Key: "intervals.add.opens_at", Value: 1}, {Key: "key", Value: 1}}).SetLimit(int64(limit)))
 	if err != nil {
 		return nil, err
 	}

@@ -310,3 +310,44 @@ func TestMongoRequeueRoomKeysOnlyTouchesThatRoom(t *testing.T) {
 		t.Fatalf("RequeueRoomKeys(B) = %d %v", n, err)
 	}
 }
+
+func TestMongoForecastKeysAnySubjectOpeningBy(t *testing.T) {
+	c := connectOrSkip(t)
+	ctx := context.Background()
+	aggs := NewAggRepo(c, NewTx(c))
+	if err := aggs.EnsureIndexes(ctx); err != nil {
+		t.Fatal(err)
+	}
+	room, owner := "rf_"+randHex(6), "w_"+randHex(6)
+	now := time.Now().UTC().Truncate(time.Millisecond)
+	wm, ok, err := aggs.AcquireLease(ctx, owner, 5*time.Minute, now)
+	if err != nil || !ok {
+		t.Fatalf("lease %v %v", ok, err)
+	}
+	defer func() { _ = aggs.ReleaseLease(ctx, owner) }()
+	b := analytics.NewBatch()
+	refs := []analytics.KeyRef{{RoomID: room, SubjectType: "item", Key: "milk"}, {RoomID: room, SubjectType: "chore", Key: "bins"},
+		{RoomID: room, SubjectType: "item", Key: "later"}, {RoomID: room, SubjectType: "item", Key: "none"}}
+	for _, ref := range refs {
+		b.Keys[ref.ID()] = &analytics.DocUpdate{ID: ref.ID(), Inc: map[string]int64{"containers.list:l1": 1},
+			Set: map[string]any{"room_id": ref.RoomID, "subject_type": ref.SubjectType, "key": ref.Key}}
+	}
+	if err := aggs.ApplyBatch(ctx, b, owner, wm); err != nil {
+		t.Fatal(err)
+	}
+	opens := map[string]time.Time{"milk": now.Add(-time.Hour), "bins": now.Add(time.Hour), "later": now.Add(72 * time.Hour)}
+	for _, ref := range refs[:3] {
+		iv := analytics.KeyIntervals{N: 5, LastAt: now, ComputedAt: now, Version: analytics.ForecastVersion,
+			Add: &analytics.AddForecast{Series: "added", Clock: "home", EWMADays: 7, OpensAt: opens[ref.Key], ClosesAt: opens[ref.Key].Add(time.Hour), DueAt: opens[ref.Key]}}
+		if err := aggs.SetKeyIntervals(ctx, ref.ID(), iv); err != nil {
+			t.Fatal(err)
+		}
+	}
+	got, err := aggs.ForecastKeys(ctx, room, now.Add(2*time.Hour), 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 2 || got[0].Key != "milk" || got[1].Key != "bins" || got[0].Containers["list:l1"] != 1 || got[0].Intervals.Add.Clock != "home" {
+		t.Fatalf("got %+v", got)
+	}
+}
