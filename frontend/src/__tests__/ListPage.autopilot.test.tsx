@@ -35,7 +35,7 @@ const setup = (mode: 'suggest' | 'assist') => {
     item('i-eggs', 'Eggs', 'autopilot'),
     item('i-jam', 'Jam'),
   ]
-  const calls = { autopilot: 0, undone: [] as string[] }
+  const calls = { autopilot: 0, suggestions: 0, undone: [] as string[] }
   server.use(
     http.get('/api/me', () => json({ user_id: 'u1', name: 'Alice', room_id: roomId })),
     http.get('/api/rooms/me', () =>
@@ -55,7 +55,14 @@ const setup = (mode: 'suggest' | 'assist') => {
       ]),
     ),
     http.get(`/api/rooms/${roomId}/lists/${listId}/items`, () => json(items)),
-    http.get(`/api/rooms/${roomId}/lists/${listId}/suggestions`, () => json({ suggestions: [] })),
+    http.get(`/api/rooms/${roomId}/lists/${listId}/suggestions`, () => {
+      calls.suggestions++
+      return json({
+        suggestions: [
+          { key: 'bread', description: 'Bread', every_days: 7, score: 0.8, due_in_days: 0 },
+        ],
+      })
+    }),
     http.get(`/api/rooms/${roomId}/lists/${listId}/autopilot`, () => {
       calls.autopilot++
       const applied = [
@@ -101,6 +108,20 @@ const setup = (mode: 'suggest' | 'assist') => {
 }
 
 describe('ListPage autopilot', () => {
+  it('on assist, never asks for or shows a suggestion: the modes do not mix', async () => {
+    const calls = setup('assist')
+    await screen.findByRole('region', { name: 'Added by autopilot' })
+    expect(screen.queryByRole('region', { name: 'Suggestion' })).toBeNull()
+    expect(calls.suggestions).toBe(0)
+  })
+
+  it('on suggest, shows the suggestion and no autopilot slip', async () => {
+    const calls = setup('suggest')
+    expect(await screen.findByRole('region', { name: 'Suggestion' })).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Added by autopilot' })).toBeNull()
+    expect(calls.autopilot).toBe(0)
+  })
+
   it('marks autopilot items and says why when the mark is tapped', async () => {
     setup('assist')
     const mark = await screen.findByRole('button', { name: 'Added by autopilot. Why Whole milk?' })

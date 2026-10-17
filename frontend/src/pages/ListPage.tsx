@@ -239,11 +239,15 @@ export const ListPage: React.FC = () => {
   // Smart suggestion: the one thing the house usually adds around now (mid-shop: what comes due
   // before the next shop). The server decides (and answers with nothing when the feature is off);
   // a failure just means no slip.
+  // The modes do not mix: on assist, autopilot adds what it would have suggested, so the list
+  // never asks for (or shows) a suggestion; the autopilot slip below says what was added.
+  const assist = !!houseQuery.data && autopilotModeOf(houseQuery.data) === 'assist'
   const suggestionsKey = ['suggestions', roomId, listId, during ?? 'normal']
   const suggestionsQuery = useQuery({
     queryKey: suggestionsKey,
     queryFn: () => getListSuggestions(apiKey!, roomId!, listId, during),
-    enabled: !!roomId && !!listId,
+    // Wait for the House's mode, so an assist list never asks.
+    enabled: !!roomId && !!listId && !!houseQuery.data && !assist,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
     retry: false,
@@ -253,9 +257,11 @@ export const ListPage: React.FC = () => {
   // then held), so going through suggestions swaps the card in place instead of moving the list. The
   // slot only collapses (once) when there is no next suggestion.
   const [spent, setSpent] = useState<{ s: ListSuggestion; phase: SlipPhase } | null>(null)
-  const suggestions = spent
-    ? [spent.s]
-    : (suggestionsQuery.data ?? []).slice(0, MAX_SUGGESTIONS_SHOWN)
+  const suggestions = assist
+    ? []
+    : spent
+      ? [spent.s]
+      : (suggestionsQuery.data ?? []).slice(0, MAX_SUGGESTIONS_SHOWN)
 
   // Items that replace a skeleton fade in; cached items just appear with the sheet.
   const itemsWereLoading = useRef(false)
@@ -266,7 +272,6 @@ export const ListPage: React.FC = () => {
 
   // Autopilot (assist mode): what it put on this list, why, and the once-per-run slip. Only asked
   // for when the House is on assist; a failure just means no marks' reasons and no slip.
-  const assist = !!houseQuery.data && autopilotModeOf(houseQuery.data) === 'assist'
   const autopilotKey = ['autopilot', roomId, listId]
   const autopilotQuery = useQuery({
     queryKey: autopilotKey,

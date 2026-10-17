@@ -69,7 +69,7 @@ describe('House settings: autopilot', () => {
     await waitFor(() => expect(s).toHaveAttribute('aria-valuetext', 'Assist'))
     expect(
       screen.getByText(
-        'Adds things to your lists before you shop. You can always undo. It never buys or books anything.',
+        'Adds what it would have suggested to your lists before you shop. You can always undo. It never buys or books anything.',
       ),
     ).toBeInTheDocument()
   })

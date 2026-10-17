@@ -42,7 +42,7 @@ const AUTOPILOT_HELP: Record<AutopilotMode, string> = {
   suggest:
     'Suggests things your House usually adds, a little before they’re due. Nothing changes until someone taps.',
   assist:
-    'Adds things to your lists before you shop. You can always undo. It never buys or books anything.',
+    'Adds what it would have suggested to your lists before you shop. You can always undo. It never buys or books anything.',
 }
 
 /** House settings, laid out like Trip settings: the House's name (typed in place), what it is

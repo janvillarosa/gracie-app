@@ -287,6 +287,8 @@ export async function startMockTrips() {
       })
     }),
     http.get('/api/rooms/:roomId/lists/:listId/suggestions', ({ params, request }) => {
+      // Only suggest mode suggests (assist adds instead), as on the server.
+      if (autopilotMode !== 'suggest') return HttpResponse.json({ suggestions: [] })
       // Mid-shop (run mode): something not due yet, but due before the next shop.
       if (new URL(request.url).searchParams.get('during') === 'run') {
         const soon = { key: 'butter', description: 'Butter', quantity: '250', unit: 'g' }
