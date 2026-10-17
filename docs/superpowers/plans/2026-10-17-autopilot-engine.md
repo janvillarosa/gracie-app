@@ -1,18 +1,19 @@
-# Autopilot Engine Implementation Plan (v3)
+# Autopilot Engine Implementation Plan (v4)
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Changes**
-- **v3 (2026-10-17):** one service and one candidate pipeline. `SuggestionService` is folded into `AutopilotService`, with no wrapper left behind. The handlers call `AutopilotService` directly. The existing routes (`…/suggestions`, `…/suggestions/ignore`, `…/run-hint`) keep their paths and are marked deprecated in favour of `…/autopilot`. The candidate filters move into the pure `autopilot` package, so the slip, run mode and Assist all judge the same items. The run hint moves into the same service.
+- **v4 (2026-10-17):** the analytics anticipation upgrade is on `main` (janvillarosa/gracie-app#28), and this branch is rebased onto it. The planner reads the real signals from day one: `Reader.RunPlan`, `Reader.NeedsBefore` (which applies `predict.NeedBy`), `Reader.Upcoming` and the `analytics.AwayCalendar` port (`services.AwayCalendar`). There is no temporary adapter, no `ApproxNeedBy`, and the house is away-aware from the first assist add. The old Task 10 is gone (11 tasks become 10). `ForecastVersion` on `main` is 3, so this branch takes 4. Tests and the eval use the golden households (`internal/testutil/households`).
+- **v3:** one service and one candidate pipeline. `SuggestionService` is folded into `AutopilotService`, with no wrapper left behind. The handlers call `AutopilotService` directly. The existing routes (`…/suggestions`, `…/suggestions/ignore`, `…/run-hint`) keep their paths and are marked deprecated in favour of `…/autopilot`. The candidate filters move into the pure `autopilot` package, so the slip, run mode and Assist all judge the same items. The run hint moves into the same service.
 - **v2:** no server ceiling (the house setting is the mode); the eval gate tunes the assist bar; diagrams added.
 
 **Goal:** Let Bauhouse take the next in-app step for a house by itself (put the usual things on a list before the shop), with three house modes: `off`, `suggest` (today's suggestions, the default) and `assist` (reversible in-app actions, each with a reason and Undo). Full autopilot (buying, booking, messaging) is not a mode.
 
-**Architecture:** One feature, one service, one pipeline. The pure package `internal/autopilot` holds the mode rules, the candidate filters, the planner (`Plan(snapshot, policy) []Proposal`) and the policy (`Decide(mode, proposal, policy) Disposition`). It reads the world through a narrow `Signals` port. `services/autopilot_service.go` is the only service. It gathers a snapshot through `Signals` (a temporary adapter over today's `analytics.Reader` and event repository now; the anticipation API from `claude/analytics-anticipation` in Task 10), runs `Plan` and `Decide`, and then shows a suggestion or applies an action. Three callers share the pipeline and differ only in **horizon**: the suggestion slip asks for what is due now, run mode for what comes due before the next run, and the Assist ticker for what is needed before the run after next. Only applied actions are stored, in a durable action log (`autopilot_actions`, unique per house × kind × key × cycle), so suggestions stay stateless. Analytics stays feature-agnostic: autopilot adds use a new generic `RoleAutomated` event role that never counts as a request.
+**Architecture:** One feature, one service, one pipeline. The pure package `internal/autopilot` holds the mode rules, the candidate filters, the planner (`Plan(snapshot, policy) []Proposal`) and the policy (`Decide(mode, proposal, policy) Disposition`). It reads the world through a narrow `Signals` port. `services/autopilot_service.go` is the only service. It gathers a snapshot through `Signals`, implemented by `services/autopilot_signals.go` over `analytics.Reader` (`RunPlan`, `NeedsBefore`, `Upcoming`, `HouseProfile`), the event repository and the `analytics.AwayCalendar` port. Then it runs `Plan` and `Decide`, and then shows a suggestion or applies an action. Three callers share the pipeline and differ only in **horizon**: the suggestion slip asks for what is due now, run mode for what comes due before the next run, and the Assist ticker for what is needed before the run after next. Only applied actions are stored, in a durable action log (`autopilot_actions`, unique per house × kind × key × cycle), so suggestions stay stateless. Analytics stays feature-agnostic: autopilot adds use a new generic `RoleAutomated` event role that never counts as a request.
 
 **Tech Stack:** Go 1.26 + chi + MongoDB (memstore fakes for unit tests); React + Vite + TypeScript + React Query + Vitest + MSW.
 
-**Spec:** this plan (Jan's brief and review, 2026-10-17). Sibling: `docs/superpowers/plans/2026-10-17-analytics-anticipation.md` on `claude/analytics-anticipation`.
+**Spec:** this plan (Jan's brief and review, 2026-10-17). Builds on `docs/superpowers/plans/2026-10-17-analytics-anticipation.md` (merged in janvillarosa/gracie-app#28) and `docs/features/analytics.md`.
 
 ## Global Constraints
 
@@ -25,19 +26,22 @@
 - **Autopilot adds are never human requests.** `item.autopilot_added` is registered with `Skip: true`, `Role: RoleAutomated` and actor `system:autopilot`. `recomputeKey` forecasts a key from checks (`predict.SeriesChecked`) when an automated add falls in its recent cycles. Removing an autopilot item emits `item.autopilot_removed` (`RoleDismiss`, a real miss). Checking it off is a normal `item.checked`.
 - **Stateless suggestions, durable actions:** suggestions are derived from events and aggregates only (the `item.suggestion_predicted` measurement records stay as they are). Only applied (assist) actions are stored, because the recorder may drop events and "did we already add this?" must be exact.
 - **Bars by intrusiveness** (`autopilot.Policy`, tuned by Task 9's eval, not by feel): suggest = `Forecast.Confident` (MinScore 0.65, MaxCV 0.5). Assist = score ≥ 0.80 **and** need-before-the-run-after-next ≥ 0.70. Between the bars, assist falls back to a suggestion of the same item.
-- `ForecastVersion` → **4** (the analytics branch takes 3).
+- `ForecastVersion` goes 3 → **4** in Task 5 (the automated role changes which series a key forecasts from); `RefreshStale` rebuilds every key, no backfill needed.
+- **Signals come from analytics, never around it.** Run plans: `Reader.RunPlan(room, "list:<id>", now)` (`Next`, `After`, both stepped in home time). Need: `Reader.NeedsBefore(room, "list:<id>", by, away, limit)`, whose `P` is `predict.NeedBy` (log-normal on the forecast's own clock, capped at 0.5 unless the forecast is confident). Away spans: `AwayCalendar.HouseAway(room)` (a house is away only when every member is). The slip's "now" horizon keeps reading `Reader.Upcoming` exactly as today, so suggest mode is unchanged.
+- **Automated actors stay out of people's stats.** `system:autopilot` is a `system:*` actor, so `isRealUser`, `LastBy` and `Turns` already ignore it; a test pins that.
+- **Tests use the golden households** (`internal/testutil/households`: ten seeded personas, including weekend shoppers, frequent travellers and a new house) wherever a realistic history is needed.
 - `internal/autopilot` imports only pure code (`analytics/predict`, `parse`). It never imports `store`, `services` or Mongo, and `internal/analytics` never imports `autopilot`.
 - UI: tokens and primitives only (`Paper`, `Button`, `Sheet`, slips). A new mark goes into the system first (token block, `pnpm design:sync`, reference page, DESIGN.md). Voice: plain, warm, short ("Added 4 for Saturday").
 - Run `make check` before each commit and `make test-integration` for the Mongo tasks (1 and 4). Commits end with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 
 ## Review Focus
 
-- Autopilot adds never count as requests; a house on assist for 10 cycles keeps a stable rhythm. → `TestAutomatedAddsKeepRhythm` (analytics), `TestAssistTenCyclesStableRhythm` (services).
+- Autopilot adds never count as requests; a house on assist for 10 cycles keeps a stable rhythm. → `TestAutomatedAddsKeepRhythm` (analytics), `TestAssistTenCyclesStableRhythm` (services, a golden household's weekend shopper), `TestAutopilotActorNotATurn`.
 - `off` produces nothing, `suggest` never writes, `assist` writes only in-app and only above the assist bar; between the bars it falls back to a suggestion of the same item. → `TestDecideModesByBand`, `TestTickWritesOnlyInAssist`, `TestExecutorRefusesExternalEffects`, `TestAssistFallbackIsSameItem`.
 - Two instances ticking at once add an item once. → `TestConcurrentTicksAddOnce` (service), `TestAutopilotActionUniqueKey` (Mongo).
 - Undo and swipe-delete both mark the action removed and feed a dismiss; the item does not come back in the same cycle. → `TestUndoMarksUndoneAndDismisses`, `TestDeleteAutopilotItemMarksRemoved`, `TestRemovedNotReaddedSameCycle`.
 - An item already on the list (or a look-alike, `parse.Similarity`) is never added again. → `TestPlanSkipsOnListAndLookAlikes`.
-- A house that is away gets no assist adds for the away period. → `TestPlanAwayNoAdds` (fake away calendar until Task 10).
+- A house that is away gets no assist adds for the away period. → `TestPlanAwayNoAdds` (pure, fake signals) and `TestTickSkipsHouseAway` (service, a real trip through `services.AwayCalendar`).
 - Suggest mode behaves exactly like today's suggestions. → the existing suggestion suite, ported to `AutopilotService` with only names changed, plus `TestSuggestionsParityAcrossModes`.
 - The deprecated routes answer exactly as before. → the existing handler tests stay green, plus `TestDeprecatedRoutesCarryHeader`.
 
@@ -58,7 +62,8 @@ flowchart LR
         RS["RoomService"]
         AS["AutopilotService<br/>suggestions · run hint · ticker<br/>executor · outcomes · undo"]
         LS["ListService"]
-        SA["analyticsSignals<br/>(temporary adapter)"]
+        SA["analyticsSignals<br/>(Signals adapter)"]
+        AWC["AwayCalendar<br/>(trips → away spans)"]
     end
     subgraph AP["autopilot (pure)"]
         MODE["Mode · HouseMode"]
@@ -66,7 +71,7 @@ flowchart LR
         SIG["Signals port"]
     end
     subgraph AN["analytics (feature-agnostic)"]
-        RD["Reader · EventRepository"]
+        RD["Reader: RunPlan · NeedsBefore<br/>Upcoming · EventRepository"]
         WK["Worker · recomputeKey"]
         PR["predict"]
     end
@@ -87,6 +92,8 @@ flowchart LR
     AS --> SA
     SA -. implements .-> SIG
     SA --> RD
+    SA --> AWC
+    RD -. WithAway .-> AWC
     LS --> IR
     LS -. ItemHooks .-> AS
     PLAN --> PR
@@ -235,7 +242,11 @@ classDiagram
         +AcquireLease(ctx, owner, ttl, now) bool
     }
     class analyticsSignals {
-        «temporary until Task 10»
+        Reader.RunPlan
+        Reader.NeedsBefore
+        Reader.Upcoming
+        AwayCalendar.HouseAway
+        EventRepository
     }
     Proposal --> Kind
     Proposal --> Effect
@@ -529,15 +540,15 @@ func (s *AutopilotService) RunHint(ctx, user, roomID, listID string) (RunHint, e
 
 ### Task 3: Planner core and the shared pipeline (pure)
 
-**Files:** create `autopilot/proposal.go`, `policy.go`, `filters.go`, `plan.go`, `signals.go`, `need.go` (+ tests), `autopilot/autopilottest/fake.go`, `services/autopilot_signals.go` (the temporary adapter); modify `services/autopilot_service.go` (`Suggestions` becomes Gather → Plan → Decide).
+**Files:** create `autopilot/proposal.go`, `policy.go`, `filters.go`, `plan.go`, `signals.go`, `need.go` (+ tests), `autopilot/autopilottest/fake.go`, `services/autopilot_signals.go` (the `Signals` adapter over the real analytics reads); modify `services/autopilot_service.go` (`Suggestions` becomes Gather → Plan → Decide).
 
 **Interfaces:** as in diagram 3, plus
 ```go
 var DefaultPolicy = Policy{SuggestMinScore: 0.65, SuggestMaxCV: 0.5, AssistMinScore: 0.80, AssistMinNeed: 0.70, MinRunConfidence: 0.5, MaxPerRun: 8}
-func ApproxNeedBy(lastAt, dueAt time.Time, everyDays, cv float64, confident bool, by time.Time) float64 // until predict.NeedBy lands
 ```
+Where each horizon's candidates come from: `now` → `Reader.Upcoming` (today's query, unchanged); `next_run` → `Reader.Upcoming` with today's run-mode lookahead (house run interval, capped at 14 days), unchanged; `run_after_next` → `Reader.NeedsBefore(…, RunPlan.After.Start, HouseAway, …)`, so `Candidate.NeedBy` is `predict.NeedBy`. The run plan is `Reader.RunPlan`.
 The filters move out of the service into `autopilot` unchanged in meaning: home list (`homeListShare` 0.6), one name per look-alike cluster, on the list or a look-alike of it, cycle still open (no ignore, add or check since `LastAt`; run-mode ignores only hide the key from run mode), paused after two ignores in a row within 14 days, ordering (open now, then soonest, then score). The adapter supplies `CycleOpen` and `Paused` from the event repository, as the service does today. `Plan` is diagram 5; `Decide` is diagram 4. Horizons: `now` (window open now), `next_run` (today's run-mode lookahead, capped at 14 days), `run_after_next` (Assist).
-- [ ] Failing table tests: `TestDecideModesByBand` (off/suggest/assist × below suggest / between / above assist / high score but low need / non-in-app effect); `TestPlanSkipsOnListAndLookAlikes`; `TestPlanAwayNoAdds`; `TestPlanCycleIsLastAtDate`; `TestPlanNoRunNoProposals` (run horizons only); `TestPlanPausedNoProposals`; `TestApproxNeedBy` (≈0.5 at due, ≥0.95 far past, ~0 at last, a step at CV 0, ≤0.5 when not confident); `TestSuggestionsParityAcrossModes`.
+- [ ] Failing table tests: `TestDecideModesByBand` (off/suggest/assist × below suggest / between / above assist / high score but low need / non-in-app effect); `TestPlanSkipsOnListAndLookAlikes`; `TestPlanAwayNoAdds`; `TestPlanCycleIsLastAtDate`; `TestPlanNoRunNoProposals` (run horizons only); `TestPlanPausedNoProposals`; `TestSignalsAdapterReadsAnalytics` (memstore aggregates: the adapter returns `RunPlan`, `NeedsBefore` and `HouseAway` unchanged); `TestSuggestionsParityAcrossModes`.
 - [ ] Move the filters; rewire `Suggestions`. The ported suggestion suite from Task 2 must still pass untouched.
 - [ ] `make check`. Commit `feat(autopilot): pure planner and one candidate pipeline`.
 
@@ -551,10 +562,10 @@ The filters move out of the service into `autopilot` unchanged in meaning: home 
 
 ### Task 5: Executor and outcomes
 
-**Files:** modify `services/autopilot_service.go` (+ test), `models/list_item.go` (`Source string json:"source,omitempty"`), `services/list_service.go` (`CreateSystemItem`, `UseItemHooks`), `services/analytics_events.go`, `analytics/registry.go` (`RoleAutomated`), `analytics/rollup.go`, `analytics/predict/forecast.go` (`PredictChecked`), `analytics/aggregate.go` (`ForecastVersion = 4`).
+**Files:** modify `services/autopilot_service.go` (+ test), `models/list_item.go` (`Source string json:"source,omitempty"`), `services/list_service.go` (`CreateSystemItem`, `UseItemHooks`), `services/analytics_events.go`, `analytics/registry.go` (`RoleAutomated`), `analytics/rollup.go`, `analytics/predict/forecast.go` (`PredictChecked`), `analytics/aggregate.go` (`ForecastVersion` 3 → 4).
 
 Flows: diagrams 6 (apply path), 7, 8 and 9.
-- [ ] Failing tests: `TestExecutorRefusesExternalEffects`; `TestApplyInsertsThenCreatesItem` (source `autopilot`, actor `system:autopilot`, only `item.autopilot_added`, no `item.added`); `TestApplyDuplicateIsNoop`; check → confirmed; `TestDeleteAutopilotItemMarksRemoved` (+ `item.autopilot_removed`); `TestRemovedNotReaddedSameCycle`; `TestAutomatedAddsKeepRhythm` (rollup: weekly checks, adds replaced by automated ones → series checked, still confident); `TestAssistTenCyclesStableRhythm`.
+- [ ] Failing tests: `TestExecutorRefusesExternalEffects`; `TestApplyInsertsThenCreatesItem` (source `autopilot`, actor `system:autopilot`, only `item.autopilot_added`, no `item.added`); `TestApplyDuplicateIsNoop`; check → confirmed; `TestDeleteAutopilotItemMarksRemoved` (+ `item.autopilot_removed`); `TestRemovedNotReaddedSameCycle`; `TestAutomatedAddsKeepRhythm` (rollup: weekly checks, adds replaced by automated ones → series checked, still confident); `TestAssistTenCyclesStableRhythm` (a golden household); `TestAutopilotActorNotATurn` (`LastBy`/`Turns` never name `system:autopilot`). Rerun `TestGoldenWorld` with `-update` only if the version bump changes the pinned output, and review the diff.
 - [ ] `make check`. Commits `feat(analytics): automated role, forecast from checks for automated keys` and `feat(autopilot): executor and outcome hooks`.
 
 ### Task 6: When it runs
@@ -566,7 +577,7 @@ Flows: diagrams 6 (apply path), 7, 8 and 9.
 // POST /rooms/{room_id}/lists/{list_id}/autopilot/{action_id}/undo → 204
 ```
 The tick is diagram 6. It only visits houses that stored `assist`, and re-reads the house mode per house so a switch to off stops it at once. The view's `suggestions` come from the same pipeline (Decide → Suggest).
-- [ ] Failing tests: `TestTickWritesOnlyInAssist`; `TestTickOutsideLeadDoesNothing`; `TestConcurrentTicksAddOnce` (two services, one store, parallel ticks); `TestTickExpiresStaleActions`; `TestViewNeverApplies`; `TestAssistFallbackIsSameItem`; `TestUndoMarksUndoneAndDismisses`; handler auth (403 for another house, 404 for an unknown action).
+- [ ] Failing tests: `TestTickWritesOnlyInAssist`; `TestTickOutsideLeadDoesNothing`; `TestConcurrentTicksAddOnce` (two services, one store, parallel ticks); `TestTickExpiresStaleActions`; `TestTickSkipsHouseAway`; `TestViewNeverApplies`; `TestAssistFallbackIsSameItem`; `TestUndoMarksUndoneAndDismisses`; handler auth (403 for another house, 404 for an unknown action).
 - [ ] `make check`. Commit `feat(autopilot): lease-based ticker, read view and undo`.
 
 ### Task 7: Frontend settings
@@ -586,15 +597,12 @@ The tick is diagram 6. It only visits houses that stored `assist`, and re-reads 
 **Files:** create `autopilot/replay.go` (+ test); modify `cmd/suggest-eval/main.go` (`autopilot` subcommand).
 
 `func Replay(events []analytics.Event, p Policy, lead time.Duration) ReplayReport` with `Precision()`, `Recall()` and `RemovalsPerWeek()`. At each past run minus the lead, plan from the data before that time through the same filters. An auto-added item counts as a hit when it was checked in that run, and as a removal otherwise.
-- [ ] Failing tests on a synthetic weekly house (precision 1, recall 1, 0 removals) and a noisy one.
-- [ ] Run on the dev dataset and sweep `AssistMinScore` / `AssistMinNeed`. **Gate:** pick the loosest bar with precision ≥ 0.85 and removals ≤ 1 per week. If no bar meets it, keep 0.80 / 0.70, say so in the PR, and Jan decides whether Assist ships in the settings control. The numbers go in the PR description.
+- [ ] Failing tests on the golden households: the weekend shopper (high precision, low removals) and the irregular top-up house (Assist adds almost nothing).
+- [ ] The subcommand takes the same flags as `backtest`: `-synthetic` (golden households) and `-away-from-trips`.
+- [ ] Run on the dev dataset and on `-synthetic`, and sweep `AssistMinScore` / `AssistMinNeed`. **Gate:** pick the loosest bar with precision ≥ 0.85 and removals ≤ 1 per week. If no bar meets it, keep 0.80 / 0.70, say so in the PR, and Jan decides whether Assist ships in the settings control. The numbers go in the PR description.
 - [ ] `make check`. Commit `feat(autopilot): suggest-eval autopilot replay`.
 
-### Task 10: Wire the real analytics (follow-up PR, after `claude/analytics-anticipation` merges)
-
-Rebase onto `main`. Implement `Signals` with `Reader.RunPlan`, `Reader.NeedsBefore`, `predict.NeedBy` and the `AwayCalendar`; delete the temporary adapter's stand-ins and `ApproxNeedBy`; keep the test fakes. Commit `feat(autopilot): read anticipation signals from analytics`.
-
-### Task 11: Docs
+### Task 10: Docs
 
 `docs/features/autopilot.md` (modes table, invariants, the deprecated routes and their successor, eval gate, these diagrams) plus a row in `docs/features/README.md`. Update `suggestions.md` (now served by `AutopilotService`), `lists.md` and `backend/CLAUDE.md` (the stateless-suggestions invariant now names the action log; the service list). Commit `docs(autopilot): feature note and invariants`.
 
