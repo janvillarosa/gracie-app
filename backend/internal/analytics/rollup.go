@@ -255,7 +255,7 @@ func (w *Worker) recomputeKey(ctx context.Context, ref KeyRef, cache awayCache) 
 		if f.Series == predict.SeriesChecked {
 			certainty = meanWeight(wDone)
 		}
-		iv.Add = &AddForecast{Series: f.Series, N: f.N, EWMADays: f.EWMADays, CV: f.CV, LastAt: f.LastAt,
+		iv.Add = &AddForecast{Series: f.Series, Clock: f.Clock, N: f.N, EWMADays: f.EWMADays, CV: f.CV, LastAt: f.LastAt,
 			DueAt: f.DueAt, OpensAt: f.OpensAt, ClosesAt: f.ClosesAt, Trials: f.Trials, Hits: f.Hits,
 			Score: f.Score * certainty, NameCertainty: certainty}
 		for _, w := range f.Windows {

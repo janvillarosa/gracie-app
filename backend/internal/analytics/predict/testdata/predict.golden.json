@@ -4,6 +4,7 @@
   "OK": true,
   "Forecast": {
    "Series": "checked",
+   "Clock": "",
    "N": 8,
    "EWMADays": 1.0593347079733102,
    "CV": 0.27277678408162814,
@@ -43,6 +44,7 @@
   "OK": true,
   "Forecast": {
    "Series": "checked",
+   "Clock": "",
    "N": 8,
    "EWMADays": 1.118808362787764,
    "CV": 0.5138156266584978,
@@ -66,6 +68,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 18,
    "EWMADays": 2.877181599467101,
    "CV": 0.056489987024459176,
@@ -105,6 +108,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 18,
    "EWMADays": 2.9193195847148665,
    "CV": 0.05467543968478942,
@@ -128,6 +132,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 3,
    "EWMADays": 6.973010647780052,
    "CV": 0.15108806112774673,
@@ -167,6 +172,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 3,
    "EWMADays": 7.3944261113785394,
    "CV": 0.15108806112774673,
@@ -190,6 +196,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 6,
    "EWMADays": 9.243426860717685,
    "CV": 0.23883725802324884,
@@ -229,6 +236,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 6,
    "EWMADays": 9.320249462442185,
    "CV": 0.46184788936913534,
@@ -252,6 +260,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 13,
    "EWMADays": 7,
    "CV": 0,
@@ -291,6 +300,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 13,
    "EWMADays": 7,
    "CV": 0,
@@ -314,6 +324,7 @@
   "OK": true,
   "Forecast": {
    "Series": "checked",
+   "Clock": "",
    "N": 7,
    "EWMADays": 10.049838165614716,
    "CV": 0.04635968675006997,
@@ -353,6 +364,7 @@
   "OK": true,
   "Forecast": {
    "Series": "checked",
+   "Clock": "",
    "N": 7,
    "EWMADays": 10.107845930380751,
    "CV": 0.04635968675006997,
@@ -376,6 +388,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 9,
    "EWMADays": 16.791132151595427,
    "CV": 0.11394739198675101,
@@ -415,6 +428,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 9,
    "EWMADays": 16.55837389248724,
    "CV": 0.11394739198675101,
@@ -438,6 +452,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 6,
    "EWMADays": 23.896617110432732,
    "CV": 0.15720898313712992,
@@ -477,6 +492,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 6,
    "EWMADays": 30.094249737963143,
    "CV": 0.4234291043435449,
@@ -500,6 +516,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 8,
    "EWMADays": 1,
    "CV": 0,
@@ -539,6 +556,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 8,
    "EWMADays": 1.1533209999999998,
    "CV": 0.35136418446315326,
@@ -562,6 +580,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 11,
    "EWMADays": 2.9958124590307174,
    "CV": 0.04691312358615069,
@@ -601,6 +620,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 11,
    "EWMADays": 3.272381595751531,
    "CV": 0.33257960408636755,
@@ -624,6 +644,7 @@
   "OK": true,
   "Forecast": {
    "Series": "checked",
+   "Clock": "",
    "N": 5,
    "EWMADays": 5.6733862252840215,
    "CV": 0.09176912901392471,
@@ -663,6 +684,7 @@
   "OK": true,
   "Forecast": {
    "Series": "checked",
+   "Clock": "",
    "N": 5,
    "EWMADays": 7.207136456382644,
    "CV": 0.5180667415039457,
@@ -686,6 +708,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 21,
    "EWMADays": 9.394295691830711,
    "CV": 0.22538910991165953,
@@ -725,6 +748,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 21,
    "EWMADays": 8.997018506103204,
    "CV": 0.3819228870403853,
@@ -748,6 +772,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 9,
    "EWMADays": 7.000000000000005,
    "CV": 5.475834548219304e-16,
@@ -787,6 +812,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 9,
    "EWMADays": 9.923543,
    "CV": 0.352089395109765,
@@ -810,6 +836,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 5,
    "EWMADays": 10.424471259146063,
    "CV": 0.027381968459083035,
@@ -849,6 +876,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 5,
    "EWMADays": 10.30665616629001,
    "CV": 0.027381968459083035,
@@ -872,6 +900,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 7,
    "EWMADays": 16.964517428514576,
    "CV": 0.23590070080552078,
@@ -911,6 +940,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 7,
    "EWMADays": 20.83031499903482,
    "CV": 0.32883123993690727,
@@ -934,6 +964,7 @@
   "OK": true,
   "Forecast": {
    "Series": "checked",
+   "Clock": "",
    "N": 4,
    "EWMADays": 16.077000556002336,
    "CV": 0.11432469488619539,
@@ -973,6 +1004,7 @@
   "OK": true,
   "Forecast": {
    "Series": "checked",
+   "Clock": "",
    "N": 4,
    "EWMADays": 25.943020847288537,
    "CV": 0.46731190143963586,
@@ -996,6 +1028,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 5,
    "EWMADays": 2,
    "CV": 0.24743582965269675,
@@ -1035,6 +1068,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 5,
    "EWMADays": 1.6569999999999998,
    "CV": 0.24743582965269675,
@@ -1058,6 +1092,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 11,
    "EWMADays": 3.062412302874896,
    "CV": 0.06777126677097323,
@@ -1097,6 +1132,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 11,
    "EWMADays": 3.130226729325772,
    "CV": 0.06777126677097323,
@@ -1120,6 +1156,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 5,
    "EWMADays": 11.535776300076897,
    "CV": 0.41898421944765485,
@@ -1159,6 +1196,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 5,
    "EWMADays": 11.067898145176693,
    "CV": 0.41898421944765485,
@@ -1182,6 +1220,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 6,
    "EWMADays": 7.800467832379109,
    "CV": 0.2646373926462402,
@@ -1221,6 +1260,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 6,
    "EWMADays": 8.057902385251051,
    "CV": 0.2646373926462402,
@@ -1244,6 +1284,7 @@
   "OK": true,
   "Forecast": {
    "Series": "checked",
+   "Clock": "",
    "N": 14,
    "EWMADays": 7.181832326247732,
    "CV": 0.05249387936054795,
@@ -1283,6 +1324,7 @@
   "OK": true,
   "Forecast": {
    "Series": "checked",
+   "Clock": "",
    "N": 14,
    "EWMADays": 8.621227926311432,
    "CV": 0.3332822162898465,
@@ -1306,6 +1348,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 8,
    "EWMADays": 10.530600912074306,
    "CV": 0.060868432401945796,
@@ -1345,6 +1388,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 8,
    "EWMADays": 11.687202220663933,
    "CV": 0.3845957749995449,
@@ -1368,6 +1412,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 21,
    "EWMADays": 12.501171158769353,
    "CV": 0.2089960173959118,
@@ -1407,6 +1452,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 21,
    "EWMADays": 14.21105262174574,
    "CV": 0.33594290046041764,
@@ -1430,6 +1476,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 15,
    "EWMADays": 27.936926370313692,
    "CV": 0.2900610279353675,
@@ -1469,6 +1516,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 15,
    "EWMADays": 29.369983501713488,
    "CV": 0.35881492232232043,
@@ -1492,6 +1540,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 7,
    "EWMADays": 1,
    "CV": 2.15280231748608e-15,
@@ -1531,6 +1580,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 7,
    "EWMADays": 1.1680700000000017,
    "CV": 0.31943828249997314,
@@ -1554,6 +1604,7 @@
   "OK": true,
   "Forecast": {
    "Series": "checked",
+   "Clock": "",
    "N": 17,
    "EWMADays": 3.4352223641547974,
    "CV": 0.11035707453256298,
@@ -1593,6 +1644,7 @@
   "OK": true,
   "Forecast": {
    "Series": "checked",
+   "Clock": "",
    "N": 17,
    "EWMADays": 3.566987851508146,
    "CV": 0.4154577246984354,
@@ -1616,6 +1668,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 5,
    "EWMADays": 8.274173532319434,
    "CV": 0.07547668672860786,
@@ -1655,6 +1708,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 5,
    "EWMADays": 7.934367395026965,
    "CV": 0.07547668672860786,
@@ -1678,6 +1732,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 7,
    "EWMADays": 6.688233432608172,
    "CV": 0.2170290576129731,
@@ -1717,6 +1772,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 7,
    "EWMADays": 6.6475713137564005,
    "CV": 0.2865954904898407,
@@ -1740,6 +1796,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 9,
    "EWMADays": 7.000000000000005,
    "CV": 6.562420722889405e-16,
@@ -1779,6 +1836,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 9,
    "EWMADays": 10.324509999999997,
    "CV": 0.35208939510976484,
@@ -1802,6 +1860,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 16,
    "EWMADays": 10.258991738878763,
    "CV": 0.06855713287373863,
@@ -1841,6 +1900,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 16,
    "EWMADays": 11.262060233556666,
    "CV": 0.2975276786853273,
@@ -1864,6 +1924,7 @@
   "OK": true,
   "Forecast": {
    "Series": "checked",
+   "Clock": "",
    "N": 14,
    "EWMADays": 16.845141433284915,
    "CV": 0.20193195652554352,
@@ -1903,6 +1964,7 @@
   "OK": true,
   "Forecast": {
    "Series": "checked",
+   "Clock": "",
    "N": 14,
    "EWMADays": 27.325157867194417,
    "CV": 0.6168671955463562,
@@ -1926,6 +1988,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 20,
    "EWMADays": 26.82327826801713,
    "CV": 0.2645022318692779,
@@ -1965,6 +2028,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 20,
    "EWMADays": 28.65562496316593,
    "CV": 0.39400866279468,
@@ -1988,6 +2052,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 8,
    "EWMADays": 1.0000000000000115,
    "CV": 4.041490662940913e-15,
@@ -2027,6 +2092,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 8,
    "EWMADays": 1.3633210000000031,
    "CV": 0.3464101615137741,
@@ -2050,6 +2116,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 10,
    "EWMADays": 2.9669960437683796,
    "CV": 0.053603337975450964,
@@ -2089,6 +2156,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 10,
    "EWMADays": 3.2633619715615496,
    "CV": 0.33915148753698066,
@@ -2112,6 +2180,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 16,
    "EWMADays": 6.612400689437796,
    "CV": 0.14133184960339515,
@@ -2151,6 +2220,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 16,
    "EWMADays": 7.44374679848178,
    "CV": 0.39842803153503775,
@@ -2174,6 +2244,7 @@
   "OK": false,
   "Forecast": {
    "Series": "",
+   "Clock": "",
    "N": 0,
    "EWMADays": 0,
    "CV": 0,
@@ -2192,6 +2263,7 @@
   "OK": false,
   "Forecast": {
    "Series": "",
+   "Clock": "",
    "N": 0,
    "EWMADays": 0,
    "CV": 0,
@@ -2210,6 +2282,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 5,
    "EWMADays": 7,
    "CV": 9.193520069792627e-16,
@@ -2249,6 +2322,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 5,
    "EWMADays": 8.47,
    "CV": 0.34641016151377624,
@@ -2272,6 +2346,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 17,
    "EWMADays": 10.251363712291377,
    "CV": 0.06292197749405601,
@@ -2311,6 +2386,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 17,
    "EWMADays": 10.268267572965804,
    "CV": 0.30992790975538237,
@@ -2334,6 +2410,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 20,
    "EWMADays": 14.21215359541118,
    "CV": 0.16936279687614436,
@@ -2373,6 +2450,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 20,
    "EWMADays": 20.759270560125252,
    "CV": 0.3421781534378576,
@@ -2396,6 +2474,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 19,
    "EWMADays": 34.34532049565153,
    "CV": 0.2574791525502989,
@@ -2435,6 +2514,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 19,
    "EWMADays": 29.030424736067868,
    "CV": 0.2840734304169686,
@@ -2458,6 +2538,7 @@
   "OK": true,
   "Forecast": {
    "Series": "checked",
+   "Clock": "",
    "N": 8,
    "EWMADays": 1.1201050468493634,
    "CV": 0.3913446213678105,
@@ -2497,6 +2578,7 @@
   "OK": true,
   "Forecast": {
    "Series": "checked",
+   "Clock": "",
    "N": 8,
    "EWMADays": 0.9840454772094535,
    "CV": 0.3913446213678105,
@@ -2520,6 +2602,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 12,
    "EWMADays": 3.1008943531412267,
    "CV": 0.04689723939176185,
@@ -2559,6 +2642,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 12,
    "EWMADays": 3.8021090768779433,
    "CV": 0.34244971935774354,
@@ -2582,6 +2666,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 11,
    "EWMADays": 6.443151338805098,
    "CV": 0.11788273399226859,
@@ -2621,6 +2706,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 11,
    "EWMADays": 6.743982083058239,
    "CV": 0.11788273399226859,
@@ -2644,6 +2730,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 12,
    "EWMADays": 9.312579162826621,
    "CV": 0.2376752359294551,
@@ -2683,6 +2770,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 12,
    "EWMADays": 7.930549450718088,
    "CV": 0.2376752359294551,
@@ -2706,6 +2794,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 3,
    "EWMADays": 7,
    "CV": 0,
@@ -2745,6 +2834,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 3,
    "EWMADays": 7,
    "CV": 0,
@@ -2768,6 +2858,7 @@
   "OK": true,
   "Forecast": {
    "Series": "checked",
+   "Clock": "",
    "N": 8,
    "EWMADays": 19.81610448175773,
    "CV": 0.27481429957837,
@@ -2807,6 +2898,7 @@
   "OK": true,
   "Forecast": {
    "Series": "checked",
+   "Clock": "",
    "N": 8,
    "EWMADays": 17.01604577600076,
    "CV": 0.27481429957837,
@@ -2830,6 +2922,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 5,
    "EWMADays": 15.97305269710633,
    "CV": 0.1270411781047875,
@@ -2869,6 +2962,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 5,
    "EWMADays": 19.813327579742523,
    "CV": 0.3975910940611461,
@@ -2892,6 +2986,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 7,
    "EWMADays": 41.732659361896424,
    "CV": 0.2866946829413563,
@@ -2931,6 +3026,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 7,
    "EWMADays": 39.00219127987396,
    "CV": 0.2866946829413563,
@@ -2954,6 +3050,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 20,
    "EWMADays": 1,
    "CV": 0,
@@ -2993,6 +3090,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 20,
    "EWMADays": 1.0006978915419615,
    "CV": 0.21213203435596426,
@@ -3016,6 +3114,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 6,
    "EWMADays": 3.2542498297809956,
    "CV": 0.06323383672116537,
@@ -3055,6 +3154,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 6,
    "EWMADays": 3.7694449403339876,
    "CV": 0.299977295885043,
@@ -3078,6 +3178,7 @@
   "OK": true,
   "Forecast": {
    "Series": "checked",
+   "Clock": "",
    "N": 20,
    "EWMADays": 7.204600290704456,
    "CV": 0.18647030316742527,
@@ -3117,6 +3218,7 @@
   "OK": true,
   "Forecast": {
    "Series": "checked",
+   "Clock": "",
    "N": 20,
    "EWMADays": 8.37918555491916,
    "CV": 0.36390571712708897,
@@ -3140,6 +3242,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 8,
    "EWMADays": 6.6078715265908565,
    "CV": 0.20481320649665166,
@@ -3179,6 +3282,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 8,
    "EWMADays": 6.438517762983017,
    "CV": 0.20481320649665166,
@@ -3202,6 +3306,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 10,
    "EWMADays": 7,
    "CV": 0,
@@ -3241,6 +3346,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 10,
    "EWMADays": 7,
    "CV": 0,
@@ -3264,6 +3370,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 12,
    "EWMADays": 10.000963814643564,
    "CV": 0.03934203855019552,
@@ -3303,6 +3410,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 12,
    "EWMADays": 10.483858988516932,
    "CV": 0.34276449194063197,
@@ -3326,6 +3434,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 4,
    "EWMADays": 10.861247283308737,
    "CV": 0.10870921015548884,
@@ -3365,6 +3474,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 4,
    "EWMADays": 13.684551572092095,
    "CV": 0.22836817078487892,
@@ -3388,6 +3498,7 @@
   "OK": true,
   "Forecast": {
    "Series": "checked",
+   "Clock": "",
    "N": 9,
    "EWMADays": 43.11918933684885,
    "CV": 0.3905388844527383,
@@ -3427,6 +3538,7 @@
   "OK": true,
   "Forecast": {
    "Series": "checked",
+   "Clock": "",
    "N": 9,
    "EWMADays": 43.97921666487959,
    "CV": 0.575698724525748,
@@ -3450,6 +3562,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 11,
    "EWMADays": 1,
    "CV": 0,
@@ -3489,6 +3602,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 11,
    "EWMADays": 1.0857157,
    "CV": 0.33333333333333337,
@@ -3512,6 +3626,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 21,
    "EWMADays": 3.1980832044567356,
    "CV": 0.04338040034578832,
@@ -3551,6 +3666,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 21,
    "EWMADays": 5.037837731961446,
    "CV": 0.34521496201626684,
@@ -3574,6 +3690,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 8,
    "EWMADays": 8.252564299606737,
    "CV": 0.1546026967455643,
@@ -3613,6 +3730,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 8,
    "EWMADays": 9.455931506554355,
    "CV": 0.3239656476678535,
@@ -3636,6 +3754,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 5,
    "EWMADays": 10.691711913172425,
    "CV": 0.25742690658670686,
@@ -3675,6 +3794,7 @@
   "OK": true,
   "Forecast": {
    "Series": "added",
+   "Clock": "",
    "N": 5,
    "EWMADays": 10.199184935381277,
    "CV": 0.25742690658670686,

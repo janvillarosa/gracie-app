@@ -78,9 +78,18 @@ var ClassicParams = Params{
 	MinScore: 0.65, MaxCV: 0.5,
 }
 
+// Which clock a forecast measures its rhythm on.
+const (
+	ClockWall = ""     // wall-clock time (no away spans, or they backtested worse)
+	ClockHome = "home" // home time: the house's away spans left out
+)
+
 // Forecast is when something is next expected and how far its track record can be trusted.
 type Forecast struct {
-	Series   string
+	Series string
+	// Clock is ClockHome when the rhythm was measured in home time. Anything that projects this
+	// forecast forward (NeedBy) must use the same clock.
+	Clock    string
 	N        int
 	EWMADays float64
 	CV       float64
@@ -318,7 +327,35 @@ func (p Params) Predict(added, checked, ignores []time.Time) (Forecast, bool) {
 
 // PredictAway is Predict in home time: gaps between occurrences leave out the house's away
 // spans, and the due time and windows are projected past them. A nil away is Predict.
+//
+// Not every rhythm lives in home time. Things used up at home are (nobody drinks the milk while
+// away), but a house that shops on a fixed weekly run buys on the calendar: across a 5 day trip its
+// gap is still 7 or 14 wall days, and 9 home days would read as irregular. So the forecast is made
+// on both clocks and keeps home time unless wall time backtests strictly better on the house's own
+// history. With no away spans the two are the same forecast.
 func (p Params) PredictAway(added, checked, ignores []time.Time, away Away) (Forecast, bool) {
+	home, ok := p.predictOn(added, checked, ignores, away)
+	if len(away) == 0 {
+		return home, ok
+	}
+	wall, wok := p.predictOn(added, checked, ignores, nil)
+	if wok && (!ok || wall.Score >= home.Score) {
+		// Even on the wall clock nothing is suggested while the house is away: a window that
+		// would open during a trip opens when the house is back.
+		for i := range wall.Windows {
+			wall.Windows[i].Opens = away.NextHome(wall.Windows[i].Opens)
+			if wall.Windows[i].Closes.Before(wall.Windows[i].Opens) {
+				wall.Windows[i].Closes = wall.Windows[i].Opens
+			}
+		}
+		wall.OpensAt, wall.ClosesAt = wall.Windows[0].Opens, wall.Windows[0].Closes
+		return wall, true
+	}
+	home.Clock = ClockHome
+	return home, ok
+}
+
+func (p Params) predictOn(added, checked, ignores []time.Time, away Away) (Forecast, bool) {
 	series, times := SeriesAdded, added
 	if adds := Collapse(added); len(adds) < MinSeries && len(Collapse(checked)) > len(adds) {
 		series, times = SeriesChecked, checked

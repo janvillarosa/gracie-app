@@ -86,7 +86,10 @@ type KeyIntervals struct {
 // AddForecast is a stored predict.Forecast: when the thing is next expected to be added, the
 // window a suggestion for it is shown in, and how often that window was right in the past.
 type AddForecast struct {
-	Series   string    `bson:"series" json:"series"` // "added" or "checked"
+	Series string `bson:"series" json:"series"` // "added" or "checked"
+	// Clock is "home" when the rhythm was measured in home time (the house's trips left out), ""
+	// on the wall clock. Projecting the forecast forward must use the same clock.
+	Clock    string    `bson:"clock,omitempty" json:"clock,omitempty"`
 	N        int       `bson:"n" json:"n"`
 	EWMADays float64   `bson:"ewma_days" json:"ewma_days"`
 	CV       float64   `bson:"cv" json:"cv"`

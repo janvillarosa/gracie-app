@@ -7,8 +7,8 @@
 //
 // It reads the same MONGODB_URI / MONGODB_DB as the server. backtest and shadow only read.
 // backtest -away-from-trips replays in home time, with each house's away spans built from its
-// trips (as the server does); -synthetic replays a made-up year of households instead of the
-// database (no Mongo needed), and prints wall time and home time side by side.
+// trips (as the server does); -synthetic replays the golden households (internal/testutil/
+// households) instead of the database (no Mongo needed), and prints wall and home time side by side.
 package main
 
 import (
@@ -26,6 +26,7 @@ import (
 	"github.com/janvillarosa/gracie-app/backend/internal/config"
 	"github.com/janvillarosa/gracie-app/backend/internal/models"
 	mongostore "github.com/janvillarosa/gracie-app/backend/internal/store/mongo"
+	"github.com/janvillarosa/gracie-app/backend/internal/testutil/households"
 	"github.com/janvillarosa/gracie-app/backend/internal/trips"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -110,23 +111,18 @@ func backtest(ctx context.Context, cli *mongostore.Client, room string, awayFrom
 	report(evs, away)
 }
 
-// backtestSynthetic replays the made-up households in wall time and, with awayFromTrips, in home
+// backtestSynthetic replays the golden made-up households in wall time and, with awayFromTrips, in home
 // time too, so the two can be compared.
 func backtestSynthetic(awayFromTrips bool) {
-	evs, houses := synthetic(20261017)
-	fmt.Println("== synthetic households, wall time ==")
-	report(evs, nil)
+	w := households.Golden()
+	fmt.Println("== golden households (internal/testutil/households), wall time ==")
+	report(w.Events, nil)
 	if !awayFromTrips {
 		return
 	}
-	away := map[string]predict.Away{}
-	for _, h := range houses {
-		if a := trips.HouseAway(h.trips, h.members, "UTC"); len(a) > 0 {
-			away[h.room] = a
-		}
-	}
-	fmt.Printf("\n== synthetic households, home time (%d houses with away spans) ==\n", len(away))
-	report(evs, away)
+	away := w.Away()
+	fmt.Printf("\n== golden households, home time (%d houses) ==\n", len(away))
+	report(w.Events, away)
 }
 
 // loadAway builds each house's away spans from its trips, as services.AwayCalendar does.
