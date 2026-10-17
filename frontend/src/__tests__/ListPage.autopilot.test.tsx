@@ -103,8 +103,8 @@ const setup = (mode: 'suggest' | 'assist') => {
 describe('ListPage autopilot', () => {
   it('marks autopilot items and says why when the mark is tapped', async () => {
     setup('assist')
-    const mark = await screen.findByRole('button', { name: 'Why Whole milk was added' })
-    expect(screen.queryByRole('button', { name: 'Why Jam was added' })).toBeNull()
+    const mark = await screen.findByRole('button', { name: 'Added by autopilot. Why Whole milk?' })
+    expect(screen.queryByRole('button', { name: 'Added by autopilot. Why Jam?' })).toBeNull()
     await waitFor(() =>
       expect(screen.getByRole('region', { name: 'Added by autopilot' })).toBeInTheDocument(),
     )

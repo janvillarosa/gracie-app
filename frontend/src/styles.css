@@ -1111,32 +1111,67 @@ h5.ant-typography {
   }
 }
 
-/* The autopilot mark on a row: a pencil-grey glyph in a small round target that still reaches
-   the 44px touch target. Tapping it opens why, under the item's words, and turns the glyph ink. */
-.item-row .item-autopilot {
-  position: relative;
+/* The autopilot stamp on a row: a state stamp (like "Used"), outlined in ink with the repeat glyph,
+   so a row autopilot added reads at a glance beside the pastel category stamps without borrowing
+   yellow, red or blue. It sits with the category stamp; tapping it opens why, under the words. */
+.item-stamps {
   flex: none;
-  vertical-align: middle;
-  margin: -6px 0 -6px var(--space-1);
-  width: var(--control-sm);
-  height: var(--control-sm);
-  min-width: var(--control-sm);
-  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-inline-start: var(--space-1);
 }
-
-.item-row .item-autopilot::before {
+.item-stamps .item-cat {
+  margin: 0 !important;
+}
+/* The category stays in the list's category column: last on a wide list (stamps sit at the row's
+   end), first on a narrow one (stamps start under the words). */
+.item-stamps .item-auto {
+  order: -1;
+}
+.item-auto {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0 6px;
+  height: 18px;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-xs);
+  background: none;
+  color: var(--ink);
+  font: var(--w-bold) var(--t-stamp) var(--font-body);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+}
+/* Reaches the 44px touch target without growing the stamp. */
+.item-auto::before {
   content: '';
   position: absolute;
-  inset: calc((var(--control-lg) - var(--control-sm)) / -2);
+  inset: -13px -4px;
 }
-
-.item-row .item-autopilot svg {
-  width: var(--icon-sm);
-  height: var(--icon-sm);
+.item-auto svg {
+  width: var(--icon-xs);
+  height: var(--icon-xs);
 }
-
-.item-row .item-autopilot[aria-expanded='true'] {
-  color: var(--ink);
+.item-auto[aria-expanded='true'] {
+  background: var(--well-fill);
+  box-shadow: var(--well);
+}
+.item-auto:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.item-row-completed .item-auto {
+  border-color: var(--border-strong);
+  color: var(--muted);
+}
+@media (hover: hover) {
+  .item-auto:hover {
+    background: var(--well-fill);
+  }
 }
 
 .item-why {
@@ -2045,22 +2080,25 @@ button.icon-disc:focus-visible {
 @container (max-width: 440px) {
   /* The two lines sit together in the middle of the row, so the stamp needs no pull-up and never
      covers a name that wraps to a second line. */
-  .items-list .item-row:has(.item-cat) {
+  .items-list .item-row:has(.item-stamps) {
     flex-wrap: wrap;
     align-content: center;
     row-gap: 0;
     padding-block: var(--space-2);
   }
   /* A zero-height break after the first line, so the stamp always starts the second one. */
-  .items-list .item-row:has(.item-cat)::after {
+  .items-list .item-row:has(.item-stamps)::after {
     content: '';
     order: 3;
     flex-basis: 100%;
     height: 0;
   }
-  .items-list .item-row .item-cat {
+  .items-list .item-row .item-stamps {
     order: 4;
-    margin: var(--space-1) 0 0 calc(22px + 14px) !important;
+    margin: var(--space-1) 0 0 calc(22px + 14px);
+  }
+  .items-list .item-stamps .item-auto {
+    order: 1;
   }
 }
 

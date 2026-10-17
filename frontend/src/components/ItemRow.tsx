@@ -241,22 +241,6 @@ export const ItemRow = React.memo<Props>(function ItemRow({
               {it.description}
             </span>
             {qtyText && <span className="item-qty">{qtyText}</span>}
-            {byAutopilot && (
-              <Button
-                kind="text"
-                iconOnly
-                className="item-autopilot"
-                icon={<Repeat weight="bold" />}
-                aria-label={`Why ${it.description} was added`}
-                aria-expanded={why}
-                aria-controls={why ? whyId : undefined}
-                title="Added by autopilot"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setWhy((w) => !w)
-                }}
-              />
-            )}
             {byAutopilot && why && (
               <span className="item-why" id={whyId}>
                 Added by autopilot. {reason ?? 'You usually buy it around now'}
@@ -265,10 +249,32 @@ export const ItemRow = React.memo<Props>(function ItemRow({
           </div>
         )}
       </div>
-      {showCategory && it.category && !editing && (
-        <Tag className={`category-tag item-cat ${getCategoryClass(it.category)}`}>
-          {it.category}
-        </Tag>
+      {!editing && (byAutopilot || (showCategory && it.category)) && (
+        // The row's stamps travel together: on a narrow list they drop under the words as one. CSS
+        // orders them so the category keeps the list's category column at every width.
+        <span className="item-stamps">
+          {showCategory && it.category && (
+            <Tag className={`category-tag item-cat ${getCategoryClass(it.category)}`}>
+              {it.category}
+            </Tag>
+          )}
+          {byAutopilot && (
+            <button
+              type="button"
+              className="item-auto"
+              aria-label={`Added by autopilot. Why ${it.description}?`}
+              aria-expanded={why}
+              aria-controls={why ? whyId : undefined}
+              onClick={(e) => {
+                e.stopPropagation()
+                setWhy((w) => !w)
+              }}
+            >
+              <Repeat weight="bold" aria-hidden />
+              Autopilot
+            </button>
+          )}
+        </span>
       )}
       <Button
         kind="text"

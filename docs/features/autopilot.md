@@ -101,8 +101,8 @@ _Frontend paths are relative to `frontend/src/`._
   (`AUTOPILOT_HELP`) that fades in as the key lands. `autopilotModeOf` reads older
   servers' `suggestions_off`.
 - **List page:** on assist only, it reads `GET .../autopilot` (`['autopilot', roomId, listId]`). Rows with
-  `source: 'autopilot'` carry the autopilot mark (`ItemRow`, a muted repeat glyph inline after the item's words);
-  tapping it says why
+  `source: 'autopilot'` carry the autopilot stamp (`ItemRow`, an ink-outlined "Autopilot" state stamp with the
+  repeat glyph, beside the category stamp); tapping it says why
   (`reasonText`: "You buy it about every 9 days"). Once per planned run `AutopilotSlip` reads "Added 3 for
   Saturday" (`addedLine`) with Undo all (one undo per action) and Got it; it folds away on Got it or a successful Undo all, and the
   undone rows leave only after it has; the run it was closed for is kept
