@@ -2,16 +2,19 @@ import { useCallback } from 'react'
 import { flushSync } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import type { NavigateOptions, To } from 'react-router-dom'
+import { isLiteMotion } from './motion'
 
 type ViewTransitionDoc = Document & { startViewTransition?: (update: () => void) => unknown }
 
 // Runs a DOM-changing update inside a View Transition so the browser cross-fades the
 // old and new page and morphs elements that share a `view-transition-name` (the logo).
-// Falls back to a plain update where the API is missing or motion is reduced.
+// Falls back to a plain update where the API is missing, motion is reduced, or the device is on
+// the lite motion tier (two full-screen snapshots, re-captured every frame while the new page's
+// own entrance plays, is the heaviest thing the app asks of a phone).
 export function withViewTransition(update: () => void) {
   const doc = document as ViewTransitionDoc
   const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-  if (!doc.startViewTransition || reduce) {
+  if (!doc.startViewTransition || reduce || isLiteMotion()) {
     update()
     return
   }
