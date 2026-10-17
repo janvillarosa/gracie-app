@@ -47,6 +47,11 @@ operator command (see Behavior analytics > Backfill); both Dockerfiles ship it n
 - Error mapping is minimal (401/403/404/409). Room views are sanitized — internal IDs
   are not exposed.
 - Categorization failures degrade to `General` rather than failing item creation.
+- **Fast startup:** the Railway service has a volume (it holds `enc.key`, which must never
+  leave it), so deploys cannot overlap and startup time is downtime. The server listens
+  before the embedding model loads (`categorization.Swappable` starts keyword-only and swaps
+  in the embedding chain). Keep slow work off the path to `ListenAndServe`. `GET /healthz`
+  is the deploy healthcheck.
 
 - **Preferences:** `User.Preferences.TripsShowNextStop *bool` (nil = default true). `GET /me`
   always returns `preferences.trips_show_next_stop` as a concrete bool. `PUT /me` takes
