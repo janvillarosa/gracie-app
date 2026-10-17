@@ -167,7 +167,16 @@ export async function startMockTrips() {
         updated_at: new Date().toISOString(),
       })
     }),
-    http.get('/api/rooms/:roomId/lists/:listId/suggestions', ({ params }) => {
+    http.get('/api/rooms/:roomId/lists/:listId/suggestions', ({ params, request }) => {
+      // Mid-shop (run mode): something not due yet, but due before the next shop.
+      if (new URL(request.url).searchParams.get('during') === 'run') {
+        const soon = { key: 'oat milk', description: 'Oat milk', quantity: '2', unit: 'L' }
+        return HttpResponse.json({
+          suggestions: spent.has(soon.key)
+            ? []
+            : [{ ...soon, every_days: 7, score: 0.85, due_in_days: 3 }],
+        })
+      }
       const next = suggestionQueue.find((s) => !spent.has(s.key))
       return HttpResponse.json({
         suggestions: params.listId === 'list_groceries' && next ? [next] : [],

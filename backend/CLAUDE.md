@@ -165,6 +165,8 @@ own events.
   `ANALYTICS_PROFILE_EVERY`) recomputes profiles for subjects the fold marked dirty. Both are safe
   to run on every instance. **Standalone Mongo has no transactions** (the Tx runner falls back to
   running without one), so exactly-once only holds on a replica set.
+- **Run shape:** each `ContainerRhythm` also stores `run_minutes`, `run_items` and `run_gap_sec` (medians over
+  `predict.RunSpans`), which the run hint scales its thresholds by.
 - **Reads:** `analytics.Reader` and `GET /me/insights`, `GET /rooms/{id}/insights`,
   `GET /rooms/{id}/insights/periods/{period}`. All point lookups; no endpoint returns raw events.
   The house review includes per-member totals; nudges and profiles stay personal. A nil profile
@@ -229,6 +231,18 @@ the analytics aggregates and the live list; the only state is `Room.SuggestionsO
 - **Forecast version:** `analytics.ForecastVersion` is stamped on every `KeyIntervals`. **Bump it whenever the
   rhythm or add-forecast logic changes** (or after a backfill folded by older code): each fold tick then rebuilds
   every older forecast from stored history (`Worker.RefreshStale`, 500 per tick), no new events needed.
+- **Run mode** (spec `2026-10-17-shopping-run-features-design.md`): `GET .../suggestions?during=run` (the List page
+  asks once it sees a shopping run) also returns keys whose window opens before the house's next run on the list:
+  lookahead = `Containers["list:<id>"].IntervalDay` of the house profile, capped at 14 days; no learned run rhythm
+  means nothing in run mode. Open ones first, then soonest (`due_in_days`), then score, before the limit applies.
+  `POST .../suggestions/ignore {key, during:"run"}` emits the ignore with `props.during`: it counts toward the
+  two-ignores pause, is **not** a forecast miss (the rollup skips it), and only hides the key from run mode this
+  cycle. Run-mode predictions carry `during` and their own deterministic id. Any other `during` is a 400.
+- **Run hint:** `GET .../lists/{id}/run-hint` (`services/run_hint.go`, pure `ComputeRunHint`) tells the client how
+  to spot a run: `checks_to_start` 2 (`expected`: in the `next_run` window ±1 h with confidence ≥ 0.5, or the hour of
+  week ±1 holds ≥ 50% of the `run_how` peak), 3 (`unknown`), 4 (`unlikely`: < 10% of the peak); `idle_end_min` =
+  clamp(4 × `run_gap_sec`, 15, 45 min); `burst_sec` = clamp(`run_gap_sec`/5, 5, 30 s); `typical` from 5 runs. Own
+  rhythm at ≥ 3 runs, else the house's. Analytics off or the house setting off: the default 3 / 45 / 15.
 - **House setting:** `PUT /rooms/settings {suggestions_off}`; `GET /rooms/me` returns it.
 - Invariants: never add suggestion state that is not derivable from events and aggregates; an ignore must
   stay an event so the forecast sees it.
