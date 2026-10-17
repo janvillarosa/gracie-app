@@ -88,6 +88,23 @@ describe('AddItemBar suggestions', () => {
     expect(onCreate).toHaveBeenCalledWith({ description: 'bas', quantity: '', unit: '' })
   })
 
+  it('shows at most three slips, so they fit above the bar on a small screen', async () => {
+    const many = ['Cheddar', 'Cherries', 'Chervil', 'Chestnuts', 'Chickpeas'].map(
+      (description) => ({
+        description,
+        category: 'Other',
+        quantity: '',
+        unit: '',
+        times_added: 1,
+        last_added_at: '2026-01-01T00:00:00Z',
+        common: false,
+      }),
+    )
+    render(<AddItemBar onCreate={vi.fn()} pantry={many} />)
+    await userEvent.type(screen.getByRole('combobox'), 'ch')
+    expect(screen.getAllByRole('option')).toHaveLength(3)
+  })
+
   it('moves through slips with the arrow keys and adds the highlighted one on Enter', async () => {
     const onCreate = vi.fn().mockResolvedValue(undefined)
     render(<AddItemBar onCreate={onCreate} pantry={pantry} />)
