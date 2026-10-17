@@ -28,15 +28,15 @@ func TestGoldenAssistMeetsGate(t *testing.T) {
 	}
 }
 
-// F1 (precision x open recall) is ratcheted: it may only go up, toward F1Goal (70%). Raise the
-// floor when a change lifts it; never lower it.
+// F1 (precision x open recall) must meet F1Goal (70%) and is ratcheted above it: raise the floor
+// when a change lifts it; never lower it.
 func TestGoldenAssistF1Floor(t *testing.T) {
-	const floor = 0.52 // 2026-10-17: 52.6% at the default bar
+	const floor = 0.77 // 2026-10-17: 77.7% at the default bar (run fit, score 0.50, need 0.60)
 	w := households.Golden()
 	o := DefaultOptions()
 	o.Away = w.Away()
 	total, _ := Replay(w.Events, o)
-	if total.F1() < floor {
+	if total.F1() < max(floor, F1Goal) {
 		t.Fatalf("F1 %.3f fell below the floor %.2f (goal %.2f)", total.F1(), floor, F1Goal)
 	}
 }
@@ -50,6 +50,20 @@ func TestSweepIsMonotone(t *testing.T) {
 	for i := 1; i < len(reps); i++ {
 		if reps[i].Added > reps[i-1].Added {
 			t.Fatalf("score %.2f adds %d > score %.2f adds %d", reps[i].Policy.AssistMinScore, reps[i].Added, reps[i-1].Policy.AssistMinScore, reps[i-1].Added)
+		}
+	}
+}
+
+// The bar was tuned on the golden seed; households from other seeds must meet the goal and the
+// gate too, so it is not fitted to one year of made-up data.
+func TestHoldOutSeedsMeetGoal(t *testing.T) {
+	for _, seed := range []int64{1, 7, 42, 2025, 99991} {
+		w := households.Generate(seed)
+		o := DefaultOptions()
+		o.Away = w.Away()
+		r, _ := Replay(w.Events, o)
+		if r.F1() < F1Goal || r.Precision() < 0.85 || r.RemovalsPerWeek() > 1 {
+			t.Errorf("seed %d: F1 %.3f precision %.3f removals/wk %.2f", seed, r.F1(), r.Precision(), r.RemovalsPerWeek())
 		}
 	}
 }

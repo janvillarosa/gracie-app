@@ -13,16 +13,19 @@ import (
 )
 
 // assistHouse is an assist rig whose house shops weekly, with a run planned nextRunIn from now,
-// and two staples with a perfect recent track record (above the assist bar).
+// and two staples bought every run (a run fit well above the assist bar).
 func assistHouse(t *testing.T, nextRunIn time.Duration) *suggestRig {
 	t.Helper()
 	r := assistRig(t)
 	for _, key := range []string{"whole milk", "eggs"} {
-		var ago []float64
+		// Added each week and bought the next day (on the run), for fourteen weeks.
+		var added, bought []float64
 		for w := 14; w >= 1; w-- {
-			ago = append(ago, float64(7*w))
+			added = append(added, float64(7*w))
+			bought = append(bought, float64(7*w)-1)
 		}
-		r.history("item.added", key, r.list, ago...)
+		r.history("item.added", key, r.list, added...)
+		r.history("item.checked", key, r.list, bought...)
 	}
 	r.fold()
 	r.setRun(nextRunIn)

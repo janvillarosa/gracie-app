@@ -16,9 +16,14 @@ func TestPrintGoldenBenchmark(t *testing.T) {
 	w := households.Golden()
 	o := DefaultOptions()
 	o.Away = w.Away()
+	if os.Getenv("AUTOPILOT_DEBUG") != "" {
+		Debug = func(l string) { fmt.Println("  miss:", l) }
+	}
 	total, per := Replay(w.Events, o)
+	Debug = nil
 	fmt.Printf("total: runs %d adds %d hits %d later %d precision %.3f recall %.3f staple-recall %.3f open-recall %.3f removals/wk %.2f adds/run %.2f\n",
 		total.Runs, total.Added, total.Hits, total.Later, total.Precision(), total.Recall(), total.StapleRecall(), total.OpenRecall(), total.RemovalsPerWeek(), total.AddsPerRun())
+	fmt.Printf("F1 %.3f misses: %v\n", total.F1(), total.Misses)
 	for _, h := range w.Houses {
 		r := per[h.Room]
 		fmt.Printf("  %-20s runs %3d adds %3d hits %3d precision %.3f open-recall %.3f (%d open) removals/wk %.2f\n", h.Persona, r.Runs, r.Added, r.Hits, r.Precision(), r.OpenRecall(), r.Open, r.RemovalsPerWeek())

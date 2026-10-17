@@ -36,16 +36,18 @@ func TestDecideModesByBand(t *testing.T) {
 	band := func(score, need float64) autopilot.Proposal {
 		return autopilot.Proposal{Confidence: score, Need: need, Effect: autopilot.EffectAddToList}
 	}
+	off, sug, ast := autopilot.ModeOff, autopilot.ModeSuggest, autopilot.ModeAssist
+	type want = map[autopilot.Mode]autopilot.Disposition
 	cases := []struct {
 		name string
 		pr   autopilot.Proposal
-		want map[autopilot.Mode]autopilot.Disposition
+		want want
 	}{
-		{"below suggest", band(0.5, 0.99), map[autopilot.Mode]autopilot.Disposition{autopilot.ModeOff: autopilot.Drop, autopilot.ModeSuggest: autopilot.Drop, autopilot.ModeAssist: autopilot.Drop}},
-		{"between bars", band(0.7, 0.99), map[autopilot.Mode]autopilot.Disposition{autopilot.ModeOff: autopilot.Drop, autopilot.ModeSuggest: autopilot.Suggest, autopilot.ModeAssist: autopilot.Suggest}},
-		{"above assist", band(0.85, 0.75), map[autopilot.Mode]autopilot.Disposition{autopilot.ModeOff: autopilot.Drop, autopilot.ModeSuggest: autopilot.Suggest, autopilot.ModeAssist: autopilot.Apply}},
-		{"high score, low need", band(0.95, 0.4), map[autopilot.Mode]autopilot.Disposition{autopilot.ModeOff: autopilot.Drop, autopilot.ModeSuggest: autopilot.Suggest, autopilot.ModeAssist: autopilot.Suggest}},
-		{"external effect", autopilot.Proposal{Confidence: 0.99, Need: 0.99, Effect: "buy"}, map[autopilot.Mode]autopilot.Disposition{autopilot.ModeOff: autopilot.Drop, autopilot.ModeSuggest: autopilot.Suggest, autopilot.ModeAssist: autopilot.Suggest}},
+		{"below both bars", band(0.3, 0.99), want{off: autopilot.Drop, sug: autopilot.Drop, ast: autopilot.Drop}},
+		{"assist bar only (run fit), not the suggest bar", band(0.55, 0.9), want{off: autopilot.Drop, sug: autopilot.Drop, ast: autopilot.Apply}},
+		{"both bars", band(0.85, 0.75), want{off: autopilot.Drop, sug: autopilot.Suggest, ast: autopilot.Apply}},
+		{"suggest bar, need too low for assist", band(0.95, 0.4), want{off: autopilot.Drop, sug: autopilot.Suggest, ast: autopilot.Suggest}},
+		{"external effect never applies", autopilot.Proposal{Confidence: 0.99, Need: 0.99, Effect: "buy"}, want{off: autopilot.Drop, sug: autopilot.Suggest, ast: autopilot.Suggest}},
 	}
 	for _, c := range cases {
 		for m, want := range c.want {
@@ -170,6 +172,11 @@ func TestPlanRunModeLooksAsFarAsTheRunInterval(t *testing.T) {
 	}
 }
 
+// weeklyBuys is a thing bought every week for twelve weeks, last a week before the next run.
+func weeklyBuys() []autopilot.KeyEvent {
+	return autopilottest.Buys(7*24*time.Hour, 12, now.Add(10*time.Hour-7*24*time.Hour))
+}
+
 func runPlan() *autopilot.RunPlan {
 	next := now.Add(10 * time.Hour)
 	return &autopilot.RunPlan{
@@ -182,6 +189,7 @@ func runPlan() *autopilot.RunPlan {
 func TestPlanAwayNoAdds(t *testing.T) {
 	rp := runPlan()
 	f := &autopilottest.Signals{Plan: rp, Cands: []autopilot.Candidate{autopilottest.Weekly("eggs", list, now)},
+		Events:    map[string][]autopilot.KeyEvent{"eggs": weeklyBuys()},
 		AwaySpans: predict.Away{{Opens: rp.Next.Start.Add(-24 * time.Hour), Closes: rp.Next.Start.Add(72 * time.Hour)}}}
 	if s := gather(t, f, autopilot.HorizonRunAfterNext, 8); !s.Away || len(autopilot.Plan(s, autopilot.DefaultPolicy)) != 0 {
 		t.Fatalf("planned while away: %+v", s)
@@ -199,15 +207,21 @@ func TestPlanAwayNoAdds(t *testing.T) {
 
 func TestPlanAssistOrdersByNeedAndCaps(t *testing.T) {
 	var cands []autopilot.Candidate
+	evs := map[string][]autopilot.KeyEvent{}
 	for i, k := range []string{"a1", "b2", "c3", "d4", "e5", "f6", "g7", "h8", "i9", "j10"} {
-		c := autopilottest.Weekly(k, list, now)
-		c.NeedBy = 0.5 + float64(i)/20
-		cands = append(cands, c)
+		cands = append(cands, autopilottest.Weekly(k, list, now))
+		// The later ones were bought longer ago, so they are more surely needed by this run.
+		evs[k] = autopilottest.Buys(7*24*time.Hour, 12, now.Add(-time.Duration(i)*12*time.Hour))
 	}
-	f := &autopilottest.Signals{Plan: runPlan(), Cands: cands}
+	f := &autopilottest.Signals{Plan: runPlan(), Cands: cands, Events: evs}
 	prs := autopilot.Plan(gather(t, f, autopilot.HorizonRunAfterNext, 0), autopilot.DefaultPolicy)
-	if len(prs) != autopilot.DefaultPolicy.MaxPerRun || prs[0].Key != "j10" {
+	if len(prs) != autopilot.DefaultPolicy.MaxPerRun {
 		t.Fatalf("proposals: %v", keys(prs))
+	}
+	for i := 1; i < len(prs); i++ {
+		if prs[i].Need > prs[i-1].Need {
+			t.Fatalf("not most needed first: %v", keys(prs))
+		}
 	}
 }
 

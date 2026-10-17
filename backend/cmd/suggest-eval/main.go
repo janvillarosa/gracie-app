@@ -405,8 +405,9 @@ func autopilotReport(evs []analytics.Event, away map[string]predict.Away, names 
 	fmt.Printf("  precision %.1f%%  recall %.1f%%  open recall %.1f%%  removals %.2f per house-week\n",
 		100*total.Precision(), 100*total.Recall(), 100*total.OpenRecall(), total.RemovalsPerWeek())
 	fmt.Printf("  F1 (precision x open recall) %.1f%%  goal %.0f%%\n", 100*total.F1(), 100*replay.F1Goal)
-	gate := total.Precision() >= 0.85 && total.RemovalsPerWeek() <= 1
-	fmt.Printf("  gate (precision >= 85%%, removals <= 1/week): %v\n\n", map[bool]string{true: "PASS", false: "MISS"}[gate])
+	gate := total.Precision() >= 0.85 && total.RemovalsPerWeek() <= 1 && total.F1() >= replay.F1Goal
+	fmt.Printf("  gate (precision >= 85%%, removals <= 1/week, F1 >= %.0f%%): %v\n", 100*replay.F1Goal, map[bool]string{true: "PASS", false: "MISS"}[gate])
+	fmt.Printf("  misses by reason: %v\n\n", total.Misses)
 	rooms := make([]string, 0, len(per))
 	for r := range per {
 		rooms = append(rooms, r)
@@ -424,7 +425,7 @@ func autopilotReport(evs []analytics.Event, away map[string]predict.Away, names 
 		fmt.Printf("  %-22s runs %3d  adds %3d  precision %5.1f%%  open recall %5.1f%%  removals/wk %.2f\n", name, rep.Runs, rep.Added, 100*rep.Precision(), 100*rep.OpenRecall(), rep.RemovalsPerWeek())
 	}
 	fmt.Println("\nbar sweep (score x need):")
-	for _, r := range replay.Sweep(evs, o, []float64{0.65, 0.7, 0.75, 0.8, 0.85}, []float64{0.5, 0.7, 0.9}) {
+	for _, r := range replay.Sweep(evs, o, []float64{0.35, 0.45, 0.5, 0.55, 0.65, 0.8}, []float64{0.5, 0.6, 0.7}) {
 		fmt.Printf("  score>=%.2f need>=%.2f  adds %4d  precision %5.1f%%  open recall %5.1f%%  F1 %5.1f%%  removals/wk %.2f\n",
 			r.Policy.AssistMinScore, r.Policy.AssistMinNeed, r.Added, 100*r.Precision(), 100*r.OpenRecall(), 100*r.F1(), r.RemovalsPerWeek())
 	}

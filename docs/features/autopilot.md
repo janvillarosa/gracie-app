@@ -40,10 +40,14 @@ _Backend paths are relative to `backend/`; packages live under `backend/internal
   (`run_after_next`). `services/autopilot_signals.go` implements `Signals` over `Reader.Upcoming` (now and
   run mode, unchanged), `Reader.NeedsBefore` (assist; its odds are `predict.NeedBy`), `Reader.RunPlan`,
   `services.AwayCalendar` (a house is away only when every member is), the raw events and the live list.
-- **Bars** (`autopilot.DefaultPolicy`): suggest = `Forecast.Confident` (score ≥ 0.65, CV ≤ 0.5). Assist =
-  score ≥ 0.80 **and** need-before-the-run-after-next ≥ 0.70. Between the bars assist suggests the same item.
-  The score is a Wilson lower bound over the latest 8 cycles and tops out near 0.83, so 0.80 means "right
-  every cycle lately".
+- **Two independent bars** (`autopilot.DefaultPolicy`, set by the eval): a **suggestion** is judged by its add
+  forecast, `Forecast.Confident` (score ≥ 0.65, CV ≤ 0.5). **Assist** is judged by the thing's **run fit**
+  (`FitRun`, applied by `Assess` on the assist horizon from its own check-offs): run score ≥ 0.50 (a Wilson
+  lower bound over the last 12 cycles that landed in the run their rhythm pointed to, ± half a run interval)
+  **and** need ≥ 0.60 (the chance it runs out by this run, given it was not bought since; 1 when it is
+  overdue by less than two rhythms). Assist asks "will it be bought in this run?", not "when will someone
+  add it?". What assist does not apply but clears the suggest bar stays a suggestion. Look-alike spellings
+  are each judged, then the most needed is kept (`BestOfLookAlikes`).
 - **Ticker** (`TickOnce`, every `AUTOPILOT_TICK_EVERY`, default 15m): takes the `autopilot_state` lease, visits
   houses that stored `assist` (re-reading the mode per house), and for each live list whose next run starts
   within `AUTOPILOT_LEAD` (default 18h), has not started, and is not while the house is away, plans and
@@ -82,12 +86,11 @@ _Backend paths are relative to `backend/`; packages live under `backend/internal
 
 `go run ./cmd/suggest-eval autopilot -synthetic -away-from-trips` replays the golden households (and, without
 `-synthetic`, a database) at every past run minus the lead, through the same forecasts, `NeedBy` and planner.
-Assist is offered while precision ≥ 85% and removals ≤ 1 per house-week; `TestGoldenAssistMeetsGate` pins it
-(2026-10-17: 90.9% precision, 37% open recall, 0.02 removals per house-week).
-
-**Goal: F1 ≥ 70%** (precision × open recall, harmonic mean; `replay.F1Goal`). Today 52.6%;
-`TestGoldenAssistF1Floor` holds the floor (0.52) and is raised as changes lift it, never lowered. Reaching it
-needs recall (the score ceiling, look-alikes, the lead), not a looser bar; see the benchmark note.
+**Ship bar:** precision ≥ 85%, removals ≤ 1 per house-week and **F1 ≥ 70%** (precision × open recall, harmonic
+mean; `replay.F1Goal`). Pinned by `TestGoldenAssistMeetsGate`, `TestGoldenAssistF1Floor` (floor 0.77, raised
+as changes lift it, never lowered) and `TestHoldOutSeedsMeetGoal` (five households seeds the bar was not tuned
+on). 2026-10-17: 97.8% precision, 64.4% open recall, **F1 77.7%**, 0.01 removals per house-week; hold-out F1
+76.7–78.9%. See `docs/superpowers/qa/autopilot-benchmark-2026-10-17.md`.
 
 ## Frontend
 

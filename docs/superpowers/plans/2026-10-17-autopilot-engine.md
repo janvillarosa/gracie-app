@@ -3,6 +3,12 @@
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Changes**
+- **F1 ship bar (2026-10-17, Jan):** assist ships only at F1 ≥ 70% (precision × open recall) on top of the gate.
+  The add forecast was the wrong measure for assist (it times *adds*; assist needs *purchases per run*), so
+  assist now judges each thing by its **run fit** (`autopilot.FitRun`/`Assess`: run score and need from its own
+  check-offs against the run rhythm), the assist and suggest bars are independent in `Decide`, look-alikes are
+  judged before they are merged, and the bar is run score ≥ 0.50, need ≥ 0.60. F1 52.6% → 77.7% at 97.8%
+  precision; hold-out seeds 76.7–78.9%. Diagram 4 shows the new `Decide`.
 - **As built (2026-10-17):** deleting an item already checked off is tidying, not a miss, so only an *applied*
   action can become removed (diagrams 7 and 8). An unchecked item expires 30 h after its run started. The
   benchmark (`docs/superpowers/qa/autopilot-benchmark-2026-10-17.md`) passes the gate at the default bar,
@@ -29,7 +35,7 @@
 - **Never external:** `autopilot.Effect` has only in-app values (`EffectAddToList`), and the executor refuses anything else. External effects need a new mode and explicit consent (a comment at the type and at the executor says so).
 - **Autopilot adds are never human requests.** `item.autopilot_added` is registered with `Skip: true`, `Role: RoleAutomated` and actor `system:autopilot`. `recomputeKey` forecasts a key from checks (`predict.SeriesChecked`) when an automated add falls in its recent cycles. Removing an autopilot item emits `item.autopilot_removed` (`RoleDismiss`, a real miss). Checking it off is a normal `item.checked`.
 - **Stateless suggestions, durable actions:** suggestions are derived from events and aggregates only (the `item.suggestion_predicted` measurement records stay as they are). Only applied (assist) actions are stored, because the recorder may drop events and "did we already add this?" must be exact.
-- **Bars by intrusiveness** (`autopilot.Policy`, tuned by Task 9's eval, not by feel): suggest = `Forecast.Confident` (MinScore 0.65, MaxCV 0.5). Assist = score ≥ 0.80 **and** need-before-the-run-after-next ≥ 0.70. Between the bars, assist falls back to a suggestion of the same item.
+- **Bars by intrusiveness** (`autopilot.Policy`, tuned by Task 9's eval, not by feel): suggest = `Forecast.Confident` (MinScore 0.65, MaxCV 0.5). Assist = run fit score ≥ 0.50 **and** need ≥ 0.60 (as built; the first draft used the add forecast at 0.80 / 0.70). What assist does not apply but clears the suggest bar is suggested.
 - `ForecastVersion` goes 3 → **4** in Task 5 (the automated role changes which series a key forecasts from); `RefreshStale` rebuilds every key, no backfill needed.
 - **Signals come from analytics, never around it.** Run plans: `Reader.RunPlan(room, "list:<id>", now)` (`Next`, `After`, both stepped in home time). Need: `Reader.NeedsBefore(room, "list:<id>", by, away, limit)`, whose `P` is `predict.NeedBy` (log-normal on the forecast's own clock, capped at 0.5 unless the forecast is confident). Away spans: `AwayCalendar.HouseAway(room)` (a house is away only when every member is). The slip's "now" horizon keeps reading `Reader.Upcoming` exactly as today, so suggest mode is unchanged.
 - **Automated actors stay out of people's stats.** `system:autopilot` is a `system:*` actor, so `isRealUser`, `LastBy` and `Turns` already ignore it; a test pins that.
@@ -275,14 +281,12 @@ flowchart TD
     P([Proposal]) --> M{House mode}
     M -- off --> DROP[Drop]
     M -- suggest --> B1{"score ≥ 0.65<br/>and CV ≤ 0.5?"}
-    M -- assist --> B2{"score ≥ 0.65<br/>and CV ≤ 0.5?"}
+    M -- assist --> E{"Effect is in-app?"}
     B1 -- no --> DROP
     B1 -- yes --> SUG[Suggest]
-    B2 -- no --> DROP
-    B2 -- yes --> E{"Effect is in-app?"}
-    E -- no --> SUG
-    E -- yes --> B3{"score ≥ 0.80<br/>and need ≥ 0.70?"}
-    B3 -- no --> SUG
+    E -- no --> B1
+    E -- yes --> B3{"run score ≥ 0.50<br/>and need ≥ 0.60?"}
+    B3 -- no --> B1
     B3 -- yes --> APPLY[Apply]
 ```
 

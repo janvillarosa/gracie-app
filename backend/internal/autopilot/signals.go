@@ -165,17 +165,30 @@ func Gather(ctx context.Context, sig Signals, q Query, p Policy) (Snapshot, erro
 	if err != nil {
 		return s, err
 	}
+	assist := q.Horizon == HorizonRunAfterNext
 	for _, r := range Rank(cands, q.ListID, q.Horizon, onList, q.Now, p) {
-		if q.Limit > 0 && len(s.Open) >= q.Limit {
+		// The slip stops reading once it has enough; assist judges every candidate by its run fit,
+		// then Plan keeps the most needed.
+		if !assist && q.Limit > 0 && len(s.Open) >= q.Limit {
 			break
 		}
 		evs, err := sig.KeyEvents(ctx, q.RoomID, r.Key)
 		if err != nil {
 			return s, err
 		}
-		if CycleOpen(r, evs, q.Horizon) {
-			s.Open = append(s.Open, r)
+		if !CycleOpen(r, evs, q.Horizon) {
+			continue
 		}
+		if assist {
+			var ok bool
+			if r, ok = Assess(r, evs, *s.Run, s.Spans); !ok {
+				continue
+			}
+		}
+		s.Open = append(s.Open, r)
+	}
+	if assist {
+		s.Open = BestOfLookAlikes(s.Open)
 	}
 	if len(s.Open) == 0 {
 		return s, nil

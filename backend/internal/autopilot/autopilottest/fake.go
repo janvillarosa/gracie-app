@@ -71,3 +71,12 @@ func Weekly(key, listID string, now time.Time) autopilot.Candidate {
 		OpensAt: now.Add(-12 * time.Hour), ClosesAt: now.Add(24 * time.Hour),
 	}
 }
+
+// Buys is n check-offs, `every` apart, the last at `last` (newest first, as KeyEvents returns).
+func Buys(every time.Duration, n int, last time.Time) []autopilot.KeyEvent {
+	out := make([]autopilot.KeyEvent, n)
+	for i := 0; i < n; i++ {
+		out[i] = autopilot.KeyEvent{Name: "item.checked", At: last.Add(-time.Duration(i) * every)}
+	}
+	return out
+}

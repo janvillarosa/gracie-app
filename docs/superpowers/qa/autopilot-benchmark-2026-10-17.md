@@ -2,87 +2,101 @@
 
 Command: `cd backend && go run ./cmd/suggest-eval autopilot -synthetic -away-from-trips`
 (the golden households, `internal/testutil/households`, seed 20261017). Pinned by
-`internal/autopilot/replay` `TestGoldenAssistMeetsGate`.
+`internal/autopilot/replay`: `TestGoldenAssistMeetsGate`, `TestGoldenAssistF1Floor` and
+`TestHoldOutSeedsMeetGoal`.
+
+**Ship bar (Jan):** precision ≥ 85%, ≤ 1 removal per house-week, **and F1 ≥ 70%**.
 
 ## Method
 
 At every past shopping run on a list (runs found from check-offs with `predict.RunSpans`, after the
 first four, so a run rhythm exists), the replay steps back by the ticker lead (18 h) and plans with
-only the events before that moment, through the server's own code: `predict.PredictAway` forecasts,
-`predict.NeedBy` at the run after next (one median run interval of home time later, as
-`Reader.RunPlan` steps it), `autopilot.Rank` / `CycleOpen` / `Plan` / `Decide` at the assist bar.
-Each add is scored against what the house checked off in that run (± 2 h):
+only the events before that moment, through the server's own code: the candidates `Reader.NeedsBefore`
+would return, `autopilot.Rank`, `CycleOpen`, `Assess` (the run fit), `BestOfLookAlikes`, `Plan` and
+`Decide`. Each add is scored against what the house checked off in that run (± 2 h):
 
 - **precision**: adds bought in that run.
 - **removals per house-week**: adds not bought in that run (a person would delete them, or they expire).
-- **recall**: adds over everything bought in the run, one-offs included.
-- **open recall**: adds over what was bought but *not already on the list* when assist planned. In
-  these households people usually write things down themselves before the shop, and assist rightly
-  skips those, so this is the share of the remaining writing-down that assist takes over.
+- **open recall**: adds over what was bought but *not already on the list* when assist planned. In these
+  households people often write things down before the shop, and assist rightly skips those, so this is
+  the share of the remaining writing-down that assist takes over. (Plain recall, over everything bought
+  including one-offs and what was already listed, is reported too.)
+- **F1**: the harmonic mean of precision and open recall.
 
-## Results (default bar: score ≥ 0.80, need ≥ 0.70)
+## Result (default bar: run score ≥ 0.50, need ≥ 0.60)
 
-| | runs | adds | precision | open recall | removals / house-week |
-|---|---:|---:|---:|---:|---:|
-| **all houses** | 183 | 55 | **90.9%** | 37.0% | **0.02** |
-| weekend-couple | 41 | 26 | 88.5% | 48.9% | 0.07 |
-| big-family | 45 | 16 | 87.5% | 36.8% | 0.04 |
-| lookalikes | 45 | 6 | 100% | 20.0% | 0 |
-| bursty | 22 | 3 | 100% | 50.0% | 0 |
-| frequent-travellers | 16 | 3 | 100% | 42.9% | 0 |
-| monthly-stocker | 8 | 1 | 100% | 25.0% | 0 |
-| habit-changer | 6 | 0 | n/a | 0% | 0 |
+| | runs | adds | precision | open recall | F1 | removals / house-week |
+|---|---:|---:|---:|---:|---:|---:|
+| **all houses** | 183 | 89 | **97.8%** | **64.4%** | **77.7%** | **0.01** |
+| weekend-couple | 41 | 36 | 100% | 76.6% | | 0 |
+| big-family | 45 | 30 | 93.3% | 73.7% | | 0.04 |
+| bursty | 22 | 5 | 100% | 83.3% | | 0 |
+| frequent-travellers | 16 | 7 | 100% | 100% | | 0 |
+| habit-changer | 6 | 3 | 100% | 100% | | 0 |
+| monthly-stocker | 8 | 3 | 100% | 75.0% | | 0 |
+| lookalikes | 45 | 5 | 100% | 16.7% | | 0 |
 
-bin-day, solo-irregular and new-house have no replayable runs (no shopping list with a run rhythm,
-or too little history) and get nothing added. Wall time and home time give the same numbers here.
+bin-day, solo-irregular and new-house have no replayable runs and get nothing added.
+**Ship bar: PASS.**
 
-**Gate (precision ≥ 85%, ≤ 1 removal per house-week): PASS.**
+**Hold-out** (same bar, households generated from seeds it was not tuned on):
 
-## Goal: F1 ≥ 70%
-
-F1 is the harmonic mean of precision and open recall: high only when assist is both right and useful.
-Today it is **52.6%** (`replay.F1Goal` = 0.70; `TestGoldenAssistF1Floor` ratchets the floor, now 0.52, and
-must only go up). Loosening the bar does not get there: the best F1 in the sweep is 64.5% (score ≥ 0.65,
-need ≥ 0.9), and that drops precision to 83.5%, below the gate. The gap is recall, and the levers are:
-
-1. The score ceiling: an 8-cycle Wilson bound tops out near 0.83, so steady staples with a short record never
-   clear 0.80. A bar on hit rate with a minimum number of trials, or more recent cycles, would let them in.
-2. Look-alike merging in the replay (the server already merges spellings; the replay does not, which
-   understates the lookalikes persona at 20% open recall).
-3. Planning closer to the run (a shorter lead sees more of what is about to run out).
-4. Things added at the store mid-run are counted as "open" but no pre-run plan could catch them; a fairer
-   denominator may move the number without changing behaviour, so change it only with a reason.
-
-## Bar sweep
-
-| score ≥ | need ≥ | adds | precision | open recall | F1 | removals / wk |
+| seed | runs | adds | precision | open recall | F1 | removals / wk |
 |---:|---:|---:|---:|---:|---:|---:|
-| 0.65 | 0.70 | 87 | 81.6% | 52.6% | 64.0% | 0.06 |
-| 0.65 | 0.90 | 85 | 83.5% | 52.6% | 64.5% | 0.05 |
-| 0.70 | 0.50 | 58 | 87.9% | 37.8% | 52.8% | 0.03 |
-| 0.75 | 0.70 | 56 | 89.3% | 37.0% | 52.4% | 0.02 |
-| **0.80** | **0.70** | **55** | **90.9%** | **37.0%** | **52.6%** | **0.02** |
-| 0.80 | 0.90 | 54 | 92.6% | 37.0% | 52.9% | 0.01 |
-| 0.85 | any | 0 | n/a | 0% | 0% | 0 |
+| 1 | 171 | 89 | 98.9% | 65.7% | 78.9% | 0.00 |
+| 7 | 181 | 91 | 92.3% | 65.6% | 76.7% | 0.03 |
+| 42 | 171 | 96 | 94.8% | 65.9% | 77.8% | 0.02 |
+| 2025 | 168 | 100 | 97.0% | 66.0% | 78.5% | 0.01 |
+| 99991 | 183 | 107 | 96.3% | 64.4% | 77.2% | 0.02 |
 
-## Findings
+## How F1 went from 52.6% to 77.7%
 
-1. **Score ≥ 0.85 adds nothing.** The forecast score is the Wilson lower bound over the latest 8
-   cycles (`predict.DefaultParams.RecentCycles`), which tops out at about 0.83 for a perfect 8/8. The
-   0.80 bar therefore means "right every cycle lately". Any stricter bar has to come from need, not score.
-2. **Need barely moves the result.** Planning for the run after next, anything with a confident
-   rhythm is almost always needed by then (need ≈ 1), so 0.5 to 0.9 changes one or two adds.
-3. **The loosest bar that passes (0.70 / 0.50) buys almost nothing**: +3 adds and +0.8 points of open
-   recall for 3 points less precision. The default stays at 0.80 / 0.70 for the margin; the plan's
-   "loosest passing bar" rule was set aside for that reason and is Jan's call.
-4. **Look-alikes lose recall** (20%): the replay forecasts each spelling on its own, while the server
-   merges look-alike histories, so it understates that persona.
+The first version judged assist with the suggestion forecast: a Wilson score on whether the *add* lands
+in a narrow window around its predicted time, and `predict.NeedBy`, which is capped at 0.5 for any
+forecast below the suggest bar. That measures the wrong thing for assist. Milk bought nearly every
+Saturday scored 0.52 because people add it on different days, and its need could never pass. Miss
+diagnostics (`Report.Misses`) showed 51 of 85 open misses blocked by the suggestion score and 21 more by
+the assist bar; only 8 were first-time buys nothing could catch. The fixes:
+
+1. **Run fit** (`autopilot.FitRun`, `Assess`): assist judges each thing from its own purchases against the
+   house's run rhythm. Score = Wilson lower bound over the last 12 cycles that landed in the run their
+   rhythm pointed to (± half a run interval). Need = the chance it runs out by this run, given it was not
+   bought since: the share of its recent gaps that end by this run's window among those that had not ended
+   before it (Laplace-smoothed), in home time. 52.6% → 73.7%.
+2. **Overdue means wanted**: when it has been longer than any recent gap (a skipped run), need is 1, unless
+   it is more than two rhythms overdue (the habit stopped).
+3. **Look-alikes judged before they are merged**: assist keeps every spelling until each has its run fit,
+   then keeps the most needed (`BestOfLookAlikes`).
+4. **Independent bars**: `Decide` applies on the assist bar alone; the suggest bar (on the add forecast)
+   only governs suggestions. Before, anything under 0.65 was dropped before the assist bar was checked.
+5. **The bar from the plateau, not the peak**: every bar from 0.45 to 0.60 gives F1 76–78%; 0.50 / 0.60 sits
+   in the middle at 97.8% precision. Bars around 0.35 reach 81% but cost 5 points of precision.
+
+The suggestion slip and run mode are untouched (they still use the add forecast; `TestSuggestionsParityAcrossModes`).
+
+## Bar sweep (score × need)
+
+| run score ≥ | need ≥ | adds | precision | open recall | F1 | removals / wk |
+|---:|---:|---:|---:|---:|---:|---:|
+| 0.35 | 0.60 | 104 | 93.3% | 71.9% | 81.2% | 0.03 |
+| 0.45 | 0.60 | 97 | 93.8% | 67.4% | 78.4% | 0.02 |
+| **0.50** | **0.60** | **89** | **97.8%** | **64.4%** | **77.7%** | **0.01** |
+| 0.55 | 0.60 | 88 | 97.7% | 63.7% | 77.1% | 0.01 |
+| 0.65 | 0.60 | 82 | 97.6% | 59.3% | 73.7% | 0.01 |
+| 0.80 | 0.60 | 35 | 100% | 25.9% | 41.2% | 0 |
+
+## What is still missed (golden, default bar)
+
+29 run score below the bar (skippy items: bought in 6–7 of 8 predicted runs), 9 cycle closed or too few
+purchases (fewer than four), 8 never bought before, 2 other. The lookalikes persona stays low (16.7%): each
+spelling's purchases are judged on their own, so a thing written three ways rarely has four purchases under
+one name. Merging look-alike purchases in `Assess` is the next lever.
 
 ## Limits
 
-- The replay knows when each run actually happened (an oracle on run timing); the server acts on the
-  predicted `RunPlan`. A missed prediction means assist adds nothing that run, so precision does not
-  suffer, but real adds per run will be lower.
-- No dev dataset exists locally (the local `gracie` database is empty) and production data was not
-  touched. Run `suggest-eval autopilot -away-from-trips` against a real database before relying on
-  these numbers for real houses.
+- The replay knows when each run actually happened; the server acts on the predicted `RunPlan`. A missed
+  run prediction means assist adds nothing that run (precision does not suffer; real adds per run will be
+  lower).
+- The golden and hold-out households are synthetic. No dev dataset exists locally and production data was
+  not touched: run `suggest-eval autopilot -away-from-trips` against a real database before relying on these
+  numbers for real houses.

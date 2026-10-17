@@ -5,6 +5,7 @@
 package replay
 
 import (
+	"fmt"
 	"math"
 	"sort"
 	"time"
@@ -46,6 +47,8 @@ type Report struct {
 	// things assist could have saved someone from writing down.
 	Open  int
 	Weeks float64 // house-weeks spanned by the replayed runs
+	// Misses counts, by reason, the open things bought in a run that assist did not add.
+	Misses map[string]int
 }
 
 // Precision is hits over adds (0 with no adds).
@@ -60,9 +63,9 @@ func (r Report) StapleRecall() float64 { return ratio(r.Hits, r.Staples) }
 // OpenRecall is hits over what was bought but not yet on the list when assist planned.
 func (r Report) OpenRecall() float64 { return ratio(r.Hits, r.Open) }
 
-// F1Goal is where assist should get to: the harmonic mean of precision and open recall at 70%.
-// It is a target, not a gate (the gate is precision >= 85% and <= 1 removal per house-week);
-// TestGoldenAssistF1Floor ratchets the floor up toward it.
+// F1Goal is the bar assist must meet before it ships: the harmonic mean of precision and open
+// recall at 70%, on top of the gate (precision >= 85% and <= 1 removal per house-week).
+// TestGoldenAssistF1Floor holds it, with a ratcheted floor above it.
 const F1Goal = 0.70
 
 // F1 is the harmonic mean of precision and open recall (what assist could have saved someone from
@@ -111,6 +114,12 @@ func (r *Report) add(o Report) {
 	r.Staples += o.Staples
 	r.Open += o.Open
 	r.Weeks += o.Weeks
+	for k, n := range o.Misses {
+		if r.Misses == nil {
+			r.Misses = map[string]int{}
+		}
+		r.Misses[k] += n
+	}
 }
 
 // Replay benchmarks every house in events (any order), and returns the total and one report per
@@ -290,10 +299,15 @@ func planRun(evs []itemEvent, list string, past []predict.RunSpan, run predict.R
 		Until: by,
 	}
 	for _, r := range ranked {
-		if keyCycleOpen(evs, r, at) {
+		kev := keyEvents(evs, r.Key, at)
+		if !autopilot.CycleOpen(r, kev, autopilot.HorizonRunAfterNext) {
+			continue
+		}
+		if r, ok := autopilot.Assess(r, kev, *snap.Run, away); ok {
 			snap.Open = append(snap.Open, r)
 		}
 	}
+	snap.Open = autopilot.BestOfLookAlikes(snap.Open)
 
 	// What was actually bought in this run (and before the next one).
 	end := run.End.Add(o.Slack)
@@ -318,10 +332,14 @@ func planRun(evs []itemEvent, list string, past []predict.RunSpan, run predict.R
 			rep.Open++
 		}
 	}
+	added := map[string]bool{}
+	planned := map[string]autopilot.Proposal{}
 	for _, pr := range autopilot.Plan(snap, o.Policy) {
+		planned[pr.Key] = pr
 		if autopilot.Decide(autopilot.ModeAssist, pr, o.Policy) != autopilot.Apply {
 			continue
 		}
+		added[pr.Key] = true
 		rep.Added++
 		switch {
 		case likeIn(pr.Key, bought):
@@ -330,21 +348,84 @@ func planRun(evs []itemEvent, list string, past []predict.RunSpan, run predict.R
 			rep.Later++
 		}
 	}
+	// Why each open purchase was missed, for tuning.
+	rep.Misses = map[string]int{}
+	ranks := map[string]bool{}
+	for _, r := range ranked {
+		ranks[r.Key] = true
+	}
+	opens := map[string]bool{}
+	for _, r := range snap.Open {
+		opens[r.Key] = true
+	}
+	for k := range bought {
+		if likeIn(k, setOf(onList)) || likeIn(k, added) {
+			continue
+		}
+		h := keys[k]
+		var reason string
+		switch {
+		case h == nil:
+			reason = "never bought before"
+		case len(predict.Collapse(h.checked)) < 4 && len(predict.Collapse(h.added)) < 4:
+			reason = "under 4 times before"
+		default:
+			f, ok := predict.DefaultParams.PredictAway(h.added, h.checked, h.ignored, away)
+			switch {
+			case !ok:
+				reason = "no forecast"
+			case f.OpensAt.After(by):
+				reason = "window after the run after next"
+			case !isHome(h.containers, list):
+				reason = "lives on another list"
+			case !ranks[k]:
+				reason = "filtered (look-alike taken)"
+			case !opens[k]:
+				reason = "cycle closed or too few purchases"
+			default:
+				pr, ok := planned[k]
+				switch {
+				case !ok:
+					reason = "over MaxPerRun"
+				case pr.Confidence < o.Policy.AssistMinScore:
+					reason = "run score below assist bar"
+				default:
+					reason = "need below assist bar"
+				}
+				if Debug != nil {
+					fit, _ := autopilot.FitRun(autopilot.Purchases(keyEvents(evs, k, at)), run.Start, by.Sub(run.Start), away)
+					Debug(fmt.Sprintf("%s: %s score=%.2f need=%.2f every=%.1f trials=%d hits=%d", k, reason, fit.Score, fit.Need, fit.EveryDays, fit.Trials, fit.Hits))
+				}
+			}
+		}
+		rep.Misses[reason]++
+	}
 	return rep
 }
 
-// keyCycleOpen applies the server's cycle rule to the key's events before `at`.
-func keyCycleOpen(evs []itemEvent, r autopilot.Ranked, at time.Time) bool {
-	var kev []autopilot.KeyEvent
+// Debug, when set, receives one line per miss below the suggest bar (tuning only).
+var Debug func(string)
+
+func isHome(containers map[string]int64, list string) bool {
+	var total int64
+	for _, n := range containers {
+		total += n
+	}
+	return total > 0 && float64(containers["list:"+list])/float64(total) >= 0.6
+}
+
+// keyEvents are the key's events before `at`, as the server's KeyEvents would return them.
+func keyEvents(evs []itemEvent, key string, at time.Time) []autopilot.KeyEvent {
+	var out []autopilot.KeyEvent
 	for _, e := range evs {
 		if !e.at.Before(at) {
 			break
 		}
-		if e.key == r.Key {
-			kev = append(kev, autopilot.KeyEvent{Name: e.name, At: e.at, During: e.during})
+		if e.key == key {
+			out = append(out, autopilot.KeyEvent{Name: e.name, At: e.at, During: e.during})
 		}
 	}
-	return autopilot.CycleOpen(r, kev, autopilot.HorizonRunAfterNext)
+	return out
 }
 
 func setOf(keys []string) map[string]bool {

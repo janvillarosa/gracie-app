@@ -65,20 +65,25 @@ func confident(c Candidate, p Policy) bool {
 }
 
 // Rank runs the pure filters over candidates (most confident first, as the signals return them):
-// the suggest bar, home list, one name per look-alike cluster (the first, most confident, wins),
+// the suggest bar (not for assist, which Assess judges by its run fit), home list, one name per look-alike cluster (the first, most confident, wins),
 // and nothing already on the list or a look-alike of it. The "now" and "next_run" horizons then
 // put open windows first and the soonest next; assist keeps the order it was given.
 func Rank(cands []Candidate, listID string, h Horizon, onList []string, now time.Time, p Policy) []Ranked {
 	var out []Ranked
 	var taken []string
 	for _, c := range cands {
-		if !confident(c, p) || !isHomeList(c.Containers, listID) {
+		// Assist judges each thing by its run fit (Assess), not by the add forecast's score.
+		if (h != HorizonRunAfterNext && !confident(c, p)) || !isHomeList(c.Containers, listID) {
 			continue
 		}
-		if likeAny(c.Key, taken) {
-			continue
+		// The slip keeps one name per look-alike cluster here; assist keeps them all until each is
+		// judged by its run fit, then keeps the best (Gather).
+		if h != HorizonRunAfterNext {
+			if likeAny(c.Key, taken) {
+				continue
+			}
+			taken = append(taken, c.Key)
 		}
-		taken = append(taken, c.Key)
 		if likeAny(c.Key, onList) {
 			continue
 		}
