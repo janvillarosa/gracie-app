@@ -1,25 +1,30 @@
-# Autopilot Engine Implementation Plan (v2)
+# Autopilot Engine Implementation Plan (v3)
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**v2 changes (2026-10-17, Jan's review):** the server ceiling (`AUTOPILOT_MODE`) is gone. The house setting is the mode. The eval gate now tunes the assist bar instead of lowering a ceiling. Flow and UML diagrams added.
+**Changes**
+- **v3 (2026-10-17):** one service and one candidate pipeline. `SuggestionService` is folded into `AutopilotService`, with no wrapper left behind. The handlers call `AutopilotService` directly. The existing routes (`…/suggestions`, `…/suggestions/ignore`, `…/run-hint`) keep their paths and are marked deprecated in favour of `…/autopilot`. The candidate filters move into the pure `autopilot` package, so the slip, run mode and Assist all judge the same items. The run hint moves into the same service.
+- **v2:** no server ceiling (the house setting is the mode); the eval gate tunes the assist bar; diagrams added.
 
 **Goal:** Let Bauhouse take the next in-app step for a house by itself (put the usual things on a list before the shop), with three house modes: `off`, `suggest` (today's suggestions, the default) and `assist` (reversible in-app actions, each with a reason and Undo). Full autopilot (buying, booking, messaging) is not a mode.
 
-**Architecture:** A new pure package `internal/autopilot` holds the mode rules, the planner (`Plan(snapshot, policy) []Proposal`) and the policy (`Decide(mode, proposal, policy) Disposition`). It reads the world through a narrow `Signals` port that services implement: a temporary adapter over today's `analytics.Reader` now, and the anticipation API from `claude/analytics-anticipation` in Task 10. `services/autopilot_service.go` does the I/O. It gathers a snapshot, applies `Apply` proposals through `ListService` with an exact, durable action log (`autopilot_actions`, unique per house × kind × key × cycle), records outcomes from list hooks, and runs on a lease-based ticker. Suggest-mode proposals stay stateless, derived from events and aggregates as today. Analytics stays feature-agnostic: autopilot adds use a new generic `RoleAutomated` event role that never counts as a request.
+**Architecture:** One feature, one service, one pipeline. The pure package `internal/autopilot` holds the mode rules, the candidate filters, the planner (`Plan(snapshot, policy) []Proposal`) and the policy (`Decide(mode, proposal, policy) Disposition`). It reads the world through a narrow `Signals` port. `services/autopilot_service.go` is the only service. It gathers a snapshot through `Signals` (a temporary adapter over today's `analytics.Reader` and event repository now; the anticipation API from `claude/analytics-anticipation` in Task 10), runs `Plan` and `Decide`, and then shows a suggestion or applies an action. Three callers share the pipeline and differ only in **horizon**: the suggestion slip asks for what is due now, run mode for what comes due before the next run, and the Assist ticker for what is needed before the run after next. Only applied actions are stored, in a durable action log (`autopilot_actions`, unique per house × kind × key × cycle), so suggestions stay stateless. Analytics stays feature-agnostic: autopilot adds use a new generic `RoleAutomated` event role that never counts as a request.
 
 **Tech Stack:** Go 1.26 + chi + MongoDB (memstore fakes for unit tests); React + Vite + TypeScript + React Query + Vitest + MSW.
 
-**Spec:** this plan (Jan's brief, 2026-10-17). Sibling: `docs/superpowers/plans/2026-10-17-analytics-anticipation.md` on `claude/analytics-anticipation`.
+**Spec:** this plan (Jan's brief and review, 2026-10-17). Sibling: `docs/superpowers/plans/2026-10-17-analytics-anticipation.md` on `claude/analytics-anticipation`.
 
 ## Global Constraints
 
-- **The mode is a house setting.** `Room.AutopilotMode` is `off | suggest | assist`. Absent means `suggest`. A house with the legacy `Room.SuggestionsOff = true` reads as `off`. There is no data migration: the mapping happens at read time, and writing a mode clears `suggestions_off`. Any member may change it (like renaming the house); the change emits `house.settings_updated`. API responses keep `suggestions_off` for one release, derived from the mode. There is **no server ceiling**.
-- `SUGGESTIONS_MODE` (the existing operator kill switch for computing suggestions) is untouched. It is not an autopilot mode and does not gate assist.
+- **The mode is a house setting.** `Room.AutopilotMode` is `off | suggest | assist`. Absent means `suggest`. A house with the legacy `Room.SuggestionsOff = true` reads as `off`. There is no data migration: the mapping happens at read time, and writing a mode clears `suggestions_off`. Any member may change it (like renaming the house); the change emits `house.settings_updated`. API responses keep `suggestions_off` for one release, derived from the mode. There is no server ceiling.
+- `SUGGESTIONS_MODE` (the existing operator kill switch) is untouched: `off` still stops the service from computing anything for any house. It is not an autopilot mode.
+- **One service.** `SuggestionService` is removed. `AutopilotService` serves suggestions, ignores, the run hint, the read view, Undo, the executor, the outcome hooks and the ticker.
+- **Deprecated routes, same paths.** `GET …/lists/{id}/suggestions`, `POST …/suggestions/ignore` and `GET …/lists/{id}/run-hint` keep their paths and responses. Their handlers call `AutopilotService` directly and set `Deprecation: true` plus `Link: <…/autopilot>; rel="successor-version"`. A comment on each route and a line in `docs/features/autopilot.md` say they go once the List page reads `GET …/autopilot` for everything.
+- **One candidate pipeline.** The filters that decide what may be proposed (home list, not on the list or a look-alike of it, one name per look-alike cluster, cycle still open, list not paused by two ignores in a row, ordering) live once, in `autopilot`. Suggest mode must behave exactly like today: every existing suggestion test passes unchanged in meaning.
 - **Never external:** `autopilot.Effect` has only in-app values (`EffectAddToList`), and the executor refuses anything else. External effects need a new mode and explicit consent (a comment at the type and at the executor says so).
 - **Autopilot adds are never human requests.** `item.autopilot_added` is registered with `Skip: true`, `Role: RoleAutomated` and actor `system:autopilot`. `recomputeKey` forecasts a key from checks (`predict.SeriesChecked`) when an automated add falls in its recent cycles. Removing an autopilot item emits `item.autopilot_removed` (`RoleDismiss`, a real miss). Checking it off is a normal `item.checked`.
-- **Stateless suggestions, durable actions:** suggest-mode proposals are derived from events and aggregates only. Only applied (assist) actions are stored, because the recorder may drop events and "did we already add this?" must be exact.
-- **Bars by intrusiveness** (`autopilot.Policy`, tuned by Task 9's eval, not by feel): suggest = `Forecast.Confident` (MinScore 0.65, MaxCV 0.5). Assist = score ≥ 0.80 **and** need-before-the-run-after-next ≥ 0.70. Between the bars, assist falls back to a suggestion.
+- **Stateless suggestions, durable actions:** suggestions are derived from events and aggregates only (the `item.suggestion_predicted` measurement records stay as they are). Only applied (assist) actions are stored, because the recorder may drop events and "did we already add this?" must be exact.
+- **Bars by intrusiveness** (`autopilot.Policy`, tuned by Task 9's eval, not by feel): suggest = `Forecast.Confident` (MinScore 0.65, MaxCV 0.5). Assist = score ≥ 0.80 **and** need-before-the-run-after-next ≥ 0.70. Between the bars, assist falls back to a suggestion of the same item.
 - `ForecastVersion` → **4** (the analytics branch takes 3).
 - `internal/autopilot` imports only pure code (`analytics/predict`, `parse`). It never imports `store`, `services` or Mongo, and `internal/analytics` never imports `autopilot`.
 - UI: tokens and primitives only (`Paper`, `Button`, `Sheet`, slips). A new mark goes into the system first (token block, `pnpm design:sync`, reference page, DESIGN.md). Voice: plain, warm, short ("Added 4 for Saturday").
@@ -28,41 +33,40 @@
 ## Review Focus
 
 - Autopilot adds never count as requests; a house on assist for 10 cycles keeps a stable rhythm. → `TestAutomatedAddsKeepRhythm` (analytics), `TestAssistTenCyclesStableRhythm` (services).
-- `off` produces nothing, `suggest` never writes, `assist` writes only in-app and only above the assist bar; between the bars it falls back to a suggestion. → `TestDecideModesByBand`, `TestTickWritesOnlyInAssist`, `TestExecutorRefusesExternalEffects`.
+- `off` produces nothing, `suggest` never writes, `assist` writes only in-app and only above the assist bar; between the bars it falls back to a suggestion of the same item. → `TestDecideModesByBand`, `TestTickWritesOnlyInAssist`, `TestExecutorRefusesExternalEffects`, `TestAssistFallbackIsSameItem`.
 - Two instances ticking at once add an item once. → `TestConcurrentTicksAddOnce` (service), `TestAutopilotActionUniqueKey` (Mongo).
 - Undo and swipe-delete both mark the action removed and feed a dismiss; the item does not come back in the same cycle. → `TestUndoMarksUndoneAndDismisses`, `TestDeleteAutopilotItemMarksRemoved`, `TestRemovedNotReaddedSameCycle`.
 - An item already on the list (or a look-alike, `parse.Similarity`) is never added again. → `TestPlanSkipsOnListAndLookAlikes`.
 - A house that is away gets no assist adds for the away period. → `TestPlanAwayNoAdds` (fake away calendar until Task 10).
-- Suggest mode behaves exactly like today's suggestions. → `TestForListParityAcrossModes`.
+- Suggest mode behaves exactly like today's suggestions. → the existing suggestion suite, ported to `AutopilotService` with only names changed, plus `TestSuggestionsParityAcrossModes`.
+- The deprecated routes answer exactly as before. → the existing handler tests stay green, plus `TestDeprecatedRoutesCarryHeader`.
 
 ## Diagrams
 
 ### 1. Components and dependencies
 
-Arrows point from the importer to what it imports. `autopilot` is pure; services do every read and write.
+Arrows point from the importer to what it imports. `autopilot` is pure; `AutopilotService` does every read and write.
 
 ```mermaid
 flowchart LR
     subgraph HTTP["http"]
         RH["RoomHandler<br/>PUT /rooms/settings"]
         AH["AutopilotHandler<br/>GET .../autopilot<br/>POST .../undo"]
-        SH["SuggestionsHandler"]
+        DH["Deprecated routes<br/>.../suggestions<br/>.../suggestions/ignore<br/>.../run-hint"]
     end
     subgraph SVC["services (I/O)"]
         RS["RoomService"]
-        AS["AutopilotService<br/>ticker · executor · outcomes"]
+        AS["AutopilotService<br/>suggestions · run hint · ticker<br/>executor · outcomes · undo"]
         LS["ListService"]
-        SS["SuggestionService"]
         SA["analyticsSignals<br/>(temporary adapter)"]
     end
     subgraph AP["autopilot (pure)"]
         MODE["Mode · HouseMode"]
-        PLAN["Gather · Plan · Decide"]
-        POL["Policy"]
+        PLAN["Gather · Plan · Decide<br/>candidate filters"]
         SIG["Signals port"]
     end
     subgraph AN["analytics (feature-agnostic)"]
-        RD["Reader"]
+        RD["Reader · EventRepository"]
         WK["Worker · recomputeKey"]
         PR["predict"]
     end
@@ -73,24 +77,39 @@ flowchart LR
     end
     RH --> RS
     AH --> AS
-    SH --> SS
+    DH --> AS
     RS --> RR
     RS --> MODE
+    AS --> MODE
     AS --> PLAN
     AS --> AR
     AS --> LS
     AS --> SA
     SA -. implements .-> SIG
     SA --> RD
-    SS --> MODE
-    SS --> RD
     LS --> IR
     LS -. ItemHooks .-> AS
     PLAN --> PR
     WK --> PR
 ```
 
-### 2. Package model (UML class diagram)
+### 2. One pipeline, three callers
+
+Every caller goes through the same filters and the same `Decide`; only the horizon differs.
+
+```mermaid
+flowchart LR
+    SLIP["Suggestion slip<br/>GET .../suggestions"] -- "horizon: now" --> G
+    RUN["Run mode<br/>GET .../suggestions?during=run"] -- "horizon: before next run" --> G
+    TICK["Assist ticker<br/>every 15 min"] -- "horizon: before the run after next" --> G
+    G["Gather<br/>(Signals → Snapshot)"] --> P["Plan<br/>shared candidate filters"]
+    P --> D{"Decide<br/>(house mode, policy)"}
+    D -- Drop --> X([nothing])
+    D -- Suggest --> S(["Slip on the list<br/>stateless, measured by item.suggestion_predicted"])
+    D -- Apply --> A(["Executor<br/>action log, then list item"])
+```
+
+### 3. Package model (UML class diagram)
 
 ```mermaid
 classDiagram
@@ -100,6 +119,12 @@ classDiagram
         off
         suggest
         assist
+    }
+    class Horizon {
+        <<enumeration>>
+        now
+        next_run
+        run_after_next
     }
     class Kind {
         <<enumeration>>
@@ -118,10 +143,6 @@ classDiagram
         Suggest
         Apply
     }
-    class Reason {
-        +string Code
-        +map Params
-    }
     class Proposal {
         +Kind Kind
         +string ListID
@@ -131,6 +152,7 @@ classDiagram
         +string Unit
         +float Confidence
         +float Need
+        +int DueInDays
         +Reason Reason
         +string Cycle
         +time RunAt
@@ -144,25 +166,26 @@ classDiagram
         +float MinRunConfidence = 0.5
         +int MaxPerRun = 8
     }
-    class RunPlan {
-        +Window Next
-        +Window After
-        +float Confidence
-    }
-    class Need {
+    class Candidate {
         +string Key
+        +map Containers
         +float Score
         +float CV
         +float NeedBy
         +float EveryDays
         +time LastAt
+        +int DueInDays
+        +bool CycleOpen
     }
     class Snapshot {
         +string ListID
+        +Horizon Horizon
         +time Now
+        +time Until
         +RunPlan Run
         +Window[] Away
-        +Need[] Needs
+        +bool Paused
+        +Candidate[] Candidates
         +string[] OnList
         +map Usual
     }
@@ -170,23 +193,26 @@ classDiagram
         <<interface>>
         +RunPlan(ctx, room, list, now) RunPlan
         +Away(ctx, room) Window[]
-        +NeedsBefore(ctx, room, list, by, away, limit) Need[]
+        +Candidates(ctx, room, list, until, away, limit) Candidate[]
+        +Paused(ctx, room, list, now) bool
         +OnList(ctx, list) string[]
         +Usual(ctx, room, keys) map
     }
     class autopilot {
         <<package functions>>
         +HouseMode(stored, legacyOff) Mode
-        +Gather(ctx, Signals, room, list, now, Policy) Snapshot
+        +Gather(ctx, Signals, room, list, Horizon, now, Policy) Snapshot
         +Plan(Snapshot, Policy) Proposal[]
         +Decide(Mode, Proposal, Policy) Disposition
     }
     class AutopilotService {
-        +TickOnce(ctx) int
-        +RunTicker(ctx, every, jitter)
-        +Apply(ctx, room, Proposal) AutopilotAction
+        +Suggestions(ctx, user, room, list, limit, during) Suggestion[]
+        +Ignore(ctx, user, room, list, key, during)
+        +RunHint(ctx, user, room, list) RunHint
         +View(ctx, user, room, list) AutopilotView
         +Undo(ctx, user, room, list, actionID)
+        +TickOnce(ctx) int
+        +Apply(ctx, room, Proposal) AutopilotAction
         +ItemChecked(ctx, item)
         +ItemDeleted(ctx, item)
     }
@@ -213,9 +239,8 @@ classDiagram
     }
     Proposal --> Kind
     Proposal --> Effect
-    Proposal --> Reason
-    Snapshot --> RunPlan
-    Snapshot --> Need
+    Snapshot --> Horizon
+    Snapshot --> Candidate
     autopilot ..> Signals : reads
     autopilot ..> Snapshot
     autopilot ..> Proposal : produces
@@ -228,7 +253,7 @@ classDiagram
     AutopilotService --> analyticsSignals
 ```
 
-### 3. Deciding one proposal (`Decide`)
+### 4. Deciding one proposal (`Decide`)
 
 ```mermaid
 flowchart TD
@@ -246,29 +271,37 @@ flowchart TD
     B3 -- yes --> APPLY[Apply]
 ```
 
-### 4. Planning one list (`Plan`, restock rule)
+### 5. Planning one list (`Plan`: the shared candidate filters)
+
+The run and away checks apply only to the run-based horizons. The slip's "now" horizon skips them, as today.
 
 ```mermaid
 flowchart TD
-    S([Snapshot]) --> R{"Run plan with<br/>confidence ≥ 0.5?"}
-    R -- no --> NONE([No proposals])
-    R -- yes --> A{"Next run starts<br/>while the house is away?"}
+    S([Snapshot]) --> PA{"List paused by two<br/>ignores in a row?"}
+    PA -- yes --> NONE([No proposals])
+    PA -- no --> H{"Horizon is run-based?"}
+    H -- no --> L
+    H -- yes --> R{"Run plan with<br/>confidence ≥ 0.5?"}
+    R -- no --> NONE
+    R -- yes --> A{"That run starts<br/>while the house is away?"}
     A -- yes --> NONE
-    A -- no --> L[["For each need, most confident first"]]
-    L --> C1{"Clears the suggest bar?"}
-    C1 -- no --> SKIP[Skip]
-    C1 -- yes --> C2{"On the list,<br/>or a look-alike of it?"}
+    A -- no --> L[["For each candidate, most confident first"]]
+    L --> C0{"Lives on this list<br/>(home list ≥ 60%)?"}
+    C0 -- no --> SKIP[Skip]
+    C0 -- yes --> C1{"Look-alike of a key<br/>already taken?"}
+    C1 -- yes --> SKIP
+    C1 -- no --> C2{"On the list,<br/>or a look-alike of it?"}
     C2 -- yes --> SKIP
-    C2 -- no --> C3{"Look-alike of a key<br/>already proposed?"}
-    C3 -- yes --> SKIP
-    C3 -- no --> MK["Proposal: restock, add_to_list<br/>qty = usual quantity<br/>cycle = LastAt date<br/>reason = every_days"]
-    MK --> CAP{"MaxPerRun reached?"}
-    CAP -- no --> L
-    CAP -- yes --> OUT([Proposals])
+    C2 -- no --> C3{"Cycle still open?<br/>(not ignored, added or bought since)"}
+    C3 -- no --> SKIP
+    C3 -- yes --> MK["Proposal: restock, add_to_list<br/>qty = usual quantity<br/>cycle = LastAt date<br/>reason = every_days"]
+    MK --> L
     SKIP --> L
+    L -- done --> SORT["Open now first, then soonest,<br/>then most confident; cap"]
+    SORT --> OUT([Proposals])
 ```
 
-### 5. One tick (UML sequence)
+### 6. One tick (UML sequence)
 
 Every instance runs the ticker. The lease keeps the work on one instance, and the unique action key makes a second write a no-op even if two instances race.
 
@@ -291,8 +324,8 @@ sequenceDiagram
     else lease ours
         AS->>RR: ListIDsByAutopilotMode("assist")
         loop each assist house, each live list
-            AS->>AP: Gather(ctx, SG, room, list, now)
-            AP->>SG: RunPlan · Away · NeedsBefore · OnList · Usual
+            AS->>AP: Gather(ctx, SG, room, list, run_after_next, now)
+            AP->>SG: RunPlan · Away · Paused · Candidates · OnList · Usual
             SG-->>AP: signals
             AP-->>AS: Snapshot
             alt next run opens within AUTOPILOT_LEAD (18 h)
@@ -321,7 +354,7 @@ sequenceDiagram
     end
 ```
 
-### 6. Outcomes: check, swipe-delete, Undo (UML sequence)
+### 7. Outcomes: check, swipe-delete, Undo (UML sequence)
 
 ```mermaid
 sequenceDiagram
@@ -359,7 +392,7 @@ sequenceDiagram
     Note over AR: The row stays until 180 days after it resolved,<br/>so the unique key blocks a re-add in the same cycle.
 ```
 
-### 7. Action lifecycle (UML state machine)
+### 8. Action lifecycle (UML state machine)
 
 ```mermaid
 stateDiagram-v2
@@ -382,7 +415,7 @@ stateDiagram-v2
     end note
 ```
 
-### 8. Keeping the forecast honest (`recomputeKey`)
+### 9. Keeping the forecast honest (`recomputeKey`)
 
 ```mermaid
 flowchart TD
@@ -397,7 +430,7 @@ flowchart TD
 
 Why: on assist, nobody adds the thing by hand any more, so the add series would dry up and the forecast would decay (or, if autopilot adds counted, confirm itself). Completions keep coming either way.
 
-### 9. Data model (`autopilot_actions`)
+### 10. Data model (`autopilot_actions`)
 
 ```mermaid
 erDiagram
@@ -435,14 +468,14 @@ erDiagram
 
 A separate `autopilot_state` collection holds the ticker lease (`_id: "tick"`, `owner`, `lease_until`).
 
-### 10. List page (frontend flow)
+### 11. List page (frontend flow)
 
 ```mermaid
 flowchart TD
     O([List page opens]) --> R["GET /rooms/me<br/>→ autopilot_mode"]
     R --> M{Mode}
     M -- off --> PLAIN[Items only]
-    M -- suggest --> SUGG["GET .../suggestions<br/>today's suggestion slip, unchanged"]
+    M -- suggest --> SUGG["GET .../suggestions (deprecated path,<br/>served by AutopilotService)<br/>today's slip, unchanged"]
     M -- assist --> AP["GET .../autopilot<br/>{applied, suggestions}"]
     AP --> MARK["Rows with source autopilot<br/>show the autopilot mark"]
     MARK --> TAP{"Tap the mark?"}
@@ -450,7 +483,7 @@ flowchart TD
     AP --> SLIP{"Applied actions for the<br/>next run, not seen yet?"}
     SLIP -- yes --> S["Slip: 'Added 4 for Saturday'<br/>Undo all"]
     S --> UA["POST .../undo per action<br/>rows leave"]
-    AP --> FB["Suggestions between the bars<br/>use today's slip"]
+    AP --> FB["Suggestions between the bars<br/>(same items) use today's slip"]
 ```
 
 ---
@@ -474,42 +507,53 @@ type RoomSettings struct{ DisplayName, Description *string; SuggestionsOff *bool
 func (s *RoomService) UpdateRoomSettings(ctx, user, in RoomSettings) error
 ```
 - [ ] Failing tests: `ParseMode` table (tolerates case and spaces; unknown → false); `HouseMode("", true)` = off, `("", false)` = suggest, `("assist", true)` = assist. Handler: `PUT /rooms/settings {autopilot_mode:"bogus"}` → 400; `{autopilot_mode:"assist"}` → 200, then `GET /rooms/me` → `autopilot_mode:"assist", suggestions_off:false`; `{suggestions_off:true}` reads back `off`; `{suggestions_off:false}` turns off → suggest and never downgrades assist. Mongo: setting a mode unsets `suggestions_off`; `ListIDsByAutopilotMode("assist")`; a non-member write → `ErrNotFound`.
-- [ ] Implement; `house.settings_updated` lists `autopilot_mode`.
+- [ ] Implement; `house.settings_updated` lists `autopilot_mode`. Suggestions read `HouseMode(...) == ModeOff` in place of `room.SuggestionsOff` so behaviour is unchanged.
 - [ ] `make check`, `make test-integration`. Commit `feat(rooms): autopilot mode as a house setting`.
 
-### Task 2: Gate today's suggestions through the mode
+### Task 2: One service
 
-**Files:** `services/suggestion_service.go`, `services/run_hint.go`; tests in `services/suggestion_service_test.go`.
-- [ ] Failing tests: `TestForListParityAcrossModes` (the same fixture returns identical suggestions for no stored mode, `suggest` and `assist`; nothing for `off` or legacy `suggestions_off`); the run hint falls back to the default under `off`.
-- [ ] Replace the `room.SuggestionsOff` checks with `autopilot.HouseMode(...) == ModeOff`.
-- [ ] `make check`. Commit `feat(suggestions): gate suggestions and the run hint by autopilot mode`.
+A move with no behaviour change: `SuggestionService` becomes `AutopilotService`.
 
-### Task 3: Planner core (pure)
+**Files:** rename `services/suggestion_service.go` → `services/autopilot_service.go` (and its test), move `services/run_hint.go` methods onto it; modify `http/handlers/suggestions.go` (handlers take `*services.AutopilotService`, set the deprecation headers), `http/router/router.go` (route comments), `cmd/gracie-server/main.go`.
 
-**Files:** create `autopilot/proposal.go`, `policy.go`, `plan.go`, `signals.go`, `need.go` (+ tests), `autopilot/autopilottest/fake.go`.
+**Interfaces:**
+```go
+func NewAutopilotService(rooms, lists, items, reader, events, killSwitch SuggestionMode) *AutopilotService
+func (s *AutopilotService) Suggestions(ctx, user, roomID, listID string, limit int, during string) ([]Suggestion, error) // was ForList
+func (s *AutopilotService) Ignore(ctx, user, roomID, listID, key, during string) error
+func (s *AutopilotService) RunHint(ctx, user, roomID, listID string) (RunHint, error) // was RunHintFor
+```
+- [ ] Port the suggestion and run-hint tests with only names changed; add `TestDeprecatedRoutesCarryHeader` (both headers on all three routes, bodies unchanged).
+- [ ] Move the code; delete `SuggestionService`.
+- [ ] `make check`. Commit `refactor(autopilot): fold suggestions into one autopilot service`.
 
-**Interfaces:** as in diagram 2, plus
+### Task 3: Planner core and the shared pipeline (pure)
+
+**Files:** create `autopilot/proposal.go`, `policy.go`, `filters.go`, `plan.go`, `signals.go`, `need.go` (+ tests), `autopilot/autopilottest/fake.go`, `services/autopilot_signals.go` (the temporary adapter); modify `services/autopilot_service.go` (`Suggestions` becomes Gather → Plan → Decide).
+
+**Interfaces:** as in diagram 3, plus
 ```go
 var DefaultPolicy = Policy{SuggestMinScore: 0.65, SuggestMaxCV: 0.5, AssistMinScore: 0.80, AssistMinNeed: 0.70, MinRunConfidence: 0.5, MaxPerRun: 8}
 func ApproxNeedBy(lastAt, dueAt time.Time, everyDays, cv float64, confident bool, by time.Time) float64 // until predict.NeedBy lands
 ```
-The restock rule is diagram 4; `Decide` is diagram 3.
-- [ ] Failing table tests: `TestDecideModesByBand` (off/suggest/assist × below suggest / between / above assist / high score but low need / non-in-app effect); `TestPlanSkipsOnListAndLookAlikes`; `TestPlanAwayNoAdds`; `TestPlanCycleIsLastAtDate`; `TestPlanNoRunNoProposals`; `TestApproxNeedBy` (≈0.5 at due, ≥0.95 far past, ~0 at last, a step at CV 0, ≤0.5 when not confident).
-- [ ] `make check`. Commit `feat(autopilot): pure planner, policy and signals port`.
+The filters move out of the service into `autopilot` unchanged in meaning: home list (`homeListShare` 0.6), one name per look-alike cluster, on the list or a look-alike of it, cycle still open (no ignore, add or check since `LastAt`; run-mode ignores only hide the key from run mode), paused after two ignores in a row within 14 days, ordering (open now, then soonest, then score). The adapter supplies `CycleOpen` and `Paused` from the event repository, as the service does today. `Plan` is diagram 5; `Decide` is diagram 4. Horizons: `now` (window open now), `next_run` (today's run-mode lookahead, capped at 14 days), `run_after_next` (Assist).
+- [ ] Failing table tests: `TestDecideModesByBand` (off/suggest/assist × below suggest / between / above assist / high score but low need / non-in-app effect); `TestPlanSkipsOnListAndLookAlikes`; `TestPlanAwayNoAdds`; `TestPlanCycleIsLastAtDate`; `TestPlanNoRunNoProposals` (run horizons only); `TestPlanPausedNoProposals`; `TestApproxNeedBy` (≈0.5 at due, ≥0.95 far past, ~0 at last, a step at CV 0, ≤0.5 when not confident); `TestSuggestionsParityAcrossModes`.
+- [ ] Move the filters; rewire `Suggestions`. The ported suggestion suite from Task 2 must still pass untouched.
+- [ ] `make check`. Commit `feat(autopilot): pure planner and one candidate pipeline`.
 
 ### Task 4: Action log store (Mongo)
 
 **Files:** create `models/autopilot_action.go`, `store/mongo/autopilot_repo.go`, `testutil/memstore/autopilot.go`, `store/mongo/autopilot_integration_test.go`; modify `store/repo.go`, `services/room_service.go`, `services/user_service.go` (delete with the house).
 
-**Interfaces:** `AutopilotActionRepository` as in diagram 2; data as in diagram 9. `Insert` returns `derr.ErrConflict` on the unique key; `Resolve` is conditional on the `from` states and sets `purge_at`.
+**Interfaces:** `AutopilotActionRepository` as in diagram 3; data as in diagram 10. `Insert` returns `derr.ErrConflict` on the unique key; `Resolve` is conditional on the `from` states and sets `purge_at`.
 - [ ] Failing integration tests: `TestAutopilotActionUniqueKey`; conditional resolve (applied→confirmed true; undone→removed false); TTL index on `purge_at`; `DeleteByRoom`; the lease is exclusive between two owners. The memstore mirrors every rule.
 - [ ] `make check`, `make test-integration`. Commit `feat(autopilot): durable action log with a unique action key`.
 
 ### Task 5: Executor and outcomes
 
-**Files:** create `services/autopilot_service.go` (+ test); modify `models/list_item.go` (`Source string json:"source,omitempty"`), `services/list_service.go` (`CreateSystemItem`, `UseItemHooks`), `services/analytics_events.go`, `analytics/registry.go` (`RoleAutomated`), `analytics/rollup.go`, `analytics/predict/forecast.go` (`PredictChecked`), `analytics/aggregate.go` (`ForecastVersion = 4`).
+**Files:** modify `services/autopilot_service.go` (+ test), `models/list_item.go` (`Source string json:"source,omitempty"`), `services/list_service.go` (`CreateSystemItem`, `UseItemHooks`), `services/analytics_events.go`, `analytics/registry.go` (`RoleAutomated`), `analytics/rollup.go`, `analytics/predict/forecast.go` (`PredictChecked`), `analytics/aggregate.go` (`ForecastVersion = 4`).
 
-Flows: diagrams 5 (apply path), 6, 7 and 8.
+Flows: diagrams 6 (apply path), 7, 8 and 9.
 - [ ] Failing tests: `TestExecutorRefusesExternalEffects`; `TestApplyInsertsThenCreatesItem` (source `autopilot`, actor `system:autopilot`, only `item.autopilot_added`, no `item.added`); `TestApplyDuplicateIsNoop`; check → confirmed; `TestDeleteAutopilotItemMarksRemoved` (+ `item.autopilot_removed`); `TestRemovedNotReaddedSameCycle`; `TestAutomatedAddsKeepRhythm` (rollup: weekly checks, adds replaced by automated ones → series checked, still confident); `TestAssistTenCyclesStableRhythm`.
 - [ ] `make check`. Commits `feat(analytics): automated role, forecast from checks for automated keys` and `feat(autopilot): executor and outcome hooks`.
 
@@ -521,8 +565,8 @@ Flows: diagrams 5 (apply path), 6, 7 and 8.
 // GET  /rooms/{room_id}/lists/{list_id}/autopilot → {mode, applied: [...], suggestions: [...]}  (never applies)
 // POST /rooms/{room_id}/lists/{list_id}/autopilot/{action_id}/undo → 204
 ```
-The tick is diagram 5. It only visits houses that stored `assist`, and the house mode is re-read per house so a switch to off stops it at once.
-- [ ] Failing tests: `TestTickWritesOnlyInAssist`; `TestTickOutsideLeadDoesNothing`; `TestConcurrentTicksAddOnce` (two services, one store, parallel ticks); `TestTickExpiresStaleActions`; `TestViewNeverApplies`; `TestUndoMarksUndoneAndDismisses`; handler auth (403 for another house, 404 for an unknown action).
+The tick is diagram 6. It only visits houses that stored `assist`, and re-reads the house mode per house so a switch to off stops it at once. The view's `suggestions` come from the same pipeline (Decide → Suggest).
+- [ ] Failing tests: `TestTickWritesOnlyInAssist`; `TestTickOutsideLeadDoesNothing`; `TestConcurrentTicksAddOnce` (two services, one store, parallel ticks); `TestTickExpiresStaleActions`; `TestViewNeverApplies`; `TestAssistFallbackIsSameItem`; `TestUndoMarksUndoneAndDismisses`; handler auth (403 for another house, 404 for an unknown action).
 - [ ] `make check`. Commit `feat(autopilot): lease-based ticker, read view and undo`.
 
 ### Task 7: Frontend settings
@@ -533,7 +577,7 @@ The tick is diagram 5. It only visits houses that stored `assist`, and the house
 
 ### Task 8: Frontend list
 
-**Files:** `components/ItemRow.tsx`, `pages/ListPage.tsx`, a new `AutopilotSlip`, `styles.css` token(s) for the autopilot mark, `docs/design-system/index.html`, `DESIGN.md`, the MSW mock (autopilot items + endpoint). Flow: diagram 10.
+**Files:** `components/ItemRow.tsx`, `pages/ListPage.tsx`, a new `AutopilotSlip`, `styles.css` token(s) for the autopilot mark, `docs/design-system/index.html`, `DESIGN.md`, the MSW mock (autopilot items + endpoint). Flow: diagram 11. The List page keeps calling the deprecated suggestion routes in this PR; moving it fully onto `GET …/autopilot` (and then removing those routes) is a follow-up.
 - [ ] Failing tests: an item with `source:"autopilot"` shows the mark; tapping it shows the reason; the slip reads "Added 4 for Saturday" once per run; Undo all posts one undo per action and removes the rows; suggest mode keeps today's slip.
 - [ ] Check it in `VITE_MOCK_TRIPS=1 pnpm dev`. `make check`. Commit `feat(lists): autopilot mark, reason and the added-for slip`.
 
@@ -541,18 +585,22 @@ The tick is diagram 5. It only visits houses that stored `assist`, and the house
 
 **Files:** create `autopilot/replay.go` (+ test); modify `cmd/suggest-eval/main.go` (`autopilot` subcommand).
 
-`func Replay(events []analytics.Event, p Policy, lead time.Duration) ReplayReport` with `Precision()`, `Recall()` and `RemovalsPerWeek()`. At each past run minus the lead, plan from the data before that time. An auto-added item counts as a hit when it was checked in that run, and as a removal otherwise.
+`func Replay(events []analytics.Event, p Policy, lead time.Duration) ReplayReport` with `Precision()`, `Recall()` and `RemovalsPerWeek()`. At each past run minus the lead, plan from the data before that time through the same filters. An auto-added item counts as a hit when it was checked in that run, and as a removal otherwise.
 - [ ] Failing tests on a synthetic weekly house (precision 1, recall 1, 0 removals) and a noisy one.
 - [ ] Run on the dev dataset and sweep `AssistMinScore` / `AssistMinNeed`. **Gate:** pick the loosest bar with precision ≥ 0.85 and removals ≤ 1 per week. If no bar meets it, keep 0.80 / 0.70, say so in the PR, and Jan decides whether Assist ships in the settings control. The numbers go in the PR description.
 - [ ] `make check`. Commit `feat(autopilot): suggest-eval autopilot replay`.
 
 ### Task 10: Wire the real analytics (follow-up PR, after `claude/analytics-anticipation` merges)
 
-Rebase onto `main`. Implement `Signals` with `Reader.RunPlan`, `Reader.NeedsBefore`, `predict.NeedBy` and the `AwayCalendar`; delete the temporary adapter and `ApproxNeedBy`; keep the test fakes. Commit `feat(autopilot): read anticipation signals from analytics`.
+Rebase onto `main`. Implement `Signals` with `Reader.RunPlan`, `Reader.NeedsBefore`, `predict.NeedBy` and the `AwayCalendar`; delete the temporary adapter's stand-ins and `ApproxNeedBy`; keep the test fakes. Commit `feat(autopilot): read anticipation signals from analytics`.
 
 ### Task 11: Docs
 
-`docs/features/autopilot.md` (modes table, invariants, eval gate, these diagrams) plus a row in `docs/features/README.md`. Update `suggestions.md`, `lists.md` and `backend/CLAUDE.md` (the stateless-suggestions invariant now names the action log). Commit `docs(autopilot): feature note and invariants`.
+`docs/features/autopilot.md` (modes table, invariants, the deprecated routes and their successor, eval gate, these diagrams) plus a row in `docs/features/README.md`. Update `suggestions.md` (now served by `AutopilotService`), `lists.md` and `backend/CLAUDE.md` (the stateless-suggestions invariant now names the action log; the service list). Commit `docs(autopilot): feature note and invariants`.
+
+## Follow-ups (not in this PR)
+
+- Move the List page onto `GET …/autopilot` for suggestions and the run hint, then delete the three deprecated routes.
 
 ## Out of scope
 
