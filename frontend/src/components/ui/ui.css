@@ -303,6 +303,66 @@ button.ui-note:focus-visible {
   color: var(--ink);
 }
 
+/* ---- RubberStamp: an inked moment pressed onto the sheet ------------------------------------- */
+/* Fixed over the upper middle of the page, clear of the add bar; only the stamp itself takes taps. */
+.ui-rubber-stamp-anchor {
+  position: fixed;
+  inset: 22vh 0 auto;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 40;
+}
+.ui-rubber-stamp {
+  pointer-events: auto;
+  cursor: pointer;
+  display: grid;
+  justify-items: center;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-5);
+  border: 3px solid var(--ink);
+  border-radius: var(--radius-md);
+  outline: 1.5px solid var(--ink);
+  outline-offset: -8px;
+  background: var(--brand-yellow);
+  color: var(--ink);
+  transform: rotate(var(--stamp-tilt));
+  animation: stamp-lift var(--dur-base) var(--ease-out) calc(var(--stamp-hold) - var(--dur-base)) both;
+}
+.ui-rubber-stamp-title {
+  font: var(--w-bold) var(--t-heading) var(--font-headings);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.ui-rubber-stamp-line {
+  font: var(--w-semibold) var(--t-meta) var(--font-body);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .ui-rubber-stamp:not(.is-still) {
+    animation:
+      stamp-press var(--dur-stamp) var(--ease-out) both,
+      stamp-lift var(--dur-base) var(--ease-out) calc(var(--stamp-hold) - var(--dur-base)) both;
+  }
+}
+@keyframes stamp-press {
+  from {
+    opacity: 0;
+    transform: rotate(calc(var(--stamp-tilt) * 2)) scale(var(--stamp-press));
+  }
+  70% {
+    opacity: 1;
+    transform: rotate(var(--stamp-tilt)) scale(0.97);
+  }
+  to {
+    transform: rotate(var(--stamp-tilt)) scale(1);
+  }
+}
+@keyframes stamp-lift {
+  to {
+    opacity: 0;
+  }
+}
+
 /* ---- Row: [lead] [time] [title] [trail] ------------------------------------------------------ */
 .ui-row {
   display: grid;

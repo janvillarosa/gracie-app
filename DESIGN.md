@@ -510,6 +510,7 @@ Bottom sheets have 20px top corners and `--lift-2`. Dialogs have a 1px edge, 16p
 
 ### Stamps, Pips and Notes
 - **Stamp:** an 11px uppercase weight-700 tag with 5px corners, muted on Paper Tint. Category stamps use their tint and ink pair; `used` is an outlined stamp; `done` is Key Yellow.
+- **Rubber stamp** (`RubberStamp`): the one charm moment for a finished shopping run. Key Yellow with ink type and an inked double edge (3px border, 1.5px inner line), Outfit 22px caps title and 13px lines, tilted `--stamp-tilt`. It presses onto the sheet (`--stamp-press`, `--dur-stamp`), rests `--stamp-hold`, then lifts away; reduced motion only fades. Fixed over the upper middle of the page, clear of the add bar; a tap dismisses it; `role="status"`. At most one per run, and it only praises, never scolds.
 - **Pip:** an 8px dot in a day or category colour, or the muted done grey. An idea's pip is hollow (white with a coloured ring).
 - **Note:** a 13px one-liner. Muted for context ("These are dated outside 13–21 Oct."). Warn is weight-600 amber text after a 14px flag glyph, underlined on hover when it is a link. No box, no side rule.
 - **Empty state:** an Outfit 22px line, a muted sentence and an optional key, left-aligned. On a desk an empty day is a dashed 12px-corner slot, "Nothing planned yet", in muted 13px text.

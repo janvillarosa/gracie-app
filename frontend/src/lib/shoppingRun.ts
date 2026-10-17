@@ -96,3 +96,17 @@ export function useShoppingRun(hint: RunHint | undefined) {
     markStamped,
   }
 }
+
+/** What the run-done stamp says. A run noticeably quicker than usual gets a word of praise; a slow
+ *  one gets nothing (the stamp is a reward, not a report card). */
+export function stampLines(
+  runChecks: number,
+  minutes: number,
+  typical?: { minutes: number },
+): string[] {
+  const items = `${runChecks} ${runChecks === 1 ? 'item' : 'items'}`
+  const lines = ['Run done', minutes >= 1 ? `${items} · ${minutes} min` : items]
+  const quicker = typical ? typical.minutes - minutes : 0
+  if (quicker >= 3) lines.push(`${quicker} min quicker than usual`)
+  return lines
+}

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { Paper, PaperStack, Button } from '@components/ui'
+import { Paper, PaperStack, Button, RubberStamp } from '@components/ui'
 import { errorMessage } from '@lib/errors'
 import { useLocation, useParams } from 'react-router-dom'
 import { useTransitionNavigate } from '@lib/viewTransition'
@@ -71,7 +71,7 @@ import { ItemRow, reorderLock } from '@components/ItemRow'
 import { AddItemBar } from '@components/AddItemBar'
 import { SuggestionStack, type SlipPhase } from '@components/SuggestionSlip'
 import { track } from '@lib/analytics'
-import { useShoppingRun } from '@lib/shoppingRun'
+import { stampLines, useShoppingRun } from '@lib/shoppingRun'
 import { TopNav } from '@components/TopNav'
 import { PillNav } from '@components/PillNav'
 import { HouseLoader } from '@components/HouseLoader'
@@ -195,6 +195,17 @@ export const ListPage: React.FC = () => {
   })
   const run = useShoppingRun(runHintQuery.data)
   const during = run.active ? ('run' as const) : undefined
+  // The run-done stamp: lands once per run, on the last check or on Clear done.
+  const [runStamp, setRunStamp] = useState<string[] | null>(null)
+  const landRunStamp = useStableCallback(() => {
+    if (!run.active || run.stamped) return
+    run.markStamped()
+    setRunStamp(stampLines(run.runChecks, run.minutes, runHintQuery.data?.typical))
+    track('list.run_stamped', {
+      subject: { type: 'list', id: listId },
+      props: { items: run.runChecks, minutes: run.minutes },
+    })
+  })
 
   // Smart suggestion: the one thing the house usually adds around now (mid-shop: what comes due
   // before the next shop). The server decides (and answers with nothing when the feature is off);
@@ -261,6 +272,10 @@ export const ListPage: React.FC = () => {
   const totalCount = items.length
   const completedCount = items.filter((it) => it.completed).length
   const incompleteCount = items.filter((it) => !it.completed).length
+  // Everything got: the run is done.
+  useEffect(() => {
+    if (run.active && !run.stamped && incompleteCount === 0 && !itemsQuery.isLoading) landRunStamp()
+  }, [run.active, run.stamped, incompleteCount, itemsQuery.isLoading, landRunStamp])
   // Sensors: touch (mobile long-press), mouse (desktop), keyboard (a11y)
   const sensors = useSensors(
     // Tolerance stays under ItemRow's SWIPE_START, so a finger that starts a swipe has
@@ -524,6 +539,7 @@ export const ListPage: React.FC = () => {
 
   const onClearCompleted = async () => {
     if (pendingClear.current) return
+    landRunStamp()
     inFlight.current += 1
     await applyOptimistic((items) => items.filter((x) => !x.completed))
 
@@ -945,6 +961,13 @@ export const ListPage: React.FC = () => {
                   ),
                   children: (
                     <>
+                      {runStamp && (
+                        <RubberStamp
+                          title={runStamp[0]}
+                          lines={runStamp.slice(1)}
+                          onDone={() => setRunStamp(null)}
+                        />
+                      )}
                       <SuggestionStack
                         suggestions={suggestions}
                         during={during}

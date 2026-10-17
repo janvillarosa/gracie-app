@@ -148,6 +148,10 @@
   --dur-fast: 160ms;
   --dur-base: 240ms;
   --dur-slow: 420ms;
+  --dur-stamp: 260ms; /* the run-done stamp pressing onto the sheet */
+  --stamp-tilt: -5deg; /* a hand-pressed stamp is never square to the page */
+  --stamp-press: 1.18; /* how far above the sheet the stamp starts before it lands */
+  --stamp-hold: 2500ms; /* how long it rests before lifting away (RubberStamp's holdMs sets it) */
 
   /* ---- Layout: sheets and the row grid ----------------------------------------------- */
   --sheet-inset: 20px;
@@ -236,6 +240,8 @@
 }
 </style><!-- /design-tokens -->
 <style>
+  .ds-rubber-stamp { display:grid; justify-items:center; gap:var(--space-1); padding:var(--space-3) var(--space-5); border:3px solid var(--ink); border-radius:var(--radius-md); outline:1.5px solid var(--ink); outline-offset:-8px; background:var(--brand-yellow); color:var(--ink); transform:rotate(var(--stamp-tilt)); font:var(--w-semibold) var(--t-meta) var(--font-body); }
+  .ds-rubber-stamp .t { font:var(--w-bold) var(--t-heading) var(--font-headings); letter-spacing:0.08em; text-transform:uppercase; }
   /* Reference-page only: the app self-hosts the variable faces; this page loads the same families
      from Google Fonts, so it names them as Google does. */
   :root {
@@ -583,6 +589,18 @@
         </div>
       </div>
       <div style="margin-top:40px" class="composer"><span class="day">Today</span><span class="ph">Add a place, plan or idea</span><button class="btn key round" type="button" aria-label="Add"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button></div>
+    </div>
+  </section>
+  <!-- 5. Moments -->
+  <section class="part">
+    <div class="part-head">
+      <div>
+        <h2>A finished run is a stamp</h2>
+        <p><code>RubberStamp</code> is a moment, not a control. When a shopping run ends (the last item checked, or Clear done, mid-run) a Key Yellow stamp with an inked double edge presses onto the sheet at <code>--stamp-tilt</code>, starting <code>--stamp-press</code> above it over <code>--dur-stamp</code>, rests for <code>--stamp-hold</code>, then lifts away. It sits over the upper middle of the page, never over the add bar; a tap dismisses it; it is announced once, politely. Reduced motion skips the press and only fades. One per run, and it only ever praises ("4 min quicker than usual"), never scolds.</p>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:center;padding:32px 0">
+      <div class="ds-rubber-stamp"><span class="t">Run done</span><span>14 items · 22 min</span><span>4 min quicker than usual</span></div>
     </div>
   </section>
 </main>

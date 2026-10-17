@@ -140,6 +140,10 @@
   --dur-fast: 160ms;
   --dur-base: 240ms;
   --dur-slow: 420ms;
+  --dur-stamp: 260ms; /* the run-done stamp pressing onto the sheet */
+  --stamp-tilt: -5deg; /* a hand-pressed stamp is never square to the page */
+  --stamp-press: 1.18; /* how far above the sheet the stamp starts before it lands */
+  --stamp-hold: 2500ms; /* how long it rests before lifting away (RubberStamp's holdMs sets it) */
 
   /* ---- Layout: sheets and the row grid ----------------------------------------------- */
   --sheet-inset: 20px;

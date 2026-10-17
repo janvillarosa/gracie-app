@@ -4,6 +4,7 @@ import {
   initialRun,
   type RunState,
   runReducer,
+  stampLines,
   useShoppingRun,
 } from '@lib/shoppingRun'
 import { act, renderHook } from '@testing-library/react'
@@ -109,5 +110,28 @@ describe('useShoppingRun', () => {
       vi.advanceTimersByTime(16 * MIN)
     })
     expect(result.current.active).toBe(false)
+  })
+})
+
+describe('stampLines', () => {
+  it('says how many items and how long', () => {
+    expect(stampLines(14, 22)).toEqual(['Run done', '14 items · 22 min'])
+  })
+  it('drops the minutes under one', () => {
+    expect(stampLines(5, 0)).toEqual(['Run done', '5 items'])
+  })
+  it('says one item, not one items', () => {
+    expect(stampLines(1, 3)).toEqual(['Run done', '1 item · 3 min'])
+  })
+  it('praises a run at least three minutes quicker than usual', () => {
+    expect(stampLines(14, 18, { minutes: 22 })).toEqual([
+      'Run done',
+      '14 items · 18 min',
+      '4 min quicker than usual',
+    ])
+  })
+  it('never mentions a run that was only a little quicker, or slower', () => {
+    expect(stampLines(14, 20, { minutes: 22 })).toHaveLength(2)
+    expect(stampLines(14, 30, { minutes: 22 })).toHaveLength(2)
   })
 })
