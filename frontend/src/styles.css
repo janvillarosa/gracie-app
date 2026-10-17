@@ -34,6 +34,7 @@
 
   /* ---- Surfaces: the desk and the paper on it ----------------------------------------- */
   --bg: #F7F7F7; /* the desk */
+  --desk-tone: #EAEAEA; /* the desk seen from arm's length: its grain averaged over --bg. Browser bars and overscroll */
   --panel: #FFFFFF; /* paper: every sheet, slip and control face */
   --panel-subtle: #FAFAFA; /* a well: detail groups, tracks, stamps, pressed fills */
   --sheet-scrim: rgba(0, 0, 0, 0.35);
@@ -67,6 +68,7 @@
   --space-5: 20px;
   --space-6: 24px;
   --space-7: 32px;
+  --paper-pad-x: var(--space-6); /* a sheet's side padding (16px on a phone); edge-to-edge bars bleed by it */
 
   /* ---- Controls and rows ------------------------------------------------------------- */
   --control-sm: 32px; /* a target chip, a small round slip */
@@ -129,6 +131,7 @@
   --paper-fill: var(--grain-paper), var(--panel); /* a white fill inside a sheet: the same paper, grain and all */
   --well-fill: var(--grain-paper), var(--panel-subtle); /* a tinted fill inside a sheet */
   --desk-fill: var(--grain-desk), var(--bg); /* the desk, where something must cover what scrolls under it */
+  --desk-fade: 40px; /* on touch screens the desk's grain dissolves into --desk-tone over this much at the top and foot */
   --grain-desk: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.2 0 0 0 0 0.2 0 0 0 0 0.2 0 0 0 0.21 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 
   /* ---- Motion ------------------------------------------------------------------------ */
@@ -234,18 +237,35 @@ body,
   height: 100%;
 }
 
-/* The desk's grain, behind everything and fixed, so it never repaints with a scroll. */
+/* Browsers tint their own bars (iOS Safari's top and bottom, Android's status bar) and paint
+   overscroll with the page's flat background colour, not its grain. So the canvas is the desk's
+   averaged tone, and the grained desk is a fixed layer over it: the bars read as the same desk.
+   On touch screens, where those bars sit right against the page, the grained layer also fades out
+   at its top and foot, so the texture dissolves into the flat tint instead of stopping at a line.
+   The tone is the grain's average, so the fade changes texture only, never brightness. */
+html {
+  background: var(--desk-tone);
+}
+
+/* The desk and its grain, behind everything and fixed, so it never repaints with a scroll. */
 body::before {
   content: '';
   position: fixed;
   inset: 0;
   z-index: -1;
-  background-image: var(--grain-desk);
+  background: var(--desk-fill);
   pointer-events: none;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  body::before {
+    --desk-mask: linear-gradient(transparent, black var(--desk-fade), black calc(100% - var(--desk-fade)), transparent);
+    -webkit-mask-image: var(--desk-mask);
+    mask-image: var(--desk-mask);
+  }
 }
 body {
   margin: 0;
-  background: var(--bg);
   color: var(--text);
   font-family: var(--font-body);
   font-size: var(--t-body);
@@ -296,8 +316,12 @@ a {
 /* Auth pages */
 /* The whole viewport turns yellow (including overscroll and the transition snapshot),
    not just the page box. */
-body:has(.login-page) {
+html:has(.login-page) {
   background: var(--brand-yellow);
+}
+
+body:has(.login-page)::before {
+  background: var(--grain-desk), var(--brand-yellow);
 }
 
 .login-page {
@@ -470,6 +494,13 @@ h5.ant-typography {
   max-width: 720px;
   margin: 0 auto;
   padding: 24px;
+}
+
+/* A phone keeps a 16px gutter, so the sheet (and the rows on it) get the width back. */
+@media (max-width: 480px) {
+  .container {
+    padding-inline: var(--space-4);
+  }
 }
 
 /* Brand logo alignment: sits above the main panel, aligned left */
@@ -792,13 +823,14 @@ h5.ant-typography {
 
 /* Add bar: pinned to the bottom of the viewport while the list scrolls under it, and
    docked flush to the card's bottom edge once you reach the end. The negative margins
-   cancel the card body's 24px padding so the bar spans the card edge to edge. */
+   cancel the card body's padding (its sides are --paper-pad-x, narrower on a phone) so the bar
+   spans the card edge to edge and its field lines up with the rows above. */
 .add-bar {
   position: sticky;
   bottom: 0;
   background: var(--paper-fill);
-  margin: 16px -24px -24px;
-  padding: 12px 24px calc(12px + env(safe-area-inset-bottom, 0px));
+  margin: 16px calc(-1 * var(--paper-pad-x)) calc(-1 * var(--space-6));
+  padding: 12px var(--paper-pad-x) calc(12px + env(safe-area-inset-bottom, 0px));
   border-top: 1px solid var(--border);
   border-radius: 0 0 calc(var(--radius-lg) - 1px) calc(var(--radius-lg) - 1px);
   box-shadow: var(--shadow-up);
@@ -871,15 +903,17 @@ h5.ant-typography {
   color: transparent;
 }
 
-/* Smart suggestions: one sheet of paper above the items. Its Add is the one yellow key, and a
-   warm edge hints at it; the sheet stays white so it reads as paper, not an alert. */
+/* Smart suggestions: one slip of paper above the items. Its Add is the one yellow key, and a
+   warm edge hints at it; the slip stays white so it reads as paper, not an alert. It lies on the
+   list's sheet, not the desk, so it rests a hair above the page (a slip), never a paper height:
+   a lift's ream and long drop would bleed over the rows below. */
 .suggestion-sheet {
   margin: 0 0 var(--space-3);
   padding: var(--space-1) var(--space-3);
   background: var(--paper-fill);
   border: 1px solid color-mix(in srgb, var(--brand-yellow-deep) 38%, var(--border));
   border-radius: var(--radius-lg);
-  box-shadow: var(--lift-0);
+  box-shadow: var(--slip-rest);
 }
 
 .suggestion-rows {
@@ -893,8 +927,9 @@ h5.ant-typography {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  /* Tall enough for a wrapped rhythm line too, so every slip is the same height. */
-  min-height: 68px;
+  /* Tall enough for a two-line name (or a wrapped rhythm line) too, so every slip is the same
+     height and the list never moves when one hands off to the next. */
+  min-height: 76px;
   padding: var(--space-2) 0 var(--space-2) var(--space-1);
 }
 
@@ -916,13 +951,17 @@ h5.ant-typography {
   gap: 1px;
 }
 
+/* The name wraps to a second line before it is cut, so a narrow screen still shows all of it. */
 .suggestion-name {
   color: var(--ink);
   font-weight: var(--w-medium);
   line-height: 1.35;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
 .suggestion-cadence {
@@ -940,6 +979,8 @@ h5.ant-typography {
    the plus on the key turns once. Nothing loops. */
 .suggestion-reveal {
   display: grid;
+  /* minmax(0, 1fr): the slip takes the list's width and its name ellipsizes, never pushes past. */
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: 1fr;
 }
 
@@ -1218,7 +1259,9 @@ h5.ant-typography {
 /* The item's words win the row: they keep at least a readable width, and the stamp gives way
    (shrinks with an ellipsis) before they do. */
 .item-row .item-text {
-  flex: 1 1 auto;
+  /* Basis 0, not auto: a long name wraps beside its checkbox instead of the whole name breaking
+     onto a line of its own when the row wraps for its stamp. */
+  flex: 1 1 0;
   min-width: 0;
   white-space: normal;
   overflow-wrap: anywhere;
@@ -1756,9 +1799,13 @@ h5.ant-typography {
   container-type: inline-size;
 }
 @container (max-width: 440px) {
+  /* The two lines sit together in the middle of the row, so the stamp needs no pull-up and never
+     covers a name that wraps to a second line. */
   .items-list .item-row:has(.item-cat) {
     flex-wrap: wrap;
+    align-content: center;
     row-gap: 0;
+    padding-block: var(--space-2);
   }
   /* A zero-height break after the first line, so the stamp always starts the second one. */
   .items-list .item-row:has(.item-cat)::after {
@@ -1769,7 +1816,7 @@ h5.ant-typography {
   }
   .items-list .item-row .item-cat {
     order: 4;
-    margin: -8px 0 12px calc(22px + 14px) !important;
+    margin: var(--space-1) 0 0 calc(22px + 14px) !important;
   }
 }
 

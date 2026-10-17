@@ -1132,8 +1132,16 @@ input.ui-sheet-title.has-error:focus-visible {
 .paper.is-tint {
   background: var(--grain-paper), var(--panel-subtle);
 }
+/* The sides are --paper-pad-x; anything that bleeds to the sheet's edges (the add bar) reads it,
+   so the two never drift apart. */
 .paper-body {
-  padding: var(--space-6);
+  padding: var(--space-6) var(--paper-pad-x);
+}
+/* On a phone a sheet keeps 16px at its sides, so its rows aren't squeezed between two 24px margins. */
+@media (max-width: 480px) {
+  .paper-body {
+    --paper-pad-x: var(--space-4);
+  }
 }
 .paper.is-flush > .paper-body {
   padding: 0;
