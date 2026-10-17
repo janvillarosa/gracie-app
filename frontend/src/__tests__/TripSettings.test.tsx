@@ -2,7 +2,7 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { shortDay, shortRange } from '@lib/trips/schedule'
+import { shortRange } from '@lib/trips/schedule'
 import { server, tripServer } from '../testServer'
 import {
   ME,
@@ -217,6 +217,23 @@ describe('Trip settings: Where', () => {
   })
 })
 
+// A day's whole accessible name ("Tue, 20 Oct 2026"). Weekday and day alone are not enough: /Tue.*20/
+// also matches every Tuesday of 2026, and a February grid can show Sun 1 Feb and Sun 1 Mar.
+const DAY_NAME = new Intl.DateTimeFormat('en-GB', {
+  weekday: 'short',
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+  timeZone: 'UTC',
+})
+const label = (d: string) => DAY_NAME.format(new Date(`${d}T00:00:00Z`))
+// Only the shown month's days are buttons, so near a month's end the day may be one page on.
+const tapDay = async (sheet: HTMLElement, d: string) => {
+  if (!within(sheet).queryByRole('button', { name: label(d) }))
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Next month' }))
+  await userEvent.click(within(sheet).getByRole('button', { name: label(d) }))
+}
+
 describe('Trip settings: When', () => {
   it('says "Add dates" for a draft, and the range and length for a dated trip', async () => {
     seed(makeTrip(7, { title: 'Draft' }))
@@ -235,13 +252,12 @@ describe('Trip settings: When', () => {
     settings(makeTrip(7).trip_id)
     await userEvent.click((await screen.findByText('When')).closest('button') as HTMLElement)
     const sheet = await screen.findByRole('dialog')
-    const label = (d: string) => new RegExp(shortDay(d).replace(/\s/, '.*'))
-    await userEvent.click(within(sheet).getByRole('button', { name: label(rel(1)) }))
+    await tapDay(sheet, rel(1))
     const t = () => tripServer.trips.get(makeTrip(7).trip_id)?.fields
     // The first tap is already a one-day trip.
     await waitFor(() => expect(t()?.start_date).toBe(rel(1)))
     expect(t()?.end_date).toBe(rel(1))
-    await userEvent.click(within(sheet).getByRole('button', { name: label(rel(3)) }))
+    await tapDay(sheet, rel(3))
     await waitFor(() => expect(t()?.end_date).toBe(rel(3)))
     expect(t()?.start_date).toBe(rel(1))
     // No native date inputs anywhere.
@@ -261,11 +277,10 @@ describe('Trip settings: When', () => {
     // The footer row exists from the start; its keys are only hidden until needed.
     expect(foot()).toBeInTheDocument()
     expect(within(sheet).queryByRole('button', { name: 'Done' })).not.toBeInTheDocument()
-    const label = (d: string) => new RegExp(shortDay(d).replace(/\s/, '.*'))
-    await userEvent.click(within(sheet).getByRole('button', { name: label(rel(1)) }))
+    await tapDay(sheet, rel(1))
     expect(grid().children.length).toBe(cells)
     expect(sheet.querySelector('.trip-cal-foot')).toBe(foot())
-    await userEvent.click(within(sheet).getByRole('button', { name: label(rel(3)) }))
+    await tapDay(sheet, rel(3))
     expect(grid().children.length).toBe(cells)
     await userEvent.click(await within(sheet).findByRole('button', { name: 'Done' }))
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
