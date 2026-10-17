@@ -4,7 +4,8 @@ import {
   initialRun,
   type RunState,
   runReducer,
-  stampLines,
+  runDoneLines,
+  tallyCategories,
   useShoppingRun,
 } from '@lib/shoppingRun'
 import { act, renderHook } from '@testing-library/react'
@@ -113,25 +114,58 @@ describe('useShoppingRun', () => {
   })
 })
 
-describe('stampLines', () => {
+describe('runDoneLines', () => {
   it('says how many items and how long', () => {
-    expect(stampLines(14, 22)).toEqual(['Run done', '14 items · 22 min'])
+    expect(runDoneLines(14, 22)).toEqual(['Run done', '14 items · 22 min'])
   })
   it('drops the minutes under one', () => {
-    expect(stampLines(5, 0)).toEqual(['Run done', '5 items'])
+    expect(runDoneLines(5, 0)).toEqual(['Run done', '5 items'])
   })
   it('says one item, not one items', () => {
-    expect(stampLines(1, 3)).toEqual(['Run done', '1 item · 3 min'])
+    expect(runDoneLines(1, 3)).toEqual(['Run done', '1 item · 3 min'])
   })
   it('praises a run at least three minutes quicker than usual', () => {
-    expect(stampLines(14, 18, { minutes: 22 })).toEqual([
+    expect(runDoneLines(14, 18, { minutes: 22 })).toEqual([
       'Run done',
       '14 items · 18 min',
       '4 min quicker than usual',
     ])
   })
   it('never mentions a run that was only a little quicker, or slower', () => {
-    expect(stampLines(14, 20, { minutes: 22 })).toHaveLength(2)
-    expect(stampLines(14, 30, { minutes: 22 })).toHaveLength(2)
+    expect(runDoneLines(14, 20, { minutes: 22 })).toHaveLength(2)
+    expect(runDoneLines(14, 30, { minutes: 22 })).toHaveLength(2)
+  })
+})
+
+describe('what the run got', () => {
+  it('remembers the category of each check in the run', () => {
+    const step = runReducer(hint({ checks_to_start: 2 }))
+    let s = initialRun
+    for (const [i, category] of ['Produce', 'Dairy', 'Produce'].entries()) {
+      s = step(s, { type: 'check', at: T + i * MIN, category })
+    }
+    expect(s.active).toBe(true)
+    expect(s.categories).toEqual(['Produce', 'Dairy', 'Produce'])
+  })
+
+  it('a lapsed run forgets them', () => {
+    const step = runReducer(hint({ checks_to_start: 2, idle_end_min: 15 }))
+    let s = step(initialRun, { type: 'check', at: T, category: 'Produce' })
+    s = step(s, { type: 'check', at: T + MIN, category: 'Produce' })
+    s = step(s, { type: 'check', at: T + 60 * MIN, category: 'Dairy' })
+    expect(s.categories).toEqual(['Dairy'])
+  })
+
+  it('tallies by count, biggest first, ties in the order first seen; no category is General', () => {
+    expect(tallyCategories(['Dairy', 'Produce', 'Produce', undefined, 'Dairy', 'Bakery'])).toEqual([
+      { label: 'Dairy', count: 2 },
+      { label: 'Produce', count: 2 },
+      { label: 'General', count: 1 },
+      { label: 'Bakery', count: 1 },
+    ])
+  })
+
+  it('shows at most four categories', () => {
+    expect(tallyCategories(['A', 'B', 'C', 'D', 'E', 'F'])).toHaveLength(4)
   })
 })

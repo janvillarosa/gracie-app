@@ -303,10 +303,10 @@ button.ui-note:focus-visible {
   color: var(--ink);
 }
 
-/* ---- RubberStamp: a paper slip pops into the middle of the screen with an inked mark ----------- */
-/* Fixed to the screen's centre (portalled to the body, so a transformed sheet can't move it); the page
-   stays usable around it: only the slip itself takes a tap. Popover height, never a scrim. */
-.ui-rubber-stamp-anchor {
+/* ---- DoneSlip: a paper slip rises into the middle of the screen --------------------------------- */
+/* Fixed to the screen's centre (portalled to the body, so a transformed sheet can't move it). No scrim:
+   the page stays usable around it, and only the slip takes a tap. Popover height. */
+.ui-done-anchor {
   position: fixed;
   inset: 0;
   display: grid;
@@ -315,136 +315,98 @@ button.ui-note:focus-visible {
   pointer-events: none;
   z-index: 40;
 }
-.ui-rubber-stamp {
+.ui-done {
   pointer-events: auto;
   cursor: pointer;
   display: grid;
-  justify-items: center;
+  justify-items: start;
   gap: var(--space-1);
   width: min(100%, 320px);
-  padding: var(--space-7) var(--space-6) var(--space-6);
+  padding: var(--space-6);
   border-radius: var(--radius-lg);
   background: var(--paper-fill);
   box-shadow: var(--paper-edge), var(--lift-3);
-  transform: rotate(var(--peek-tilt-1)); /* set down a hair off true, like the sheets beneath */
 }
-/* The mark: ink on paper, outlined like a rubber stamp, never filled. The ink has bled a little at
-   its edge and has not taken everywhere (--ink-wear), as a real impression has not. */
-.ui-rubber-stamp-mark {
+/* The title is marked with the highlighter, as a new row is. */
+.ui-done-title {
   position: relative;
-  margin-bottom: var(--space-3);
-}
-.ui-rubber-stamp-title {
-  display: block;
-  padding: var(--space-2) var(--space-4);
-  border: 3px solid var(--ink);
-  border-radius: var(--radius-sm);
+  isolation: isolate;
+  margin-bottom: var(--space-1);
   color: var(--ink);
   font: var(--w-bold) var(--t-title) var(--font-headings);
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  text-shadow: 0 0 1px color-mix(in srgb, var(--ink) 40%, transparent);
-  transform: rotate(var(--stamp-tilt));
-  -webkit-mask-image: var(--ink-wear);
-  mask-image: var(--ink-wear);
-  -webkit-mask-size: 160px;
-  mask-size: 160px;
 }
-.ui-rubber-stamp-line {
-  font: var(--w-semibold) var(--t-lead) var(--font-body);
-  color: var(--ink);
-}
-.ui-rubber-stamp-line + .ui-rubber-stamp-line {
-  font: var(--w-regular) var(--t-body) var(--font-body);
-  color: var(--muted);
-}
-/* The stamp tool: ink knob and body, a rubber plate. It is only there while it moves. */
-.ui-rubber-stamp-tool {
-  display: none;
+.ui-done-title::before {
+  content: '';
   position: absolute;
-  left: 50%;
-  bottom: 28%;
-  width: 56px;
-  height: 64px;
-  margin-left: -28px;
-  pointer-events: none;
-  transform-origin: 50% 100%;
+  z-index: -1;
+  inset: 46% calc(var(--space-1) * -1) 4%;
+  border-radius: 3px;
+  background: var(--highlighter);
+  transform-origin: left center;
 }
-.ui-rubber-stamp-tool .knob,
-.ui-rubber-stamp-tool .neck,
-.ui-rubber-stamp-tool .body {
-  fill: var(--ink);
+.ui-done-line {
+  color: var(--text);
+  font: var(--w-medium) var(--t-body) var(--font-body);
 }
-.ui-rubber-stamp-tool .body {
-  fill: var(--text);
+/* What the run got: the list rows' own category tags, so the colour means what it means on the list. */
+.ui-done-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
 }
-.ui-rubber-stamp-tool .plate {
-  fill: var(--muted);
+.ui-done-tag {
+  display: inline-block;
 }
-@media (prefers-reduced-motion: no-preference) {
-  .ui-rubber-stamp:not(.is-still) {
-    animation:
-      stamp-arrive var(--dur-base) var(--ease-out) both,
-      stamp-thud var(--dur-fast) var(--ease-out) var(--stamp-hit) both;
-  }
-  .ui-rubber-stamp:not(.is-still) .ui-rubber-stamp-tool {
-    display: block;
-    animation: stamp-tool var(--stamp-tool-ms) var(--ease-out) both;
-  }
-  /* The mark takes the moment the tool lands, and not before. */
-  .ui-rubber-stamp:not(.is-still) .ui-rubber-stamp-title {
-    animation: stamp-press var(--dur-stamp) var(--ease-out) var(--stamp-hit) both;
-  }
-  .ui-rubber-stamp.is-leaving:not(.is-still) {
-    animation: stamp-leave var(--dur-fast) var(--ease-out) both;
-  }
+/* The ticket slip's tear (as in the invite code), then a word of praise. */
+.ui-done-praise {
+  justify-self: stretch;
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 2px dashed var(--border-strong);
+  color: var(--ok-ink);
+  font: var(--w-semibold) var(--t-body) var(--font-body);
 }
-.ui-rubber-stamp.is-leaving {
+.ui-done.is-leaving {
   opacity: 0;
   transition: opacity var(--dur-fast) linear;
 }
-@keyframes stamp-arrive {
+@media (prefers-reduced-motion: no-preference) {
+  .ui-done:not(.is-still) {
+    animation: done-in var(--dur-base) var(--ease-out) both;
+  }
+  .ui-done:not(.is-still) .ui-done-tag {
+    animation: done-tag var(--dur-base) var(--ease-out) both;
+    animation-delay: calc(var(--dur-base) + var(--tag-i) * 70ms);
+  }
+  .ui-done:not(.is-still) .ui-done-title::before {
+    animation: done-swipe var(--dur-slow) var(--ease-out) 200ms both;
+  }
+  .ui-done.is-leaving:not(.is-still) {
+    animation: done-out var(--dur-fast) var(--ease-out) both;
+  }
+}
+@keyframes done-in {
   from {
     opacity: 0;
-    transform: scale(0.9) rotate(var(--peek-tilt-1));
+    transform: translateY(var(--space-3));
   }
 }
-/* The slip is pressed toward the desk for a beat as the stamp hits it. */
-@keyframes stamp-thud {
-  50% {
-    box-shadow: var(--paper-edge), var(--lift-0);
-  }
-}
-@keyframes stamp-tool {
-  0% {
-    opacity: 0;
-    transform: translateY(-48px) rotate(var(--stamp-tilt));
-  }
-  25% {
-    opacity: 1;
-  }
-  45% {
-    opacity: 1;
-    transform: translateY(0) rotate(var(--stamp-tilt)) scaleY(0.96);
-  }
-  55% {
-    transform: translateY(0) rotate(var(--stamp-tilt));
-  }
-  100% {
-    opacity: 0;
-    transform: translateY(-64px) rotate(var(--stamp-tilt));
-  }
-}
-@keyframes stamp-press {
+@keyframes done-tag {
   from {
     opacity: 0;
-    transform: rotate(var(--stamp-tilt)) scale(var(--stamp-press));
+    transform: translateY(var(--space-1));
   }
 }
-@keyframes stamp-leave {
+@keyframes done-swipe {
+  from {
+    transform: scaleX(0);
+  }
+}
+@keyframes done-out {
   to {
     opacity: 0;
-    transform: scale(0.97) rotate(var(--peek-tilt-1));
+    transform: translateY(calc(var(--space-2) * -1));
   }
 }
 

@@ -14,7 +14,7 @@ export const roomId = 'room-1'
 export const listId = 'list-1'
 
 export type RunSetup = {
-  items?: string[]
+  items?: (string | { description: string; category?: string })[]
   /** null: the hint endpoint fails. */
   hint?: Partial<RunHint> | null
   normal?: ListSuggestion[]
@@ -36,11 +36,11 @@ export function setupRunPage({
     patched: [] as { id: string; completed?: boolean }[],
     cleared: 0,
   }
-  let rows = items.map((description, i) => ({
+  let rows = items.map((item, i) => ({
+    ...(typeof item === 'string' ? { description: item } : item),
     item_id: `it-${i}`,
     list_id: listId,
     room_id: roomId,
-    description,
     completed: false,
     order: i,
     created_at: new Date().toISOString(),

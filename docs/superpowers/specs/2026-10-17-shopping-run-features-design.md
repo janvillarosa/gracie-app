@@ -126,27 +126,34 @@ nightly full pass fills the rest. No backfill is needed.
     not evidence the rhythm is wrong, so it must not lower the item's score. *(My call.)*
   - It skips that item for the rest of this run. It can return when it is actually due.
 
-## 2. Run-done stamp
+## 2. Run-done slip
+
+*Amended 2026-10-17 after review: it began as a rubber stamp. A yellow filled stamp competed with the
+page's one yellow key, and the tool, tilt and ink texture tried were gimmicks. It is now a plain paper
+slip, built from patterns Bauhouse already has.*
 
 - **Trigger:** while a run is on (section 1), either the last unchecked item on the list gets
   checked or the user taps Clear done. At most once per run.
-- **Content:** "Run done · {n} items · {m} min". n = checks in this run, m = minutes from the first
-  to the last check in this run, rounded. Under 1 minute, drop the minutes.
-- **Learned flourish:** when the run hint carries `typical` (≥ 5 runs learned) and this run was at
-  least 3 minutes quicker than `typical.minutes`, add a line: "4 min quicker than usual". Never
-  "slower than usual". The stamp is a reward, not a report card. *(My call.)*
-- **Behaviour:** the stamp lands on the list sheet with a short press animation, stays about 2.5 s,
-  then fades. A tap dismisses it. It never blocks input. Under `prefers-reduced-motion` it appears
-  and fades without the press. It is announced politely to screen readers (`role="status"`).
-- **Client-built:** made from the page's own check times plus the run hint already fetched for
-  run detection. No extra request.
-- **Design system first:** this is a new pattern (a large rubber-stamp moment, distinct from the
-  small `ui/Stamp` tag). Add it to `components/ui/` as a primitive (name is the builder's call, e.g.
-  `RubberStamp`), with its tokens in the `:root` block, a section on
-  `docs/design-system/index.html` (`pnpm design:sync`) and in `DESIGN.md`.
-- **Measurement:** client event `list.run_stamped {items, minutes}` (`Client: true`, int props,
-  `Container {list}`), registered in `services/analytics_events.go` and allow-listed for
-  `POST /events`.
+- **Content:** title "Run done", then "{n} items · {m} min" (n = checks in this run, m = minutes from
+  the first to the last check, rounded; under 1 minute, drop the minutes). When the hint carries
+  `typical` (≥ 5 runs learned) and this run was at least 3 minutes quicker than `typical.minutes`, a
+  dashed tear and one line of praise in `--ok-ink`: "4 min quicker than usual". Never "slower".
+  *(My call: the slip is a reward, not a report card.)*
+- **Colour (Jan: "add more color"):** what the run got, as the list rows' own category tags with counts
+  ("Produce ×3", "Dairy ×2"; `category-tag` + `cat-*`, at most four, biggest first, no category is
+  General), staggered in a beat after the slip. Colour keeps its meaning: it is the same category colour as on
+  the list, never decoration. The run records each check's category (`RunState.categories`).
+- **Look and behaviour:** flat paper at popover height (`--lift-3`), 320px wide, in the middle of the
+  screen (portalled to the body), no scrim, so the page stays usable. The title is Outfit 28px with the
+  highlighter swiped under it, as a new row's is. It rises over `--dur-base`, the highlighter sweeps in
+  over `--dur-slow`, it rests about 2.5s and lifts away. A tap or Esc dismisses it. Under
+  `prefers-reduced-motion` it only fades. `role="status"`. No fill colour, tilt, texture or tool.
+- **Client-built:** made from the page's own check times plus the run hint already fetched for run
+  detection. No extra request.
+- **Design system first:** `DoneSlip` is a primitive in `components/ui/` with its section on
+  `docs/design-system/index.html` and in DESIGN.md. It adds no tokens.
+- **Measurement:** client event `list.run_stamped {items, minutes}` (`Client: true`, int props), kept
+  under its original name so the stored event ids stay stable.
 
 ## 3. Usual quantity
 

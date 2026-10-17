@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { Paper, PaperStack, Button, RubberStamp } from '@components/ui'
+import { Paper, PaperStack, Button, DoneSlip } from '@components/ui'
 import { errorMessage } from '@lib/errors'
 import { useLocation, useParams } from 'react-router-dom'
 import { useTransitionNavigate } from '@lib/viewTransition'
@@ -71,13 +71,16 @@ import { ItemRow, reorderLock } from '@components/ItemRow'
 import { AddItemBar } from '@components/AddItemBar'
 import { SuggestionStack, type SlipPhase } from '@components/SuggestionSlip'
 import { track } from '@lib/analytics'
-import { stampLines, useShoppingRun } from '@lib/shoppingRun'
+import { runDoneLines, tallyCategories, useShoppingRun } from '@lib/shoppingRun'
 import { TopNav } from '@components/TopNav'
 import { PillNav } from '@components/PillNav'
 import { HouseLoader } from '@components/HouseLoader'
 import { RowSkeleton } from '@components/RowSkeleton'
 
 const CLEAR_TOAST_KEY = 'clear-completed'
+
+// How long the run-done slip waits for the check-off confetti to burst first.
+const RUN_DONE_DELAY_MS = 500
 
 // Smart suggestions show one at a time: the server answers with the most confident, and after an
 // add or an ignore it is asked again (it pauses the list once two in a row are ignored).
@@ -195,12 +198,23 @@ export const ListPage: React.FC = () => {
   })
   const run = useShoppingRun(runHintQuery.data)
   const during = run.active ? ('run' as const) : undefined
-  // The run-done stamp: lands once per run, on the last check or on Clear done.
-  const [runStamp, setRunStamp] = useState<string[] | null>(null)
-  const landRunStamp = useStableCallback(() => {
+  // The run-done slip: lands once per run, on the last check or on Clear done, a beat after the
+  // check-off confetti so the two don't fight over the same spot.
+  const [runDone, setRunDone] = useState<{
+    lines: string[]
+    tags: { label: string; count: number }[]
+  } | null>(null)
+  const runDoneTimer = useRef<ReturnType<typeof setTimeout>>()
+  useEffect(() => () => clearTimeout(runDoneTimer.current), [])
+  const landRunDone = useStableCallback(() => {
     if (!run.active || run.stamped) return
     run.markStamped()
-    setRunStamp(stampLines(run.runChecks, run.minutes, runHintQuery.data?.typical))
+    const slip = {
+      lines: runDoneLines(run.runChecks, run.minutes, runHintQuery.data?.typical),
+      tags: tallyCategories(run.categories),
+    }
+    clearTimeout(runDoneTimer.current)
+    runDoneTimer.current = setTimeout(() => setRunDone(slip), RUN_DONE_DELAY_MS)
     track('list.run_stamped', {
       subject: { type: 'list', id: listId },
       props: { items: run.runChecks, minutes: run.minutes },
@@ -274,8 +288,8 @@ export const ListPage: React.FC = () => {
   const incompleteCount = items.filter((it) => !it.completed).length
   // Everything got: the run is done.
   useEffect(() => {
-    if (run.active && !run.stamped && incompleteCount === 0 && !itemsQuery.isLoading) landRunStamp()
-  }, [run.active, run.stamped, incompleteCount, itemsQuery.isLoading, landRunStamp])
+    if (run.active && !run.stamped && incompleteCount === 0 && !itemsQuery.isLoading) landRunDone()
+  }, [run.active, run.stamped, incompleteCount, itemsQuery.isLoading, landRunDone])
   // Sensors: touch (mobile long-press), mouse (desktop), keyboard (a11y)
   const sensors = useSensors(
     // Tolerance stays under ItemRow's SWIPE_START, so a finger that starts a swipe has
@@ -539,7 +553,7 @@ export const ListPage: React.FC = () => {
 
   const onClearCompleted = async () => {
     if (pendingClear.current) return
-    landRunStamp()
+    landRunDone()
     inFlight.current += 1
     await applyOptimistic((items) => items.filter((x) => !x.completed))
 
@@ -581,7 +595,7 @@ export const ListPage: React.FC = () => {
     if (isTemp(it.item_id)) return
     if (savingItemId === it.item_id || editingItemId === it.item_id) return
     const next = !it.completed
-    if (next) run.check()
+    if (next) run.check(it.category)
     inFlight.current += 1
     // Confetti and UI update immediately; the request reconciles afterwards.
     if (next) {
@@ -961,11 +975,12 @@ export const ListPage: React.FC = () => {
                   ),
                   children: (
                     <>
-                      {runStamp && (
-                        <RubberStamp
-                          title={runStamp[0]}
-                          lines={runStamp.slice(1)}
-                          onDone={() => setRunStamp(null)}
+                      {runDone && (
+                        <DoneSlip
+                          title={runDone.lines[0]}
+                          lines={runDone.lines.slice(1)}
+                          tags={runDone.tags}
+                          onDone={() => setRunDone(null)}
                         />
                       )}
                       <SuggestionStack

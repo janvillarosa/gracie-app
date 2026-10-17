@@ -116,9 +116,9 @@ failure or an empty answer just shows nothing. Events: `nudge.shown|tapped|dismi
   `predict.RunMin` / `RunGap`).
 - **Run mode:** while a run is on, the suggestions query key gains `'run'` and asks `?during=run`; the slip says
   "Usually due in 3 days" (`due_in_days`) and Ignore posts `during: 'run'`.
-- **Run-done stamp:** `RubberStamp` (`components/ui/`) lands once per run when the last unchecked item is checked or
-  on Clear done, with `stampLines` ("Run done", "14 items · 22 min", and "4 min quicker than usual" only when ≥ 3
-  min quicker than the hint's `typical`). Tracks `list.run_stamped {items, minutes}`.
+- **Run-done slip:** `DoneSlip` (`components/ui/`) lands once per run when the last unchecked item is checked or
+  on Clear done, with `runDoneLines` ("Run done", "14 items · 22 min", and "4 min quicker than usual" only when ≥ 3
+  min quicker than the hint's `typical`), plus the run's categories as `category-tag` chips with counts (`tallyCategories`; each check carries its item's category). Tracks `list.run_stamped {items, minutes}`.
 
 ## Behavior tracking (`lib/analytics/`)
 
@@ -302,7 +302,7 @@ each, styled by `ui/ui.css` from tokens on `:root` in `styles.css` (`--space-*`,
 | `Field`, `Switch` | `Field.tsx`, `Switch.tsx` | Borderless text field (with inline problem text); the yellow switch. |
 | `Combobox` | `Combobox.tsx` | The one ARIA combobox: slips rise above an add bar, ↑/↓, Esc, Tab takes the ghost, polite count, `visualViewport` fit. Enter only picks a highlighted option, else `onSubmitText`. `AddItemBar` (pantry) and the trip `QuickAdd` (places) both use it; the draft stays in the bar. |
 | `Stamp`, `Pip` | `Stamp.tsx`, `Pip.tsx` | Category/state tag; the colour dot. |
-| `RubberStamp` | `RubberStamp.tsx` | A moment, not a control: the run-done stamp pressed onto the sheet (`--stamp-*` tokens), held, then lifted; tap dismisses; `role="status"`. |
+| `DoneSlip` | `DoneSlip.tsx` | A moment, not a control: the run-done slip, flat paper rising into the middle of the screen with a highlighted title (and a dashed tear and a word of praise when the run beat the usual); no scrim; tap or Esc dismisses; `role="status"`. |
 | `InlineWhen`, `InlineSelect`, `StampSelect` | `InlineWhen.tsx`, `InlineSelect.tsx`, `StampSelect.tsx` | The desktop inspector's in-place editors (variant `panel`; phones keep pickers). `InlineWhen`: a day select, a typed 24-hour time (`lib/trips/clock.ts` parses "9", "930", "2:30pm"; ↑/↓ ±15 min, Shift ±1 h; blank clears when allowed), and the length as segments. `InlineSelect`: a native select drawn like the paper (linked booking). `StampSelect`: stamps outlined in their colours, only the chosen one filled. The desktop Place rows (todo; booking From/To) are `InlinePlace` (Enter on typed text drops a pin from coordinates or keeps an address: `components/trips/typedPlace.ts`); phones keep `PlacePicker`. |
 | `Row` | `Row.tsx` | The row grid `[lead 24] 12 [time 48] 12 [title] [trail]`. |
 | `Note`, `SectionLabel`, `EmptyState` | `Note.tsx`, `SectionLabel.tsx`, `EmptyState.tsx` | Muted/warn one-liner (warn = amber text + glyph, no side rule), small caps label, friendly empty line. |
