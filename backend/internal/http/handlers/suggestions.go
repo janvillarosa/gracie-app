@@ -23,7 +23,7 @@ func (h *SuggestionsHandler) ForList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	limit := intParam(r, "limit", 1, 1, 5)
-	out, err := h.svc.ForList(r.Context(), u, chi.URLParam(r, "room_id"), chi.URLParam(r, "list_id"), limit)
+	out, err := h.svc.ForList(r.Context(), u, chi.URLParam(r, "room_id"), chi.URLParam(r, "list_id"), limit, r.URL.Query().Get("during"))
 	if err != nil {
 		api.WriteJSON(w, statusFromErr(err), map[string]string{"error": err.Error()})
 		return
@@ -32,7 +32,8 @@ func (h *SuggestionsHandler) ForList(w http.ResponseWriter, r *http.Request) {
 }
 
 type ignoreSuggestionReq struct {
-	Key string `json:"key"`
+	Key    string `json:"key"`
+	During string `json:"during,omitempty"`
 }
 
 // Ignore handles POST /rooms/{room_id}/lists/{list_id}/suggestions/ignore {key}. The key is
@@ -48,9 +49,25 @@ func (h *SuggestionsHandler) Ignore(w http.ResponseWriter, r *http.Request) {
 		api.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request"})
 		return
 	}
-	if err := h.svc.Ignore(r.Context(), u, chi.URLParam(r, "room_id"), chi.URLParam(r, "list_id"), req.Key); err != nil {
+	if err := h.svc.Ignore(r.Context(), u, chi.URLParam(r, "room_id"), chi.URLParam(r, "list_id"), req.Key, req.During); err != nil {
 		api.WriteJSON(w, statusFromErr(err), map[string]string{"error": err.Error()})
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// RunHint handles GET /rooms/{room_id}/lists/{list_id}/run-hint: the thresholds the List page uses
+// to spot a shopping run, learned from this person's and the house's habits.
+func (h *SuggestionsHandler) RunHint(w http.ResponseWriter, r *http.Request) {
+	u, ok := api.UserFrom(r.Context())
+	if !ok {
+		api.WriteJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+		return
+	}
+	hint, err := h.svc.RunHintFor(r.Context(), u, chi.URLParam(r, "room_id"), chi.URLParam(r, "list_id"))
+	if err != nil {
+		api.WriteJSON(w, statusFromErr(err), map[string]string{"error": err.Error()})
+		return
+	}
+	api.WriteJSON(w, http.StatusOK, map[string]any{"run_hint": hint})
 }

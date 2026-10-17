@@ -113,6 +113,7 @@ func NewRouter(userFinder authmw.UserFinder, h Handlers) http.Handler {
 		if h.Suggestions != nil {
 			ar.Get("/rooms/{room_id}/lists/{list_id}/suggestions", h.Suggestions.ForList)
 			ar.Post("/rooms/{room_id}/lists/{list_id}/suggestions/ignore", h.Suggestions.Ignore)
+			ar.Get("/rooms/{room_id}/lists/{list_id}/run-hint", h.Suggestions.RunHint)
 		}
 		if h.Insights != nil {
 			ar.Get("/me/insights", h.Insights.Mine)

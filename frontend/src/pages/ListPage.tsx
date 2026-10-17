@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { Paper, PaperStack, Button } from '@components/ui'
+import { Paper, PaperStack, Button, InkStamp, Sheet, SheetActions } from '@components/ui'
 import { errorMessage } from '@lib/errors'
 import { useLocation, useParams } from 'react-router-dom'
 import { useTransitionNavigate } from '@lib/viewTransition'
@@ -20,6 +20,7 @@ import {
   clearListItems,
   getRoomPantry,
   getListSuggestions,
+  getRunHint,
   ignoreListSuggestion,
 } from '@api/endpoints'
 import type { List, ListItem, ListSuggestion, PantryItem } from '@api/types'
@@ -71,6 +72,7 @@ import { ItemRow, reorderLock } from '@components/ItemRow'
 import { AddItemBar } from '@components/AddItemBar'
 import { SuggestionStack, type SlipPhase } from '@components/SuggestionSlip'
 import { track } from '@lib/analytics'
+import { nextCheer, runDoneLines, useShoppingRun } from '@lib/shoppingRun'
 import { TopNav } from '@components/TopNav'
 import { PillNav } from '@components/PillNav'
 import { HouseLoader } from '@components/HouseLoader'
@@ -78,6 +80,9 @@ import { RowSkeleton } from '@components/RowSkeleton'
 import { ListPrint } from '@components/ListPrint'
 
 const CLEAR_TOAST_KEY = 'clear-completed'
+
+// How long the run-done announcement waits, so the last checked row is seen to go first.
+const RUN_DONE_DELAY_MS = 350
 
 // Smart suggestions show one at a time: the server answers with the most confident, and after an
 // add or an ignore it is asked again (it pauses the list once two in a row are ignored).
@@ -183,12 +188,56 @@ export const ListPage: React.FC = () => {
     staleTime: 5 * 60_000,
   })
 
-  // Smart suggestion: the one thing the house usually adds around now. The server decides
-  // (and answers with nothing when the feature is off); a failure just means no slip.
-  const suggestionsKey = ['suggestions', roomId, listId]
+  // Shopping run: check-offs on this visit, with thresholds learned from this person's (or the
+  // house's) habits. A failed or slow hint just means the default rule.
+  const runHintQuery = useQuery({
+    queryKey: ['run-hint', roomId, listId],
+    queryFn: () => getRunHint(apiKey!, roomId!, listId),
+    enabled: !!roomId && !!listId,
+    refetchOnWindowFocus: false,
+    retry: false,
+    staleTime: 600_000,
+  })
+  const run = useShoppingRun(runHintQuery.data)
+  const during = run.active ? ('run' as const) : undefined
+  // The run-done announcement: once per run, on the last check or on Clear done. The stamp is the
+  // celebration, so the check that finishes a run throws no confetti.
+  const [runDone, setRunDone] = useState<{ lines: string[]; date: string; cheer: string } | null>(
+    null,
+  )
+  const [runDoneOpen, setRunDoneOpen] = useState(false)
+  const runDoneTimer = useRef<ReturnType<typeof setTimeout>>()
+  useEffect(() => () => clearTimeout(runDoneTimer.current), [])
+  const landRunDone = useStableCallback(() => {
+    if (!run.active || run.stamped) return
+    run.markStamped()
+    const done = {
+      lines: runDoneLines(run.runChecks, run.minutes, runHintQuery.data?.typical),
+      date: new Date().toLocaleDateString(undefined, {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+      }),
+      cheer: nextCheer(),
+    }
+    clearTimeout(runDoneTimer.current)
+    runDoneTimer.current = setTimeout(() => {
+      setRunDone(done)
+      setRunDoneOpen(true)
+    }, RUN_DONE_DELAY_MS)
+    track('list.run_stamped', {
+      subject: { type: 'list', id: listId },
+      props: { items: run.runChecks, minutes: run.minutes },
+    })
+  })
+
+  // Smart suggestion: the one thing the house usually adds around now (mid-shop: what comes due
+  // before the next shop). The server decides (and answers with nothing when the feature is off);
+  // a failure just means no slip.
+  const suggestionsKey = ['suggestions', roomId, listId, during ?? 'normal']
   const suggestionsQuery = useQuery({
     queryKey: suggestionsKey,
-    queryFn: () => getListSuggestions(apiKey!, roomId!, listId),
+    queryFn: () => getListSuggestions(apiKey!, roomId!, listId, during),
     enabled: !!roomId && !!listId,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
@@ -247,6 +296,10 @@ export const ListPage: React.FC = () => {
   const totalCount = items.length
   const completedCount = items.filter((it) => it.completed).length
   const incompleteCount = items.filter((it) => !it.completed).length
+  // Everything got: the run is done.
+  useEffect(() => {
+    if (run.active && !run.stamped && incompleteCount === 0 && !itemsQuery.isLoading) landRunDone()
+  }, [run.active, run.stamped, incompleteCount, itemsQuery.isLoading, landRunDone])
   // Sensors: touch (mobile long-press), mouse (desktop), keyboard (a11y)
   const sensors = useSensors(
     // Tolerance stays under ItemRow's SWIPE_START, so a finger that starts a swipe has
@@ -468,7 +521,7 @@ export const ListPage: React.FC = () => {
     nudge('nudge.dismissed')
     await retireSuggestion(s, async () => {
       try {
-        await ignoreListSuggestion(apiKey!, roomId!, listId, s.key)
+        await ignoreListSuggestion(apiKey!, roomId!, listId, s.key, during)
       } catch {
         // fall through: the refetch puts the slip back if the ignore did not land
       }
@@ -510,6 +563,7 @@ export const ListPage: React.FC = () => {
 
   const onClearCompleted = async () => {
     if (pendingClear.current) return
+    landRunDone()
     inFlight.current += 1
     await applyOptimistic((items) => items.filter((x) => !x.completed))
 
@@ -551,9 +605,11 @@ export const ListPage: React.FC = () => {
     if (isTemp(it.item_id)) return
     if (savingItemId === it.item_id || editingItemId === it.item_id) return
     const next = !it.completed
+    // The last item of a run gets the stamp instead of confetti.
+    const finishesRun = next ? run.check() && incompleteCount === 1 : false
     inFlight.current += 1
     // Confetti and UI update immediately; the request reconciles afterwards.
-    if (next) {
+    if (next && !finishesRun) {
       const rect = checkboxRefs.current[it.item_id]?.getBoundingClientRect()
       if (rect) {
         confettiAt(rect.left + rect.width / 2, rect.top + rect.height / 2, { durationMs: 2000 })
@@ -933,8 +989,30 @@ export const ListPage: React.FC = () => {
                   ),
                   children: (
                     <>
+                      {runDone && (
+                        <Sheet
+                          variant="announce"
+                          open={runDoneOpen}
+                          label={runDone.lines[0]}
+                          onClose={() => setRunDoneOpen(false)}
+                          actions={
+                            <SheetActions>
+                              <Button kind="key" onClick={() => setRunDoneOpen(false)}>
+                                {runDone.cheer}
+                              </Button>
+                            </SheetActions>
+                          }
+                        >
+                          <InkStamp note={runDone.date}>{runDone.lines[0]}</InkStamp>
+                          <p className="run-done-line">{runDone.lines[1]}</p>
+                          {runDone.lines[2] && (
+                            <p className="run-done-praise">{runDone.lines[2]}</p>
+                          )}
+                        </Sheet>
+                      )}
                       <SuggestionStack
                         suggestions={suggestions}
+                        during={during}
                         phase={spent?.phase}
                         onAdd={onAddSuggestion}
                         onIgnore={onIgnoreSuggestion}

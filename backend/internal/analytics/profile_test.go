@@ -2,6 +2,7 @@ package analytics_test
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"testing"
 	"time"
@@ -293,5 +294,24 @@ func TestProfileActHourCountsBackfilledActionsButNotClientOnes(t *testing.T) {
 	}
 	if p.ActHOW[6*24+4] != 0 {
 		t.Fatal("client events must not count toward act_how")
+	}
+}
+
+func TestProfileLearnsWhatARunLooksLike(t *testing.T) {
+	sat := time.Date(2026, 9, 5, 10, 0, 0, 0, ny)
+	runs := []struct{ checks, gapMin int }{{4, 2}, {3, 4}, {5, 3}}
+	var evs []analytics.Event
+	for w, r := range runs {
+		start := sat.AddDate(0, 0, 7*w)
+		for i := 0; i < r.checks; i++ {
+			at := start.Add(time.Duration(i*r.gapMin) * time.Minute)
+			evs = append(evs, localEv(fmt.Sprintf("c%d_%d", w, i), "item.checked", "mia", at, inList))
+		}
+	}
+	p := analytics.BuildProfile(fullRegistry(), "u:mia", evs, sat.AddDate(0, 0, 16))
+	c := p.Containers["list:list_1"]
+	// Runs last 6, 8 and 12 minutes; hold 4, 3 and 5 checks; gaps are 2,2,2, 4,4, 3,3,3,3 minutes.
+	if c.RunMinutes != 8 || c.RunItems != 4 || c.RunGapSec != 180 {
+		t.Fatalf("run shape: minutes %v items %v gap %v", c.RunMinutes, c.RunItems, c.RunGapSec)
 	}
 }

@@ -328,8 +328,8 @@ func (r *AggRepo) DueKeys(ctx context.Context, roomID, subjectType string, befor
 	return out, nil
 }
 
-func (r *AggRepo) UpcomingKeys(ctx context.Context, roomID, subjectType string, now time.Time, minScore, maxCV float64, limit int) ([]analytics.KeyStat, error) {
-	open := bson.D{{Key: "$lte", Value: now.UTC()}}
+func (r *AggRepo) UpcomingKeys(ctx context.Context, roomID, subjectType string, now, opensBefore time.Time, minScore, maxCV float64, limit int) ([]analytics.KeyStat, error) {
+	open := bson.D{{Key: "$lte", Value: opensBefore.UTC()}}
 	notClosed := bson.D{{Key: "$gte", Value: now.UTC()}}
 	filter := bson.D{{Key: "room_id", Value: roomID}, {Key: "subject_type", Value: subjectType},
 		{Key: "intervals.add.score", Value: bson.D{{Key: "$gte", Value: minScore}}},

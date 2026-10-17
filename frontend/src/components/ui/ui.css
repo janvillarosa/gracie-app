@@ -309,6 +309,54 @@ button.ui-note:focus-visible {
   color: var(--ink);
 }
 
+/* ---- InkStamp: a rubber-stamp impression in green "done" ink -------------------------------- */
+/* A double rule (the border, a paper gap, a fine inner line), set off true. Multiply lets the paper's
+   grain show through the ink, as it would. It is pressed in once. */
+.ui-ink-stamp {
+  display: inline-grid;
+  justify-items: center;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-5) var(--space-4);
+  border: 3px solid currentColor;
+  border-radius: var(--radius-sm);
+  box-shadow:
+    inset 0 0 0 3px var(--panel),
+    inset 0 0 0 4.5px currentColor;
+  color: var(--ok-ink);
+  opacity: 0.92;
+  mix-blend-mode: multiply;
+  transform: rotate(var(--ink-tilt));
+}
+.ui-ink-stamp-note {
+  font: var(--w-bold) var(--t-label) var(--font-body);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.ui-ink-stamp-words {
+  font: var(--w-bold) var(--t-title) var(--font-headings);
+  line-height: 1;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .ui-ink-stamp {
+    animation: ink-press var(--dur-ink) var(--ease-out) var(--dur-fast) both;
+  }
+}
+@keyframes ink-press {
+  0% {
+    opacity: 0;
+    transform: rotate(calc(var(--ink-tilt) * 2)) scale(1.7);
+  }
+  60% {
+    opacity: 0.92;
+    transform: rotate(var(--ink-tilt)) scale(0.95);
+  }
+  100% {
+    transform: rotate(var(--ink-tilt)) scale(1);
+  }
+}
+
 /* ---- Row: [lead] [time] [title] [trail] ------------------------------------------------------ */
 .ui-row {
   display: grid;
@@ -737,6 +785,29 @@ input.ui-sheet-title.has-error:focus-visible {
 }
 .ui-dialog .ant-modal-body {
   padding: 0;
+}
+/* Announce: a moment worth stopping for. The desk goes pale and out of focus; the sheet sits at
+   popover height with its content centred and ends on its one key, full width. */
+.ui-announce-scrim {
+  background: var(--announce-scrim) !important;
+  -webkit-backdrop-filter: blur(var(--announce-blur));
+  backdrop-filter: blur(var(--announce-blur));
+}
+.ui-dialog.is-announce .ant-modal-content {
+  box-shadow: var(--paper-edge), var(--lift-3);
+}
+.ui-sheet.is-announce .ui-sheet-scroll {
+  display: grid;
+  justify-items: center;
+  padding: var(--space-7) var(--space-6) var(--space-6);
+  text-align: center;
+}
+.ui-sheet.is-announce .ui-sheet-actions {
+  justify-self: stretch;
+  margin: var(--space-6) 0 0;
+}
+.ui-sheet.is-announce .ui-sheet-actions > * {
+  flex: 1;
 }
 .ui-sheet-panel {
   position: absolute;

@@ -17,10 +17,12 @@ the analytics aggregates and the live list; the only state is `Room.SuggestionsO
   this cycle, raw events newer than the rollup win) and `Ignore` (emits `item.suggestion_ignored`, a
   `RoleDismiss` event that counts against the forecast). Routes: `GET .../lists/{id}/suggestions`,
   `POST .../suggestions/ignore {key}`.
-- **Mode** `SUGGESTIONS_MODE=off|shadow|on` (default shadow). Shadow records `item.suggestion_predicted`
-  (`Skip: true`, never rolled up; deterministic id per house, item and cycle) and returns nothing.
+- **Mode** `SUGGESTIONS_MODE=off|on` (default on; a retired `shadow` value runs as on and logs it). There is
+  no shadow mode: the only gate is enough history, i.e. `Forecast.Confident` (MinScore, MaxCV). Every shown
+  suggestion records `item.suggestion_predicted` (`Skip: true`, never rolled up; deterministic id per house,
+  item and cycle) so live precision stays measurable.
 - **`cmd/suggest-eval`** `backtest | shadow | backfill [-apply]`, backed by `analytics/eval` (pure, shared
-  with the tests). Go-live gate: shadow precision >= 70% over >= 50 settled predictions across >= 2 weeks.
+  with the tests). `shadow` scores the live `item.suggestion_predicted` records against what happened next.
 - **Pause:** two `item.suggestion_ignored` in a row on a list (no `item.suggestion_accepted` between, within
   14 days) stop suggestions there (`pausedByIgnores`, via `EventRepository.ListByContainer`). Ignore is
   written with `emitSync` (`analytics.SyncRecorder`) so the client's immediate refetch sees it.
@@ -31,6 +33,18 @@ the analytics aggregates and the live list; the only state is `Room.SuggestionsO
 - **Forecast version:** `analytics.ForecastVersion` is stamped on every `KeyIntervals`. **Bump it whenever the
   rhythm or add-forecast logic changes** (or after a backfill folded by older code): each fold tick then rebuilds
   every older forecast from stored history (`Worker.RefreshStale`, 500 per tick), no new events needed.
+- **Run mode** (spec `2026-10-17-shopping-run-features-design.md`): `GET .../suggestions?during=run` (the List page
+  asks once it sees a shopping run) also returns keys whose window opens before the house's next run on the list:
+  lookahead = `Containers["list:<id>"].IntervalDay` of the house profile, capped at 14 days; no learned run rhythm
+  means nothing in run mode. Open ones first, then soonest (`due_in_days`), then score, before the limit applies.
+  `POST .../suggestions/ignore {key, during:"run"}` emits the ignore with `props.during`: it counts toward the
+  two-ignores pause, is **not** a forecast miss (the rollup skips it), and only hides the key from run mode until
+  its window opens. Run-mode predictions carry `during` and their own deterministic id. Any other `during` is a 400.
+- **Run hint:** `GET .../lists/{id}/run-hint` (`services/run_hint.go`, pure `ComputeRunHint`) tells the client how
+  to spot a run: `checks_to_start` 2 (`expected`: in the `next_run` window ±1 h with confidence ≥ 0.5, or the hour of
+  week ±1 holds ≥ 50% of the `run_how` peak), 3 (`unknown`), 4 (`unlikely`: < 10% of the peak); `idle_end_min` =
+  clamp(4 × `run_gap_sec`, 15, 45 min); `burst_sec` = clamp(`run_gap_sec`/5, 5, 30 s); `typical` from 5 runs. Own
+  rhythm at ≥ 3 runs, else the house's. Analytics off or the house setting off: the default 3 / 45 / 15.
 - **House setting:** `PUT /rooms/settings {suggestions_off}`; `GET /rooms/me` returns it.
 - Invariants: never add suggestion state that is not derivable from events and aggregates; an ignore must
   stay an event so the forecast sees it.
@@ -53,4 +67,5 @@ through suggestions swaps the card in place and the list never moves; the slot c
 Every slip is the same height (`min-height: 76px`, room for a two-line name). Any new row, typed or suggested, pops in (`row-in`, with the highlighter swipe). Taking or ignoring the slip pops it out (150ms) while the list glides up; it stays mounted
 until then (`leavingSuggestion`, `SUGGESTION_EXIT_MS`). Reduced motion gets a plain fade. The server decides everything (confidence, home list, house setting), so a
 failure or an empty answer just shows nothing. Events: `nudge.shown|tapped|dismissed` with
-`kind: 'recurring'`. The House settings page has the on/off switch (`suggestions_off`).
+`kind: 'recurring'`. The House settings page has the on/off switch (`suggestions_off`). Mid-shop the slip runs in
+run mode (see [lists.md](lists.md), Shopping runs).

@@ -152,7 +152,9 @@ type AggregateRepository interface {
 	DueKeys(ctx context.Context, roomID, subjectType string, before time.Time, limit int) ([]KeyStat, error)
 	// UpcomingKeys returns keys whose add forecast window contains now, with a score of at
 	// least minScore and a CV of at most maxCV, highest score first.
-	UpcomingKeys(ctx context.Context, roomID, subjectType string, now time.Time, minScore, maxCV float64, limit int) ([]KeyStat, error)
+	// UpcomingKeys returns keys with a suggestion window that opens by opensBefore and is still open
+	// at now (opensBefore == now: open right now).
+	UpcomingKeys(ctx context.Context, roomID, subjectType string, now, opensBefore time.Time, minScore, maxCV float64, limit int) ([]KeyStat, error)
 	// StaleKeys returns up to limit keys whose intervals were computed with an older (or no)
 	// ForecastVersion than version.
 	StaleKeys(ctx context.Context, version, limit int) ([]KeyRef, error)

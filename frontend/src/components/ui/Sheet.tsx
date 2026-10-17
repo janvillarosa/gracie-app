@@ -9,12 +9,14 @@ import { SheetIdentity } from './SheetIdentity'
 import { useMedia, WIDE } from './useMedia'
 import './ui.css'
 
-export type SheetVariant = 'sheet' | 'panel' | 'slip' | 'confirm' | 'chips'
+export type SheetVariant = 'sheet' | 'panel' | 'slip' | 'confirm' | 'chips' | 'announce'
 
 type Props = {
   // sheet: the default. panel: the editor docked over the map (wide screens). slip: a ticket
   // code. confirm: a small destructive question. chips: a picker (a popover on wide screens,
-  // a small sheet elsewhere, hanging from `anchor`).
+  // a small sheet elsewhere, hanging from `anchor`). announce: a moment worth stopping for (a
+  // shopping run done): a centred dialog on every screen over a blurred desk, no close key, its
+  // content first and its one yellow key last, which dismisses it.
   variant?: SheetVariant
   // Controlled: closing (not unmounting) lets focus return to what opened it.
   open?: boolean
@@ -83,7 +85,8 @@ const SheetBody: React.FC<BodyProps> = ({
       if (!el || el.contains(document.activeElement)) return
       ;(
         el.querySelector<HTMLElement>('input, textarea, [autofocus]') ??
-        el.querySelector<HTMLElement>('.ui-sheet-x')
+        el.querySelector<HTMLElement>('.ui-sheet-x') ??
+        el.querySelector<HTMLElement>('.ui-sheet-actions button')
       )?.focus({ preventScroll: true })
       if (!el.contains(document.activeElement) && ++tries < 10) id = requestAnimationFrame(place)
     }
@@ -97,33 +100,46 @@ const SheetBody: React.FC<BodyProps> = ({
       role={role}
       aria-label={role ? name : undefined}
     >
-      <header
-        className="ui-sheet-header"
-        // A swipe down on the header closes (phones).
-        onPointerDown={handle ? (e) => (swipe.current = e.clientY) : undefined}
-        onPointerUp={
-          handle
-            ? (e) => {
-                if (swipe.current !== null && e.clientY - swipe.current > SWIPE_PX) onRequestClose()
-                swipe.current = null
-              }
-            : undefined
-        }
-      >
-        {handle && <span className="ui-sheet-handle" aria-hidden />}
-        {menu}
-        <Button
-          kind="text"
-          className="ui-sheet-x"
-          aria-label="Close"
-          icon={<X aria-hidden />}
-          onClick={onRequestClose}
-        />
-      </header>
+      {variant !== 'announce' && (
+        <header
+          className="ui-sheet-header"
+          // A swipe down on the header closes (phones).
+          onPointerDown={handle ? (e) => (swipe.current = e.clientY) : undefined}
+          onPointerUp={
+            handle
+              ? (e) => {
+                  if (swipe.current !== null && e.clientY - swipe.current > SWIPE_PX)
+                    onRequestClose()
+                  swipe.current = null
+                }
+              : undefined
+          }
+        >
+          {handle && <span className="ui-sheet-handle" aria-hidden />}
+          {menu}
+          <Button
+            kind="text"
+            className="ui-sheet-x"
+            aria-label="Close"
+            icon={<X aria-hidden />}
+            onClick={onRequestClose}
+          />
+        </header>
+      )}
       <div className="ui-sheet-scroll">
         {identity ?? (title ? <SheetIdentity title={title} /> : null)}
-        {actions}
-        {children}
+        {variant === 'announce' ? (
+          // An announcement says its piece, then ends on its key.
+          <>
+            {children}
+            {actions}
+          </>
+        ) : (
+          <>
+            {actions}
+            {children}
+          </>
+        )}
         {details}
         {footer}
       </div>
@@ -285,6 +301,30 @@ export const Sheet: React.FC<Props> = ({
         'aria-expanded': open,
       })
     : null
+
+  // An announcement is centred on every screen (a moment, not a task), over a blurred desk.
+  if (variant === 'announce') {
+    return (
+      <>
+        {trigger}
+        <Modal
+          open={open}
+          centered
+          footer={null}
+          closable={false}
+          title={hiddenTitle}
+          width={width ?? 340}
+          className="ui-dialog is-announce"
+          classNames={{ mask: 'ui-announce-scrim' }}
+          onCancel={requestClose}
+          destroyOnHidden
+        >
+          {open ? body(false) : null}
+        </Modal>
+        {confirm}
+      </>
+    )
+  }
 
   if (wide && (variant === 'sheet' || variant === 'confirm')) {
     return (

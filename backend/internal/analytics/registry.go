@@ -23,6 +23,10 @@ type PropSpec struct {
 	MaxLen int      // PropString, default 64
 }
 
+// DuringRun is the "during" prop of a suggestion event that happened mid-shop (run mode). A dismiss
+// carrying it does not count against the forecast.
+const DuringRun = "run"
+
 // Role says how an event feeds the generic per-Key interval model.
 type Role int
 

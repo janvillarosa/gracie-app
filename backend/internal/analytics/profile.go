@@ -39,6 +39,11 @@ type ContainerRhythm struct {
 	CV          float64     `bson:"run_interval_cv" json:"run_interval_cv"`
 	RunHOW      []float64   `bson:"run_how" json:"run_how"`
 	NextRun     *NextWindow `bson:"next_run,omitempty" json:"next_run,omitempty"`
+	// What a run usually looks like: medians of its length, its completions, and the gap
+	// between completions inside it. A shopping-run detector scales its thresholds by these.
+	RunMinutes float64 `bson:"run_minutes,omitempty" json:"run_minutes,omitempty"`
+	RunItems   float64 `bson:"run_items,omitempty" json:"run_items,omitempty"`
+	RunGapSec  float64 `bson:"run_gap_sec,omitempty" json:"run_gap_sec,omitempty"`
 }
 
 // NextWindow is a predicted time range with a confidence between 0 and 1.
@@ -137,9 +142,19 @@ func BuildProfile(reg *Registry, id string, events []Event, now time.Time) *Prof
 		for i, e := range es {
 			times[i] = e.OccurredAt
 		}
-		runs := predict.Runs(times)
-		if len(runs) == 0 {
+		spans := predict.RunSpans(times)
+		if len(spans) == 0 {
 			continue
+		}
+		runs := make([]time.Time, len(spans))
+		var mins, items, gaps []float64
+		for i, sp := range spans {
+			runs[i] = sp.Start
+			mins = append(mins, sp.End.Sub(sp.Start).Minutes())
+			items = append(items, float64(sp.Count))
+			for _, g := range sp.Gaps {
+				gaps = append(gaps, g.Seconds())
+			}
 		}
 		rhythm := predict.Intervals(runs)
 		var occ []predict.Occurrence
@@ -149,6 +164,9 @@ func BuildProfile(reg *Registry, id string, events []Event, now time.Time) *Prof
 		}
 		runHOW := predict.HOWHistogram(occ, now)
 		cr := ContainerRhythm{Runs: len(runs), LastRunAt: rhythm.Last, IntervalDay: rhythm.EWMADays, CV: rhythm.CV, RunHOW: hist(runHOW)}
+		cr.RunMinutes, _ = predict.Median(mins)
+		cr.RunItems, _ = predict.Median(items)
+		cr.RunGapSec, _ = predict.Median(gaps)
 		if w, ok := predict.NextWindow(rhythm, runHOW, loc, now); ok {
 			cr.NextRun = &NextWindow{Start: w.Start, End: w.End, Confidence: w.Confidence}
 		}

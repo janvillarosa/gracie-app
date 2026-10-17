@@ -169,7 +169,7 @@ func (r *AggRepo) DueKeys(_ context.Context, roomID, subjectType string, before 
 	return out, nil
 }
 
-func (r *AggRepo) UpcomingKeys(_ context.Context, roomID, subjectType string, now time.Time, minScore, maxCV float64, limit int) ([]analytics.KeyStat, error) {
+func (r *AggRepo) UpcomingKeys(_ context.Context, roomID, subjectType string, now, opensBefore time.Time, minScore, maxCV float64, limit int) ([]analytics.KeyStat, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	var out []analytics.KeyStat
@@ -182,9 +182,9 @@ func (r *AggRepo) UpcomingKeys(_ context.Context, roomID, subjectType string, no
 			continue
 		}
 		a := ks.Intervals.Add
-		open := !a.OpensAt.After(now) && !a.ClosesAt.Before(now)
+		open := !a.OpensAt.After(opensBefore) && !a.ClosesAt.Before(now)
 		for _, w := range a.Windows {
-			open = open || (!w.Opens.After(now) && !w.Closes.Before(now))
+			open = open || (!w.Opens.After(opensBefore) && !w.Closes.Before(now))
 		}
 		if open && a.Score >= minScore && a.CV <= maxCV {
 			out = append(out, ks)

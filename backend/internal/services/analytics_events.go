@@ -5,12 +5,15 @@ import "github.com/janvillarosa/gracie-app/backend/internal/analytics"
 var nudgeProps = map[string]analytics.PropSpec{"kind": {Kind: analytics.PropString, MaxLen: 32}}
 
 var predictedProps = map[string]analytics.PropSpec{
-	"mode":      {Kind: analytics.PropEnum, Values: []string{"shadow", "on"}},
+	"mode":      {Kind: analytics.PropEnum, Values: []string{"shadow", "on"}}, // "shadow": events from before shadow mode was retired
 	"score_pct": {Kind: analytics.PropInt},
 	"opens_at":  {Kind: analytics.PropString, MaxLen: 32},
 	"closes_at": {Kind: analytics.PropString, MaxLen: 32},
 	"series":    {Kind: analytics.PropEnum, Values: []string{"added", "checked"}},
+	"during":    {Kind: analytics.PropEnum, Values: []string{analytics.DuringRun}},
 }
+
+var duringProps = map[string]analytics.PropSpec{"during": {Kind: analytics.PropEnum, Values: []string{analytics.DuringRun}}}
 
 var fieldsSpec = map[string]analytics.PropSpec{"fields": {Kind: analytics.PropString, MaxLen: 128}}
 
@@ -34,8 +37,8 @@ func RegisterAnalyticsEvents(reg *analytics.Registry) {
 		analytics.EventDef{Name: "item.deleted"},
 		analytics.EventDef{Name: "item.reordered", Skip: true},
 		// Smart suggestions. An ignore counts against the item's forecast; a prediction is a
-		// shadow-mode measurement record, stored for suggest-eval and never rolled up.
-		analytics.EventDef{Name: "item.suggestion_ignored", Role: analytics.RoleDismiss},
+		// measurement record, stored for suggest-eval and never rolled up.
+		analytics.EventDef{Name: "item.suggestion_ignored", Role: analytics.RoleDismiss, Props: duringProps},
 		analytics.EventDef{Name: "item.suggestion_predicted", Skip: true, Props: predictedProps},
 		// An add that came from tapping a suggestion. With the ignores, it is what decides whether the
 		// house is still interested (two ignores in a row pause suggestions on that list).
@@ -64,5 +67,7 @@ func RegisterAnalyticsEvents(reg *analytics.Registry) {
 		analytics.EventDef{Name: "nudge.shown", Client: true, Props: nudgeProps},
 		analytics.EventDef{Name: "nudge.tapped", Client: true, Props: nudgeProps},
 		analytics.EventDef{Name: "nudge.dismissed", Client: true, Props: nudgeProps},
+		// A shopping run finished on a list (the run-done stamp landed).
+		analytics.EventDef{Name: "list.run_stamped", Client: true, Props: map[string]analytics.PropSpec{"items": {Kind: analytics.PropInt}, "minutes": {Kind: analytics.PropInt}}},
 	)
 }

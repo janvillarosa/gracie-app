@@ -33,6 +33,8 @@ own events.
   `ANALYTICS_PROFILE_EVERY`) recomputes profiles for subjects the fold marked dirty. Both are safe
   to run on every instance. **Standalone Mongo has no transactions** (the Tx runner falls back to
   running without one), so exactly-once only holds on a replica set.
+- **Run shape:** each `ContainerRhythm` also stores `run_minutes`, `run_items` and `run_gap_sec` (medians over
+  `predict.RunSpans`), which the run hint scales its thresholds by.
 - **Reads:** `analytics.Reader` and `GET /me/insights`, `GET /rooms/{id}/insights`,
   `GET /rooms/{id}/insights/periods/{period}`. All point lookups; no endpoint returns raw events.
   The house review includes per-member totals; nudges and profiles stay personal. A nil profile

@@ -236,3 +236,63 @@ describe('Sheet, on a phone', () => {
     await waitFor(() => expect(opener).toHaveFocus())
   })
 })
+
+const Announcement = ({ onClosed }: { onClosed?: () => void }) => {
+  const [open, setOpen] = useState(true)
+  const close = () => {
+    setOpen(false)
+    onClosed?.()
+  }
+  return (
+    <Sheet
+      variant="announce"
+      open={open}
+      label="Run done"
+      onClose={close}
+      actions={
+        <SheetActions>
+          <Button kind="key" onClick={close}>
+            Nice
+          </Button>
+        </SheetActions>
+      }
+    >
+      <p>6 items · 4 min</p>
+    </Sheet>
+  )
+}
+
+describe('Sheet, the announce variant', () => {
+  it.each([
+    'desktop',
+    'phone',
+  ] as const)('is a centred dialog on a blurred desk on %s, with no close key or handle', async (size) => {
+    setViewport(size)
+    render(<Announcement />)
+    const dialog = await screen.findByRole('dialog', { name: 'Run done' })
+    expect(dialog.closest('.ui-dialog.is-announce')).not.toBeNull()
+    expect(dialog.closest('.ui-drawer')).toBeNull()
+    expect(document.querySelector('.ui-announce-scrim')).not.toBeNull()
+    expect(within(dialog).queryByRole('button', { name: 'Close' })).not.toBeInTheDocument()
+    expect(dialog.querySelector('.ui-sheet-handle')).toBeNull()
+    expectAtMostOneKey(dialog)
+  })
+
+  it('puts focus on its yellow key, which dismisses it', async () => {
+    setViewport('phone')
+    const closed = vi.fn()
+    render(<Announcement onClosed={closed} />)
+    const key = await screen.findByRole('button', { name: 'Nice' })
+    await waitFor(() => expect(key).toHaveFocus())
+    await userEvent.click(key)
+    expect(closed).toHaveBeenCalledTimes(1)
+  })
+
+  it('also closes with Esc', async () => {
+    const closed = vi.fn()
+    render(<Announcement onClosed={closed} />)
+    await screen.findByRole('dialog', { name: 'Run done' })
+    await userEvent.keyboard('{Escape}')
+    expect(closed).toHaveBeenCalledTimes(1)
+  })
+})

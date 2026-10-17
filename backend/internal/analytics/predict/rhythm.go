@@ -39,24 +39,47 @@ func HOWHistogram(occ []Occurrence, now time.Time) Histogram {
 	return h
 }
 
-// Runs groups times (ascending) into runs of at least RunMin with no gap above RunGap,
-// and returns the first time of each run: when the person started.
+// RunSpan is one run: when it started and ended, how many completions it held, and the gaps
+// between them.
+type RunSpan struct {
+	Start, End time.Time
+	Count      int
+	Gaps       []time.Duration
+}
+
+// RunSpans groups times (ascending) into runs of at least RunMin with no gap above RunGap.
+func RunSpans(times []time.Time) []RunSpan {
+	var out []RunSpan
+	start := 0
+	flush := func(end int) { // times[start:end] is one stretch
+		if end-start < RunMin {
+			return
+		}
+		s := RunSpan{Start: times[start], End: times[end-1], Count: end - start}
+		for i := start + 1; i < end; i++ {
+			s.Gaps = append(s.Gaps, times[i].Sub(times[i-1]))
+		}
+		out = append(out, s)
+	}
+	for i := 1; i < len(times); i++ {
+		if times[i].Sub(times[i-1]) > RunGap {
+			flush(i)
+			start = i
+		}
+	}
+	if len(times) > 0 {
+		flush(len(times))
+	}
+	return out
+}
+
+// Runs returns the first time of each run (see RunSpans): when the person started.
 func Runs(times []time.Time) []time.Time {
-	var out []time.Time
-	start, count := 0, 0
-	flush := func() {
-		if count >= RunMin {
-			out = append(out, times[start])
-		}
+	spans := RunSpans(times)
+	out := make([]time.Time, len(spans))
+	for i, s := range spans {
+		out[i] = s.Start
 	}
-	for i, t := range times {
-		if i > 0 && t.Sub(times[i-1]) > RunGap {
-			flush()
-			start, count = i, 0
-		}
-		count++
-	}
-	flush()
 	return out
 }
 

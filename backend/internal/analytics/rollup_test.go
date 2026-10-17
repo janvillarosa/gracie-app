@@ -365,3 +365,20 @@ func TestStaleForecastsAreRebuiltWithoutNewEvents(t *testing.T) {
 		t.Fatalf("second pass refreshed %d", n)
 	}
 }
+
+func TestRunModeIgnoresDoNotCountAgainstTheForecast(t *testing.T) {
+	r := newRig(t0.Add(120 * 24 * time.Hour))
+	for i := 0; i < 8; i++ {
+		r.add(ev("item.added", "mia", "room_1", "milk", t0.AddDate(0, 0, 7*i)))
+	}
+	early := ev("item.suggestion_ignored", "sam", "room_1", "milk", t0.AddDate(0, 0, 27))
+	early.Props = map[string]any{"during": "run"} // turned down days early, mid-shop: not a miss
+	r.add(early)
+	if _, err := r.worker.FoldOnce(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	a := r.aggs.Key("room_1:item:milk")["intervals"].(analytics.KeyIntervals).Add
+	if a == nil || a.Trials != 5 || a.Hits != 5 {
+		t.Fatalf("forecast: %+v", a)
+	}
+}
