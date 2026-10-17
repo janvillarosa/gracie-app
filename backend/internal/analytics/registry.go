@@ -21,6 +21,8 @@ type PropSpec struct {
 	Kind   PropKind
 	Values []string // PropEnum
 	MaxLen int      // PropString, default 64
+	// Min and Max bound a PropInt when Max > 0 (values outside are dropped).
+	Min, Max int64
 }
 
 // DuringRun is the "during" prop of a suggestion event that happened mid-shop (run mode). A dismiss
@@ -45,6 +47,10 @@ type EventDef struct {
 	Role   Role
 	// Skip excludes high-volume noise (item.reordered) from rollups; it is still stored.
 	Skip bool
+	// RequeueRoom makes the event a signal, not behavior: folding it counts nothing and marks every
+	// key of its room stale, so the room's forecasts are rebuilt (trip.away_changed: the house's away
+	// calendar moved, so its home time did too).
+	RequeueRoom bool
 }
 
 // Registry holds event definitions and aliases (old name -> current name).
@@ -152,18 +158,26 @@ func (s PropSpec) coerce(v any) (any, bool) {
 		b, ok := v.(bool)
 		return b, ok
 	case PropInt:
-		switch n := v.(type) {
+		var n int64
+		switch x := v.(type) {
 		case int:
-			return int64(n), true
+			n = int64(x)
 		case int32:
-			return int64(n), true
+			n = int64(x)
 		case int64:
-			return n, true
+			n = x
 		case float64: // JSON numbers
-			if n == float64(int64(n)) {
-				return int64(n), true
+			if x != float64(int64(x)) {
+				return nil, false
 			}
+			n = int64(x)
+		default:
+			return nil, false
 		}
+		if s.Max > 0 && (n < s.Min || n > s.Max) {
+			return nil, false
+		}
+		return n, true
 	}
 	return nil, false
 }

@@ -103,6 +103,13 @@ func asFloat(v any) (float64, bool) {
 // BuildProfile computes a profile from the subject's raw events (any order). It is pure.
 // For "u:" profiles pass the events that user performed; for "h:" the house's events.
 func BuildProfile(reg *Registry, id string, events []Event, now time.Time) *Profile {
+	return BuildProfileAway(reg, id, events, now, nil)
+}
+
+// BuildProfileAway is BuildProfile with run rhythms in home time: away is when the subject (the
+// house for "h:", the person for "u:") was away, so a holiday neither stretches the interval
+// between shopping runs nor puts the next run inside the trip.
+func BuildProfileAway(reg *Registry, id string, events []Event, now time.Time, away predict.Away) *Profile {
 	scope, owner, _ := strings.Cut(id, ":")
 	p := &Profile{ID: id, Scope: scope, Owner: owner, ComputedAt: now.UTC(), Events: len(events)}
 	evs := append([]Event(nil), events...)
@@ -156,7 +163,7 @@ func BuildProfile(reg *Registry, id string, events []Event, now time.Time) *Prof
 				gaps = append(gaps, g.Seconds())
 			}
 		}
-		rhythm := predict.Intervals(runs)
+		rhythm := predict.IntervalsAway(runs, away)
 		var occ []predict.Occurrence
 		for _, r := range runs {
 			l := r.In(loc)
@@ -167,7 +174,7 @@ func BuildProfile(reg *Registry, id string, events []Event, now time.Time) *Prof
 		cr.RunMinutes, _ = predict.Median(mins)
 		cr.RunItems, _ = predict.Median(items)
 		cr.RunGapSec, _ = predict.Median(gaps)
-		if w, ok := predict.NextWindow(rhythm, runHOW, loc, now); ok {
+		if w, ok := predict.NextWindowAway(rhythm, runHOW, loc, now, away); ok {
 			cr.NextRun = &NextWindow{Start: w.Start, End: w.End, Confidence: w.Confidence}
 		}
 		p.Containers[k] = cr

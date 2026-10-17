@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/janvillarosa/gracie-app/backend/internal/analytics"
+	"github.com/janvillarosa/gracie-app/backend/internal/analytics/predict"
 	"github.com/janvillarosa/gracie-app/backend/internal/models"
 	"go.mongodb.org/mongo-driver/bson"
 )
@@ -248,5 +249,144 @@ func TestEventRepoInsertNewCountsOnlyNewEvents(t *testing.T) {
 	}
 	if n, err := repo.InsertNew(ctx, []analytics.Event{a, b, cNew}); err != nil || n != 0 {
 		t.Fatalf("all duplicates: n=%d err=%v", n, err)
+	}
+}
+
+func TestMongoRequeueRoomKeysOnlyTouchesThatRoom(t *testing.T) {
+	c := connectOrSkip(t)
+	ctx := context.Background()
+	aggs := NewAggRepo(c, NewTx(c))
+	if err := aggs.EnsureIndexes(ctx); err != nil {
+		t.Fatal(err)
+	}
+	roomA, roomB := "ra_"+randHex(6), "rb_"+randHex(6)
+	owner := "w_" + randHex(6)
+	now := time.Now().UTC()
+	if _, ok, err := aggs.AcquireLease(ctx, owner, 5*time.Minute, now); err != nil || !ok {
+		t.Fatalf("lease: %v %v", ok, err)
+	}
+	defer func() { _ = aggs.ReleaseLease(ctx, owner) }()
+	wm, _, _ := aggs.AcquireLease(ctx, owner, 5*time.Minute, now)
+	b := analytics.NewBatch()
+	for _, ref := range []analytics.KeyRef{{RoomID: roomA, SubjectType: "item", Key: "milk"}, {RoomID: roomA, SubjectType: "item", Key: "eggs"}, {RoomID: roomB, SubjectType: "item", Key: "milk"}} {
+		u := &analytics.DocUpdate{ID: ref.ID(), Inc: map[string]int64{"counts.added": 1}, Set: map[string]any{"room_id": ref.RoomID, "subject_type": ref.SubjectType, "key": ref.Key}}
+		b.Keys[ref.ID()] = u
+	}
+	b.Keys[roomA+":item:bread"] = &analytics.DocUpdate{ID: roomA + ":item:bread", Set: map[string]any{"room_id": roomA, "subject_type": "item", "key": "bread"}}
+	if err := aggs.ApplyBatch(ctx, b, owner, wm); err != nil {
+		t.Fatal(err)
+	}
+	for _, id := range []string{roomA + ":item:milk", roomA + ":item:eggs", roomB + ":item:milk"} {
+		if err := aggs.SetKeyIntervals(ctx, id, analytics.KeyIntervals{N: 3, LastAt: now, ComputedAt: now, Version: analytics.ForecastVersion}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	req := analytics.NewBatch()
+	req.Requeue[roomA] = struct{}{}
+	if err := aggs.ApplyBatch(ctx, req, owner, wm); err != nil {
+		t.Fatal(err)
+	}
+	stale, err := aggs.StaleKeys(ctx, analytics.ForecastVersion, 10000)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]bool{}
+	for _, ref := range stale {
+		if ref.RoomID == roomA || ref.RoomID == roomB {
+			got[ref.ID()] = true
+		}
+	}
+	if !got[roomA+":item:milk"] || !got[roomA+":item:eggs"] || !got[roomA+":item:bread"] || got[roomB+":item:milk"] {
+		t.Fatalf("only room A's keys are stale: %v", got)
+	}
+	var bread map[string]any
+	if err := aggs.keys().FindOne(ctx, map[string]any{"_id": roomA + ":item:bread"}).Decode(&bread); err != nil {
+		t.Fatal(err)
+	}
+	if _, has := bread["intervals"]; has {
+		t.Fatal("a key without intervals must not get a stub intervals document")
+	}
+	if n, err := aggs.RequeueRoomKeys(ctx, roomB); err != nil || n != 1 {
+		t.Fatalf("RequeueRoomKeys(B) = %d %v", n, err)
+	}
+}
+
+func TestMongoForecastKeysAnySubjectOpeningBy(t *testing.T) {
+	c := connectOrSkip(t)
+	ctx := context.Background()
+	aggs := NewAggRepo(c, NewTx(c))
+	if err := aggs.EnsureIndexes(ctx); err != nil {
+		t.Fatal(err)
+	}
+	room, owner := "rf_"+randHex(6), "w_"+randHex(6)
+	now := time.Now().UTC().Truncate(time.Millisecond)
+	wm, ok, err := aggs.AcquireLease(ctx, owner, 5*time.Minute, now)
+	if err != nil || !ok {
+		t.Fatalf("lease %v %v", ok, err)
+	}
+	defer func() { _ = aggs.ReleaseLease(ctx, owner) }()
+	b := analytics.NewBatch()
+	refs := []analytics.KeyRef{{RoomID: room, SubjectType: "item", Key: "milk"}, {RoomID: room, SubjectType: "chore", Key: "bins"},
+		{RoomID: room, SubjectType: "item", Key: "later"}, {RoomID: room, SubjectType: "item", Key: "none"}}
+	for _, ref := range refs {
+		b.Keys[ref.ID()] = &analytics.DocUpdate{ID: ref.ID(), Inc: map[string]int64{"containers.list:l1": 1},
+			Set: map[string]any{"room_id": ref.RoomID, "subject_type": ref.SubjectType, "key": ref.Key}}
+	}
+	if err := aggs.ApplyBatch(ctx, b, owner, wm); err != nil {
+		t.Fatal(err)
+	}
+	opens := map[string]time.Time{"milk": now.Add(-time.Hour), "bins": now.Add(time.Hour), "later": now.Add(72 * time.Hour)}
+	for _, ref := range refs[:3] {
+		iv := analytics.KeyIntervals{N: 5, LastAt: now, ComputedAt: now, Version: analytics.ForecastVersion,
+			Add: &analytics.AddForecast{Series: "added", Clock: "home", EWMADays: 7, OpensAt: opens[ref.Key], ClosesAt: opens[ref.Key].Add(time.Hour), DueAt: opens[ref.Key]}}
+		if err := aggs.SetKeyIntervals(ctx, ref.ID(), iv); err != nil {
+			t.Fatal(err)
+		}
+	}
+	got, err := aggs.ForecastKeys(ctx, room, now.Add(2*time.Hour), 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 2 || got[0].Key != "milk" || got[1].Key != "bins" || got[0].Containers["list:l1"] != 1 || got[0].Intervals.Add.Clock != "home" {
+		t.Fatalf("got %+v", got)
+	}
+}
+
+func TestMongoKeyIntervalsWeeklyRoundtripsAndClears(t *testing.T) {
+	c := connectOrSkip(t)
+	ctx := context.Background()
+	aggs := NewAggRepo(c, NewTx(c))
+	room, owner := "rw_"+randHex(6), "w_"+randHex(6)
+	now := time.Now().UTC().Truncate(time.Millisecond)
+	wm, ok, err := aggs.AcquireLease(ctx, owner, 5*time.Minute, now)
+	if err != nil || !ok {
+		t.Fatalf("lease %v %v", ok, err)
+	}
+	defer func() { _ = aggs.ReleaseLease(ctx, owner) }()
+	ref := analytics.KeyRef{RoomID: room, SubjectType: "item", Key: "bin bags"}
+	b := analytics.NewBatch()
+	b.Keys[ref.ID()] = &analytics.DocUpdate{ID: ref.ID(), Set: map[string]any{"room_id": room, "subject_type": "item", "key": ref.Key}}
+	if err := aggs.ApplyBatch(ctx, b, owner, wm); err != nil {
+		t.Fatal(err)
+	}
+	wk := predict.Weekly{EveryWeeks: 2, Weekday: 2, Hour: 20, Share: 1}
+	if err := aggs.SetKeyIntervals(ctx, ref.ID(), analytics.KeyIntervals{N: 10, LastAt: now, ComputedAt: now, Version: analytics.ForecastVersion, Weekly: &wk,
+		LastBy: "u_b", Turns: []string{"u_b", "u_a", "u_b"}}); err != nil {
+		t.Fatal(err)
+	}
+	got, err := aggs.GetKeyStats(ctx, room, "item", []string{ref.Key})
+	if err != nil || got[ref.Key].Intervals == nil || got[ref.Key].Intervals.Weekly == nil || *got[ref.Key].Intervals.Weekly != wk {
+		t.Fatalf("weekly lost: %+v %v", got[ref.Key].Intervals, err)
+	}
+	if iv := got[ref.Key].Intervals; iv.LastBy != "u_b" || len(iv.Turns) != 3 || iv.Turns[1] != "u_a" {
+		t.Fatalf("turns lost: %+v", iv)
+	}
+	if err := aggs.SetKeyIntervals(ctx, ref.ID(), analytics.KeyIntervals{N: 10, LastAt: now, ComputedAt: now, Version: analytics.ForecastVersion}); err != nil {
+		t.Fatal(err)
+	}
+	got, _ = aggs.GetKeyStats(ctx, room, "item", []string{ref.Key})
+	if got[ref.Key].Intervals.Weekly != nil || got[ref.Key].Intervals.LastBy != "" || got[ref.Key].Intervals.Turns != nil {
+		t.Fatal("a pattern no longer detected, and turns no longer known, must be cleared")
 	}
 }

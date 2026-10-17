@@ -42,6 +42,8 @@ type TripPatch struct {
 	Stops Opt[[]models.Place] `json:"stops"`
 	// Days sets labels per date; an empty string removes the label.
 	Days map[string]string `json:"days"`
+	// Travellers replaces who is going; null or [] means the whole house.
+	Travellers Opt[[]string] `json:"travellers"`
 }
 
 type TodoPatch struct {

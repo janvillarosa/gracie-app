@@ -118,3 +118,21 @@ func TestBackfillIsDeterministicAndSkipsWhatExists(t *testing.T) {
 		t.Fatalf("%+v", first)
 	}
 }
+
+func TestReplayAwayDoesNotPunishAHoliday(t *testing.T) {
+	// weekly, then a 10 day whole-house holiday, then weekly again one home week after the last buy
+	adds := every(7, 6)
+	for i := 0; i < 6; i++ {
+		adds = append(adds, at(52+7*float64(i)))
+	}
+	s := []Series{{Room: "r", Key: "milk", Added: adds}}
+	away := map[string]predict.Away{"r": {{Opens: at(36), Closes: at(46)}}}
+	wall := Replay(s, predict.DefaultParams)
+	home := ReplayAway(s, predict.DefaultParams, away)
+	if home.Precision() < wall.Precision() || home.Hits != home.Predictions {
+		t.Fatalf("home %+v wall %+v", home, wall)
+	}
+	if other := ReplayAway(s, predict.DefaultParams, map[string]predict.Away{"x": away["r"]}); other.Hits != wall.Hits || other.Predictions != wall.Predictions {
+		t.Fatal("another house's trips change nothing")
+	}
+}

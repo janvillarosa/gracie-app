@@ -612,9 +612,21 @@ func (s *ListService) emitList(ctx context.Context, name string, user *models.Us
 // normalized text (never the raw text).
 func (s *ListService) emitItem(ctx context.Context, name string, user *models.User, it *models.ListItem) {
 	var props map[string]any
+	accepted := false
 	if name == "item.added" {
+		props = map[string]any{}
 		if src := addSourceFrom(ctx); src != "" {
-			props = map[string]any{"source": src}
+			props["source"], accepted = src, true
+		}
+		qty, unit := it.Quantity, it.Unit
+		if qty == "" { // "2 milk" typed as the description
+			_, qty, unit = parse.ParseInput(it.Description)
+		}
+		if milli, u, ok := parse.ParseAmount(qty, unit); ok {
+			props["qty"], props["unit"] = milli, u
+		}
+		if len(props) == 0 {
+			props = nil
 		}
 	}
 	ev := analytics.Event{
@@ -623,7 +635,7 @@ func (s *ListService) emitItem(ctx context.Context, name string, user *models.Us
 		Key: parse.NormalizeKey(it.Description), Category: it.Category, Props: props,
 	}
 	s.emit(ctx, ev)
-	if props != nil {
+	if accepted {
 		ev.Name, ev.Props = "item.suggestion_accepted", nil
 		s.emit(ctx, ev)
 	}

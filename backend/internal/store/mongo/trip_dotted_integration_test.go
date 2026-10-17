@@ -40,4 +40,30 @@ func TestMongoTripRoundtripsDaysStopsAndDottedClocks(t *testing.T) {
 	}
 }
 
+func TestMongoTripRoundtripsTravellers(t *testing.T) {
+	c := connectOrSkip(t)
+	r := NewTripRepo(c)
+	ctx := context.Background()
+	id := "trip_" + randHex(16)
+	tr := newTestTrip(id, "room_1")
+	tr.Travellers = []string{"user_a", "user_b"}
+	if err := r.Insert(ctx, tr); err != nil {
+		t.Fatal(err)
+	}
+	got, err := r.Get(ctx, id)
+	if err != nil || len(got.Travellers) != 2 || got.Travellers[1] != "user_b" {
+		t.Fatalf("roundtrip lost travellers: %+v err=%v", got.Travellers, err)
+	}
+	next := got.Clone()
+	next.Version = got.Version + 1
+	next.Travellers = nil // back to the whole house
+	if ok, err := r.ReplaceCAS(ctx, next, got.Version); err != nil || !ok {
+		t.Fatalf("CAS: %v %v", ok, err)
+	}
+	again, _ := r.Get(ctx, id)
+	if again.Travellers != nil {
+		t.Fatalf("cleared travellers came back: %v", again.Travellers)
+	}
+}
+
 func fptr(v float64) *float64 { return &v }

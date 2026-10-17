@@ -23,7 +23,7 @@ import { createPackingList } from '@api/tripEndpoints'
 import type { Place } from '@api/tripTypes'
 import { errorMessage } from '@lib/errors'
 import { useDocumentTitle } from '@lib/useDocumentTitle'
-import { useTrips } from '@lib/trips/hooks'
+import { memberName, type Member, useTrips } from '@lib/trips/hooks'
 import { usePacking } from '@lib/trips/usePacking'
 import { diffDays, routeText, shortRange } from '@lib/trips/schedule'
 import { useTransitionNavigate } from '@lib/viewTransition'
@@ -36,7 +36,21 @@ import '../trips.css'
 const samePlace = (a: Place, b?: Place) =>
   !!b && (a.place_id && b.place_id ? a.place_id === b.place_id : a.lat === b.lat && a.lng === b.lng)
 
-type SheetKind = 'icon' | 'where' | 'when' | null
+type SheetKind = 'icon' | 'where' | 'when' | 'who' | null
+
+const EVERYONE = 'everyone'
+
+/** "Everyone", "Just you", "Mia", "Mia and you", "Mia, Sam and you". */
+export function goingText(going: string[], me: string | undefined, members: Member[]): string {
+  if (going.length === 0) return 'Everyone'
+  const others = going.filter((id) => id !== me).map((id) => memberName(id, me, members))
+  const withMe = going.includes(me ?? '')
+  if (!others.length) return 'Just you'
+  const names = withMe ? [...others, 'you'] : others
+  return names.length === 1
+    ? names[0]
+    : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`
+}
 
 /** Trip settings, as a page in the same tiers as a sheet: the trip's identity, then what is
  *  shared with the House, then what is just for you, then Delete. Everything saves as it
@@ -45,7 +59,7 @@ export const TripSettings: React.FC = () => {
   const { tripId = '' } = useParams()
   const { apiKey } = useAuth()
   const navigate = useTransitionNavigate()
-  const { store, state, loading } = useTrips()
+  const { store, state, loading, members, userId } = useTrips()
   const trip = state.trips[tripId]
   const [sheet, setSheet] = useState<SheetKind>(null)
   const [confirming, setConfirming] = useState(false)
@@ -100,6 +114,21 @@ export const TripSettings: React.FC = () => {
     ? `${shortRange(trip.start_date, trip.end_date)} · ${days} ${days === 1 ? 'day' : 'days'}`
     : 'Add dates'
   const route = routeText(trip)
+  // Who's going: only current members count (someone who left the House is dropped), and an
+  // empty list, or every member, is the whole House.
+  const memberIds = members.flatMap((m) => (m.user_id ? [m.user_id] : []))
+  const going = memberIds.filter((id) => trip.travellers?.includes(id))
+  const setGoing = (pick: string) => {
+    if (pick === EVERYONE) return patch({ travellers: null })
+    const next =
+      going.length === 0
+        ? [pick]
+        : going.includes(pick)
+          ? going.filter((id) => id !== pick)
+          : [...going, pick]
+    const whole = next.length === 0 || memberIds.every((id) => next.includes(id))
+    patch({ travellers: whole ? null : memberIds.filter((id) => next.includes(id)) })
+  }
 
   const makePacking = async () => {
     setPackBusy(true)
@@ -145,6 +174,13 @@ export const TripSettings: React.FC = () => {
               empty={!trip.start_date}
               onClick={() => setSheet('when')}
             />
+            {memberIds.length > 1 && (
+              <NavRow
+                label="Who's going"
+                value={goingText(going, userId, members)}
+                onClick={() => setSheet('who')}
+              />
+            )}
             {pack.listId ? (
               <NavRow
                 label="Packing list"
@@ -199,6 +235,28 @@ export const TripSettings: React.FC = () => {
         identity={<SheetIdentity title="Where" context="The first place is the destination." />}
       >
         <WhereSheet stops={stops} tz={trip.tz} onChange={setStops} />
+      </Sheet>
+      <Sheet
+        open={sheet === 'who'}
+        label="Who's going"
+        onClose={() => setSheet(null)}
+        identity={
+          <SheetIdentity
+            title="Who's going"
+            context="Suggestions skip the days the whole House is away."
+          />
+        }
+      >
+        <ChipGroup<string>
+          label="Who's going"
+          values={going.length ? going : [EVERYONE]}
+          options={[
+            { value: EVERYONE, label: 'Everyone' },
+            ...members.flatMap((m) => (m.user_id ? [{ value: m.user_id, label: m.name }] : [])),
+          ]}
+          columns={3}
+          onChange={setGoing}
+        />
       </Sheet>
       <WhenSheet
         open={sheet === 'when'}

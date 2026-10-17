@@ -6,6 +6,9 @@
 //	suggest-eval tune       replay history across a grid of window, regularity and score settings
 //
 // It reads the same MONGODB_URI / MONGODB_DB as the server. backtest and shadow only read.
+// backtest -away-from-trips replays in home time, with each house's away spans built from its
+// trips (as the server does); -synthetic replays the golden households (internal/testutil/
+// households) instead of the database (no Mongo needed), and prints wall and home time side by side.
 package main
 
 import (
@@ -23,6 +26,8 @@ import (
 	"github.com/janvillarosa/gracie-app/backend/internal/config"
 	"github.com/janvillarosa/gracie-app/backend/internal/models"
 	mongostore "github.com/janvillarosa/gracie-app/backend/internal/store/mongo"
+	"github.com/janvillarosa/gracie-app/backend/internal/testutil/households"
+	"github.com/janvillarosa/gracie-app/backend/internal/trips"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -36,7 +41,13 @@ func main() {
 	apply := fs.Bool("apply", false, "backfill: write the events (default is a dry run)")
 	room := fs.String("room", "", "limit to one house id")
 	minPrecision := fs.Float64("min-precision", 0.6, "tune: only list settings at least this precise")
+	awayFromTrips := fs.Bool("away-from-trips", false, "backtest: measure gaps in home time, from each house's trips")
+	synth := fs.Bool("synthetic", false, "backtest: replay a made-up year of households instead of the database")
 	_ = fs.Parse(args)
+	if cmd == "backtest" && *synth {
+		backtestSynthetic(*awayFromTrips)
+		return
+	}
 
 	cfg, err := config.Load()
 	if err != nil {
@@ -51,7 +62,7 @@ func main() {
 
 	switch cmd {
 	case "backtest":
-		backtest(ctx, cli, *room)
+		backtest(ctx, cli, *room, *awayFromTrips)
 	case "shadow":
 		shadow(ctx, cli, *room)
 	case "explain":
@@ -66,7 +77,7 @@ func main() {
 }
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: suggest-eval backtest|shadow|tune|backfill [-room ID] [-apply] [-min-precision 0.6]")
+	fmt.Fprintln(os.Stderr, "usage: suggest-eval backtest|shadow|tune|backfill [-room ID] [-apply] [-min-precision 0.6] [-away-from-trips] [-synthetic]")
 	os.Exit(2)
 }
 
@@ -89,18 +100,85 @@ func loadEvents(ctx context.Context, cli *mongostore.Client, filter bson.D) []an
 	return evs
 }
 
-func backtest(ctx context.Context, cli *mongostore.Client, room string) {
+func backtest(ctx context.Context, cli *mongostore.Client, room string, awayFromTrips bool) {
 	evs := loadEvents(ctx, cli, roomFilter(room, bson.D{{Key: "subject.type", Value: "item"},
 		{Key: "name", Value: bson.D{{Key: "$in", Value: bson.A{"item.added", "item.checked", "item.suggestion_ignored"}}}}}))
+	var away map[string]predict.Away
+	if awayFromTrips {
+		away = loadAway(ctx, cli, room)
+		fmt.Printf("home time: %d houses with away spans\n", len(away))
+	}
+	report(evs, away)
+}
+
+// backtestSynthetic replays the golden made-up households in wall time and, with awayFromTrips, in home
+// time too, so the two can be compared.
+func backtestSynthetic(awayFromTrips bool) {
+	w := households.Golden()
+	fmt.Println("== golden households (internal/testutil/households), wall time ==")
+	report(w.Events, nil)
+	if !awayFromTrips {
+		return
+	}
+	away := w.Away()
+	fmt.Printf("\n== golden households, home time (%d houses) ==\n", len(away))
+	report(w.Events, away)
+}
+
+// loadAway builds each house's away spans from its trips, as services.AwayCalendar does.
+func loadAway(ctx context.Context, cli *mongostore.Client, room string) map[string]predict.Away {
+	var rooms []models.Room
+	cur, err := cli.DB.Collection("rooms").Find(ctx, roomFilter(room, bson.D{}))
+	if err != nil || cur.All(ctx, &rooms) != nil {
+		log.Fatalf("read rooms: %v", err)
+	}
+	var users []models.User
+	cur, err = cli.DB.Collection("users").Find(ctx, bson.D{}, options.Find().SetProjection(bson.D{{Key: "user_id", Value: 1}, {Key: "tz", Value: 1}}))
+	if err != nil || cur.All(ctx, &users) != nil {
+		log.Fatalf("read users: %v", err)
+	}
+	tz := map[string]string{}
+	for _, u := range users {
+		tz[u.UserID] = u.TZ
+	}
+	// Only dates, zones and travellers: no titles, notes or places are read.
+	var all []models.Trip
+	cur, err = cli.DB.Collection("trips").Find(ctx, roomFilter(room, bson.D{}), options.Find().SetProjection(bson.D{
+		{Key: "trip_id", Value: 1}, {Key: "room_id", Value: 1}, {Key: "start_date", Value: 1}, {Key: "end_date", Value: 1},
+		{Key: "tz", Value: 1}, {Key: "travellers", Value: 1}, {Key: "deleted_at", Value: 1}}))
+	if err != nil || cur.All(ctx, &all) != nil {
+		log.Fatalf("read trips: %v", err)
+	}
+	byRoom := map[string][]models.Trip{}
+	for _, t := range all {
+		byRoom[t.RoomID] = append(byRoom[t.RoomID], t)
+	}
+	out := map[string]predict.Away{}
+	for _, rm := range rooms {
+		houseTZ := ""
+		for _, m := range rm.MemberIDs {
+			if tz[m] != "" {
+				houseTZ = tz[m]
+				break
+			}
+		}
+		if a := trips.HouseAway(byRoom[rm.RoomID], rm.MemberIDs, houseTZ); len(a) > 0 {
+			out[rm.RoomID] = a
+		}
+	}
+	return out
+}
+
+func report(evs []analytics.Event, away map[string]predict.Away) {
 	series := eval.GroupEvents(evs)
 	fmt.Printf("%d events, %d (house, item) series\n\n", len(evs), len(series))
-	cur := eval.Replay(series, predict.DefaultParams)
+	cur := eval.ReplayAway(series, predict.DefaultParams, away)
 	fmt.Printf("policy MinScore=%.2f MaxCV=%.2f\n", cur.Params.MinScore, cur.Params.MaxCV)
 	fmt.Printf("  replayable series: %d, qualifying at least once: %d\n", cur.Series, cur.Qualifying)
 	fmt.Printf("  predictions: %d  hits: %d  too late: %d  too early: %d  precision: %.1f%%\n", cur.Predictions, cur.Hits, cur.TooLate, cur.TooEarly, 100*cur.Precision())
 	fmt.Printf("  score distribution (0.0-0.2 ... 0.8-1.0): %v\n\n", cur.ScoreBuckets)
 	fmt.Println("MinScore sweep:")
-	for _, r := range eval.Sweep(series, predict.DefaultParams, []float64{0.4, 0.5, 0.6, 0.65, 0.7, 0.8, 0.9}) {
+	for _, r := range eval.SweepAway(series, predict.DefaultParams, []float64{0.4, 0.5, 0.6, 0.65, 0.7, 0.8, 0.9}, away) {
 		fmt.Printf("  %.2f  predictions %5d  precision %5.1f%%  qualifying %4d\n", r.Params.MinScore, r.Predictions, 100*r.Precision(), r.Qualifying)
 	}
 }

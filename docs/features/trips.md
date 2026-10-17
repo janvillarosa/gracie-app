@@ -27,6 +27,17 @@ Spec: `docs/superpowers/specs/2026-10-14-trips-api-persistence-design.md`.
   cap 60; `""` removes; clock `field_at["days.<date>"]`, so labelling different days never
   conflicts). Over-cap patches are rejected with code `cap`. `field_at` keys with dots are
   fine because trips are only ever written as whole documents (`ReplaceCAS`).
+- **Who's going (2026-10-17):** `travellers` (user ids, cap 20, no blanks or duplicates) is
+  replaced whole via `trip.update` (clock `field_at["travellers"]`); null or `[]` is the whole
+  House (stored as absent). The service passes the House's members into `Ctx.Members` and a
+  non-member is rejected per op as `invalid`; the pure engine (no `Members`) only checks shape.
+  Ids of people who later leave are ignored at read time. Trip settings has a "Who's going" row
+  (Everyone, or any members, via `ChipGroup` `values`), shown only in a House of two or more.
+  `trips/presence.go` turns a House's trips into away spans for analytics (`HouseAway`: every
+  current member away at once; `MemberAway`), from `start_date` 00:00 to `end_date` 24:00 in the
+  trip's zone (the House's when empty); deleted and dateless trips don't count. `trips.EventsFor`
+  emits `trip.away_changed` when dates, `tz` or travellers change and when a dated trip is created,
+  deleted or restored, so analytics re-learns that House in home time (see analytics.md).
 - **Attribution:** todos and bookings also carry server-set `updated_at` (UTC), stamped with
   `created_by`/`updated_by` on every applied change (create, update, and the booking-delete
   cascade); duplicate and fully-conflicted ops leave it alone. `GET /rooms/me` `members_meta`

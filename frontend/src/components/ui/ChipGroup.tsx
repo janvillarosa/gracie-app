@@ -7,6 +7,8 @@ type Props<T extends string> = {
   // Names the group for screen readers ("Kind of booking").
   label: string
   value?: T
+  // Several pressed at once (who's going): every option in values is pressed, and value is ignored.
+  values?: T[]
   options: Array<Option<T>>
   onChange: (v: T) => void
   // How many columns on a wide line; the group wraps by itself below that.
@@ -14,10 +16,12 @@ type Props<T extends string> = {
   disabled?: boolean
 }
 
-/** The large choice chips: six booking kinds, seven category stamps. One is pressed. */
+/** The large choice chips: six booking kinds, seven category stamps. One is pressed, or with
+ *  `values` several are (the caller decides what a press toggles). */
 export function ChipGroup<T extends string>({
   label,
   value,
+  values,
   options,
   onChange,
   columns,
@@ -35,7 +39,7 @@ export function ChipGroup<T extends string>({
           key={o.value}
           type="button"
           className="ui-choice"
-          aria-pressed={value === o.value}
+          aria-pressed={values ? values.includes(o.value) : value === o.value}
           disabled={disabled}
           onClick={() => onChange(o.value)}
         >

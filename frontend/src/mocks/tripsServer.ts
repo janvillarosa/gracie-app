@@ -53,6 +53,7 @@ export const LIMITS = {
   todos: 150,
   bookings: 50,
   stops: 12,
+  travellers: 20,
   days: 60,
   dayClocks: 4 * 60,
   ackedClients: 200,
@@ -111,7 +112,7 @@ const KNOWN_TYPES = new Set([
 ])
 
 // ---- decoding (patch.go): strict, unknown field = "unsupported", wrong type = "invalid" ------
-type Kind = 'str' | 'bool' | 'num' | 'int' | 'place' | 'places' | 'days'
+type Kind = 'str' | 'bool' | 'num' | 'int' | 'place' | 'places' | 'strs' | 'days'
 /** opt: the Go `Opt[T]`: an explicit null is a value (clears). Otherwise null means "absent". */
 type Spec = Record<string, { kind: Kind; opt?: boolean }>
 
@@ -124,6 +125,7 @@ const TRIP_SPEC: Spec = {
   tz: { kind: 'str' },
   icon: { kind: 'str' },
   stops: { kind: 'places', opt: true },
+  travellers: { kind: 'strs', opt: true },
   days: { kind: 'days' },
 }
 const TODO_SPEC: Spec = {
@@ -191,6 +193,8 @@ function checkKind(kind: Kind, v: unknown): Code | null {
       return typeof v === 'number' && Number.isInteger(v) ? null : 'invalid'
     case 'place':
       return checkPlace(v)
+    case 'strs':
+      return Array.isArray(v) && v.every((x) => typeof x === 'string') ? null : 'invalid'
     case 'places': {
       if (!Array.isArray(v)) return 'invalid'
       for (const p of v) {
@@ -288,6 +292,19 @@ const todoTitleOK = (title: string, place: Place | null | undefined) =>
 const optOK = (p: Patch, k: string, fn: (s: string) => boolean) =>
   !(k in p) || p[k] === null || fn(p[k] as string)
 
+/** Shape only (validTravellers in validate.go): cap, no blanks, no duplicates. */
+const validTravellers = (ids: string[]) =>
+  ids.length <= LIMITS.travellers &&
+  new Set(ids).size === ids.length &&
+  ids.every((id) => id !== '' && id.length <= 64)
+
+/** The service's membership check (Ctx.Members in apply.go). */
+const travellersKnown = (p: Patch, c: Ctx) =>
+  !c.members ||
+  !('travellers' in p) ||
+  p.travellers === null ||
+  (p.travellers as string[]).every((id) => c.members?.includes(id))
+
 function validTripPatch(p: Patch, create: boolean): boolean {
   if (create && !('title' in p)) return false
   if ('title' in p && !okTitle(p.title as string, MAX_TRIP_TITLE)) return false
@@ -297,6 +314,8 @@ function validTripPatch(p: Patch, create: boolean): boolean {
   if ('stops' in p && p.stops !== null) {
     for (const pl of p.stops as Place[]) if (!pl || !pl.source || !validPlace(pl)) return false
   }
+  if ('travellers' in p && p.travellers !== null && !validTravellers(p.travellers as string[]))
+    return false
   const days = (p.days ?? {}) as Record<string, string | null>
   if (Object.keys(days).length > LIMITS.days) return false
   for (const [date, label] of Object.entries(days))
@@ -439,7 +458,8 @@ function omitEmpty<T>(v: T): T {
 const iso = (ms: number) => new Date(ms).toISOString()
 
 type Change = { name: string; apply: () => void }
-type Ctx = { actor: string; now: number; newV: number }
+/** members: the house's member ids (TripService passes them; travellers must be among them). */
+type Ctx = { actor: string; now: number; newV: number; members?: string[] }
 type Outcome = { res: OpResult; dirty: boolean; bump: boolean }
 
 export class MockTripServer {
@@ -467,6 +487,7 @@ export class MockTripServer {
         end_date: trip.end_date,
         tz: trip.tz,
         stops: trip.stops,
+        travellers: trip.travellers,
         days: trip.days,
         packing_list_id: trip.packing_list_id,
       },
@@ -610,7 +631,12 @@ export class MockTripServer {
       created_by: actor,
     }
     const base = t.version
-    const c: Ctx = { actor, now, newV: base + 1 }
+    const c: Ctx = {
+      actor,
+      now,
+      newV: base + 1,
+      members: this.members.length ? this.members.map((m) => m.user_id) : undefined,
+    }
     let dirty = false
     let bump = false
     const newClients = new Set<string>()
@@ -755,6 +781,11 @@ export class MockTripServer {
     for (const k of ['title', 'destination', 'notes', 'start_date', 'end_date', 'tz', 'icon'])
       if (k in p) set(k, p[k], p[k] === null || p[k] === '')
     if ('stops' in p) set('stops', p.stops === null ? [] : [...(p.stops as Place[])])
+    // null or [] means the whole house; Go stores nothing (omitempty).
+    if ('travellers' in p) {
+      const ids = (p.travellers as string[] | null) ?? []
+      set('travellers', [...ids], ids.length === 0)
+    }
     const days = (p.days ?? {}) as Record<string, string | null>
     for (const date of Object.keys(days).sort()) {
       const label = days[date] ?? ''
@@ -801,7 +832,11 @@ export class MockTripServer {
     const d = decodePatch(op.patch, TRIP_SPEC)
     if ('code' in d) return reject(d.code)
     const p = d.patch
-    if (!validTripPatch(p, true) || !this.datesOrdered(p.start_date, p.end_date))
+    if (
+      !validTripPatch(p, true) ||
+      !this.datesOrdered(p.start_date, p.end_date) ||
+      !travellersKnown(p, c)
+    )
       return reject('invalid')
     if (this.tripCapExceeded(t, p)) return reject('cap')
     this.commit(t.field_at, at, this.tripChanges(t, p), res)
@@ -823,7 +858,8 @@ export class MockTripServer {
     const p = d.patch
     const start = 'start_date' in p ? p.start_date : t.fields.start_date
     const end = 'end_date' in p ? p.end_date : t.fields.end_date
-    if (!validTripPatch(p, false) || !this.datesOrdered(start, end)) return reject('invalid')
+    if (!validTripPatch(p, false) || !this.datesOrdered(start, end) || !travellersKnown(p, c))
+      return reject('invalid')
     if (this.tripCapExceeded(t, p)) return reject('cap')
     if (!this.commit(t.field_at, at, this.tripChanges(t, p), res)) return false
     t.v = c.newV

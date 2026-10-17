@@ -221,6 +221,32 @@ func (r *AggRepo) ListKeys(_ context.Context, roomID, subjectType string, limit 
 	return out, nil
 }
 
+func (r *AggRepo) ForecastKeys(_ context.Context, roomID string, opensBefore time.Time, limit int) ([]analytics.KeyStat, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	var out []analytics.KeyStat
+	for id, doc := range r.keys {
+		if !strings.HasPrefix(id, roomID+":") {
+			continue
+		}
+		ks := toKeyStat(doc)
+		if ks.Intervals == nil || ks.Intervals.Add == nil || ks.Intervals.Add.OpensAt.After(opensBefore) {
+			continue
+		}
+		out = append(out, ks)
+	}
+	sort.SliceStable(out, func(i, j int) bool {
+		if a, b := out[i].Intervals.Add.OpensAt, out[j].Intervals.Add.OpensAt; !a.Equal(b) {
+			return a.Before(b)
+		}
+		return out[i].Key < out[j].Key
+	})
+	if limit > 0 && len(out) > limit {
+		out = out[:limit]
+	}
+	return out, nil
+}
+
 func (r *AggRepo) StaleKeys(_ context.Context, version, limit int) ([]analytics.KeyRef, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()

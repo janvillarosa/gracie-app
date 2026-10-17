@@ -119,6 +119,9 @@ type TripFields struct {
 	Stops []Place `bson:"stops,omitempty" json:"stops,omitempty"`
 	// Days maps "YYYY-MM-DD" to a short label (cap 60 entries); each date has its own clock.
 	Days map[string]string `bson:"days,omitempty" json:"days,omitempty"`
+	// Travellers are the user IDs going on the trip (cap 20); nil or empty means the whole house.
+	// Replaced as a whole list. IDs of people who have left the house are ignored at read time.
+	Travellers []string `bson:"travellers,omitempty" json:"travellers,omitempty"`
 }
 
 // Trip is the persisted aggregate (collection "trips").

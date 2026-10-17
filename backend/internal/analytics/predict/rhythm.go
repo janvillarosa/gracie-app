@@ -124,10 +124,35 @@ func Confidence(n int, cv float64) float64 {
 // the smoothed gap, the hours from this person's own habit on that weekday. A rhythm that is
 // overdue is expected "today, at the usual hour" (tomorrow if that hour has passed).
 func NextWindow(r Rhythm, how Histogram, loc *time.Location, now time.Time) (Window, bool) {
-	if _, ok := r.Due(); !ok {
+	return NextWindowAway(r, how, loc, now, nil)
+}
+
+// NextWindowAway is NextWindow in home time: the due day is projected past the away spans, and a
+// window that would fall while the house is away moves to the first usual hour after it is back.
+func NextWindowAway(r Rhythm, how Histogram, loc *time.Location, now time.Time, away Away) (Window, bool) {
+	w, ok := nextWindow(r, how, loc, now, away)
+	for tries := 0; ok && away.Contains(w.Start) && tries < 3; tries++ {
+		back := away.NextHome(w.Start)
+		w, ok = nextWindow(r, how, loc, maxTime(now, back), away)
+		if ok && w.Start.Before(back) && back.Before(w.End) {
+			w.Start = back.UTC() // home part way through the usual hours
+		}
+	}
+	return w, ok
+}
+
+func maxTime(a, b time.Time) time.Time {
+	if a.After(b) {
+		return a
+	}
+	return b
+}
+
+func nextWindow(r Rhythm, how Histogram, loc *time.Location, now time.Time, away Away) (Window, bool) {
+	due, ok := r.DueAway(away)
+	if !ok {
 		return Window{}, false
 	}
-	due, _ := r.Due()
 	day := due.In(loc)
 	today := now.In(loc)
 	dayStart := time.Date(day.Year(), day.Month(), day.Day(), 0, 0, 0, 0, loc)
@@ -180,4 +205,75 @@ func minInt(a, b int) int {
 		return a
 	}
 	return b
+}
+
+// Weekly is a thing that follows the calendar: done every one or two weeks on one local weekday
+// (bin day), at about one hour.
+type Weekly struct {
+	EveryWeeks int     `bson:"every_weeks" json:"every_weeks"` // 1 or 2
+	Weekday    int     `bson:"weekday" json:"weekday"`         // 0 = Sunday, local
+	Hour       int     `bson:"hour" json:"hour"`               // local
+	Share      float64 `bson:"share" json:"share"`             // of occurrences on that weekday
+}
+
+const (
+	weeklyMin   = 4   // occurrences it takes
+	weeklyShare = 0.8 // share on one weekday
+)
+
+// DetectWeekly finds a calendar pattern: at least 4 occurrences (bursts collapsed), at least 80%
+// of them on one local weekday (from HOW), and a median home-time gap within a day of 7 or 14
+// days. Hour is the mean local time of day on that weekday, rounded (the minutes come from the
+// UTC instant, so a half-hour zone is off by its half hour).
+func DetectWeekly(occ []Occurrence, away Away) (Weekly, bool) {
+	sorted := append([]Occurrence(nil), occ...)
+	sort.Slice(sorted, func(i, j int) bool { return sorted[i].At.Before(sorted[j].At) })
+	var kept []Occurrence
+	for _, o := range sorted {
+		if o.HOW < 0 || o.HOW >= HoursInWeek {
+			continue
+		}
+		if len(kept) == 0 || o.At.Sub(kept[len(kept)-1].At) >= MinGap {
+			kept = append(kept, o)
+		}
+	}
+	if len(kept) < weeklyMin {
+		return Weekly{}, false
+	}
+	var byDay [7]int
+	for _, o := range kept {
+		byDay[o.HOW/24]++
+	}
+	day := 0
+	for d := 1; d < 7; d++ {
+		if byDay[d] > byDay[day] {
+			day = d
+		}
+	}
+	share := float64(byDay[day]) / float64(len(kept))
+	if share < weeklyShare {
+		return Weekly{}, false
+	}
+	gaps := make([]float64, 0, len(kept)-1)
+	for i := 1; i < len(kept); i++ {
+		gaps = append(gaps, away.homeDays(kept[i-1].At, kept[i].At))
+	}
+	med, _ := Median(gaps)
+	every := 0
+	switch {
+	case math.Abs(med-7) <= 1:
+		every = 1
+	case math.Abs(med-14) <= 1:
+		every = 2
+	default:
+		return Weekly{}, false
+	}
+	var sum float64
+	for _, o := range kept {
+		if o.HOW/24 == day {
+			sum += float64(o.HOW%24) + float64(o.At.Minute())/60
+		}
+	}
+	hour := int(math.Round(sum/float64(byDay[day]))) % 24
+	return Weekly{EveryWeeks: every, Weekday: day, Hour: hour, Share: math.Round(share*100) / 100}, true
 }

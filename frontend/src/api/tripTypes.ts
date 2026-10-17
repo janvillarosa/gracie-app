@@ -84,6 +84,8 @@ export type TripFields = {
   // One of the House icons (the same set lists use); shown on the trip's sheet.
   icon?: string
   stops?: Place[]
+  // User ids of who is going; absent means the whole House.
+  travellers?: string[]
   days?: Record<string, string>
 }
 

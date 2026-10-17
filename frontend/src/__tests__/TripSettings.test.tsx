@@ -3,9 +3,11 @@ import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { shortRange } from '@lib/trips/schedule'
+import { goingText } from '@pages/TripSettings'
 import { server, tripServer } from '../testServer'
 import {
   ME,
+  MIA,
   lisbonTrip,
   makeTrip,
   meState,
@@ -298,6 +300,60 @@ describe('Trip settings: When', () => {
     await userEvent.click(within(sheet).getByRole('button', { name: 'Clear dates' }))
     await waitFor(() => expect(t()?.start_date ?? null).toBeNull())
     expect(t()?.end_date ?? null).toBeNull()
+  })
+})
+
+describe("Trip settings: who's going", () => {
+  it('names the group in plain words', () => {
+    const members = [
+      { user_id: ME, name: 'Jan' },
+      { user_id: MIA, name: 'Mia' },
+      { user_id: 'user_sam', name: 'Sam' },
+    ]
+    expect(goingText([], ME, members)).toBe('Everyone')
+    expect(goingText([ME], ME, members)).toBe('Just you')
+    expect(goingText([MIA, ME], ME, members)).toBe('Mia and you')
+    expect(goingText([MIA, 'user_sam'], ME, members)).toBe('Mia and Sam')
+    expect(goingText([ME, MIA, 'user_sam'], ME, members)).toBe('Mia, Sam and you')
+  })
+
+  it('says Everyone by default and saves a smaller group through the outbox', async () => {
+    seed(TRIP)
+    settings()
+    const row = (await screen.findByText("Who's going")).closest('button') as HTMLElement
+    expect(within(row).getByText('Everyone')).toBeInTheDocument()
+    await userEvent.click(row)
+    const group = await screen.findByRole('group', { name: "Who's going" })
+    expect(within(group).getByRole('button', { name: 'Everyone' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    await userEvent.click(within(group).getByRole('button', { name: 'Mia' }))
+    await waitFor(() => expect(serverTrip()?.fields.travellers).toEqual([MIA]))
+    expect(within(group).getByRole('button', { name: 'Mia' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    expect(within(group).getByRole('button', { name: 'Everyone' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    )
+  })
+
+  it('goes back to the whole House when everyone is picked, or the last person is unpicked', async () => {
+    seed({ ...TRIP, travellers: [ME] })
+    settings()
+    expect(await screen.findByText('Just you')).toBeInTheDocument()
+    await userEvent.click(screen.getByText("Who's going"))
+    const group = await screen.findByRole('group', { name: "Who's going" })
+    await userEvent.click(within(group).getByRole('button', { name: 'Mia' }))
+    // Both members picked is the whole House.
+    await waitFor(() => expect(serverTrip()?.fields.travellers).toBeUndefined())
+    // From Everyone, a name means just that person; unpicking the last one is Everyone again.
+    await userEvent.click(within(group).getByRole('button', { name: 'Mia' }))
+    await waitFor(() => expect(serverTrip()?.fields.travellers).toEqual([MIA]))
+    await userEvent.click(within(group).getByRole('button', { name: 'Mia' }))
+    await waitFor(() => expect(serverTrip()?.fields.travellers).toBeUndefined())
   })
 })
 

@@ -4,6 +4,8 @@ import (
 	"context"
 	"strings"
 	"time"
+
+	"github.com/janvillarosa/gracie-app/backend/internal/analytics/predict"
 )
 
 // DocUpdate is a storage-agnostic update to one aggregate document. Every operation is
@@ -27,10 +29,11 @@ type Batch struct {
 	Keys    map[string]*DocUpdate // key_stats docs
 	Dirty   map[string]struct{}   // subjects ("u:<id>", "h:<room>") whose profile needs recomputing
 	Touched map[string]KeyRef     // keys whose intervals need recomputing, by key_stats id
+	Requeue map[string]struct{}   // rooms whose every key is marked stale (RequeueRoom events)
 }
 
 func NewBatch() *Batch {
-	return &Batch{Periods: map[string]*DocUpdate{}, Keys: map[string]*DocUpdate{}, Dirty: map[string]struct{}{}, Touched: map[string]KeyRef{}}
+	return &Batch{Periods: map[string]*DocUpdate{}, Keys: map[string]*DocUpdate{}, Dirty: map[string]struct{}{}, Touched: map[string]KeyRef{}, Requeue: map[string]struct{}{}}
 }
 
 func (b *Batch) period(id string) *DocUpdate {
@@ -62,7 +65,9 @@ func (k KeyRef) ID() string { return k.RoomID + ":" + k.SubjectType + ":" + k.Ke
 // ForecastVersion is the version of the logic that builds KeyIntervals (rhythm and add forecast).
 // Bump it whenever that logic changes: the worker then rebuilds every older forecast from the
 // stored history, so a change takes effect without waiting for each key's next event.
-const ForecastVersion = 2 // 2: skip-aware, recent-cycle forecasts with repeating windows
+// 2: skip-aware, recent-cycle forecasts with repeating windows.
+// 3: home time: gaps, due dates and windows leave out the spans the whole house was away (trips).
+const ForecastVersion = 3
 
 // KeyIntervals is the recomputed rhythm of one key.
 type KeyIntervals struct {
@@ -78,12 +83,22 @@ type KeyIntervals struct {
 	// Add forecasts the next time the thing is asked for, with its backtested track record.
 	// Nil until there is enough history. Smart suggestions read only this.
 	Add *AddForecast `bson:"add,omitempty" json:"add,omitempty"`
+	// Weekly is set when the thing follows the calendar (bin day): done on one local weekday every
+	// one or two weeks. Learned from completions, or requests when completions are thin.
+	Weekly *predict.Weekly `bson:"weekly,omitempty" json:"weekly,omitempty"`
+	// LastBy is who completed it last and Turns who completed it, newest first (up to
+	// predict.MaxTurns; real people only, system:* actors are left out). predict.NextTurn reads them.
+	LastBy string   `bson:"last_by,omitempty" json:"last_by,omitempty"`
+	Turns  []string `bson:"turns,omitempty" json:"turns,omitempty"`
 }
 
 // AddForecast is a stored predict.Forecast: when the thing is next expected to be added, the
 // window a suggestion for it is shown in, and how often that window was right in the past.
 type AddForecast struct {
-	Series   string    `bson:"series" json:"series"` // "added" or "checked"
+	Series string `bson:"series" json:"series"` // "added" or "checked"
+	// Clock is "home" when the rhythm was measured in home time (the house's trips left out), ""
+	// on the wall clock. Projecting the forecast forward must use the same clock.
+	Clock    string    `bson:"clock,omitempty" json:"clock,omitempty"`
 	N        int       `bson:"n" json:"n"`
 	EWMADays float64   `bson:"ewma_days" json:"ewma_days"`
 	CV       float64   `bson:"cv" json:"cv"`
@@ -101,6 +116,16 @@ type AddForecast struct {
 	// Windows are every window the forecast may show: the first (OpensAt..ClosesAt) and one per
 	// skipped cycle it rides through. A suggestion is shown while now is inside any of them.
 	Windows []ForecastWindow `bson:"windows,omitempty" json:"windows,omitempty"`
+}
+
+// Forecast turns the stored forecast back into the predict form (for NeedBy).
+func (a AddForecast) Forecast() predict.Forecast {
+	f := predict.Forecast{Series: a.Series, Clock: a.Clock, N: a.N, EWMADays: a.EWMADays, CV: a.CV, LastAt: a.LastAt,
+		DueAt: a.DueAt, OpensAt: a.OpensAt, ClosesAt: a.ClosesAt, Trials: a.Trials, Hits: a.Hits, Score: a.Score}
+	for _, w := range a.Windows {
+		f.Windows = append(f.Windows, predict.Span{Opens: w.Opens, Closes: w.Closes})
+	}
+	return f
 }
 
 // ForecastWindow is one suggestion window.
@@ -130,8 +155,9 @@ type AggregateRepository interface {
 	// AcquireLease takes the rollup lease for owner when it is free, expired or already
 	// held by owner, and returns the current watermark (zero time before the first fold).
 	AcquireLease(ctx context.Context, owner string, ttl time.Duration, now time.Time) (watermark time.Time, ok bool, err error)
-	// ApplyBatch writes the aggregates, marks subjects dirty and advances the watermark in
-	// ONE transaction, so a crash can never apply a window twice or skip one.
+	// ApplyBatch writes the aggregates, marks subjects dirty, requeues the batch's rooms
+	// (RequeueRoomKeys) and advances the watermark in ONE transaction, so a crash can never apply
+	// a window twice or skip one.
 	ApplyBatch(ctx context.Context, b *Batch, owner string, watermark time.Time) error
 	ReleaseLease(ctx context.Context, owner string) error
 	// SetKeyIntervals replaces the interval fields of one key_stats document.
@@ -155,6 +181,12 @@ type AggregateRepository interface {
 	// UpcomingKeys returns keys with a suggestion window that opens by opensBefore and is still open
 	// at now (opensBefore == now: open right now).
 	UpcomingKeys(ctx context.Context, roomID, subjectType string, now, opensBefore time.Time, minScore, maxCV float64, limit int) ([]KeyStat, error)
+	// RequeueRoomKeys marks every computed key of a room stale (intervals.v = 0), so RefreshStale
+	// rebuilds them. It returns how many it marked.
+	RequeueRoomKeys(ctx context.Context, roomID string) (int, error)
+	// ForecastKeys returns up to limit keys of a room (any subject type) with an add forecast whose
+	// first window opens by opensBefore, soonest first.
+	ForecastKeys(ctx context.Context, roomID string, opensBefore time.Time, limit int) ([]KeyStat, error)
 	// StaleKeys returns up to limit keys whose intervals were computed with an older (or no)
 	// ForecastVersion than version.
 	StaleKeys(ctx context.Context, version, limit int) ([]KeyRef, error)

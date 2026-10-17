@@ -72,3 +72,54 @@ func TestEmitWithoutRecorderIsNoop(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestItemAddedRecordsParsedQuantityNeverText(t *testing.T) {
+	m := memstore.Compose()
+	us := NewUserService(m.Users, m.Rooms, m.Tx)
+	ls := NewListService(m.Users, m.Rooms, m.Lists, m.Items, categorization.NewKeywordCategorizer(categorization.GroceryAnchors))
+	reg := analytics.NewRegistry()
+	RegisterAnalyticsEvents(reg)
+	rec := analytics.NewMemRecorder(reg)
+	ls.UseRecorder(rec)
+	ctx := context.Background()
+	cu, _ := us.CreateUserWithSoloRoom(ctx, "A")
+	roomID := *cu.User.RoomID
+	l, _ := ls.CreateList(ctx, cu.User, roomID, "Groceries", "", "")
+	cases := []struct {
+		desc, qty, unit string
+		milli           any
+		wantUnit        any
+	}{
+		{"milk", "2", "", int64(2000), "count"},
+		{"rice", "1.5 kg", "", int64(1500), "kg"},
+		{"flour", "1.5", "kg", int64(1500), "kg"},
+		{"2 bottles milk", "", "", int64(2000), "bottle"},
+		{"bread", "a few", "", nil, nil},
+		{"eggs", "", "", nil, nil},
+	}
+	for _, c := range cases {
+		if _, err := ls.CreateItem(ctx, cu.User, roomID, l.ListID, c.desc, c.qty, c.unit, ""); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var adds []analytics.Event
+	for _, e := range rec.Events() {
+		if e.Name == "item.added" {
+			adds = append(adds, e)
+		}
+	}
+	for i, c := range cases {
+		e := adds[i]
+		if e.Props["qty"] != c.milli || e.Props["unit"] != c.wantUnit {
+			t.Errorf("%q %q %q: props %v", c.desc, c.qty, c.unit, e.Props)
+		}
+		for k, v := range e.Props {
+			if s, ok := v.(string); ok && (s == c.qty || s == c.desc) && s != "" {
+				t.Errorf("typed text %q leaked as %s", s, k)
+			}
+		}
+	}
+	if adds[0].Key != "milk" || adds[3].Key != "milk" {
+		t.Fatalf("the key is unchanged by the amount: %q %q", adds[0].Key, adds[3].Key)
+	}
+}

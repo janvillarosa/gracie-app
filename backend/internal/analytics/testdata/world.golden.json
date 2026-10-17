@@ -1,0 +1,1491 @@
+{
+ "eval": {
+  "home": {
+   "early": 33,
+   "hits": 566,
+   "late": 16,
+   "precision": 0.92,
+   "predictions": 615,
+   "qualifying": 28
+  },
+  "wall": {
+   "early": 32,
+   "hits": 562,
+   "late": 15,
+   "precision": 0.923,
+   "predictions": 609,
+   "qualifying": 27
+  }
+ },
+ "houses": [
+  {
+   "persona": "weekend-couple",
+   "away_spans": 2,
+   "keys": [
+    {
+     "key": "milk",
+     "kind": "staple",
+     "n": 45,
+     "source": "complete",
+     "days": 7.065,
+     "cv": 0.238,
+     "series": "added",
+     "score": 0.83,
+     "confident": true,
+     "due": "2026-09-23T18:38:17Z",
+     "weekly": {
+      "every_weeks": 1,
+      "weekday": 6,
+      "hour": 10,
+      "share": 1
+     },
+     "next_turn": "room_weekend-couple_a"
+    },
+    {
+     "key": "eggs",
+     "kind": "staple",
+     "n": 45,
+     "source": "complete",
+     "days": 7.065,
+     "cv": 0.239,
+     "series": "added",
+     "score": 0.661,
+     "confident": true,
+     "due": "2026-09-22T23:46:37Z",
+     "weekly": {
+      "every_weeks": 1,
+      "weekday": 6,
+      "hour": 10,
+      "share": 1
+     },
+     "next_turn": "room_weekend-couple_b"
+    },
+    {
+     "key": "bread",
+     "kind": "staple",
+     "n": 45,
+     "source": "complete",
+     "days": 7.061,
+     "cv": 0.239,
+     "series": "added",
+     "score": 0.661,
+     "confident": true,
+     "due": "2026-09-24T08:38:06Z",
+     "weekly": {
+      "every_weeks": 1,
+      "weekday": 6,
+      "hour": 10,
+      "share": 1
+     },
+     "next_turn": "room_weekend-couple_b"
+    },
+    {
+     "key": "coffee",
+     "kind": "staple",
+     "n": 25,
+     "source": "complete",
+     "days": 13.369,
+     "cv": 0.117,
+     "series": "added",
+     "score": 0.524,
+     "confident": false,
+     "due": "2026-10-04T01:27:06Z",
+     "weekly": {
+      "every_weeks": 2,
+      "weekday": 6,
+      "hour": 10,
+      "share": 1
+     },
+     "next_turn": "room_weekend-couple_b"
+    },
+    {
+     "key": "olive oil",
+     "kind": "staple",
+     "n": 11,
+     "source": "complete",
+     "days": 27.67,
+     "cv": 0.154,
+     "series": "added",
+     "score": 0.196,
+     "confident": false,
+     "due": "2026-09-19T08:41:32Z",
+     "next_turn": "room_weekend-couple_a"
+    },
+    {
+     "key": "bananas",
+     "kind": "staple",
+     "n": 45,
+     "source": "complete",
+     "days": 7.065,
+     "cv": 0.239,
+     "series": "added",
+     "score": 0.83,
+     "confident": true,
+     "due": "2026-09-24T05:21:02Z",
+     "weekly": {
+      "every_weeks": 1,
+      "weekday": 6,
+      "hour": 10,
+      "share": 1
+     },
+     "next_turn": "room_weekend-couple_a"
+    },
+    {
+     "key": "chocolate",
+     "kind": "irregular",
+     "n": 34,
+     "source": "complete",
+     "days": 8.829,
+     "cv": 0.34,
+     "series": "added",
+     "score": 0.196,
+     "confident": false,
+     "due": "2026-09-25T15:13:12Z",
+     "weekly": {
+      "every_weeks": 1,
+      "weekday": 6,
+      "hour": 10,
+      "share": 1
+     },
+     "next_turn": "room_weekend-couple_b"
+    },
+    {
+     "key": "duct tape",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_weekend-couple_b"
+    },
+    {
+     "key": "wrapping paper",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_weekend-couple_a"
+    },
+    {
+     "key": "hand warmers",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_weekend-couple_b"
+    },
+    {
+     "key": "birthday candles",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_weekend-couple_a"
+    },
+    {
+     "key": "paint brush",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_weekend-couple_b"
+    },
+    {
+     "key": "doormat",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_weekend-couple_a"
+    },
+    {
+     "key": "bike pump",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_weekend-couple_a"
+    },
+    {
+     "key": "kettle descaler",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_weekend-couple_a"
+    },
+    {
+     "key": "picnic blanket",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_weekend-couple_a"
+    },
+    {
+     "key": "picture hook",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_weekend-couple_b"
+    },
+    {
+     "key": "ice cube tray",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_weekend-couple_a"
+    },
+    {
+     "key": "candle",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_weekend-couple_a"
+    },
+    {
+     "key": "plant pot",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_weekend-couple_a"
+    },
+    {
+     "key": "laundry basket",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_weekend-couple_b"
+    },
+    {
+     "key": "padlock",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_weekend-couple_b"
+    },
+    {
+     "key": "batteries",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_weekend-couple_a"
+    },
+    {
+     "key": "garden gloves",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_weekend-couple_a"
+    },
+    {
+     "key": "envelopes",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_weekend-couple_a"
+    },
+    {
+     "key": "corkscrew",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_weekend-couple_a"
+    },
+    {
+     "key": "water filter",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_weekend-couple_a"
+    },
+    {
+     "key": "napkins",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_weekend-couple_b"
+    },
+    {
+     "key": "glue",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_weekend-couple_a"
+    },
+    {
+     "key": "spatula",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_weekend-couple_b"
+    },
+    {
+     "key": "sewing kit",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_weekend-couple_a"
+    },
+    {
+     "key": "torch",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_weekend-couple_a"
+    }
+   ],
+   "runs": {
+    "groceries": {
+     "cv": 0.216,
+     "interval_days": 7.063,
+     "next": "2026-10-01T08:00:00Z",
+     "runs": 21
+    }
+   }
+  },
+  {
+   "persona": "bin-day",
+   "away_spans": 1,
+   "keys": [
+    {
+     "key": "bin bags",
+     "kind": "calendar",
+     "n": 26,
+     "source": "complete",
+     "days": 14.01,
+     "cv": 0.055,
+     "series": "checked",
+     "score": 0.83,
+     "confident": true,
+     "due": "2026-10-14T00:20:59Z",
+     "weekly": {
+      "every_weeks": 2,
+      "weekday": 2,
+      "hour": 20,
+      "share": 1
+     },
+     "next_turn": "room_bin-day_a"
+    },
+    {
+     "key": "recycling",
+     "kind": "calendar",
+     "n": 52,
+     "source": "complete",
+     "days": 6.997,
+     "cv": 0.06,
+     "series": "checked",
+     "score": 0.83,
+     "confident": true,
+     "due": "2026-10-06T23:51:03Z",
+     "weekly": {
+      "every_weeks": 1,
+      "weekday": 2,
+      "hour": 20,
+      "share": 1
+     },
+     "next_turn": "room_bin-day_b"
+    },
+    {
+     "key": "milk",
+     "kind": "staple",
+     "n": 43,
+     "source": "complete",
+     "days": 7.301,
+     "cv": 0.368,
+     "series": "added",
+     "score": 0.83,
+     "confident": true,
+     "due": "2026-10-03T20:54:18Z",
+     "weekly": {
+      "every_weeks": 1,
+      "weekday": 0,
+      "hour": 11,
+      "share": 1
+     },
+     "next_turn": "room_bin-day_b"
+    },
+    {
+     "key": "cereal",
+     "kind": "staple",
+     "n": 24,
+     "source": "complete",
+     "days": 15.435,
+     "cv": 0.234,
+     "series": "added",
+     "score": 0.294,
+     "confident": false,
+     "due": "2026-09-27T14:55:18Z",
+     "weekly": {
+      "every_weeks": 2,
+      "weekday": 0,
+      "hour": 11,
+      "share": 1
+     },
+     "next_turn": "room_bin-day_b"
+    }
+   ]
+  },
+  {
+   "persona": "solo-irregular",
+   "away_spans": 0,
+   "keys": [
+    {
+     "key": "instant noodles",
+     "kind": "irregular",
+     "n": 17,
+     "source": "complete",
+     "days": 23.941,
+     "cv": 0.778,
+     "series": "added",
+     "score": 0.403,
+     "confident": false,
+     "due": "2026-09-17T22:35:17Z"
+    },
+    {
+     "key": "eggs",
+     "kind": "irregular",
+     "n": 17,
+     "source": "complete",
+     "days": 20.569,
+     "cv": 0.861,
+     "series": "added",
+     "score": 0.109,
+     "confident": false,
+     "due": "2026-10-09T00:21:30Z"
+    },
+    {
+     "key": "soda",
+     "kind": "irregular",
+     "n": 15,
+     "source": "complete",
+     "days": 24.865,
+     "cv": 0.72,
+     "series": "added",
+     "confident": false,
+     "due": "2026-10-18T15:25:08Z"
+    },
+    {
+     "key": "bread",
+     "kind": "irregular",
+     "n": 13,
+     "source": "complete",
+     "days": 27.467,
+     "cv": 0.776,
+     "series": "added",
+     "score": 0.196,
+     "confident": false,
+     "due": "2026-10-14T00:53:10Z"
+    },
+    {
+     "key": "tuna",
+     "kind": "irregular",
+     "n": 18,
+     "source": "complete",
+     "days": 8.899,
+     "cv": 1.056,
+     "series": "added",
+     "score": 0.109,
+     "confident": false,
+     "due": "2026-10-08T04:30:59Z"
+    },
+    {
+     "key": "shampoo",
+     "kind": "irregular",
+     "n": 15,
+     "source": "complete",
+     "days": 17.401,
+     "cv": 0.735,
+     "series": "added",
+     "confident": false,
+     "due": "2026-10-16T02:01:34Z"
+    },
+    {
+     "key": "rice",
+     "kind": "irregular",
+     "n": 16,
+     "source": "complete",
+     "days": 22.961,
+     "cv": 0.904,
+     "series": "added",
+     "score": 0.038,
+     "confident": false,
+     "due": "2026-09-28T00:35:23Z"
+    },
+    {
+     "key": "coffee",
+     "kind": "irregular",
+     "n": 12,
+     "source": "complete",
+     "days": 36.515,
+     "cv": 0.769,
+     "series": "added",
+     "score": 0.196,
+     "confident": false,
+     "due": "2026-10-23T13:52:48Z"
+    }
+   ]
+  },
+  {
+   "persona": "habit-changer",
+   "away_spans": 1,
+   "keys": [
+    {
+     "key": "milk",
+     "kind": "staple",
+     "n": 73,
+     "source": "complete",
+     "days": 3.655,
+     "cv": 0.424,
+     "series": "added",
+     "score": 0.661,
+     "confident": true,
+     "due": "2026-10-02T11:19:25Z",
+     "next_turn": "room_habit-changer_b"
+    },
+    {
+     "key": "coffee",
+     "kind": "staple",
+     "n": 36,
+     "source": "complete",
+     "days": 6.999,
+     "cv": 0.382,
+     "series": "added",
+     "score": 0.524,
+     "confident": false,
+     "due": "2026-09-28T16:34:24Z",
+     "next_turn": "room_habit-changer_a"
+    },
+    {
+     "key": "rice",
+     "kind": "staple",
+     "n": 17,
+     "source": "complete",
+     "days": 21.803,
+     "cv": 0.101,
+     "series": "added",
+     "score": 0.403,
+     "confident": false,
+     "due": "2026-10-15T02:42:26Z",
+     "next_turn": "room_habit-changer_b"
+    }
+   ],
+   "runs": {
+    "groceries": {
+     "cv": 0.001,
+     "interval_days": 21,
+     "next": "2026-10-01T16:00:00Z",
+     "runs": 6
+    }
+   }
+  },
+  {
+   "persona": "lookalikes",
+   "away_spans": 1,
+   "keys": [
+    {
+     "key": "yogurt",
+     "kind": "staple",
+     "n": 22,
+     "source": "complete",
+     "days": 12.608,
+     "cv": 0.633,
+     "series": "added",
+     "score": 0.808,
+     "confident": true,
+     "due": "2026-10-02T12:48:59Z",
+     "weekly": {
+      "every_weeks": 2,
+      "weekday": 6,
+      "hour": 10,
+      "share": 1
+     },
+     "next_turn": "room_lookalikes_a"
+    },
+    {
+     "key": "tomatoes",
+     "kind": "staple",
+     "n": 25,
+     "source": "complete",
+     "days": 20.962,
+     "cv": 0.864,
+     "series": "added",
+     "score": 0.83,
+     "confident": true,
+     "due": "2026-10-01T00:53:37Z",
+     "weekly": {
+      "every_weeks": 1,
+      "weekday": 6,
+      "hour": 10,
+      "share": 1
+     },
+     "next_turn": "room_lookalikes_a"
+    },
+    {
+     "key": "kombucha",
+     "kind": "staple",
+     "n": 49,
+     "source": "complete",
+     "days": 6.999,
+     "cv": 0.168,
+     "series": "added",
+     "score": 0.524,
+     "confident": false,
+     "due": "2026-10-01T01:09:44Z",
+     "weekly": {
+      "every_weeks": 1,
+      "weekday": 6,
+      "hour": 10,
+      "share": 1
+     },
+     "next_turn": "room_lookalikes_a"
+    },
+    {
+     "key": "cheese",
+     "kind": "staple",
+     "n": 36,
+     "source": "complete",
+     "days": 10.674,
+     "cv": 0.346,
+     "series": "added",
+     "score": 0.403,
+     "confident": false,
+     "due": "2026-09-24T19:27:43Z",
+     "weekly": {
+      "every_weeks": 1,
+      "weekday": 6,
+      "hour": 10,
+      "share": 1
+     },
+     "next_turn": "room_lookalikes_a"
+    }
+   ],
+   "runs": {
+    "groceries": {
+     "cv": 0.141,
+     "interval_days": 6.999,
+     "next": "2026-10-03T06:00:00Z",
+     "runs": 24
+    }
+   }
+  },
+  {
+   "persona": "frequent-travellers",
+   "away_spans": 12,
+   "keys": [
+    {
+     "key": "milk",
+     "kind": "staple",
+     "n": 37,
+     "source": "complete",
+     "days": 7.792,
+     "cv": 0.312,
+     "series": "added",
+     "score": 0.524,
+     "confident": false,
+     "due": "2026-10-02T08:35:37Z",
+     "weekly": {
+      "every_weeks": 1,
+      "weekday": 6,
+      "hour": 9,
+      "share": 1
+     },
+     "next_turn": "room_frequent-travellers_a"
+    },
+    {
+     "key": "sourdough",
+     "kind": "staple",
+     "n": 38,
+     "source": "complete",
+     "days": 7.791,
+     "cv": 0.323,
+     "series": "added",
+     "clock": "home",
+     "score": 0.83,
+     "confident": true,
+     "due": "2026-10-02T18:35:54Z",
+     "weekly": {
+      "every_weeks": 1,
+      "weekday": 6,
+      "hour": 9,
+      "share": 1
+     },
+     "next_turn": "room_frequent-travellers_a"
+    },
+    {
+     "key": "coffee beans",
+     "kind": "staple",
+     "n": 21,
+     "source": "complete",
+     "days": 15.894,
+     "cv": 0.21,
+     "series": "added",
+     "score": 0.196,
+     "confident": false,
+     "due": "2026-10-04T04:35:59Z",
+     "weekly": {
+      "every_weeks": 2,
+      "weekday": 6,
+      "hour": 9,
+      "share": 1
+     },
+     "next_turn": "room_frequent-travellers_b"
+    }
+   ],
+   "runs": {
+    "groceries": {
+     "cv": 0.226,
+     "interval_days": 15.507,
+     "next": "2026-10-03T22:00:00Z",
+     "runs": 9
+    }
+   }
+  },
+  {
+   "persona": "new-house",
+   "away_spans": 0,
+   "keys": [
+    {
+     "key": "milk",
+     "kind": "thin",
+     "n": 3,
+     "source": "complete",
+     "days": 7.007,
+     "cv": 0.001,
+     "series": "added",
+     "confident": false,
+     "due": "2026-10-02T03:53:47Z",
+     "next_turn": "room_new-house_b"
+    },
+    {
+     "key": "bread",
+     "kind": "thin",
+     "n": 3,
+     "source": "complete",
+     "days": 7.007,
+     "cv": 0.001,
+     "series": "added",
+     "confident": false,
+     "due": "2026-10-02T03:53:47Z",
+     "next_turn": "room_new-house_b"
+    },
+    {
+     "key": "eggs",
+     "kind": "thin",
+     "n": 3,
+     "source": "complete",
+     "days": 7.007,
+     "cv": 0.001,
+     "series": "added",
+     "confident": false,
+     "due": "2026-10-02T03:53:47Z",
+     "next_turn": "room_new-house_b"
+    }
+   ],
+   "runs": {
+    "groceries": {
+     "cv": 0.001,
+     "interval_days": 7.007,
+     "next": "2026-10-03T08:00:00Z",
+     "runs": 3
+    }
+   }
+  },
+  {
+   "persona": "bursty",
+   "away_spans": 0,
+   "keys": [
+    {
+     "key": "milk",
+     "kind": "staple",
+     "n": 47,
+     "source": "complete",
+     "days": 7.095,
+     "cv": 0.259,
+     "series": "added",
+     "score": 0.83,
+     "confident": true,
+     "due": "2026-10-02T20:13:47Z",
+     "weekly": {
+      "every_weeks": 1,
+      "weekday": 5,
+      "hour": 18,
+      "share": 1
+     },
+     "next_turn": "room_bursty_a"
+    },
+    {
+     "key": "apples",
+     "kind": "staple",
+     "n": 48,
+     "source": "complete",
+     "days": 7.098,
+     "cv": 0.257,
+     "series": "added",
+     "score": 0.83,
+     "confident": true,
+     "due": "2026-10-01T11:26:46Z",
+     "weekly": {
+      "every_weeks": 1,
+      "weekday": 5,
+      "hour": 18,
+      "share": 1
+     },
+     "next_turn": "room_bursty_b"
+    }
+   ],
+   "runs": {
+    "groceries": {
+     "cv": 0.592,
+     "interval_days": 9.103,
+     "next": "2026-10-04T14:00:00Z",
+     "runs": 15
+    }
+   }
+  },
+  {
+   "persona": "big-family",
+   "away_spans": 1,
+   "keys": [
+    {
+     "key": "rice",
+     "kind": "staple",
+     "n": 49,
+     "source": "complete",
+     "days": 7.102,
+     "cv": 0.191,
+     "series": "added",
+     "score": 0.524,
+     "confident": false,
+     "due": "2026-10-02T08:41:07Z",
+     "weekly": {
+      "every_weeks": 1,
+      "weekday": 0,
+      "hour": 16,
+      "share": 1
+     },
+     "next_turn": "room_big-family_b"
+    },
+    {
+     "key": "drinking water",
+     "kind": "staple",
+     "n": 49,
+     "source": "complete",
+     "days": 7.101,
+     "cv": 0.191,
+     "series": "added",
+     "score": 0.661,
+     "confident": true,
+     "due": "2026-10-01T17:27:48Z",
+     "weekly": {
+      "every_weeks": 1,
+      "weekday": 0,
+      "hour": 16,
+      "share": 1
+     },
+     "next_turn": "room_big-family_d"
+    },
+    {
+     "key": "eggs",
+     "kind": "staple",
+     "n": 49,
+     "source": "complete",
+     "days": 7.102,
+     "cv": 0.192,
+     "series": "added",
+     "score": 0.661,
+     "confident": true,
+     "due": "2026-10-02T20:49:01Z",
+     "weekly": {
+      "every_weeks": 1,
+      "weekday": 0,
+      "hour": 16,
+      "share": 1
+     },
+     "next_turn": "room_big-family_d"
+    },
+    {
+     "key": "chicken",
+     "kind": "staple",
+     "n": 49,
+     "source": "complete",
+     "days": 7.099,
+     "cv": 0.192,
+     "series": "added",
+     "score": 0.83,
+     "confident": true,
+     "due": "2026-10-04T02:05:03Z",
+     "weekly": {
+      "every_weeks": 1,
+      "weekday": 0,
+      "hour": 16,
+      "share": 1
+     },
+     "next_turn": "room_big-family_d"
+    },
+    {
+     "key": "dish soap",
+     "kind": "staple",
+     "n": 17,
+     "source": "complete",
+     "days": 23.785,
+     "cv": 0.139,
+     "series": "added",
+     "score": 0.403,
+     "confident": false,
+     "due": "2026-10-10T08:08:54Z",
+     "next_turn": "room_big-family_d"
+    },
+    {
+     "key": "vitamins",
+     "kind": "staple",
+     "n": 13,
+     "source": "complete",
+     "days": 26.199,
+     "cv": 0.06,
+     "series": "added",
+     "score": 0.83,
+     "confident": true,
+     "due": "2026-10-02T16:12:29Z",
+     "next_turn": "room_big-family_a"
+    },
+    {
+     "key": "paracetamol",
+     "kind": "irregular",
+     "n": 6,
+     "source": "complete",
+     "days": 62.716,
+     "cv": 0.182,
+     "series": "added",
+     "score": 0.322,
+     "confident": false,
+     "due": "2026-09-30T23:20:46Z",
+     "next_turn": "room_big-family_d"
+    },
+    {
+     "key": "fly spray",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_big-family_a"
+    },
+    {
+     "key": "thermometer",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_big-family_a"
+    },
+    {
+     "key": "shoe polish",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_big-family_a"
+    },
+    {
+     "key": "extension cord",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_big-family_a"
+    },
+    {
+     "key": "sunscreen",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_big-family_a"
+    },
+    {
+     "key": "measuring tape",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_big-family_b"
+    },
+    {
+     "key": "notebook",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_big-family_a"
+    },
+    {
+     "key": "first aid kit",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_big-family_b"
+    },
+    {
+     "key": "lunch box",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_big-family_a"
+    },
+    {
+     "key": "tea towels",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_big-family_b"
+    },
+    {
+     "key": "umbrella",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_big-family_a"
+    },
+    {
+     "key": "phone charger",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_big-family_a"
+    },
+    {
+     "key": "duct tape",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_big-family_a"
+    },
+    {
+     "key": "wrapping paper",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_big-family_b"
+    },
+    {
+     "key": "hand warmers",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_big-family_b"
+    },
+    {
+     "key": "birthday candles",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_big-family_a"
+    },
+    {
+     "key": "paint brush",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_big-family_a"
+    },
+    {
+     "key": "doormat",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_big-family_a"
+    },
+    {
+     "key": "bike pump",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_big-family_a"
+    },
+    {
+     "key": "kettle descaler",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_big-family_a"
+    },
+    {
+     "key": "picnic blanket",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_big-family_a"
+    },
+    {
+     "key": "picture hook",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_big-family_a"
+    },
+    {
+     "key": "ice cube tray",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_big-family_a"
+    },
+    {
+     "key": "candle",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_big-family_a"
+    },
+    {
+     "key": "plant pot",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_big-family_a"
+    },
+    {
+     "key": "laundry basket",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_big-family_a"
+    },
+    {
+     "key": "padlock",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_big-family_b"
+    },
+    {
+     "key": "batteries",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_big-family_a"
+    },
+    {
+     "key": "garden gloves",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_big-family_a"
+    },
+    {
+     "key": "envelopes",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_big-family_b"
+    },
+    {
+     "key": "corkscrew",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_big-family_a"
+    },
+    {
+     "key": "water filter",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_big-family_a"
+    },
+    {
+     "key": "napkins",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_big-family_b"
+    },
+    {
+     "key": "glue",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_big-family_a"
+    },
+    {
+     "key": "spatula",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_big-family_b"
+    },
+    {
+     "key": "sewing kit",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_big-family_b"
+    },
+    {
+     "key": "torch",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_big-family_a"
+    },
+    {
+     "key": "cookie cutters",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_big-family_a"
+    },
+    {
+     "key": "light bulb",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_big-family_a"
+    },
+    {
+     "key": "party hats",
+     "kind": "one-off",
+     "n": 1,
+     "source": "complete",
+     "days": 0,
+     "cv": 0,
+     "confident": false,
+     "next_turn": "room_big-family_a"
+    }
+   ],
+   "runs": {
+    "groceries": {
+     "cv": 0.196,
+     "interval_days": 7.102,
+     "next": "2026-10-04T07:00:00Z",
+     "runs": 24
+    }
+   }
+  },
+  {
+   "persona": "monthly-stocker",
+   "away_spans": 0,
+   "keys": [
+    {
+     "key": "toilet paper",
+     "kind": "staple",
+     "n": 13,
+     "source": "complete",
+     "days": 27.989,
+     "cv": 0.001,
+     "series": "added",
+     "score": 0.83,
+     "confident": true,
+     "due": "2026-10-02T14:05:21Z"
+    },
+    {
+     "key": "detergent",
+     "kind": "staple",
+     "n": 13,
+     "source": "complete",
+     "days": 27.987,
+     "cv": 0.001,
+     "series": "added",
+     "score": 0.524,
+     "confident": false,
+     "due": "2026-10-03T10:05:43Z"
+    },
+    {
+     "key": "rice",
+     "kind": "staple",
+     "n": 12,
+     "source": "complete",
+     "days": 27.988,
+     "cv": 0.001,
+     "series": "added",
+     "score": 0.661,
+     "confident": true,
+     "due": "2026-10-03T09:21:13Z"
+    }
+   ],
+   "runs": {
+    "stock-up": {
+     "cv": 0.001,
+     "interval_days": 27.999,
+     "next": "2026-10-03T16:00:00Z",
+     "runs": 6
+    }
+   }
+  }
+ ]
+}

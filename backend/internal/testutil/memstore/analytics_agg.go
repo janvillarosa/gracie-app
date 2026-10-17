@@ -75,8 +75,32 @@ func (r *AggRepo) ApplyBatch(_ context.Context, b *analytics.Batch, owner string
 	for s := range b.Dirty {
 		r.dirty[s] = true
 	}
+	for room := range b.Requeue {
+		r.requeueRoom(room)
+	}
 	r.watermark = watermark
 	return nil
+}
+
+func (r *AggRepo) RequeueRoomKeys(_ context.Context, roomID string) (int, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.requeueRoom(roomID), nil
+}
+
+// requeueRoom sets intervals.v = 0 on the room's computed keys (caller holds mu).
+func (r *AggRepo) requeueRoom(roomID string) int {
+	n := 0
+	for id, doc := range r.keys {
+		iv, ok := doc["intervals"].(analytics.KeyIntervals)
+		if !ok || !strings.HasPrefix(id, roomID+":") {
+			continue
+		}
+		iv.Version = 0
+		doc["intervals"] = iv
+		n++
+	}
+	return n
 }
 
 func (r *AggRepo) SetKeyIntervals(_ context.Context, id string, iv analytics.KeyIntervals) error {

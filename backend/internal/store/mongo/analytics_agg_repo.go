@@ -39,6 +39,7 @@ func (r *AggRepo) EnsureIndexes(ctx context.Context) error {
 		{Keys: bson.D{{Key: "room_id", Value: 1}, {Key: "subject_type", Value: 1}, {Key: "intervals.due_at", Value: 1}}},
 		{Keys: bson.D{{Key: "room_id", Value: 1}, {Key: "subject_type", Value: 1}, {Key: "last_at.added", Value: -1}}},
 		{Keys: bson.D{{Key: "room_id", Value: 1}, {Key: "subject_type", Value: 1}, {Key: "intervals.add.opens_at", Value: 1}}},
+		{Keys: bson.D{{Key: "room_id", Value: 1}, {Key: "intervals.add.opens_at", Value: 1}}}, // ForecastKeys (any subject)
 	})
 	return err
 }
@@ -153,8 +154,30 @@ func (r *AggRepo) ApplyBatch(ctx context.Context, b *analytics.Batch, owner stri
 				return err
 			}
 		}
+		for room := range b.Requeue {
+			if _, err := r.requeueRoom(txctx, room); err != nil {
+				return err
+			}
+		}
 		return nil
 	})
+}
+
+// RequeueRoomKeys marks every computed key of a room stale, so RefreshStale rebuilds it.
+func (r *AggRepo) RequeueRoomKeys(ctx context.Context, roomID string) (int, error) {
+	return r.requeueRoom(ctx, roomID)
+}
+
+// requeueRoom sets intervals.v = 0 on the room's keys that have intervals (one without is already
+// stale: StaleKeys matches a missing version). Served by the (room_id, subject_type, …) indexes.
+func (r *AggRepo) requeueRoom(ctx context.Context, roomID string) (int, error) {
+	res, err := r.keys().UpdateMany(ctx,
+		bson.D{{Key: "room_id", Value: roomID}, {Key: "intervals", Value: bson.D{{Key: "$exists", Value: true}}}},
+		bson.D{{Key: "$set", Value: bson.D{{Key: "intervals.v", Value: 0}}}})
+	if err != nil {
+		return 0, err
+	}
+	return int(res.ModifiedCount), nil
 }
 
 func (r *AggRepo) SetKeyIntervals(ctx context.Context, id string, iv analytics.KeyIntervals) error {
@@ -179,6 +202,16 @@ func (r *AggRepo) SetKeyIntervals(ctx context.Context, id string, iv analytics.K
 		set = append(set, bson.E{Key: "intervals.add", Value: a})
 	} else {
 		unset = append(unset, bson.E{Key: "intervals.add", Value: ""})
+	}
+	if iv.LastBy != "" {
+		set = append(set, bson.E{Key: "intervals.last_by", Value: iv.LastBy}, bson.E{Key: "intervals.turns", Value: iv.Turns})
+	} else {
+		unset = append(unset, bson.E{Key: "intervals.last_by", Value: ""}, bson.E{Key: "intervals.turns", Value: ""})
+	}
+	if iv.Weekly != nil {
+		set = append(set, bson.E{Key: "intervals.weekly", Value: *iv.Weekly})
+	} else {
+		unset = append(unset, bson.E{Key: "intervals.weekly", Value: ""})
 	}
 	update := bson.D{{Key: "$set", Value: set}}
 	if len(unset) > 0 {
@@ -340,6 +373,20 @@ func (r *AggRepo) UpcomingKeys(ctx context.Context, roomID, subjectType string, 
 			bson.D{{Key: "intervals.add.windows", Value: bson.D{{Key: "$elemMatch", Value: bson.D{{Key: "opens", Value: open}, {Key: "closes", Value: notClosed}}}}}},
 		}}}
 	cur, err := r.keys().Find(ctx, filter, options.Find().SetSort(bson.D{{Key: "intervals.add.score", Value: -1}, {Key: "key", Value: 1}}).SetLimit(int64(limit)))
+	if err != nil {
+		return nil, err
+	}
+	var out []analytics.KeyStat
+	if err := cur.All(ctx, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (r *AggRepo) ForecastKeys(ctx context.Context, roomID string, opensBefore time.Time, limit int) ([]analytics.KeyStat, error) {
+	filter := bson.D{{Key: "room_id", Value: roomID}, {Key: "intervals.add.opens_at", Value: bson.D{{Key: "$lte", Value: opensBefore.UTC()}}}}
+	cur, err := r.keys().Find(ctx, filter, options.Find().
+		SetSort(bson.D{{Key: "intervals.add.opens_at", Value: 1}, {Key: "key", Value: 1}}).SetLimit(int64(limit)))
 	if err != nil {
 		return nil, err
 	}

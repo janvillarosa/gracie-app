@@ -25,6 +25,9 @@ func RegisterAnalyticsEvents(reg *analytics.Registry) {
 		analytics.EventDef{Name: "trip.deleted"},
 		analytics.EventDef{Name: "trip.restored"},
 		analytics.EventDef{Name: "trip.packing_list_created", Props: map[string]analytics.PropSpec{"days_to_start": daysSpec}},
+		// The house's away calendar moved (dates, zone or who is going changed, or a dated trip was
+		// created, deleted or restored): analytics re-learns the house's forecasts in home time.
+		analytics.EventDef{Name: "trip.away_changed", RequeueRoom: true},
 
 		analytics.EventDef{Name: "todo.created", Props: map[string]analytics.PropSpec{"days_to_start": daysSpec}},
 		analytics.EventDef{Name: "todo.checked", Role: analytics.RoleComplete, Props: map[string]analytics.PropSpec{"days_to_start": daysSpec}},
@@ -78,7 +81,7 @@ func EventsFor(t *models.Trip, op models.Op, res models.OpResult, actor string, 
 	mk := func(name string, subject analytics.Ref, container *analytics.Ref, props map[string]any) analytics.Event {
 		ev := base
 		ev.Name, ev.Subject, ev.Container = name, subject, container
-		if hasDays && name != "trip.deleted" && name != "trip.restored" {
+		if hasDays && name != "trip.deleted" && name != "trip.restored" && name != "trip.away_changed" {
 			if props == nil {
 				props = map[string]any{}
 			}
@@ -119,15 +122,25 @@ func EventsFor(t *models.Trip, op models.Op, res models.OpResult, actor string, 
 		return false
 	}
 
+	dated := t.StartDate != nil && t.EndDate != nil
+	// withAway appends trip.away_changed when the op moved who is away when.
+	withAway := func(ev analytics.Event, moved bool) []analytics.Event {
+		if !moved {
+			return []analytics.Event{ev}
+		}
+		return []analytics.Event{ev, mk("trip.away_changed", tripRef, nil, nil)}
+	}
+
 	switch op.Type {
 	case TypeTripCreate:
-		return []analytics.Event{mk("trip.created", tripRef, nil, nil)}
+		return withAway(mk("trip.created", tripRef, nil, nil), dated)
 	case TypeTripUpdate:
-		return []analytics.Event{mk("trip.updated", tripRef, nil, fields())}
+		moved := has("start_date") || has("end_date") || has("travellers") || has("tz")
+		return withAway(mk("trip.updated", tripRef, nil, fields()), moved)
 	case TypeTripDelete:
-		return []analytics.Event{mk("trip.deleted", tripRef, nil, nil)}
+		return withAway(mk("trip.deleted", tripRef, nil, nil), dated)
 	case TypeTripRestore:
-		return []analytics.Event{mk("trip.restored", tripRef, nil, nil)}
+		return withAway(mk("trip.restored", tripRef, nil, nil), dated)
 	case TypeTodoCreate:
 		return []analytics.Event{todo("todo.created", nil)}
 	case TypeTodoDelete:

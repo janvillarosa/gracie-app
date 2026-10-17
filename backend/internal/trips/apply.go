@@ -1,6 +1,7 @@
 package trips
 
 import (
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -21,6 +22,22 @@ type Ctx struct {
 	// TZ derives an IANA zone from coordinates for Google places that arrive without one.
 	// Optional (nil = leave tz empty); it must be cheap to call and safe to call concurrently.
 	TZ func(lat, lng float64) string
+	// Members are the house's current members. When set, travellers must be among them (the
+	// service passes them; nil skips the check, the engine itself does not know the house).
+	Members []string
+}
+
+// travellersKnown reports whether every traveller in the patch is a current member.
+func (c Ctx) travellersKnown(p TripPatch) bool {
+	if c.Members == nil || !p.Travellers.Set || p.Travellers.Val == nil {
+		return true
+	}
+	for _, id := range *p.Travellers.Val {
+		if !slices.Contains(c.Members, id) {
+			return false
+		}
+	}
+	return true
 }
 
 // Outcome tells the caller what to persist.
@@ -196,6 +213,13 @@ func tripChanges(t *models.Trip, p TripPatch) []change {
 		}
 		ch = append(ch, change{"stops", func() { t.Stops = v }})
 	}
+	if p.Travellers.Set {
+		var v []string
+		if p.Travellers.Val != nil && len(*p.Travellers.Val) > 0 {
+			v = append(v, *p.Travellers.Val...)
+		}
+		ch = append(ch, change{"travellers", func() { t.Travellers = v }})
+	}
 	dates := make([]string, 0, len(p.Days))
 	for d := range p.Days {
 		dates = append(dates, d)
@@ -254,7 +278,7 @@ func tripCreate(t *models.Trip, op models.Op, at int64, c Ctx, res *models.OpRes
 	if code := decodePatch(op.Patch, &p); code != "" {
 		return fail(res, code)
 	}
-	if !validTripPatch(p, true, c.Now) || !datesOrdered(pick(p.StartDate, nil), pick(p.EndDate, nil)) {
+	if !validTripPatch(p, true, c.Now) || !datesOrdered(pick(p.StartDate, nil), pick(p.EndDate, nil)) || !c.travellersKnown(p) {
 		return fail(res, models.CodeInvalid)
 	}
 	if tripCapExceeded(t, p) {
@@ -274,7 +298,7 @@ func tripUpdate(t *models.Trip, op models.Op, at int64, c Ctx, res *models.OpRes
 	if code := decodePatch(op.Patch, &p); code != "" {
 		return fail(res, code)
 	}
-	if !validTripPatch(p, false, c.Now) || !datesOrdered(pick(p.StartDate, t.StartDate), pick(p.EndDate, t.EndDate)) {
+	if !validTripPatch(p, false, c.Now) || !datesOrdered(pick(p.StartDate, t.StartDate), pick(p.EndDate, t.EndDate)) || !c.travellersKnown(p) {
 		return fail(res, models.CodeInvalid)
 	}
 	if tripCapExceeded(t, p) {

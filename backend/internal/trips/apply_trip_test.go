@@ -165,3 +165,41 @@ func TestRestoreOfLiveTripIsHarmlessNoop(t *testing.T) {
 		t.Fatalf("noop restore bumped version")
 	}
 }
+
+func TestTravellersSetAndClearToWholeHouse(t *testing.T) {
+	h := newTripH(t)
+	mustStatus(t, h.do("dev-a", TypeTripUpdate, "", map[string]any{"travellers": []string{"user_a", "user_b"}}, t0+100), models.OpApplied, "")
+	if len(h.trip.Travellers) != 2 || h.trip.FieldAt["travellers"] != t0+100 {
+		t.Fatalf("travellers=%v clock=%v", h.trip.Travellers, h.trip.FieldAt)
+	}
+	// replaced as a whole list
+	mustStatus(t, h.do("dev-a", TypeTripUpdate, "", map[string]any{"travellers": []string{"user_b"}}, t0+200), models.OpApplied, "")
+	if len(h.trip.Travellers) != 1 || h.trip.Travellers[0] != "user_b" {
+		t.Fatalf("travellers=%v", h.trip.Travellers)
+	}
+	mustStatus(t, h.do("dev-a", TypeTripUpdate, "", map[string]any{"travellers": nil}, t0+300), models.OpApplied, "")
+	if h.trip.Travellers != nil {
+		t.Fatalf("null should clear to the whole house, got %v", h.trip.Travellers)
+	}
+}
+
+func TestTravellersValidation(t *testing.T) {
+	h := newTripH(t)
+	many := make([]string, MaxTravellers+1)
+	for i := range many {
+		many[i] = fmt.Sprintf("user_%d", i)
+	}
+	mustStatus(t, h.do("dev-a", TypeTripUpdate, "", map[string]any{"travellers": many}, t0+100), models.OpRejected, models.CodeInvalid)
+	mustStatus(t, h.do("dev-a", TypeTripUpdate, "", map[string]any{"travellers": []string{"user_a", "user_a"}}, t0+101), models.OpRejected, models.CodeInvalid)
+	mustStatus(t, h.do("dev-a", TypeTripUpdate, "", map[string]any{"travellers": []string{""}}, t0+102), models.OpRejected, models.CodeInvalid)
+	// the pure engine does not know the house: unknown ids are the service's job
+	mustStatus(t, h.do("dev-a", TypeTripUpdate, "", map[string]any{"travellers": []string{"user_unknown"}}, t0+103), models.OpApplied, "")
+}
+
+func TestTravellersOnCreate(t *testing.T) {
+	h := newHarness(t)
+	mustStatus(t, h.do("dev-a", TypeTripCreate, "", map[string]any{"title": "Lisbon", "travellers": []string{"user_a"}}, t0+1), models.OpApplied, "")
+	if len(h.trip.Travellers) != 1 {
+		t.Fatalf("travellers=%v", h.trip.Travellers)
+	}
+}

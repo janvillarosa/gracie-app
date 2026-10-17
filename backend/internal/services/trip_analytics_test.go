@@ -42,11 +42,16 @@ func TestTripOpsEmitEventsWithLeadTime(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := []string{"trip.created", "todo.created", "todo.checked", "todo.unchecked", "todo.scheduled", "todo.edited"}
+	// A dated trip moves the house's away calendar too.
+	want := []string{"trip.created", "trip.away_changed", "todo.created", "todo.checked", "todo.unchecked", "todo.scheduled", "todo.edited"}
 	if got := rec.Names(); !reflect.DeepEqual(got, want) {
 		t.Fatalf("events\n got %v\nwant %v", got, want)
 	}
 	evs := rec.Events()
+	if moved := evs[1]; moved.Props != nil || moved.RoomID != "room_1" {
+		t.Fatalf("away_changed carries only the room: %+v", moved)
+	}
+	evs = append(evs[:1], evs[2:]...)
 	created := evs[1]
 	if created.Subject.Type != "todo" || created.Container == nil || created.Container.Type != "trip" ||
 		created.Container.ID != svcTripID || created.Category != "food" || created.ActorID != "user_a" || created.RoomID != "room_1" {
