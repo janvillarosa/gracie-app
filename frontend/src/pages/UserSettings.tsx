@@ -57,9 +57,14 @@ export const UserSettings: React.FC = () => {
   const [passwordOpen, setPasswordOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
-  useEffect(() => {
-    if (me) setEmail(me.username || '')
-  }, [me?.username])
+  // Follow the server's email into the field during render, not in an effect: the field's first
+  // paint already holds the address, so typing never lands in a blank that is then overwritten.
+  const serverEmail = me ? me.username || '' : null
+  const [syncedEmail, setSyncedEmail] = useState<string | null>(null)
+  if (serverEmail !== null && serverEmail !== syncedEmail) {
+    setSyncedEmail(serverEmail)
+    setEmail(serverEmail)
+  }
 
   const back = { to: '/app', label: roomQuery.data?.display_name || 'House' }
   if (!me) {
