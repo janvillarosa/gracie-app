@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -92,7 +93,7 @@ func (r *suggestRig) fold() {
 
 func (r *suggestRig) suggest() []Suggestion {
 	r.t.Helper()
-	out, err := r.svc.ForList(context.Background(), r.user, r.roomID, r.list, 3)
+	out, err := r.svc.ForList(context.Background(), r.user, r.roomID, r.list, 3, "")
 	if err != nil {
 		r.t.Fatal(err)
 	}
@@ -168,7 +169,7 @@ func TestOnlySuggestedOnItsHomeList(t *testing.T) {
 	if got := r.suggest(); len(got) != 0 {
 		t.Fatalf("chips live on the party list: %v", keysOf(got))
 	}
-	out, _ := r.svc.ForList(context.Background(), r.user, r.roomID, r.other, 3)
+	out, _ := r.svc.ForList(context.Background(), r.user, r.roomID, r.other, 3, "")
 	if len(out) != 1 {
 		t.Fatalf("party list: %+v", out)
 	}
@@ -213,7 +214,7 @@ func TestIgnoreHidesForThisCycleAndCountsAsAMiss(t *testing.T) {
 	r.weekly("whole milk", r.list)
 	r.fold()
 	ctx := context.Background()
-	if err := r.svc.Ignore(ctx, r.user, r.roomID, r.list, "whole milk"); err != nil {
+	if err := r.svc.Ignore(ctx, r.user, r.roomID, r.list, "whole milk", ""); err != nil {
 		t.Fatal(err)
 	}
 	if got := r.suggest(); len(got) != 0 {
@@ -233,17 +234,17 @@ func TestIgnoreValidatesKeyAndMembership(t *testing.T) {
 	r.weekly("whole milk", r.list)
 	r.fold()
 	ctx := context.Background()
-	if err := r.svc.Ignore(ctx, r.user, r.roomID, r.list, "never seen"); !errors.Is(err, derr.ErrNotFound) {
+	if err := r.svc.Ignore(ctx, r.user, r.roomID, r.list, "never seen", ""); !errors.Is(err, derr.ErrNotFound) {
 		t.Fatalf("unknown key: %v", err)
 	}
-	if err := r.svc.Ignore(ctx, r.user, r.roomID, r.list, ""); !errors.Is(err, derr.ErrBadRequest) {
+	if err := r.svc.Ignore(ctx, r.user, r.roomID, r.list, "", ""); !errors.Is(err, derr.ErrBadRequest) {
 		t.Fatalf("empty key: %v", err)
 	}
 	stranger := &models.User{UserID: "u_x", RoomID: &r.roomID}
-	if err := r.svc.Ignore(ctx, stranger, r.roomID, r.list, "whole milk"); !errors.Is(err, derr.ErrForbidden) {
+	if err := r.svc.Ignore(ctx, stranger, r.roomID, r.list, "whole milk", ""); !errors.Is(err, derr.ErrForbidden) {
 		t.Fatalf("stranger: %v", err)
 	}
-	if _, err := r.svc.ForList(ctx, stranger, r.roomID, r.list, 3); !errors.Is(err, derr.ErrForbidden) {
+	if _, err := r.svc.ForList(ctx, stranger, r.roomID, r.list, 3, ""); !errors.Is(err, derr.ErrForbidden) {
 		t.Fatalf("stranger read: %v", err)
 	}
 }
@@ -314,10 +315,10 @@ func TestOffModeAndHouseSettingAndNoAnalytics(t *testing.T) {
 	}
 
 	bare := NewSuggestionService(r.m.Rooms, r.m.Lists, r.m.Items, nil, nil, SuggestionsOn)
-	if got, err := bare.ForList(context.Background(), r.user, r.roomID, r.list, 3); err != nil || len(got) != 0 {
+	if got, err := bare.ForList(context.Background(), r.user, r.roomID, r.list, 3, ""); err != nil || len(got) != 0 {
 		t.Fatalf("analytics disabled: %+v %v", got, err)
 	}
-	if err := bare.Ignore(context.Background(), r.user, r.roomID, r.list, "whole milk"); err != nil {
+	if err := bare.Ignore(context.Background(), r.user, r.roomID, r.list, "whole milk", ""); err != nil {
 		t.Fatalf("ignore without analytics is a no-op: %v", err)
 	}
 }
@@ -372,14 +373,14 @@ func TestTwoIgnoresInARowPauseSuggestions(t *testing.T) {
 	r := newSuggestRig(t, SuggestionsOn)
 	r.twoDue()
 	ctx := context.Background()
-	if err := r.svc.Ignore(ctx, r.user, r.roomID, r.list, "whole milk"); err != nil {
+	if err := r.svc.Ignore(ctx, r.user, r.roomID, r.list, "whole milk", ""); err != nil {
 		t.Fatal(err)
 	}
 	if got := r.suggest(); len(got) != 1 || got[0].Key != "eggs" {
 		t.Fatalf("one ignore only skips that item: %+v", got)
 	}
 	time.Sleep(2 * time.Millisecond) // the second ignore is strictly newer than the first
-	if err := r.svc.Ignore(ctx, r.user, r.roomID, r.list, "eggs"); err != nil {
+	if err := r.svc.Ignore(ctx, r.user, r.roomID, r.list, "eggs", ""); err != nil {
 		t.Fatal(err)
 	}
 	if got := r.suggest(); len(got) != 0 {
@@ -429,7 +430,7 @@ func (r *suggestRig) orangesBothWays() {
 func TestLookAlikesAreOneSuggestion(t *testing.T) {
 	r := newSuggestRig(t, SuggestionsOn)
 	r.orangesBothWays()
-	got, err := r.svc.ForList(context.Background(), r.user, r.roomID, r.list, 5)
+	got, err := r.svc.ForList(context.Background(), r.user, r.roomID, r.list, 5, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -470,5 +471,127 @@ func TestCheckingOffTheLastAddDoesNotEndTheCycle(t *testing.T) {
 	r.fold()
 	if got := r.suggest(); len(got) != 1 {
 		t.Fatalf("checking off last week's milk must not hide this week's: %+v", got)
+	}
+}
+
+// shopsEvery gives the house a learned run rhythm on the list: runs about every `days` days.
+func (r *suggestRig) shopsEvery(days float64) {
+	r.t.Helper()
+	_ = r.m.Aggs.PutProfile(context.Background(), &analytics.Profile{ID: "h:" + r.roomID, Scope: "h", Owner: r.roomID, TZ: "UTC",
+		Containers: map[string]analytics.ContainerRhythm{"list:" + r.list: {Runs: 6, IntervalDay: days}}})
+}
+
+func (r *suggestRig) suggestDuring(during string) []Suggestion {
+	r.t.Helper()
+	out, err := r.svc.ForList(context.Background(), r.user, r.roomID, r.list, 3, during)
+	if err != nil {
+		r.t.Fatal(err)
+	}
+	return out
+}
+
+func TestForListRunModeIncludesSoonDue(t *testing.T) {
+	r := newSuggestRig(t, SuggestionsOn)
+	r.weekly("whole milk", r.list) // due at base; its window opens three days before
+	r.shopsEvery(7)
+	r.fold()
+	r.now = r.now.Add(-5 * 24 * time.Hour) // the window opens in two days
+	if got := r.suggest(); len(got) != 0 {
+		t.Fatalf("normal mode waits for the window: %+v", got)
+	}
+	got := r.suggestDuring(DuringRun)
+	if len(got) != 1 || got[0].Key != "whole milk" || got[0].DueInDays != 2 {
+		t.Fatalf("run mode grabs it now: %+v", got)
+	}
+}
+
+func TestForListRunModeLooksOnlyAsFarAsTheNextRun(t *testing.T) {
+	r := newSuggestRig(t, SuggestionsOn)
+	r.weekly("whole milk", r.list)
+	r.shopsEvery(1) // they shop daily: no need to grab milk two days early
+	r.fold()
+	r.now = r.now.Add(-5 * 24 * time.Hour)
+	if got := r.suggestDuring(DuringRun); len(got) != 0 {
+		t.Fatalf("beyond the next run: %+v", got)
+	}
+}
+
+func TestForListRunModeCapsTheLookahead(t *testing.T) {
+	r := newSuggestRig(t, SuggestionsOn)
+	r.history("item.added", "flour", r.list, 224, 196, 168, 140, 112, 84, 56, 28) // every four weeks, due now
+	r.shopsEvery(30)
+	r.fold()
+	r.now = r.now.Add(-20 * 24 * time.Hour) // opens ~17 days out: inside 30, beyond the 14-day cap
+	if got := r.suggestDuring(DuringRun); len(got) != 0 {
+		t.Fatalf("lookahead is capped at 14 days: %+v", got)
+	}
+}
+
+func TestForListRunModeNeedsARunRhythm(t *testing.T) {
+	r := newSuggestRig(t, SuggestionsOn)
+	r.weekly("whole milk", r.list)
+	r.fold()
+	if got := r.suggestDuring(DuringRun); len(got) != 0 {
+		t.Fatalf("no learned runs on this list, no run mode: %+v", got)
+	}
+}
+
+func TestForListRunModeOrdersOpenThenSoonest(t *testing.T) {
+	r := newSuggestRig(t, SuggestionsOn)
+	r.history("item.added", "whole milk", r.list, 56, 49, 42, 35, 28, 21, 14, 7)            // due now: open
+	r.history("item.added", "eggs", r.list, 52, 45, 38, 31, 24, 17, 10, 3)                  // due in 4 days
+	r.history("item.added", "bread", r.list, 54.5, 47.5, 40.5, 33.5, 26.5, 19.5, 12.5, 5.5) // due in 1.5 days: open
+	r.history("item.added", "cheese", r.list, 50, 43, 36, 29, 22, 15, 8, 1)                 // due in 6 days
+	r.shopsEvery(7)
+	r.fold()
+	got := r.suggestDuring(DuringRun)
+	if strings.Join(keysOf(got), ",") != "bread,whole milk,eggs" && strings.Join(keysOf(got), ",") != "whole milk,bread,eggs" {
+		t.Fatalf("open first, then soonest: %v", keysOf(got))
+	}
+	if got[len(got)-1].DueInDays != 1 {
+		t.Fatalf("eggs open in a day: %+v", got[len(got)-1])
+	}
+}
+
+func TestRunIgnoreCountsForPause(t *testing.T) {
+	r := newSuggestRig(t, SuggestionsOn)
+	r.weekly("whole milk", r.list)
+	r.weekly("eggs", r.list)
+	r.shopsEvery(7)
+	r.fold()
+	ctx := context.Background()
+	_ = r.svc.Ignore(ctx, r.user, r.roomID, r.list, "whole milk", DuringRun)
+	_ = r.svc.Ignore(ctx, r.user, r.roomID, r.list, "eggs", DuringRun)
+	if got := r.suggest(); len(got) != 0 {
+		t.Fatalf("two ignores in a row pause the list: %+v", got)
+	}
+}
+
+func TestRunIgnoreDoesNotBlockNormalMode(t *testing.T) {
+	r := newSuggestRig(t, SuggestionsOn)
+	r.weekly("whole milk", r.list)
+	r.shopsEvery(7)
+	r.fold()
+	due := r.now
+	r.now = due.Add(-5 * 24 * time.Hour)
+	if err := r.svc.Ignore(context.Background(), r.user, r.roomID, r.list, "whole milk", DuringRun); err != nil {
+		t.Fatal(err)
+	}
+	if got := r.suggestDuring(DuringRun); len(got) != 0 {
+		t.Fatalf("skipped for the rest of this cycle in run mode: %+v", got)
+	}
+	r.now = due
+	if got := r.suggest(); len(got) != 1 {
+		t.Fatalf("back when it is actually due: %+v", got)
+	}
+}
+
+func TestRunModeRejectsUnknownDuring(t *testing.T) {
+	r := newSuggestRig(t, SuggestionsOn)
+	if _, err := r.svc.ForList(context.Background(), r.user, r.roomID, r.list, 1, "later"); !errors.Is(err, derr.ErrBadRequest) {
+		t.Fatalf("list: %v", err)
+	}
+	if err := r.svc.Ignore(context.Background(), r.user, r.roomID, r.list, "whole milk", "later"); !errors.Is(err, derr.ErrBadRequest) {
+		t.Fatalf("ignore: %v", err)
 	}
 }

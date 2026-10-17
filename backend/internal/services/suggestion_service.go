@@ -68,7 +68,15 @@ const (
 	// is not interested right now. Suggestions on that list pause for pauseFor, then try again.
 	pauseAfterIgnores = 2
 	pauseFor          = 14 * 24 * time.Hour
+	// maxRunLookahead caps how far ahead run mode looks for things that come due before the next shop.
+	maxRunLookahead = 14 * 24 * time.Hour
 )
+
+// DuringRun asks for run-mode suggestions: the person is mid-shop, so offer what comes due before
+// their next run, not only what is due now.
+const DuringRun = analytics.DuringRun
+
+func validDuring(during string) bool { return during == "" || during == DuringRun }
 
 // Suggestion is one thing the house usually adds around now.
 type Suggestion struct {
@@ -79,6 +87,9 @@ type Suggestion struct {
 	Category    string  `json:"category,omitempty"`
 	EveryDays   int     `json:"every_days"`
 	Score       float64 `json:"score"`
+	// DueInDays is 0 when the suggestion's window is open now, else the whole days until it opens
+	// (run mode only).
+	DueInDays int `json:"due_in_days"`
 }
 
 // SuggestionService turns the precomputed add forecasts into suggestions for one list. It
@@ -121,12 +132,19 @@ func (s *SuggestionService) checkList(ctx context.Context, user *models.User, ro
 }
 
 type candidate struct {
-	stat analytics.KeyStat
-	add  *analytics.AddForecast
+	stat     analytics.KeyStat
+	add      *analytics.AddForecast
+	dueIn    int // days until its window opens (0: open now)
+	duringRn bool
 }
 
-// ForList returns up to limit suggestions for a list, most confident first.
-func (s *SuggestionService) ForList(ctx context.Context, user *models.User, roomID, listID string, limit int) ([]Suggestion, error) {
+// ForList returns up to limit suggestions for a list, most confident first. during "run" widens
+// the window to what comes due before the house's next run on this list (open ones first, then
+// soonest); with no learned run rhythm for the list there is nothing to suggest in run mode.
+func (s *SuggestionService) ForList(ctx context.Context, user *models.User, roomID, listID string, limit int, during string) ([]Suggestion, error) {
+	if !validDuring(during) {
+		return nil, derr.ErrBadRequest
+	}
 	room, err := s.checkList(ctx, user, roomID, listID)
 	if err != nil {
 		return nil, err
@@ -139,7 +157,15 @@ func (s *SuggestionService) ForList(ctx context.Context, user *models.User, room
 	if paused, err := s.pausedByIgnores(ctx, roomID, listID, now); err != nil || paused {
 		return out, err
 	}
-	stats, err := s.reader.Upcoming(ctx, roomID, "item", now, upcomingScan)
+	opensBefore := now
+	if during == DuringRun {
+		ahead, err := s.runLookahead(ctx, roomID, listID)
+		if err != nil || ahead == 0 {
+			return out, err
+		}
+		opensBefore = now.Add(ahead)
+	}
+	stats, err := s.reader.Upcoming(ctx, roomID, "item", now, opensBefore, upcomingScan)
 	if err != nil {
 		return nil, err
 	}
@@ -162,11 +188,13 @@ func (s *SuggestionService) ForList(ctx context.Context, user *models.User, room
 		if onListLike(onList, st.Key) {
 			continue
 		}
-		cands = append(cands, candidate{stat: st, add: st.Intervals.Add})
+		cands = append(cands, candidate{stat: st, add: st.Intervals.Add, dueIn: daysUntilOpen(st.Intervals.Add, now), duringRn: during == DuringRun})
 	}
 	if len(cands) == 0 {
 		return out, nil
 	}
+	// Open ones first, then soonest (Upcoming already ranks by confidence), before the limit applies.
+	sort.SliceStable(cands, func(i, j int) bool { return cands[i].dueIn < cands[j].dueIn })
 	var display map[string]*PantryItem
 	for _, c := range cands {
 		if len(out) >= limit {
@@ -187,16 +215,65 @@ func (s *SuggestionService) ForList(ctx context.Context, user *models.User, room
 			}
 			display, _ = pantryByKey(items)
 		}
-		out = append(out, toSuggestion(c, displayFor(display, c.stat.Key)))
+		sg := toSuggestion(c, displayFor(display, c.stat.Key))
+		sg.DueInDays = c.dueIn
+		out = append(out, sg)
 	}
-	sort.SliceStable(out, func(i, j int) bool { return out[i].Score > out[j].Score })
+	sort.SliceStable(out, func(i, j int) bool {
+		if out[i].DueInDays != out[j].DueInDays {
+			return out[i].DueInDays < out[j].DueInDays
+		}
+		return out[i].Score > out[j].Score
+	})
 	return out, nil
+}
+
+// runLookahead is how far run mode looks ahead on a list: the house's learned run interval there,
+// capped at maxRunLookahead; 0 when no run rhythm has been learned yet.
+func (s *SuggestionService) runLookahead(ctx context.Context, roomID, listID string) (time.Duration, error) {
+	p, err := s.reader.HouseProfile(ctx, roomID)
+	if err != nil || p == nil {
+		return 0, err
+	}
+	c, ok := p.Containers["list:"+listID]
+	if !ok || c.Runs < predict.MinOccurrences || c.IntervalDay <= 0 {
+		return 0, nil
+	}
+	return min(time.Duration(c.IntervalDay*24*float64(time.Hour)), maxRunLookahead), nil
+}
+
+// daysUntilOpen is 0 when a window is open at now, else the whole days (rounded up) until the
+// earliest window that has not closed opens.
+func daysUntilOpen(a *analytics.AddForecast, now time.Time) int {
+	spans := append([]analytics.ForecastWindow{{Opens: a.OpensAt, Closes: a.ClosesAt}}, a.Windows...)
+	var next time.Time
+	for _, w := range spans {
+		if w.Closes.Before(now) {
+			continue
+		}
+		if !w.Opens.After(now) {
+			return 0
+		}
+		if next.IsZero() || w.Opens.Before(next) {
+			next = w.Opens
+		}
+	}
+	if next.IsZero() {
+		return 0
+	}
+	return int(math.Ceil(next.Sub(now).Hours() / 24))
 }
 
 // Ignore turns down the suggestion for key on this list for the current cycle. It is
 // recorded as an analytics event: the next forecast counts it as a miss, and ForList skips
 // the key until the house adds it again.
-func (s *SuggestionService) Ignore(ctx context.Context, user *models.User, roomID, listID, key string) error {
+//
+// A run-mode ignore (during "run") still counts toward pausing the list, but not against the
+// forecast, and it only hides the key from run mode: it comes back when it is actually due.
+func (s *SuggestionService) Ignore(ctx context.Context, user *models.User, roomID, listID, key, during string) error {
+	if !validDuring(during) {
+		return derr.ErrBadRequest
+	}
 	if _, err := s.checkList(ctx, user, roomID, listID); err != nil {
 		return err
 	}
@@ -214,10 +291,14 @@ func (s *SuggestionService) Ignore(ctx context.Context, user *models.User, roomI
 		return derr.ErrNotFound
 	}
 	// Synchronous: the client asks what comes next right away, and must not be offered this again.
-	s.emitSync(ctx, analytics.Event{
+	ev := analytics.Event{
 		Name: "item.suggestion_ignored", ActorID: user.UserID, RoomID: roomID,
 		Subject: analytics.Ref{Type: "item"}, Container: ref(listRef(listID)), Key: key,
-	})
+	}
+	if during != "" {
+		ev.Props = map[string]any{"during": during}
+	}
+	s.emitSync(ctx, ev)
 	return nil
 }
 
@@ -323,6 +404,10 @@ func (s *SuggestionService) currentCycleIsOpen(ctx context.Context, roomID strin
 	for _, e := range evs {
 		switch e.Name {
 		case "item.suggestion_ignored":
+			// A run-mode ignore only hides the key from run mode for this cycle.
+			if e.Props["during"] == DuringRun && !c.duringRn {
+				continue
+			}
 			if e.OccurredAt.After(c.add.LastAt) {
 				return false, nil
 			}
@@ -338,18 +423,26 @@ func (s *SuggestionService) currentCycleIsOpen(ctx context.Context, roomID strin
 // recordPrediction stores one measurement record per key and cycle (the id is derived from
 // both, so repeated list views write the same event and the store keeps one).
 func (s *SuggestionService) recordPrediction(ctx context.Context, user *models.User, roomID, listID string, c candidate) {
-	sum := sha256.Sum256([]byte(roomID + "\x00" + c.stat.Key + "\x00" + c.add.LastAt.UTC().Format(time.RFC3339Nano)))
+	seed := roomID + "\x00" + c.stat.Key + "\x00" + c.add.LastAt.UTC().Format(time.RFC3339Nano)
+	if c.duringRn {
+		seed += "\x00" + DuringRun // a run-mode prediction is measured on its own
+	}
+	sum := sha256.Sum256([]byte(seed))
+	props := map[string]any{
+		"mode":      string(s.mode),
+		"score_pct": int64(math.Round(c.add.Score * 100)),
+		"opens_at":  c.add.OpensAt.UTC().Format(time.RFC3339),
+		"closes_at": c.add.ClosesAt.UTC().Format(time.RFC3339),
+		"series":    c.add.Series,
+	}
+	if c.duringRn {
+		props["during"] = DuringRun
+	}
 	s.emit(ctx, analytics.Event{
 		EventID: "sp_" + hex.EncodeToString(sum[:12]),
 		Name:    "item.suggestion_predicted", ActorID: user.UserID, RoomID: roomID,
 		Subject: analytics.Ref{Type: "item"}, Container: ref(listRef(listID)), Key: c.stat.Key,
-		Props: map[string]any{
-			"mode":      string(s.mode),
-			"score_pct": int64(math.Round(c.add.Score * 100)),
-			"opens_at":  c.add.OpensAt.UTC().Format(time.RFC3339),
-			"closes_at": c.add.ClosesAt.UTC().Format(time.RFC3339),
-			"series":    c.add.Series,
-		},
+		Props: props,
 	})
 }
 

@@ -207,6 +207,10 @@ func (w *Worker) recomputeKey(ctx context.Context, ref KeyRef) ([]KeyRef, error)
 				}
 				wAsked = append(wAsked, weighted{e.OccurredAt, weight})
 			case RoleDismiss:
+				// Turned down mid-shop, days before it was due: not evidence the rhythm is wrong.
+				if e.Props["during"] == DuringRun {
+					continue
+				}
 				wIgnored = append(wIgnored, weighted{e.OccurredAt, weight})
 			}
 		}

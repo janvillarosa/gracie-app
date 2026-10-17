@@ -109,7 +109,7 @@ func TestMongoUpcomingKeysAndContainers(t *testing.T) {
 	}
 
 	now := time.Now().UTC()
-	got, err := aggs.UpcomingKeys(ctx, room, "item", now, 0.65, 0.5, 10)
+	got, err := aggs.UpcomingKeys(ctx, room, "item", now, now, 0.65, 0.5, 10)
 	if err != nil || len(got) != 1 || got[0].Key != "milk" {
 		t.Fatalf("upcoming: %+v %v", got, err)
 	}
@@ -119,13 +119,17 @@ func TestMongoUpcomingKeysAndContainers(t *testing.T) {
 	if a := got[0].Intervals.Add; a == nil || a.Trials != 5 || a.Hits != 5 || a.Series != "added" {
 		t.Fatalf("stored forecast: %+v", got[0].Intervals)
 	}
-	if early, _ := aggs.UpcomingKeys(ctx, room, "item", now.AddDate(0, 0, -6), 0.65, 0.5, 10); len(early) != 0 {
+	if early, _ := aggs.UpcomingKeys(ctx, room, "item", now.AddDate(0, 0, -6), now.AddDate(0, 0, -6), 0.65, 0.5, 10); len(early) != 0 {
 		t.Fatalf("window not open yet: %+v", early)
 	}
-	if strict, _ := aggs.UpcomingKeys(ctx, room, "item", now, 0.99, 0.5, 10); len(strict) != 0 {
+	soon := now.AddDate(0, 0, -6) // the window opens in about three days
+	if ahead, _ := aggs.UpcomingKeys(ctx, room, "item", soon, soon.AddDate(0, 0, 4), 0.65, 0.5, 10); len(ahead) != 1 {
+		t.Fatalf("opens before the bound: %+v", ahead)
+	}
+	if strict, _ := aggs.UpcomingKeys(ctx, room, "item", now, now, 0.99, 0.5, 10); len(strict) != 0 {
 		t.Fatalf("score below the bar: %+v", strict)
 	}
-	if other, _ := aggs.UpcomingKeys(ctx, "other_room", "item", now, 0.65, 0.5, 10); len(other) != 0 {
+	if other, _ := aggs.UpcomingKeys(ctx, "other_room", "item", now, now, 0.65, 0.5, 10); len(other) != 0 {
 		t.Fatalf("other house: %+v", other)
 	}
 }
@@ -250,7 +254,7 @@ func TestMongoUpcomingFindsALaterWindowAfterASkippedWeek(t *testing.T) {
 		t.Fatal(err)
 	}
 	now := time.Now().UTC()
-	got, err := aggs.UpcomingKeys(ctx, room, "item", now, 0.65, 0.5, 10)
+	got, err := aggs.UpcomingKeys(ctx, room, "item", now, now, 0.65, 0.5, 10)
 	if err != nil || len(got) != 1 || got[0].Key != "milk" {
 		t.Fatalf("upcoming: %+v %v", got, err)
 	}

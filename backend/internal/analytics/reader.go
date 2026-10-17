@@ -44,11 +44,12 @@ func (r *Reader) Due(ctx context.Context, roomID, subjectType string, before tim
 	return r.aggs.DueKeys(ctx, roomID, subjectType, before, limit)
 }
 
-// Upcoming returns things whose suggestion window is open now and whose forecast clears the
-// confidence bar, most confident first. Like Due, the caller drops what is already on the list.
-func (r *Reader) Upcoming(ctx context.Context, roomID, subjectType string, now time.Time, limit int) ([]KeyStat, error) {
+// Upcoming returns things whose suggestion window has opened by opensBefore (pass now for "open
+// right now") and has not closed, and whose forecast clears the confidence bar, most confident
+// first. Like Due, the caller drops what is already on the list.
+func (r *Reader) Upcoming(ctx context.Context, roomID, subjectType string, now, opensBefore time.Time, limit int) ([]KeyStat, error) {
 	p := predict.DefaultParams
-	return r.aggs.UpcomingKeys(ctx, roomID, subjectType, now.UTC(), p.MinScore, p.MaxCV, limit)
+	return r.aggs.UpcomingKeys(ctx, roomID, subjectType, now.UTC(), opensBefore.UTC(), p.MinScore, p.MaxCV, limit)
 }
 
 // Period returns the raw rolled-up document for "u" or "h" and a valid period, or nil.

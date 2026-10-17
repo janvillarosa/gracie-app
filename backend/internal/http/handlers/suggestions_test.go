@@ -128,3 +128,16 @@ func TestRunHintEndpoint(t *testing.T) {
 		t.Fatalf("%d %s", w.Code, w.Body.String())
 	}
 }
+
+func TestSuggestionsRejectUnknownDuring(t *testing.T) {
+	r, _ := newSuggestionsRouter(t)
+	if w := call(r, "mia", http.MethodGet, "/rooms/room_1/lists/list_1/suggestions?during=bogus", ""); w.Code != http.StatusBadRequest {
+		t.Fatalf("list: %d", w.Code)
+	}
+	if w := call(r, "mia", http.MethodGet, "/rooms/room_1/lists/list_1/suggestions?during=run", ""); w.Code != http.StatusOK {
+		t.Fatalf("run: %d %s", w.Code, w.Body.String())
+	}
+	if w := call(r, "mia", http.MethodPost, "/rooms/room_1/lists/list_1/suggestions/ignore", `{"key":"milk","during":"x"}`); w.Code != http.StatusBadRequest {
+		t.Fatalf("ignore: %d", w.Code)
+	}
+}
