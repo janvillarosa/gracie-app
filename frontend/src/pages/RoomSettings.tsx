@@ -13,19 +13,34 @@ import { HouseLoader } from '@components/HouseLoader'
 import { TopNav } from '@components/TopNav'
 import {
   Button,
+  ChipGroup,
   DetailGroup,
   Field,
   NavRow,
   SectionLabel,
   SheetIdentity,
-  Switch,
   Paper,
   PaperStack,
 } from '@components/ui'
-import type { RoomView } from '@api/types'
+import { autopilotModeOf, type AutopilotMode, type RoomView } from '@api/types'
 import { useDocumentTitle } from '@lib/useDocumentTitle'
 
 const nameProblem = (v: string) => (v && !isValidDisplayName(v) ? NAME_RULE : '')
+
+const AUTOPILOT_OPTIONS: { value: AutopilotMode; label: string }[] = [
+  { value: 'off', label: 'Off' },
+  { value: 'suggest', label: 'Suggest' },
+  { value: 'assist', label: 'Assist' },
+]
+
+// One line under the chosen mode, in the House's words.
+const AUTOPILOT_HELP: Record<AutopilotMode, string> = {
+  off: 'Nothing is suggested or added.',
+  suggest:
+    'Suggests things your House usually adds, a little before they’re due. Nothing changes until someone taps.',
+  assist:
+    'Adds things to your lists before you shop. You can always undo. It never buys or books anything.',
+}
 
 /** House settings, laid out like Trip settings: the House's name (typed in place), what it is
  *  about, who is in it and how to invite someone, then the vote to delete it. Everything saves
@@ -80,17 +95,19 @@ export const RoomSettings: React.FC = () => {
     void save({ description }, 'Description saved.')
   }
 
-  // Smart suggestions: a House preference that saves on toggle, and rolls back if refused.
-  const suggestionsOn = !room.suggestions_off
-  const onToggleSuggestions = async (on: boolean) => {
+  // Autopilot: a House setting that saves on choice, and rolls back if refused.
+  const autopilotMode = autopilotModeOf(room)
+  const onAutopilotMode = async (mode: AutopilotMode) => {
+    if (mode === autopilotMode) return
     const before = qc.getQueryData<RoomView>(['my-room'])
     qc.setQueryData<RoomView | undefined>(['my-room'], (r) =>
-      r ? { ...r, suggestions_off: !on } : r,
+      r ? { ...r, autopilot_mode: mode, suggestions_off: mode === 'off' } : r,
     )
     try {
-      await updateRoomSettings(apiKey as string, { suggestions_off: !on })
+      await updateRoomSettings(apiKey as string, { autopilot_mode: mode })
       await qc.invalidateQueries({ queryKey: ['my-room'] })
       qc.invalidateQueries({ queryKey: ['suggestions'] })
+      qc.invalidateQueries({ queryKey: ['autopilot'] })
     } catch (e) {
       qc.setQueryData(['my-room'], before)
       message.error(errorMessage(e, 'Couldn’t save that. Try again.'))
@@ -178,19 +195,18 @@ export const RoomSettings: React.FC = () => {
           <SectionLabel>Lists</SectionLabel>
           <DetailGroup label="Lists">
             <div className="pref">
-              <div className="pref-row">
-                <label htmlFor="smart-suggestions" className="pref-label">
-                  Smart suggestions
-                </label>
-                <Switch
-                  id="smart-suggestions"
-                  checked={suggestionsOn}
-                  onChange={(on) => void onToggleSuggestions(on)}
-                  aria-describedby="smart-suggestions-help"
-                />
-              </div>
-              <p className="pref-help" id="smart-suggestions-help">
-                Suggest things your House usually adds, a little before they’re due.
+              <span className="pref-label" id="autopilot-label">
+                Autopilot
+              </span>
+              <ChipGroup
+                label="Autopilot"
+                columns={3}
+                value={autopilotMode}
+                options={AUTOPILOT_OPTIONS}
+                onChange={(m) => void onAutopilotMode(m)}
+              />
+              <p className="pref-help" aria-live="polite">
+                {AUTOPILOT_HELP[autopilotMode]}
               </p>
             </div>
           </DetailGroup>

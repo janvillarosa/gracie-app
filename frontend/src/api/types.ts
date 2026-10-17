@@ -22,9 +22,19 @@ export type RoomView = {
   my_deletion_vote?: boolean
   // How many current members have voted to delete the House.
   deletion_votes?: number
-  // Smart suggestions are on unless the house turned them off.
+  // The House's autopilot: off, suggest (the default) or assist. Older servers send only
+  // suggestions_off; read it through autopilotModeOf.
+  autopilot_mode?: AutopilotMode
+  // Deprecated: derived from autopilot_mode for one release.
   suggestions_off?: boolean
 }
+
+export type AutopilotMode = 'off' | 'suggest' | 'assist'
+
+export const autopilotModeOf = (room: {
+  autopilot_mode?: AutopilotMode
+  suggestions_off?: boolean
+}): AutopilotMode => room.autopilot_mode ?? (room.suggestions_off ? 'off' : 'suggest')
 
 export type CreateUserResponse = {
   user: User
@@ -56,9 +66,30 @@ export type ListItem = {
   is_starred?: boolean
   is_archived?: boolean
   completed: boolean
+  // "autopilot" when assist mode put it on the list (the row shows the autopilot mark).
+  source?: 'autopilot'
   order?: number
   created_at: string
   updated_at: string
+}
+
+// What autopilot applied to a list lately (GET .../autopilot).
+export type AutopilotReason = { code: string; params?: Record<string, unknown> }
+
+export type AutopilotApplied = {
+  action_id: string
+  item_id: string
+  key: string
+  state: 'applied' | 'confirmed'
+  run_at: string
+  reason: AutopilotReason
+  confidence: number
+}
+
+export type AutopilotView = {
+  mode: AutopilotMode
+  applied: AutopilotApplied[]
+  suggestions: ListSuggestion[]
 }
 
 export type PantryItem = {
