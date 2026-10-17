@@ -109,6 +109,7 @@
   --lift-1: var(--thick), 0 6px 10px -4px rgba(40, 30, 10, 0.14), 0 34px 64px -22px rgba(40, 30, 10, 0.36); /* on top */
   --lift-2: var(--thick), 0 8px 14px -6px rgba(40, 30, 10, 0.18), 0 36px 68px -22px rgba(40, 30, 10, 0.38); /* overlay */
   --lift-3: var(--thick), 0 8px 14px -6px rgba(40, 30, 10, 0.2), 0 40px 70px -24px rgba(40, 30, 10, 0.4); /* popover */
+  --lift-bar: var(--thick), 0 2px 4px rgba(40, 30, 10, 0.16), 0 12px 22px -8px rgba(40, 30, 10, 0.34), 0 34px 64px -18px rgba(40, 30, 10, 0.5); /* the composer: floats over the plan */
   --peek-shadow: 0 1px 0 var(--edge-deep), 0 10px 16px -8px rgba(40, 30, 10, 0.26);
   --peek-tilt-1: -0.6deg; /* the sheets beneath sit a little off true, like a real pile */
   --peek-tilt-2: 0.9deg;
@@ -126,7 +127,7 @@
   --wash: color-mix(in srgb, var(--ink) 6%, transparent); /* a hover or open fill on paper */
   --wash-danger: color-mix(in srgb, var(--brand-red) 7%, transparent);
   --panel-veil: rgba(255, 255, 255, 0.9); /* paper over the map */
-  --shadow-up: 0 -10px 16px -14px rgba(40, 30, 10, 0.2); /* a bar pinned to the foot of a sheet */
+  --shadow-up: 0 -2px 4px -2px rgba(40, 30, 10, 0.1), 0 -14px 22px -12px rgba(40, 30, 10, 0.3); /* a bar pinned to the foot of a sheet */
   --tab-lift: 0 1px 0 var(--border-strong), 0 1px 2px rgba(0, 0, 0, 0.08), 0 3px 8px -2px rgba(40, 30, 10, 0.14); /* the selected tab on its track */
   --swipe-shadow: 1px 0 0 rgba(0, 0, 0, 0.08), 12px 0 16px -6px rgba(50, 0, 6, 0.55);
   --tray-inset: inset 0 2px 4px rgba(0, 0, 0, 0.22), inset 0 -1px 2px rgba(0, 0, 0, 0.12);
@@ -330,6 +331,11 @@
   .menu div:hover { background: var(--panel-subtle); }
   .menu div.danger { color: var(--brand-red); }
   .toast { display: inline-flex; align-items: center; gap: 12px; padding: 10px 10px 10px 16px; border-radius: 12px; }
+  .composer { display: flex; align-items: center; gap: 12px; box-sizing: border-box; width: min(100%, 520px); min-height: var(--composer-h); padding: 0 var(--space-2); background: var(--grain-paper), var(--panel); border: 1px solid var(--border-strong); border-radius: var(--radius-pill); box-shadow: var(--paper-edge), var(--lift-bar); }
+  .composer .day { display: inline-flex; align-items: center; min-height: var(--control-sm); padding: 0 10px; border-radius: var(--radius-pill); background: color-mix(in srgb, var(--brand-yellow) 45%, white); color: var(--ink); font: var(--w-semibold) var(--t-meta) var(--font-body); }
+  .composer .ph { flex: 1; color: var(--muted); font: var(--w-regular) var(--t-lead) var(--font-body); }
+  .composer .key.round { --key-size: calc(var(--composer-h) - 2px - 2 * var(--space-2)); width: var(--key-size); min-width: var(--key-size); min-height: var(--key-size); }
+  .composer .key.round svg { width: calc(var(--key-size) / 2); height: calc(var(--key-size) / 2); }
   .tip { display: inline-block; padding: 8px 12px; border-radius: var(--radius-sm); font-size: var(--t-meta); color: var(--ink); }
   .spec { display: grid; gap: 28px; }
   .spec-block > .label { display: block; margin: 0 0 12px; }
@@ -565,7 +571,7 @@
     <div class="part-head">
       <div>
         <h2>Floating things are slips</h2>
-        <p>Menus, toasts and tooltips keep Ant's behaviour but are drawn once as paper at popover height, with the same edge, corners and type.</p>
+        <p>Menus, toasts and tooltips keep Ant's behaviour but are drawn once as paper at popover height, with the same edge, corners and type. The desk's add bar (the composer) floats higher still, at <code>--lift-bar</code>, with its round key 8px clear of the pill.</p>
       </div>
     </div>
     <div class="floating">
@@ -576,6 +582,7 @@
           <div class="paper l3 tip">Sam</div>
         </div>
       </div>
+      <div style="margin-top:40px" class="composer"><span class="day">Today</span><span class="ph">Add a place, plan or idea</span><button class="btn key round" type="button" aria-label="Add"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button></div>
     </div>
   </section>
 </main>

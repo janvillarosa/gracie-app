@@ -414,8 +414,10 @@ Breakpoints are `480px` (tighter PillNav tabs; 16px page and sheet sides), `640p
 Depth is paper height, and paper has body. Every sheet has a 1px edge, a white top highlight (`--paper-edge`), a fine grain (`--grain-paper`, a background layer with its strength baked in) and a stepped foot: two or three leaves of the ream showing beneath it (`--thick`, in every lift). Its shadow is warm (tinted from the desk's brown, not grey) and long. There are four heights:
 - `--lift-0`: a sheet resting on the desk (the base of a stack, the Ideas column, a settings page).
 - `--lift-1`: the sheet on top of a stack.
-- `--lift-2`: bottom sheets, dialogs, the inspector, the composer and a dragged row.
+- `--lift-2`: bottom sheets, dialogs, the inspector and a dragged row.
 - `--lift-3`: popovers, menus, toasts, tooltips and suggestion slips.
+
+The add bar is the one control surface that floats over the plan, so it gets its own height: `--lift-bar` (the composer), with a tight dark contact shadow and a long drop, clearly above `--lift-3`. On a phone the bar is pinned to the sheet's foot instead, and casts `--shadow-up` onto the rows that scroll under it.
 
 A lift is for paper on the desk or floating over it. Paper lying on a sheet (the smart-suggestion slip above a list's items) is not a new height: it rests a hair above the page with `--slip-rest`, the same as a quiet slip. A lift's ream and long drop inside a sheet would bleed over the rows below it.
 
@@ -435,11 +437,13 @@ Map pills are paper too, but they sit on a photograph-like ground, so they carry
 - **Well** (`--well`): pressed into the sheet.
 - **Slip** (`--slip-rest`, `--slip-hover`, `--slip-press`): a quiet button's three heights.
 - **Lift 0–3** (`--lift-0` … `--lift-3`): the four paper heights above.
+- **Bar lift** (`--lift-bar`): the composer, floating over the plan.
+- **Shadow up** (`--shadow-up`): the phone's add bar, pinned to a sheet's foot, cast up onto the rows beneath.
 - **Key** (`--shadow-key`, `--shadow-key-hover`): the yellow key, selected chips and pressed choice tiles.
 - **Focus ring** (`--focus-ring`): a 2px paper gap, then a 2px Ink Blue ring at 70%. It is visible on white and on yellow.
 
 ### Named Rules
-**The Paper Heights Rule.** A surface takes one of the four lifts, chosen by what it is (resting, on top, overlay, popover), never a bespoke shadow. Map pills are the one exception, because they sit on the map, not on the desk.
+**The Paper Heights Rule.** A surface takes one of the four lifts, chosen by what it is (resting, on top, overlay, popover), never a bespoke shadow. The add bar has its own height (`--lift-bar`, or `--shadow-up` when pinned), because it is the one control that floats over the plan. Map pills are the other exception, because they sit on the map, not on the desk.
 
 **The Only Lifted Control Rule.** Only the yellow key (and yellow-selected chips and choices) is lifted. Quiet slips rest a hair above the page and press into it; text buttons and everything else are flat on the sheet.
 
@@ -458,7 +462,7 @@ All overlays and form controls in trip screens come from `src/components/ui/`, s
 ### Buttons
 One family (`Button`), each kind paper at a known height.
 - **Key** (`kind="key"`): Key Yellow, ink label 600, 44px, 20px side padding, a 2px deep-yellow underside and a warm drop (`--shadow-key`). One per sheet. Pressed, it sinks 2px (`--key-travel`). Not yet pressable: yellow soaked into the paper (38% on paper), flat, muted ink.
-- **Round key** (`kind="key" iconOnly`): the add bar's plus (44px) and the composer's (48px). With nothing to add it is a plain paper disc.
+- **Round key** (`kind="key" iconOnly`): the add bar's plus (44px) and the composer's (38px, 8px clear of the pill on every side, hit area 46px). With nothing to add it is a plain paper disc.
 - **Danger key**: the key in Stamp Red with white text and a red-tinted shadow, for a confirmation only.
 - **Quiet** (`kind="quiet"`): a paper slip, 36px, 1px edge, grain, resting a hair above the page; lifts 1px on hover; presses in when pressed. Disabled: paper with faded ink and edge, never grey, never see-through.
 - **Text** (`kind="text"`): 44px tall, 13px 600, ink on the sheet; a wash on hover. Danger is red ink.
@@ -482,7 +486,7 @@ One family (`Button`), each kind paper at a known height.
 ### Inputs / Fields
 - **Field:** borderless text on the paper, 16px, 12px vertical padding and a muted placeholder. Focus draws the shared focus ring around it. An error draws a 2px Stamp Red ring with a 13px red line of problem text beneath.
 - **Add bar:** a 44px pill input on Paper Tint (white on focus) inside a bar pinned to the bottom of the viewport, docked flush to the card's bottom edge at the end of the list. A parsed quantity ("2 kg") shows as a small yellow-tinted pill inside the field. The top suggestion's tail shows as faded ghost text. Suggestions are slips that rise above the bar (`Combobox`).
-- **Composer** (the desk's add bar): a 56px white pill with a 1px edge, the paper edge and `--lift-2`, 17px text, a 32px target chip (a day or Ideas) and a 48px yellow key. Focus turns the edge deep yellow and adds a 3px yellow halo at 55%. An empty, unfocused composer shows a muted `/` key hint on devices with a fine pointer.
+- **Composer** (the desk's add bar): a 56px white pill with a 1px edge, the paper edge and `--lift-bar`, 17px text, a 32px target chip (a day or Ideas) and a 38px yellow key, 8px clear of the pill on every side. Focus turns the edge deep yellow and adds a 3px yellow halo at 55%. An empty, unfocused composer shows a muted `/` key hint on devices with a fine pointer.
 - **Inspector editors** (desktop only; phones keep pickers): `InlineWhen` (a day select, a typed 24-hour time where ↑/↓ moves 15 minutes, and duration segments), `InlinePlace` (inline search with slips below), `InlineSelect` (a native select drawn like the paper) and `StampSelect`.
 - **Switch:** the Ant switch, checked in Key Yellow with an ink handle. Hover deepens it to Key Yellow Deep.
 
