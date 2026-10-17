@@ -124,3 +124,14 @@ func TestForecastIsLearnedInHomeTime(t *testing.T) {
 		t.Fatalf("home-time forecast: %+v add %+v", iv, iv.Add)
 	}
 }
+
+func TestPropIntBounds(t *testing.T) {
+	d := analytics.EventDef{Name: "item.added", Props: map[string]analytics.PropSpec{"qty": {Kind: analytics.PropInt, Max: 1000}, "n": {Kind: analytics.PropInt}}}
+	got := d.Sanitize(map[string]any{"qty": int64(1001), "n": int64(-5)})
+	if _, ok := got["qty"]; ok || got["n"] != int64(-5) {
+		t.Fatalf("bounded ints are dropped outside [Min, Max], unbounded ones kept: %v", got)
+	}
+	if got := d.Sanitize(map[string]any{"qty": float64(500)}); got["qty"] != int64(500) {
+		t.Fatalf("in range: %v", got)
+	}
+}

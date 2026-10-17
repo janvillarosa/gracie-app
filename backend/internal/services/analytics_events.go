@@ -1,6 +1,9 @@
 package services
 
-import "github.com/janvillarosa/gracie-app/backend/internal/analytics"
+import (
+	"github.com/janvillarosa/gracie-app/backend/internal/analytics"
+	"github.com/janvillarosa/gracie-app/backend/internal/parse"
+)
 
 var nudgeProps = map[string]analytics.PropSpec{"kind": {Kind: analytics.PropString, MaxLen: 32}}
 
@@ -28,7 +31,13 @@ func RegisterAnalyticsEvents(reg *analytics.Registry) {
 		analytics.EventDef{Name: "list.deleted"},
 		analytics.EventDef{Name: "list.cleared", Props: map[string]analytics.PropSpec{"count": {Kind: analytics.PropInt}}},
 
-		analytics.EventDef{Name: "item.added", Role: analytics.RoleRequest, Props: map[string]analytics.PropSpec{"source": {Kind: analytics.PropEnum, Values: []string{AddSourceSuggestion}}}},
+		// qty/unit: the parsed amount (thousandths and a canonical unit, parse.ParseAmount), never
+		// the typed text. Nothing reads them yet: they start the history consumption forecasts need.
+		analytics.EventDef{Name: "item.added", Role: analytics.RoleRequest, Props: map[string]analytics.PropSpec{
+			"source": {Kind: analytics.PropEnum, Values: []string{AddSourceSuggestion}},
+			"qty":    {Kind: analytics.PropInt, Min: 0, Max: parse.MaxAmountMilli},
+			"unit":   {Kind: analytics.PropEnum, Values: parse.AmountUnits()},
+		}},
 		analytics.EventDef{Name: "item.checked", Role: analytics.RoleComplete},
 		analytics.EventDef{Name: "item.unchecked"},
 		analytics.EventDef{Name: "item.edited", Props: fieldsSpec},
