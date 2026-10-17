@@ -63,6 +63,11 @@
   --on-red: #FFFFFF;
   --on-pin: #FFFFFF;
   --highlighter: color-mix(in srgb, var(--brand-yellow) 70%, transparent);
+  /* Icon grounds: the three brand colours as pale tints, only ever behind a list or trip emoji (the
+     icon disc). They are far too light to read as state, a delete or a link. */
+  --ground-blue: color-mix(in srgb, var(--brand-blue) 16%, var(--panel));
+  --ground-yellow: color-mix(in srgb, var(--brand-yellow) 45%, var(--panel));
+  --ground-red: color-mix(in srgb, var(--brand-red) 14%, var(--panel));
   --focus-ring: 0 0 0 2px var(--panel), 0 0 0 4px color-mix(in srgb, var(--brand-blue) 70%, transparent);
 
   /* ---- Status ------------------------------------------------------------------------ */
@@ -102,6 +107,7 @@
   --icon-lg: 20px;
   --icon-xl: 24px; /* an emoji on a 44px sticker */
   --icon-2xl: 28px; /* an emoji on a 52px tile */
+  --disc-lg: 52px; /* the icon disc on the desk's trip header; --control-lg is the usual 44px, --control-md the picker's */
 
   /* ---- Depth: paper heights, the ream, slips, wells, the key ------------------------- */
   --paper-edge: inset 0 1px 0 rgba(255, 255, 255, 0.9); /* the white top highlight */
@@ -346,6 +352,16 @@
   .toast { display: inline-flex; align-items: center; gap: 12px; padding: 10px 10px 10px 16px; border-radius: 12px; }
   .composer { display: flex; align-items: center; gap: 12px; box-sizing: border-box; width: min(100%, 520px); min-height: var(--composer-h); padding: 0 var(--space-2); background: var(--grain-paper), var(--panel); border: 1px solid var(--border-strong); border-radius: var(--radius-pill); box-shadow: var(--paper-edge), var(--lift-bar); }
   .composer .day { display: inline-flex; align-items: center; min-height: var(--control-sm); padding: 0 10px; border-radius: var(--radius-pill); background: color-mix(in srgb, var(--brand-yellow) 45%, white); color: var(--ink); font: var(--w-semibold) var(--t-meta) var(--font-body); }
+  .icon-disc { --disc: var(--control-lg); --ground: var(--panel-subtle); display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; width: var(--disc); height: var(--disc); border-radius: 50%; font-size: var(--icon-xl); line-height: 1; background: var(--grain-paper), var(--ground); border: 1px solid var(--border-strong); box-shadow: var(--slip-rest); }
+  .icon-disc.is-blue { --ground: var(--ground-blue); }
+  .icon-disc.is-yellow { --ground: var(--ground-yellow); }
+  .icon-disc.is-red { --ground: var(--ground-red); }
+  .icon-disc.is-sm { --disc: var(--control-md); font-size: var(--icon-lg); }
+  .icon-disc.is-lg { --disc: var(--disc-lg); font-size: var(--icon-2xl); }
+  .discs { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+  .choice { display: grid; justify-items: center; gap: 4px; width: 84px; padding: 8px 2px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--grain-paper), var(--panel); color: var(--muted); font: var(--w-semibold) var(--t-label) var(--font-body); }
+  .choice.on { border-color: var(--brand-yellow-deep); background: var(--brand-yellow); color: var(--ink); box-shadow: var(--shadow-key); }
+  .choice.on .icon-disc { --ground: var(--panel); }
   .composer .ph { flex: 1; color: var(--muted); font: var(--w-regular) var(--t-lead) var(--font-body); }
   .composer .key.round { --key-size: calc(var(--composer-h) - 2px - 2 * var(--space-2)); width: var(--key-size); min-width: var(--key-size); min-height: var(--key-size); }
   .composer .key.round svg { width: calc(var(--key-size) / 2); height: calc(var(--key-size) / 2); }
@@ -629,6 +645,25 @@
       <div style="font-family:var(--font-headings);font-size:var(--t-heading);font-weight:var(--w-semibold);border-bottom:1.5px solid var(--ink);padding-bottom:4px"><span style="color:var(--muted);font-weight:var(--w-regular)">1.</span> Transport</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;padding:8px 0 4px;border-bottom:1px solid var(--border-strong);color:var(--muted);font-size:var(--t-stamp);font-weight:var(--w-bold);letter-spacing:.08em;text-transform:uppercase"><span>Departs</span><span>Booking</span></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;padding:8px 0;border-bottom:1px solid var(--border)"><span>Thu 22 Oct, 07:05</span><span>London to Lisbon<span style="display:block;color:var(--muted);font-size:var(--t-meta)">Flight</span></span></div>
+    </div>
+  </section>
+  <section class="part">
+    <div class="part-head">
+      <div>
+        <h2>Icons sit on a disc</h2>
+        <p>A list's or trip's emoji is always on a round paper sticker, on a pale tint of one brand colour: blue behind warm and red things, yellow behind blue things, red behind green ones. The tints are the <code>--ground-*</code> tokens, far too pale to read as a delete, a link or the key. Three sizes: 44px in rows and headers, 36px inside a picker tile, 52px on the desk's trip header. A selected tile is Key Yellow and its disc turns to plain paper.</p>
+      </div>
+    </div>
+    <div class="discs" aria-hidden="true">
+      <span class="icon-disc is-blue">🍎</span><span class="icon-disc is-blue">🏠</span><span class="icon-disc is-blue">🧳</span><span class="icon-disc is-blue">🍷</span>
+      <span class="icon-disc is-yellow">✈️</span><span class="icon-disc is-yellow">🏔️</span><span class="icon-disc is-yellow">🚆</span><span class="icon-disc is-yellow">📺</span>
+      <span class="icon-disc is-red">🥦</span><span class="icon-disc is-red">🗺️</span><span class="icon-disc is-red">⛺</span>
+      <span class="icon-disc" style="color:var(--muted);font-size:var(--icon-md)">•</span>
+    </div>
+    <div class="discs" style="margin-top:20px" aria-hidden="true">
+      <span class="icon-disc is-sm is-blue">🍎</span><span class="icon-disc is-blue">🍎</span><span class="icon-disc is-lg is-blue">🍎</span>
+      <span class="choice"><span class="icon-disc is-sm is-yellow">✈️</span>Plane</span>
+      <span class="choice on"><span class="icon-disc is-sm is-blue">🧳</span>Suitcase</span>
     </div>
   </section>
 </main>

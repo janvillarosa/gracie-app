@@ -61,7 +61,7 @@ import {
   verticalListSortingStrategy,
   sortableKeyboardCoordinates,
 } from '@dnd-kit/sortable'
-import { toEmoji } from '../icons'
+import { ListIconDisc } from '@components/IconDiscs'
 import { confettiAt } from '@lib/confetti'
 import { parseInput } from '@lib/parseInput'
 import { timeAgo } from '@lib/time'
@@ -925,9 +925,7 @@ export const ListPage: React.FC = () => {
                 style={{ margin: 0, lineHeight: 1.2, display: 'flex', alignItems: 'center' }}
               >
                 {listMeta.icon ? (
-                  <span className="list-icon list-icon-title" aria-hidden>
-                    {toEmoji(listMeta.icon)}
-                  </span>
+                  <ListIconDisc icon={listMeta.icon} className="icon-disc-title" />
                 ) : null}
                 {listMeta.name}
               </Typography.Title>

@@ -332,6 +332,7 @@ A near-monochrome paper-and-ink palette with one saturated yellow, plus function
 
 ### Tertiary (functional hues)
 - **Day colours** (`--trip-day-0` … `--trip-day-5`): blue, red, deep yellow, green, teal and violet, cycling per day of a trip (day 7 reuses day 1). They live on the map: each day's route is drawn in its colour. In the list, colour is limited to the day dot, the yellow key and state.
+- **Icon grounds** (`--ground-blue`, `--ground-yellow`, `--ground-red`): the three brand colours as pale tints (16%, 45% and 14% over paper), used only behind a list or trip emoji (the icon disc). Each icon takes the ground that stands out from its own colour (`ICON_GROUND` and `TRIP_ICON_GROUND` in `icons.ts`): blue behind warm and red things, yellow behind blue things, red behind green ones. They are display only, never stored, and far too pale to read as selected, as a delete or as a link.
 - **Transport leg** (`--trip-transport`, defined in `gmap.css`): the grey of the dotted line to a train, flight or car stop.
 - **Trip category stamps** (`--trip-cat-*-bg` / `-fg`): a tinted ground with a darker ink of the same hue, 4.5:1 for the text. The categories are food, sight, activity, transport, stay, shopping and other.
 - **Category pips** (`--pip-*`): the stamp hues, a little stronger, each at least 3:1 on the map ground. They colour the dot in a row, an idea and a map pill. A finished stop is the muted grey `--pip-done`.
@@ -351,9 +352,9 @@ A near-monochrome paper-and-ink palette with one saturated yellow, plus function
 - **On Red / On Pin** (`--on-red`, `--on-pin`): white text on a red key or a coloured pin.
 
 ### Named Rules
-**The One Key Rule.** A sheet has at most one Key Yellow button (enforced by `ui.helpers.ts`). Yellow anywhere else means "selected", "next" or "done", never a second call to action.
+**The One Key Rule.** A sheet has at most one Key Yellow button (enforced by `ui.helpers.ts`). Yellow anywhere else means "selected", "next" or "done", never a second call to action. The one exception is the pale icon ground (`--ground-yellow`, a 45% tint behind a list or trip emoji), which is too light to read as the key; a selected picker tile turns its disc to plain paper so it never reads yellow on yellow.
 
-**The Red Means Gone Rule.** Stamp Red is for deleting and for errors that block. Warnings are amber text with a glyph; they never borrow red.
+**The Red Means Gone Rule.** Stamp Red is for deleting and for errors that block. Warnings are amber text with a glyph; they never borrow red. The 14% `--ground-red` tint behind an icon is decoration, not an error.
 
 **The No Raw Hex Rule.** Colours live on `:root` in `styles.css`. `ui.css` and `trips.css` have no hex values outside `:root` (enforced by `ui.enforcement.test.ts`); they reference tokens.
 
@@ -507,6 +508,10 @@ Bottom sheets have 20px top corners and `--lift-2`. Dialogs have a 1px edge, 16p
 - **List item row:** 52px minimum, a 22px checkbox with 7px corners, the item text at 15px/500, a quantity in muted tabular numerals and a category stamp. Ticking draws a strike-through across the text (420ms) and mutes it. Desktop shows a drag handle and a trash on hover. Touch swipes left over a red tray, behind a 5-second Undo toast.
 - **Trip row:** two lines at most on the row grid: checkbox, time, title, and the place under it. The category is a pip, not a text chip. An idea on a desk shows its grip at rest and lifts on hover.
 - **Nav row** (`NavRow`): 52px, a 96px muted label column, a weight-500 value that ellipsises (muted at 400 when empty) and a deep-yellow chevron. The `is-list` layout (days, settings) makes the label the 15px weight-600 text and the value a muted 13px note, with a hairline below.
+
+### Icon disc
+- **IconDisc** (`components/ui/IconDisc.tsx`; `ListIconDisc` and `TripIconDisc` in `components/IconDiscs.tsx` pick the emoji and ground from the icon): the one way a list's or trip's emoji is drawn. A round paper sticker (Edge border, `--slip-rest`, grain) on a pale `--ground-*` tint. It is `md` 44px with a 24px emoji in House rows and list and trip headers, `sm` 36px with a 20px emoji inside a picker tile and a New list row, and `lg` 52px with a 28px emoji on the desk's trip header. With no icon chosen a list row keeps the place with a plain Paper Tint disc and a muted glyph (`blank`). The disc is decorative (`aria-hidden`); with `onClick` and a `label` it is a button (trip settings' "Change icon").
+- A selected picker tile is Key Yellow and its disc goes to plain paper.
 
 ### Stamps, Pips and Notes
 - **Stamp:** an 11px uppercase weight-700 tag with 5px corners, muted on Paper Tint. Category stamps use their tint and ink pair; `used` is an outlined stamp; `done` is Key Yellow.

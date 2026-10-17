@@ -18,6 +18,7 @@ export {
   suggestionKey,
   suggestionLabel,
 } from './InlinePlace'
+export { IconDisc } from './IconDisc'
 export { InlineSelect } from './InlineSelect'
 export { InlineWhen } from './InlineWhen'
 export { NavRow } from './NavRow'

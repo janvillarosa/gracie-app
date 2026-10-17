@@ -55,6 +55,11 @@
   --on-red: #FFFFFF;
   --on-pin: #FFFFFF;
   --highlighter: color-mix(in srgb, var(--brand-yellow) 70%, transparent);
+  /* Icon grounds: the three brand colours as pale tints, only ever behind a list or trip emoji (the
+     icon disc). They are far too light to read as state, a delete or a link. */
+  --ground-blue: color-mix(in srgb, var(--brand-blue) 16%, var(--panel));
+  --ground-yellow: color-mix(in srgb, var(--brand-yellow) 45%, var(--panel));
+  --ground-red: color-mix(in srgb, var(--brand-red) 14%, var(--panel));
   --focus-ring: 0 0 0 2px var(--panel), 0 0 0 4px color-mix(in srgb, var(--brand-blue) 70%, transparent);
 
   /* ---- Status ------------------------------------------------------------------------ */
@@ -94,6 +99,7 @@
   --icon-lg: 20px;
   --icon-xl: 24px; /* an emoji on a 44px sticker */
   --icon-2xl: 28px; /* an emoji on a 52px tile */
+  --disc-lg: 52px; /* the icon disc on the desk's trip header; --control-lg is the usual 44px, --control-md the picker's */
 
   /* ---- Depth: paper heights, the ream, slips, wells, the key ------------------------- */
   --paper-edge: inset 0 1px 0 rgba(255, 255, 255, 0.9); /* the white top highlight */
@@ -1290,23 +1296,59 @@ h5.ant-typography {
   overflow-wrap: anywhere;
 }
 
-/* List icon: a round paper sticker holding the list's emoji */
-.list-icon {
+/* Icon disc (components/ui/IconDisc): a round paper sticker holding a list's or trip's emoji, on
+   a pale tint of one brand colour (--ground-*). With no ground it is a plain Paper Tint disc. */
+.icon-disc {
+  --disc: var(--control-lg);
+  --ground: var(--panel-subtle);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 44px;
-  height: 44px;
+  box-sizing: border-box;
+  width: var(--disc);
+  height: var(--disc);
+  padding: 0;
   border-radius: 50%;
+  font: inherit;
   font-size: var(--icon-xl);
   line-height: 1;
-  background: var(--well-fill);
-  border: 1px solid var(--border);
+  background: var(--grain-paper), var(--ground);
+  border: 1px solid var(--border-strong);
   box-shadow: var(--slip-rest);
 }
+.icon-disc.is-blue {
+  --ground: var(--ground-blue);
+}
+.icon-disc.is-yellow {
+  --ground: var(--ground-yellow);
+}
+.icon-disc.is-red {
+  --ground: var(--ground-red);
+}
+.icon-disc.is-sm {
+  --disc: var(--control-md);
+  font-size: var(--icon-lg);
+}
+.icon-disc.is-lg {
+  --disc: var(--disc-lg);
+  font-size: var(--icon-2xl);
+}
+/* No icon chosen: the disc keeps the place, so every title starts on one line. */
+.icon-disc.is-blank {
+  color: var(--muted);
+  font-size: var(--icon-md);
+}
+button.icon-disc {
+  cursor: pointer;
+  color: inherit;
+}
+button.icon-disc:focus-visible {
+  box-shadow: var(--focus-ring);
+  outline: none;
+}
 
-.list-icon-title {
+.icon-disc-title {
   margin-right: 12px;
 }
 
@@ -2246,7 +2288,7 @@ textarea.notes-textarea {
   }
 
   /* As the list page settles in, its sticker gives a small hop, like a sticker pressed down */
-  .list-icon-title {
+  .icon-disc-title {
     animation: sticker-press 560ms ease-out 200ms both;
   }
 }
@@ -3201,11 +3243,6 @@ textarea.notes-textarea {
   gap: var(--space-1);
 }
 
-/* A list without an icon keeps the icon's place, so every title starts on one line. */
-.list-icon.is-blank {
-  color: var(--muted);
-  font-size: var(--icon-md);
-}
 .lists-list .list-row-desc {
   color: var(--muted);
 }
@@ -3493,7 +3530,7 @@ textarea.notes-textarea {
   }
 
   /* Secondary flourishes that played on top of a page's arrival. */
-  :root[data-motion='lite'] .list-icon-title,
+  :root[data-motion='lite'] .icon-disc-title,
   :root[data-motion='lite'] .avatar-stack-face,
   :root[data-motion='lite'] .avatar-stack-more,
   :root[data-motion='lite'] .pantry-slip {

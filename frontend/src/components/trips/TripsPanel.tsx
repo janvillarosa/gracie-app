@@ -8,7 +8,7 @@ import { TransitionLink } from '@components/TransitionLink'
 import { useTransitionNavigate } from '@lib/viewTransition'
 import type { TripStore } from '@lib/trips/store'
 import { countdown, groupTrips, localDateKey, shortRange, tripPhase } from '@lib/trips/schedule'
-import { toTripEmoji } from '../../icons'
+import { TripIconDisc } from '@components/IconDiscs'
 import { TripNameModal } from './NewTripModal'
 
 const metaFor = (t: Trip, today: string, kind: 'now' | 'upcoming' | 'draft' | 'past') => {
@@ -43,9 +43,7 @@ const TripRow = React.memo(function TripRow({
   return (
     <AntList.Item className="trip-list-row">
       <TransitionLink to={`/app/trips/${trip.trip_id}`} className="list-row-link">
-        <span className="list-icon" aria-hidden>
-          {toTripEmoji(trip.icon)}
-        </span>
+        <TripIconDisc icon={trip.icon} />
         <span className="list-row-text">
           <span className="list-row-name">{trip.title}</span>
           <Typography.Text

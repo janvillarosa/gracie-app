@@ -2,7 +2,8 @@ import React from 'react'
 import { CircleDashed } from '@phosphor-icons/react'
 import type { ListIcon } from '@api/types'
 import { ChipGroup } from '@components/ui'
-import { LIST_ICONS, ICON_EMOJI } from '../icons'
+import { ListIconDisc } from '@components/IconDiscs'
+import { LIST_ICONS } from '../icons'
 
 const NONE = 'NONE'
 const label = (key: string) =>
@@ -21,7 +22,11 @@ export const IconPicker: React.FC<Props> = ({ value, onChange }) => (
     columns={3}
     options={[
       { value: NONE, label: 'None', icon: <CircleDashed weight="bold" /> },
-      ...LIST_ICONS.map((ic) => ({ value: ic, label: label(ic), icon: ICON_EMOJI[ic] })),
+      ...LIST_ICONS.map((ic) => ({
+        value: ic,
+        label: label(ic),
+        icon: <ListIconDisc icon={ic} size="sm" />,
+      })),
     ]}
     onChange={(v) => onChange(v === NONE ? undefined : v)}
   />

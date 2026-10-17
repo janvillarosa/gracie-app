@@ -92,7 +92,7 @@ describe('the planning desk layout', () => {
     // One row: icon, title over the day line, avatars, menu.
     const row = top.querySelector('.trip-desk-head') as HTMLElement
     expect(
-      [...row.children].map((c) => c.className.split(' ')[0].replace(/^list-icon$/, 'icon')),
+      [...row.children].map((c) => c.className.split(' ')[0].replace(/^icon-disc$/, 'icon')),
     ).toEqual(['icon', 'trip-desk-text', 'avatar-stack', 'ui-btn'])
   })
 

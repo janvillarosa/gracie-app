@@ -35,12 +35,14 @@ import { TripNameModal } from '@components/trips/NewTripModal'
 import { TripsPanel } from '@components/trips/TripsPanel'
 import { useTripState, useTripStoreFor } from '@lib/trips/hooks'
 import { daysToNextTrip, localDateKey, tripPhase } from '@lib/trips/schedule'
-import { toEmoji } from '../icons'
+import { ListIconDisc } from '@components/IconDiscs'
+import { toEmoji, toGround, toTripGround } from '../icons'
 import {
   Button,
   DetailGroup,
   EmptyState,
   Field,
+  IconDisc,
   NavRow,
   Sheet,
   SheetActions,
@@ -244,14 +246,18 @@ export const RoomPage: React.FC<{
         // A trip's packing list says whose it is.
         const packing = packingOf(l)
         const icon = l.icon ? toEmoji(l.icon) : packing ? '🧳' : null
+        // A packing list with no icon of its own wears the trip suitcase's disc.
+        const ground = l.icon ? toGround(l.icon) : packing ? toTripGround() : undefined
         const meta = packing ? `For ${l.name.slice('Packing · '.length)}` : l.description
         const votes = votesOf(l).length
         return (
           <AntList.Item>
             <TransitionLink to={`/app/lists/${l.list_id}`} className="list-row-link">
-              <span className={icon ? 'list-icon' : 'list-icon is-blank'} aria-hidden>
-                {icon ?? <ListBullets weight="bold" />}
-              </span>
+              <IconDisc
+                glyph={icon ?? <ListBullets weight="bold" />}
+                ground={ground}
+                blank={!icon}
+              />
               <span className="list-row-text">
                 <span className="list-row-name">{packing ? 'Packing' : l.name}</span>
                 {meta && <span className="list-row-desc">{meta}</span>}
@@ -480,7 +486,8 @@ export const RoomPage: React.FC<{
             </div>
             <NavRow
               label="Icon"
-              value={newIcon ? toEmoji(newIcon) : 'None'}
+              value={newIcon ? <ListIconDisc icon={newIcon} size="sm" /> : 'None'}
+              aria-label={newIcon ? `Icon: ${newIcon.toLowerCase().replace('_', ' ')}` : undefined}
               empty={!newIcon}
               picker={{
                 title: 'Icon',
@@ -540,7 +547,10 @@ export const RoomPage: React.FC<{
             </div>
             <NavRow
               label="Icon"
-              value={editIcon ? toEmoji(editIcon) : 'None'}
+              value={editIcon ? <ListIconDisc icon={editIcon} size="sm" /> : 'None'}
+              aria-label={
+                editIcon ? `Icon: ${editIcon.toLowerCase().replace('_', ' ')}` : undefined
+              }
               empty={!editIcon}
               picker={{
                 title: 'Icon',

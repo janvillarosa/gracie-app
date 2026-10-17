@@ -27,7 +27,8 @@ import { useTrips } from '@lib/trips/hooks'
 import { usePacking } from '@lib/trips/usePacking'
 import { diffDays, routeText, shortRange } from '@lib/trips/schedule'
 import { useTransitionNavigate } from '@lib/viewTransition'
-import { TRIP_ICONS, TRIP_ICON_EMOJI, toTripEmoji, type TripIcon } from '../icons'
+import { TripIconDisc } from '@components/IconDiscs'
+import { TRIP_ICONS, type TripIcon } from '../icons'
 import { ChipGroup } from '@components/ui'
 import '../trips.css'
 
@@ -123,14 +124,7 @@ export const TripSettings: React.FC = () => {
             tile
             editHint
             leading={
-              <button
-                type="button"
-                className="list-icon"
-                aria-label="Change icon"
-                onClick={() => setSheet('icon')}
-              >
-                {toTripEmoji(trip.icon)}
-              </button>
+              <TripIconDisc icon={trip.icon} label="Change icon" onClick={() => setSheet('icon')} />
             }
             title={trip.title}
             onTitle={(v) => patch({ title: v })}
@@ -258,7 +252,7 @@ const IconChoices: React.FC<{ value: TripIcon; onPick: (v: TripIcon) => void }> 
     options={TRIP_ICONS.map((i) => ({
       value: i,
       label: i.charAt(0) + i.slice(1).toLowerCase().replace('_', ' '),
-      icon: TRIP_ICON_EMOJI[i],
+      icon: <TripIconDisc icon={i} size="sm" />,
     }))}
     columns={4}
     onChange={onPick}
