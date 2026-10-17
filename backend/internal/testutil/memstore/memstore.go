@@ -55,12 +55,14 @@ type Repos struct {
 	Trips  store.TripRepository
 	Events *EventRepo
 	Aggs   *AggRepo
+	// Autopilot is the autopilot action log.
+	Autopilot *AutopilotRepo
 }
 
 // Compose returns in-memory repos + a no-op Tx runner.
 func Compose() Repos {
 	st := NewStore()
-	return Repos{Tx: Tx{}, Users: &UserRepo{st}, Rooms: &RoomRepo{st}, Lists: &ListRepo{st}, Items: &ListItemRepo{st}, Trips: &TripRepo{st}, Events: NewEventRepo(), Aggs: NewAggRepo()}
+	return Repos{Tx: Tx{}, Users: &UserRepo{st}, Rooms: &RoomRepo{st}, Lists: &ListRepo{st}, Items: &ListItemRepo{st}, Trips: &TripRepo{st}, Events: NewEventRepo(), Aggs: NewAggRepo(), Autopilot: NewAutopilotRepo()}
 }
 
 // UserRepo

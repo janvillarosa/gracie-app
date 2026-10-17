@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/janvillarosa/gracie-app/backend/internal/analytics"
+	"github.com/janvillarosa/gracie-app/backend/internal/store"
 )
 
 // emitter gives a service nil-safe event emission. Services embed it and get a
@@ -35,6 +36,17 @@ func (e *emitter) purgeRoom(ctx context.Context, roomID string) {
 	}
 	if err := e.purger.PurgeRoom(ctx, roomID); err != nil {
 		log.Printf("analytics: purge house %s: %v", roomID, err)
+	}
+}
+
+// deleteAutopilotActions removes a gone house's autopilot actions. Like the purges, it never fails
+// the caller: the house is already gone.
+func deleteAutopilotActions(ctx context.Context, r store.AutopilotActionRepository, roomID string) {
+	if r == nil {
+		return
+	}
+	if err := r.DeleteByRoom(ctx, roomID); err != nil {
+		log.Printf("autopilot: delete actions of house %s: %v", roomID, err)
 	}
 }
 

@@ -20,6 +20,8 @@ type RoomService struct {
 	items store.ListItemRepository
 	trips store.TripRepository
 	tx    store.TxRunner
+	// autopilot is the optional action log, deleted with the house.
+	autopilot store.AutopilotActionRepository
 	emitter
 }
 
@@ -136,6 +138,9 @@ func (s *RoomService) JoinRoom(ctx context.Context, joiner *models.User, roomID,
 		return nil
 	}); err != nil {
 		return nil, err
+	}
+	if deleteSolo != nil {
+		deleteAutopilotActions(ctx, s.autopilot, deleteSolo.RoomID)
 	}
 	if deleteSolo != nil && s.purger != nil {
 		// The solo house is gone; the person's own events stay (their profile is built from them).
@@ -266,8 +271,12 @@ func (s *RoomService) UpdateRoomSettings(ctx context.Context, user *models.User,
 	return nil
 }
 
+// UseAutopilotActions injects the autopilot action log, so a deleted house's actions go with it.
+func (s *RoomService) UseAutopilotActions(r store.AutopilotActionRepository) { s.autopilot = r }
+
 func (s *RoomService) cleanupRoomResources(ctx context.Context, roomID string) {
 	s.purgeRoom(ctx, roomID)
+	deleteAutopilotActions(ctx, s.autopilot, roomID)
 	if s.trips != nil {
 		_ = s.trips.DeleteByRoom(ctx, roomID)
 	}

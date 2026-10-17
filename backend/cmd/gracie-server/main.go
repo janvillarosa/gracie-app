@@ -46,6 +46,10 @@ func main() {
 		log.Fatalf("trips: ensure indexes: %v", err)
 	}
 	tx := mongostore.NewTx(mcli)
+	autopilotRepo := mongostore.NewAutopilotRepo(mcli)
+	if err := autopilotRepo.EnsureIndexes(ctx); err != nil {
+		log.Fatalf("autopilot: ensure indexes: %v", err)
+	}
 
 	// Behavior analytics: buffered, non-blocking event capture. Disabled -> NopRecorder.
 	analyticsReg := analytics.NewRegistry()
@@ -108,6 +112,8 @@ func main() {
 	userSvc.UseListRepos(listsRepo, itemsRepo)
 	roomSvc.UseTripRepo(tripsRepo)
 	userSvc.UseTripRepo(tripsRepo)
+	roomSvc.UseAutopilotActions(autopilotRepo)
+	userSvc.UseAutopilotActions(autopilotRepo)
 	categorizers := buildCategorizers(ctx, cfg, indexArg(categoryIndex))
 	listSvc := services.NewListService(usersRepo, roomsRepo, listsRepo, itemsRepo, categorizers["grocery"])
 	tripSvc := services.NewTripService(roomsRepo, tripsRepo, listSvc, listsRepo)

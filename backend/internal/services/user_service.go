@@ -20,6 +20,8 @@ type UserService struct {
 	items store.ListItemRepository
 	trips store.TripRepository
 	tx    store.TxRunner
+	// autopilot is the optional action log, deleted with the house.
+	autopilot store.AutopilotActionRepository
 	emitter
 }
 
@@ -218,8 +220,12 @@ func (s *UserService) DeleteAccount(ctx context.Context, userID string) error {
 	return nil
 }
 
+// UseAutopilotActions injects the autopilot action log, so a deleted house's actions go with it.
+func (s *UserService) UseAutopilotActions(r store.AutopilotActionRepository) { s.autopilot = r }
+
 func (s *UserService) cleanupRoomResources(ctx context.Context, roomID string) {
 	s.purgeRoom(ctx, roomID)
+	deleteAutopilotActions(ctx, s.autopilot, roomID)
 	if s.trips != nil {
 		_ = s.trips.DeleteByRoom(ctx, roomID)
 	}

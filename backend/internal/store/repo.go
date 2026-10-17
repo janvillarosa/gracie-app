@@ -86,6 +86,31 @@ type ListItemRepository interface {
 	Delete(ctx context.Context, itemID string) error
 }
 
+// AutopilotActionRepository is the durable log of what autopilot applied.
+type AutopilotActionRepository interface {
+	// Insert returns derr.ErrConflict when (room_id, kind, key, cycle) already has an action.
+	Insert(ctx context.Context, a *models.AutopilotAction) error
+	SetItem(ctx context.Context, actionID, itemID string) error
+	// Delete removes an action whose item could not be created, so a later tick may try again.
+	Delete(ctx context.Context, actionID string) error
+	GetByID(ctx context.Context, actionID string) (*models.AutopilotAction, error)
+	// GetByItem returns derr.ErrNotFound when no action created the item.
+	GetByItem(ctx context.Context, itemID string) (*models.AutopilotAction, error)
+	// ListByList returns the list's actions created since `since`, newest first.
+	ListByList(ctx context.Context, listID string, since time.Time) ([]models.AutopilotAction, error)
+	// ListApplied returns the house's actions still in state applied.
+	ListApplied(ctx context.Context, roomID string) ([]models.AutopilotAction, error)
+	// Resolve moves an action to `to` only if its state is one of `from`, stamping resolved_at and
+	// purge_at; it reports whether it moved.
+	Resolve(ctx context.Context, actionID string, from []string, to string, at time.Time) (bool, error)
+	DeleteByRoom(ctx context.Context, roomID string) error
+	// AcquireLease takes the ticker lease for owner when it is free, expired or already owner's.
+	AcquireLease(ctx context.Context, owner string, ttl time.Duration, now time.Time) (bool, error)
+}
+
+// AutopilotRetention is how long a resolved action is kept (its key blocks a re-add meanwhile).
+const AutopilotRetention = 180 * 24 * time.Hour
+
 // TripStub is the manifest projection used by sync.
 type TripStub struct {
 	TripID    string     `bson:"trip_id"`
