@@ -15,6 +15,8 @@ Layered packages under `internal/`:
   `Booking`, `Place`, `Op`, `OpResult`, `TripDelta`) with `bson` tags.
 - `store` — repository interfaces; `store/mongo` is the only implementation.
 - `services` — business logic orchestrating repositories and enforcing rules.
+- `autopilot` — pure planner and policy for the house autopilot (modes, `Gather`/`Plan`/`Decide`, the
+  `Signals` port); `autopilot/replay` benchmarks assist on history. No I/O.
 - `trips` — pure op engine: typed patches, validators, `ApplyOp`, `DeltaSince`. No I/O.
 - `ratelimit` — in-process token-bucket limiter keyed per user.
 - `tzlookup` — lazy offline coordinates -> IANA zone (tzf), used for Google places sent without a tz.
@@ -27,7 +29,8 @@ Layered packages under `internal/`:
 `cmd/gracie-server` is the entrypoint (wired to Mongo). `cmd/fetch-model` bakes the
 embedding model into the image at build time. `cmd/analytics-backfill` is a one-off
 operator command (see [analytics.md](../docs/features/analytics.md), Backfill); both Dockerfiles ship it next to the
-server. `cmd/suggest-eval` backtests and shadow-checks the suggestion forecast.
+server. `cmd/suggest-eval` backtests and shadow-checks the suggestion forecast, and `suggest-eval autopilot`
+replays assist mode (precision, recall, removals per week).
 
 ## Core flows
 
@@ -75,7 +78,13 @@ Full behavior lives in [docs/features/](../docs/features/README.md). The rules y
   `analytics.AwayCalendar` (implemented by `services.AwayCalendar`). Test against the golden
   households (`internal/testutil/households`).
 - **Suggestions** ([suggestions.md](../docs/features/suggestions.md)): no suggestion state that is not
-  derivable from events and aggregates; bump `analytics.ForecastVersion` when forecast logic changes.
+  derivable from events and aggregates; bump `analytics.ForecastVersion` when forecast logic changes. The one
+  exception is the autopilot action log: only **applied** (assist) actions are stored, because "did we already
+  add this?" must be exact.
+- **Autopilot** ([autopilot.md](../docs/features/autopilot.md)): the mode is a house setting (`off|suggest|assist`,
+  no server ceiling). `internal/autopilot` is pure; `AutopilotService` is the only service for suggestions,
+  the run hint and assist. Every effect is in-app (`autopilot.Effect`); anything external needs a new mode and
+  consent. Autopilot adds are `RoleAutomated`, never requests, and act as `system:autopilot`.
 
 ## Testing
 

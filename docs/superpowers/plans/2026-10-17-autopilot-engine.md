@@ -3,6 +3,10 @@
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Changes**
+- **As built (2026-10-17):** deleting an item already checked off is tidying, not a miss, so only an *applied*
+  action can become removed (diagrams 7 and 8). An unchecked item expires 30 h after its run started. The
+  benchmark (`docs/superpowers/qa/autopilot-benchmark-2026-10-17.md`) passes the gate at the default bar,
+  which stays at 0.80 / 0.70: the loosest passing bar (0.70 / 0.50) adds almost nothing.
 - **v4 (2026-10-17):** the analytics anticipation upgrade is on `main` (janvillarosa/gracie-app#28), and this branch is rebased onto it. The planner reads the real signals from day one: `Reader.RunPlan`, `Reader.NeedsBefore` (which applies `predict.NeedBy`), `Reader.Upcoming` and the `analytics.AwayCalendar` port (`services.AwayCalendar`). There is no temporary adapter, no `ApproxNeedBy`, and the house is away-aware from the first assist add. The old Task 10 is gone (11 tasks become 10). `ForecastVersion` on `main` is 3, so this branch takes 4. Tests and the eval use the golden households (`internal/testutil/households`).
 - **v3:** one service and one candidate pipeline. `SuggestionService` is folded into `AutopilotService`, with no wrapper left behind. The handlers call `AutopilotService` directly. The existing routes (`…/suggestions`, `…/suggestions/ignore`, `…/run-hint`) keep their paths and are marked deprecated in favour of `…/autopilot`. The candidate filters move into the pure `autopilot` package, so the slip, run mode and Assist all judge the same items. The run hint moves into the same service.
 - **v2:** no server ceiling (the house setting is the mode); the eval gate tunes the assist bar; diagrams added.
@@ -390,7 +394,7 @@ sequenceDiagram
         API->>LS: DeleteItem
         LS->>EV: item.deleted
         LS->>AS: ItemDeleted(item)
-        AS->>AR: Resolve(applied|confirmed → removed)
+        AS->>AR: Resolve(applied → removed)
         AS->>EV: item.autopilot_removed (RoleDismiss)
     else taps Undo on the slip
         U->>LP: Undo / Undo all
@@ -411,8 +415,7 @@ stateDiagram-v2
     applied --> confirmed: item checked
     applied --> removed: item deleted by a member
     applied --> undone: Undo
-    applied --> expired: run ended over a day ago, still unchecked
-    confirmed --> removed: deleted before Clear done
+    applied --> expired: 30 h after its run started, still unchecked
     confirmed --> [*]
     removed --> [*]
     undone --> [*]

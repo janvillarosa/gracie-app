@@ -25,3 +25,9 @@ _Frontend paths are relative to `frontend/src/`._
 - **Run mode:** while a run is on, the suggestions query key gains `'run'` and asks `?during=run`; the slip says
   "Usually due in 3 days" (`due_in_days`) and Ignore posts `during: 'run'`.
 - **Run done:** once per run, on the last check or on Clear done, an `announce` Sheet with an `InkStamp` ("Run done", dated), "14 items · 22 min", and "4 min quicker than usual" only when ≥ 3 min quicker than the hint's `typical` and the run is at least ¾ the usual size, so a top-up shop is never "quicker" (`runDoneLines`); its key cheers, a different word each run (`CHEERS`, `nextCheer`: "Nice!", "Huzzah!", "Amazing!"..., never the same twice in a row; the last one is kept in `localStorage` `gracie_last_cheer`). The check that finishes a run throws no confetti (the stamp is the celebration; `useShoppingRun().check()` returns whether a run is on). It opens 350ms after the last check. Tracks `list.run_stamped {items, minutes}`.
+
+## Autopilot on a list
+
+In assist mode autopilot puts the usual things on the list before the shop: those rows carry the autopilot
+mark and a reason, and a slip says what was added for which run, with Undo all. Swipe-deleting an autopilot
+row that was not bought counts as a miss. See [autopilot.md](autopilot.md).
