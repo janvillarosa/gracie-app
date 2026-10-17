@@ -233,12 +233,41 @@ func indexArg(r *mongostore.CategoryIndexRepo) categorization.CategoryIndex {
 }
 
 // buildCategorizers returns the per-domain registry. Add a new domain (e.g.
-// list-type suggestion) by adding one line with its anchor set + fallback;
+// list-type suggestion) by adding one entry with its anchor set + fallback;
 // the embedding model is shared, not reloaded.
+//
+// Each domain starts keyword-only so the server can listen at once (a volume-backed
+// Railway service cannot overlap deploys, so every startup second is downtime).
+// The model load and anchor embedding run in the background and swap in when ready.
 func buildCategorizers(ctx context.Context, cfg *config.Config, index categorization.CategoryIndex) map[string]categorization.Categorizer {
-	emb := buildEmbedder(ctx, cfg)
-	return map[string]categorization.Categorizer{
-		"grocery": domainCategorizer(ctx, emb, categorization.GroceryAnchors, categorization.General, cfg, index),
-		// Future: "list_type": domainCategorizer(ctx, emb, categorization.ListTypeAnchors, "", cfg, index),
+	type domain struct {
+		anchors  []categorization.Anchor
+		fallback string
 	}
+	domains := map[string]domain{
+		"grocery": {categorization.GroceryAnchors, categorization.General},
+		// Future: "list_type": {categorization.ListTypeAnchors, ""},
+	}
+	swaps := make(map[string]*categorization.Swappable, len(domains))
+	out := make(map[string]categorization.Categorizer, len(domains))
+	for name, d := range domains {
+		swaps[name] = categorization.NewSwappable(categorization.NewChain(d.fallback, categorization.NewKeywordCategorizer(d.anchors)))
+		out[name] = swaps[name]
+	}
+	if !cfg.EmbeddingEnabled {
+		log.Printf("categorization: embedding disabled (keyword mode)")
+		return out
+	}
+	go func() {
+		start := time.Now()
+		emb := buildEmbedder(ctx, cfg)
+		if emb == nil {
+			return
+		}
+		for name, d := range domains {
+			swaps[name].Swap(domainCategorizer(ctx, emb, d.anchors, d.fallback, cfg, index))
+		}
+		log.Printf("categorization: embedding ready in %s", time.Since(start).Round(time.Millisecond))
+	}()
+	return out
 }

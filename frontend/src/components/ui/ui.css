@@ -22,6 +22,12 @@
     transition: transform var(--dur-press) var(--ease-out), box-shadow var(--dur-fast) ease;
   }
 }
+/* Lite motion tier: the key still sinks; its shadow changes at once instead of re-blurring. */
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-motion='lite'] .ui-btn {
+    transition: transform var(--dur-press) var(--ease-out);
+  }
+}
 /* Disabled is paper with faded ink, never a grey pill and never see-through. */
 .ui-btn:disabled {
   cursor: default;
@@ -1211,6 +1217,14 @@ input.ui-sheet-title.has-error:focus-visible {
   }
   .paper-stack:not(.is-still)::before {
     animation: sheet-peek 520ms var(--ease-out) 240ms both;
+  }
+}
+/* Lite motion tier (lib/motion.ts): the top sheets still assemble; the sheets peeking beneath are
+   simply there, so a page's arrival is two animations instead of four. */
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-motion='lite'] .paper-stack:not(.is-still)::before,
+  :root[data-motion='lite'] .paper-stack:not(.is-still)::after {
+    animation: none;
   }
 }
 

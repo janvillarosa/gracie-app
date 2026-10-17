@@ -7,9 +7,9 @@ For now, Rooms are empty containers; the core flows implemented are user signup,
 ## Quick Start
 
 Prereqs
-- Go 1.22+
+- Go 1.26
 - Docker (for MongoDB and Compose)
-- Node 18+ (for local frontend)
+- Node 20 (`.nvmrc`) and pnpm 9 (for local frontend)
 
 ### One command (Docker Compose)
 

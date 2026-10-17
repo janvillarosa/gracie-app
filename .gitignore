@@ -36,9 +36,10 @@ cpu.pprof
 mem.pprof
 heap.pprof
 
-# Go compile/cache (when redirected locally)
+# Go compile/cache/tmp (when redirected locally; the Makefile's gofmt walk skips these too)
 backend/*.gocache/
 backend/.gocache*
+backend/.gotmp*
 
 # Environment and local config
 .env
@@ -55,11 +56,6 @@ backend/.gocache*
 *.swp
 *.swo
 
-# DynamoDB Local (if using shared-db mode locally)
-.dynamodb/
-dynamodb_local_*
-shared-local-instance.db
-
 # MongoDB (local dev volume)
 .mongo/
 
@@ -75,3 +71,19 @@ frontend/dist-ssr/
 
 # Downloaded ONNX models (fetched at build time by cmd/fetch-model)
 backend/models/
+
+# Coding-agent and tool state (local to each machine/session; never commit)
+# .claude/ holds worktrees and personal settings; launch.json is the shared dev-server config.
+.claude/*
+!.claude/launch.json
+.superpowers/
+.playwright-mcp/
+.agents/
+.taste-skill/
+skills-lock.json
+qa-shots/
+# Impeccable: design.json, config.json, mocks/ and surfaces/ are tracked; its working state is not.
+.impeccable/hook.*
+.impeccable/config.local.json
+.impeccable/questions/
+.impeccable/review/

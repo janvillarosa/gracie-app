@@ -11,6 +11,7 @@ import 'antd/dist/reset.css'
 import './styles.css'
 import { setupPWAAssets } from '@lib/pwaAssets'
 import { listenForInstallPrompt } from '@lib/installPrompt'
+import { initMotion } from '@lib/motion'
 
 // Hoisted so the theme object keeps a stable identity across renders.
 const antdThemeConfig = {
@@ -69,6 +70,9 @@ const antdThemeConfig = {
 }
 
 const queryClient = new QueryClient()
+
+// The motion tier goes on <html> before the first paint, so no animation starts at the wrong tier.
+initMotion()
 
 // Inject icons/manifest before app mounts
 setupPWAAssets()

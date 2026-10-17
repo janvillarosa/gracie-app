@@ -65,6 +65,10 @@ func NewRouter(userFinder authmw.UserFinder, h Handlers) http.Handler {
 		MaxAge:           300,
 	}))
 
+	// Liveness for the deploy healthcheck: the server only listens once startup is done,
+	// so a 200 here means this instance can take traffic.
+	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) })
+
 	// Public endpoints
 	r.Post("/auth/register", h.Auth.Register)
 	r.Post("/auth/login", h.Auth.Login)

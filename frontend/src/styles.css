@@ -908,12 +908,26 @@ h5.ant-typography {
    list's sheet, not the desk, so it rests a hair above the page (a slip), never a paper height:
    a lift's ream and long drop would bleed over the rows below. */
 .suggestion-sheet {
+  position: relative;
   margin: 0 0 var(--space-3);
   padding: var(--space-1) var(--space-3);
   background: var(--paper-fill);
   border: 1px solid color-mix(in srgb, var(--brand-yellow-deep) 38%, var(--border));
   border-radius: var(--radius-lg);
   box-shadow: var(--slip-rest);
+}
+
+/* The warm edge the slip arrives with: a second, deeper border laid over the first that fades
+   out. Fading it (opacity) runs on the compositor; animating border-color instead repainted the
+   grained, shadowed slip on every frame for a second and a half. */
+.suggestion-sheet::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border: 1px solid color-mix(in srgb, var(--brand-yellow-deep) 85%, var(--border));
+  border-radius: inherit;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .suggestion-rows {
@@ -1001,9 +1015,10 @@ h5.ant-typography {
     animation: suggestion-clip 340ms steps(1, end) both;
   }
   .suggestion-sheet {
-    animation:
-      suggestion-arrive 380ms var(--ease-out) 60ms both,
-      suggestion-warm 1500ms ease-out 200ms both;
+    animation: suggestion-arrive 380ms var(--ease-out) 60ms both;
+  }
+  .suggestion-sheet::after {
+    animation: suggestion-warm 1500ms ease-out 200ms both;
   }
   /* The plus turns a quarter once, a beat after the slip settles. It is symmetric, so it ends
      looking exactly as it began: a nudge toward the key, then nothing. */
@@ -1070,7 +1085,7 @@ h5.ant-typography {
 }
 
 @keyframes suggestion-warm {
-  from { border-color: color-mix(in srgb, var(--brand-yellow-deep) 85%, var(--border)); }
+  from { opacity: 1; }
 }
 
 @keyframes suggestion-plus {
@@ -3443,4 +3458,63 @@ textarea.notes-textarea {
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-sm);
   font-size: var(--t-meta);
+}
+
+/* ---------- Motion tier: lite ---------- */
+/* `lib/motion.ts` sets `data-motion="lite"` on a device that can't hold its frame rate. The
+   meaning of every motion stays (things still arrive, rows still pop in, the slip still settles);
+   what goes is the overlap and the per-frame layout and paint. Opening a list started seventeen
+   animations at once; here it is the sheet, the rows and the slip. Full-tier devices never see
+   these rules. ui.css trims its own primitives the same way. */
+@media (prefers-reduced-motion: no-preference) {
+  /* The suggestion slot opens and closes at once instead of re-laying out the page each frame;
+     the slip itself still settles in and pops out. */
+  :root[data-motion='lite'] .suggestion-reveal,
+  :root[data-motion='lite'] .suggestion-clip,
+  :root[data-motion='lite'] .suggestion-reveal.is-collapsing,
+  :root[data-motion='lite'] .suggestion-sheet::after {
+    animation: none;
+  }
+
+  /* Secondary flourishes that played on top of a page's arrival. */
+  :root[data-motion='lite'] .list-icon-title,
+  :root[data-motion='lite'] .avatar-stack-face,
+  :root[data-motion='lite'] .avatar-stack-more,
+  :root[data-motion='lite'] .pantry-slip {
+    animation: none;
+  }
+
+  /* The pill's tab glides by left and width, a layout and a repaint of its grained, lifted
+     paper every frame; it moves at once and the new pane still slides in. */
+  :root[data-motion='lite'] .pill-nav-list::after {
+    transition: none;
+  }
+
+  /* Picked up and set down: the lift's large shadow is not re-blurred on every frame. */
+  :root[data-motion='lite'] .sortable-row {
+    transition: scale 220ms var(--ease-out), rotate 220ms var(--ease-out);
+  }
+
+  /* Skeletons breathe as one block rather than as dozens of separate bars. */
+  :root[data-motion='lite'] .row-skeleton .sk-lead,
+  :root[data-motion='lite'] .row-skeleton .sk-bar,
+  :root[data-motion='lite'] .row-skeleton .sk-tag {
+    animation: none;
+  }
+  :root[data-motion='lite'] .row-skeleton {
+    animation: sk-breathe 1400ms ease-in-out infinite alternate;
+  }
+
+  /* The loader: the drawn house, its window glowing (as with reduced motion), instead of eight
+     strokes animating inside an SVG, which repaints on the main thread while the page loads. */
+  :root[data-motion='lite'] .house-loader .house-mark,
+  :root[data-motion='lite'] .house-loader [class*='hm-'] {
+    animation: none;
+  }
+  :root[data-motion='lite'] .house-loader [pathLength] {
+    stroke-dasharray: none;
+  }
+  :root[data-motion='lite'] .house-loader .hm-pane {
+    animation: hl-glow 1600ms ease-in-out infinite alternate;
+  }
 }
