@@ -25,7 +25,7 @@ is the only implementation (uses `go.mongodb.org/mongo-driver`). See
   index** (only trips that have it) serving the daily 30-day purge. The `place_cache`
   collection no longer exists (Photon was removed); drop it manually from old databases.
 
-- **Analytics** (see `analytics` in `../../CLAUDE.md`): `events` (raw, unique `event_id`, TTL on
+- **Analytics** (see [docs/features/analytics.md](../../../docs/features/analytics.md)): `events` (raw, unique `event_id`, TTL on
   `expire_at`, generic indexes by actor/target/room/container/key), `period_stats`
   (`<u|h>:<id>:<day|month|year>`, nested counts by `<subject>.<verb>`), `key_stats`
   (`<room>:<subject type>:<key>` with `intervals.due_at` indexed), `behavior_profiles`
@@ -50,13 +50,16 @@ is the only implementation (uses `go.mongodb.org/mongo-driver`). See
   on null/missing values during email/password registration.
 - Always add **`bson` tags** to model fields (e.g. `user_id`, not `userid`).
 - Store timestamps as **`time.Time`**, not strings, to avoid decode issues.
-- Prefer a conditional Delete over ConditionCheck inside a transaction (avoids
-  multiple ops on one item).
+- Inside a transaction, guard writes with a filter on the expected state (e.g. a
+  conditional `DeleteOne`/`UpdateOne` and check the matched count) rather than a separate
+  read-then-write.
 
 ## Testing this layer
 
 `mongo_integration_test.go` carries `//go:build integration` and is **excluded from
 the fast `go test ./...`**. It runs only via **`make test-integration`**, which needs
-a Mongo RS (`MONGODB_URI`); it self-skips if Mongo is unreachable. A bare
+a Mongo RS (`MONGODB_URI`); it self-skips if Mongo is unreachable (so a "pass" with no
+Mongo running proves nothing; check the output for skips). Recipe in the root
+[CLAUDE.md](../../../CLAUDE.md), "Integration tests". A bare
 `go test ./...` covers none of this package — always run `make test-integration` when
 you change repositories, indexes, or transaction logic.

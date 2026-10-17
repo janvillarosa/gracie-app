@@ -11,7 +11,7 @@ Simple UI for the Bauhouse backend flows:
 ## Prereqs
 
 - Node.js 18+ (recommended 20)
-- pnpm 9+ (npm/yarn also work)
+- pnpm 9 (the lockfile is `pnpm-lock.yaml`; don't use npm/yarn)
 - Backend running at http://localhost:8080
 
 ## Setup
