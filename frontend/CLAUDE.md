@@ -107,6 +107,20 @@ until then (`leavingSuggestion`, `SUGGESTION_EXIT_MS`). Any new row, typed or su
 failure or an empty answer just shows nothing. Events: `nudge.shown|tapped|dismissed` with
 `kind: 'recurring'`. The House settings page has the on/off switch (`suggestions_off`).
 
+## Print and calendar
+
+- **Print:** the List and Trip ⋯ menus have Print (`window.print()`); Cmd+P works the same, and "Save as PDF" gives a
+  file. It is laid out as a document (letterhead, summary, numbered sections, tables, page footer; see DESIGN.md,
+  "Print"). `TripPrint` is a formal itinerary built from `lib/trips/itinerary.ts` (pure `buildItinerary`: summary,
+  transport, accommodation, other bookings, days): enough for a visa appointment. `ListPrint` prints unchecked
+  items by category with a box to tick. Neither prints confirmation codes or notes.
+- **Add to calendar** (trip menu, only when the trip has dates): `lib/trips/ics.ts` builds an .ics file on the
+  device (works offline): one all-day event spanning the trip and one event per dated booking, timed ones in
+  UTC from their own zone. No todos, confirmation codes, notes or Google place names/addresses (only
+  user-typed place text). Stable UIDs (`<id>@bauhouse`) so re-importing updates. A snapshot, not a feed.
+- **Trips pill countdown:** with no trip under way, a trip starting within 7 days shows on the House's Trips
+  pill as "Trips · 5d" (`daysToNextTrip` in `lib/trips/schedule.ts`).
+
 ## Behavior tracking (`lib/analytics/`)
 
 - `tracker.ts` is a small injectable queue (`Tracker`); `index.ts` binds it to the API and `localStorage`.
@@ -290,6 +304,7 @@ each, styled by `ui/ui.css` from tokens on `:root` in `styles.css` (`--space-*`,
 | `Combobox` | `Combobox.tsx` | The one ARIA combobox: slips rise above an add bar, ↑/↓, Esc, Tab takes the ghost, polite count, `visualViewport` fit. Enter only picks a highlighted option, else `onSubmitText`. `AddItemBar` (pantry) and the trip `QuickAdd` (places) both use it; the draft stays in the bar. |
 | `Stamp`, `Pip` | `Stamp.tsx`, `Pip.tsx` | Category/state tag; the colour dot. |
 | `InlineWhen`, `InlineSelect`, `StampSelect` | `InlineWhen.tsx`, `InlineSelect.tsx`, `StampSelect.tsx` | The desktop inspector's in-place editors (variant `panel`; phones keep pickers). `InlineWhen`: a day select, a typed 24-hour time (`lib/trips/clock.ts` parses "9", "930", "2:30pm"; ↑/↓ ±15 min, Shift ±1 h; blank clears when allowed), and the length as segments. `InlineSelect`: a native select drawn like the paper (linked booking). `StampSelect`: stamps outlined in their colours, only the chosen one filled. The desktop Place rows (todo; booking From/To) are `InlinePlace` (Enter on typed text drops a pin from coordinates or keeps an address: `components/trips/typedPlace.ts`); phones keep `PlacePicker`. |
+| `PrintSheet`, `PrintOnly` | `PrintSheet.tsx` | What a page prints, as a document: letterhead (`kicker`, `title`, `meta`, `facts`) and a body, in a portal beside the app root, mounted only between `beforeprint`/`afterprint` (`usePrinting`), the only thing on paper (print rules and `@page` in `ui.css`). `ListPrint` and `trips/TripPrint` are built from it. |
 | `Row` | `Row.tsx` | The row grid `[lead 24] 12 [time 48] 12 [title] [trail]`. |
 | `Note`, `SectionLabel`, `EmptyState` | `Note.tsx`, `SectionLabel.tsx`, `EmptyState.tsx` | Muted/warn one-liner (warn = amber text + glyph, no side rule), small caps label, friendly empty line. |
 
