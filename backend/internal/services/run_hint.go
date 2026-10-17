@@ -133,7 +133,7 @@ func (s *AutopilotService) RunHint(ctx context.Context, user *models.User, roomI
 	if err != nil {
 		return RunHint{}, err
 	}
-	if s.reader == nil || autopilot.HouseMode(room.AutopilotMode, room.SuggestionsOff) == autopilot.ModeOff {
+	if s.reader == nil || houseMode(room) == autopilot.ModeOff {
 		return DefaultRunHint(), nil
 	}
 	own, err := s.reader.Profile(ctx, user.UserID)
