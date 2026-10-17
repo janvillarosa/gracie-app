@@ -11,6 +11,8 @@ import {
   type DragStartEvent,
 } from '@dnd-kit/core'
 import { message } from 'antd'
+import { downloadIcs } from '@lib/trips/ics'
+import { TripPrint } from '@components/trips/TripPrint'
 import { CaretRight, Check, MapTrifold } from '@phosphor-icons/react'
 import { useAuth } from '@auth/AuthProvider'
 import { TopNav } from '@components/TopNav'
@@ -1078,7 +1080,13 @@ const TripScreen: React.FC<{
       onDismissNote={(k) => store.dismissNote(k)}
       onUnlock={() => setUnlocked(true)}
       onRestore={() => store.restoreTrip(trip.trip_id)}
-      onMenu={(k) => (k === 'details' ? goSettings() : k === 'packing' ? onPacking() : setExtra(k))}
+      onMenu={(k) => {
+        if (k === 'details') goSettings()
+        else if (k === 'packing') onPacking()
+        else if (k === 'calendar') downloadIcs(trip)
+        else if (k === 'print') window.print()
+        else setExtra(k)
+      }}
       packing={packingMenu}
       daysOpen={daysOpen}
       onDaysOpen={setDaysOpen}
@@ -1179,6 +1187,11 @@ const TripScreen: React.FC<{
       onDragEnd={onDragEnd}
       onDragCancel={onDragCancel}
     >
+      <TripPrint
+        trip={trip}
+        house={roomName}
+        preparedBy={members.find((m) => m.user_id === userId)?.name}
+      />
       <div
         className={['trip-page', dragging ? 'is-dragging' : '', desktop ? 'is-desk-shell' : '']
           .filter(Boolean)

@@ -196,3 +196,19 @@ _Frontend paths are relative to `frontend/src/`._
   phase, default `during`). Dev only; never in a production build.
 - **Tests:** `__tests__/trips.helpers.tsx` has `renderTrips`, `seed`, `setViewport`,
   `lisbonTrip`, `meState`, `resetTripsWorld`; the shared in-memory `tripServer` is in `testServer.ts`.
+
+## Calendar, print and the Trips pill (frontend only)
+
+- **Add to calendar** (trip ⋯ menu, only when the trip has dates): `lib/trips/ics.ts` builds an .ics file on the
+  device (works offline): one all-day event spanning the trip and one event per dated booking, timed ones in
+  UTC from their own zone. No todos, confirmation codes, notes or Google place names/addresses (only
+  user-typed place text). Stable UIDs (`<id>@bauhouse`) so re-importing updates. A snapshot, not a feed.
+- **Print:** the List and Trip ⋯ menus have Print (`window.print()`); Cmd+P works the same, and "Save as PDF"
+  gives a file. It is laid out as a document (letterhead, summary, numbered sections, tables, page footer; see
+  DESIGN.md, "Print"). `TripPrint` is a formal itinerary built from `lib/trips/itinerary.ts` (pure
+  `buildItinerary`: summary, transport, accommodation, other bookings, days): enough for a visa appointment.
+  `ListPrint` prints unchecked items by category with a box to tick. Neither prints confirmation codes or notes.
+  The page footer (title, site, "Page N of M") is an `@page` margin box, so only Chrome and Edge draw it;
+  elsewhere the closing line "Prepared with Bauhouse · bauhouse.app" (`SITE_URL`) stands in.
+- **Trips pill countdown:** with no trip under way, a trip starting within 7 days shows on the House's Trips
+  pill as "Trips · 5d" (`daysToNextTrip` in `lib/trips/schedule.ts`).

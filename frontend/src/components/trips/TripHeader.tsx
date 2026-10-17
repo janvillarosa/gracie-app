@@ -27,6 +27,8 @@ function useSlowSync(pending: boolean): boolean {
   return slow
 }
 
+export type TripMenuKey = 'notes' | 'packing' | 'calendar' | 'print' | 'details'
+
 type HeaderProps = {
   trip: Trip
   today: string
@@ -42,7 +44,7 @@ type HeaderProps = {
   onDismissNote: (key: string) => void
   onUnlock: () => void
   onRestore: () => void
-  onMenu: (key: 'notes' | 'packing' | 'details') => void
+  onMenu: (key: TripMenuKey) => void
   // The packing list carries its state in the menu: "Packing list · 4 of 12 packed".
   packing: { label: string; disabled: boolean }
   // The friendly line opens the list of days (a popover on wide screens, a small sheet elsewhere).
@@ -102,12 +104,15 @@ export const TripHeader: React.FC<HeaderProps> = ({
   const items: MenuProps['items'] = [
     { key: 'notes', label: 'Notes' },
     { key: 'packing', label: packing.label, disabled: packing.disabled },
+    // A trip with no dates has nothing to put on a calendar.
+    ...(trip.start_date && trip.end_date ? [{ key: 'calendar', label: 'Add to calendar' }] : []),
+    { key: 'print', label: 'Print' },
     { key: 'details', label: 'Trip settings' },
   ]
   const menuNode = (
     <Dropdown
       trigger={['click']}
-      menu={{ items, onClick: ({ key }) => onMenu(key as 'notes' | 'packing' | 'details') }}
+      menu={{ items, onClick: ({ key }) => onMenu(key as TripMenuKey) }}
     >
       <Button kind="text" iconOnly icon={<DotsThreeVertical />} aria-label="More trip options" />
     </Dropdown>

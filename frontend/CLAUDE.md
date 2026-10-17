@@ -103,6 +103,9 @@ Full behavior lives in [docs/features/](../docs/features/README.md): [trips](../
   the default `POST /api/events` handler in `testServer.ts`.
 - **Landing:** no `window`/`document` access outside effects and handlers (the page is prerendered).
   Calls to action say "Get started free". Offline is claimed for trips only.
+- **Print and calendar:** print is a document (`PrintSheet`/`PrintOnly`, shown only between `beforeprint` and
+  `afterprint`); a trip prints as a formal itinerary and neither it nor the .ics export ever includes
+  confirmation codes, notes or Google place names.
 
 ## Design tokens (`src/styles.css`, top) and the living reference
 
@@ -144,6 +147,7 @@ each, styled by `ui/ui.css` from tokens on `:root` in `styles.css` (`--space-*`,
 | `Combobox` | `Combobox.tsx` | The one ARIA combobox: slips rise above an add bar, ↑/↓, Esc, Tab takes the ghost, polite count, `visualViewport` fit. Enter only picks a highlighted option, else `onSubmitText`. `AddItemBar` (pantry) and the trip `QuickAdd` (places) both use it; the draft stays in the bar. |
 | `Stamp`, `Pip` | `Stamp.tsx`, `Pip.tsx` | Category/state tag; the colour dot. |
 | `InlineWhen`, `InlineSelect`, `StampSelect` | `InlineWhen.tsx`, `InlineSelect.tsx`, `StampSelect.tsx` | The desktop inspector's in-place editors (variant `panel`; phones keep pickers). `InlineWhen`: a day select, a typed 24-hour time (`lib/trips/clock.ts` parses "9", "930", "2:30pm"; ↑/↓ ±15 min, Shift ±1 h; blank clears when allowed), and the length as segments. `InlineSelect`: a native select drawn like the paper (linked booking). `StampSelect`: stamps outlined in their colours, only the chosen one filled. The desktop Place rows (todo; booking From/To) are `InlinePlace` (Enter on typed text drops a pin from coordinates or keeps an address: `components/trips/typedPlace.ts`); phones keep `PlacePicker`. |
+| `PrintSheet`, `PrintOnly` | `PrintSheet.tsx` | What a page prints, as a document: letterhead (`kicker`, `title`, `meta`, `facts`) and a body, in a portal beside the app root, mounted only between `beforeprint`/`afterprint` (`usePrinting`), the only thing on paper (print rules and `@page` in `ui.css`). `ListPrint` and `trips/TripPrint` are built from it. |
 | `Row` | `Row.tsx` | The row grid `[lead 24] 12 [time 48] 12 [title] [trail]`. |
 | `Note`, `SectionLabel`, `EmptyState` | `Note.tsx`, `SectionLabel.tsx`, `EmptyState.tsx` | Muted/warn one-liner (warn = amber text + glyph, no side rule), small caps label, friendly empty line. |
 

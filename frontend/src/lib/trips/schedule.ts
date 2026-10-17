@@ -47,6 +47,10 @@ export function fullDay(key: string): string {
   const d = new Date(toUtc(key))
   return `${shortDay(key)} ${MONTH.format(d)}`
 }
+/** "Thu 22 Oct 2026": a date that stands on its own, for a document. */
+export function dateWithYear(key: string): string {
+  return `${fullDay(key)} ${new Date(toUtc(key)).getUTCFullYear()}`
+}
 /** "22–30 Oct" or "30 Oct – 2 Nov": the short form for a header line. */
 export function shortRange(start?: string | null, end?: string | null): string {
   if (!start || !end) return ''
@@ -384,6 +388,18 @@ export function countdown(trip: Trip, today: string): string {
   }
   const n = diffDays(today, trip.end_date)
   return n === 1 ? 'Ended yesterday' : `Ended ${n} days ago`
+}
+
+/** Days until the next trip starts, when one starts within `within` days (1 = tomorrow), else
+ *  null. Deleted trips, drafts and trips under way don't count. */
+export function daysToNextTrip(trips: Trip[], today: string, within = 7): number | null {
+  let best: number | null = null
+  for (const t of trips) {
+    if (t.deleted || tripPhase(t, today) !== 'before' || !t.start_date) continue
+    const n = diffDays(t.start_date, today)
+    if (n <= within && (best === null || n < best)) best = n
+  }
+  return best
 }
 
 /** Stay bookings that cover tonight (check-in on or before today, check-out after it). */

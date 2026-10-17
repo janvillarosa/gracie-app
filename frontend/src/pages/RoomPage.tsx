@@ -34,7 +34,7 @@ import { PillNav } from '@components/PillNav'
 import { TripNameModal } from '@components/trips/NewTripModal'
 import { TripsPanel } from '@components/trips/TripsPanel'
 import { useTripState, useTripStoreFor } from '@lib/trips/hooks'
-import { localDateKey, tripPhase } from '@lib/trips/schedule'
+import { daysToNextTrip, localDateKey, tripPhase } from '@lib/trips/schedule'
 import { toEmoji } from '../icons'
 import {
   Button,
@@ -111,6 +111,8 @@ export const RoomPage: React.FC<{
   const liveNow = Object.values(tripState.trips).some(
     (t) => !t.deleted && tripPhase(t, today) === 'during',
   )
+  // A trip a week or less away shows on the pill, so it is seen from Lists too.
+  const soon = liveNow ? null : daysToNextTrip(Object.values(tripState.trips), today)
   const onTab = (k: string) => {
     const next = k === 'trips' ? 'trips' : 'lists'
     try {
@@ -385,10 +387,20 @@ export const RoomPage: React.FC<{
                 label: (
                   <span className="pill-label">
                     Trips
+                    {soon !== null && (
+                      <span className="pill-soon" aria-hidden>
+                        {' '}
+                        · {soon}d
+                      </span>
+                    )}
                     {liveNow && tab !== 'trips' && <span className="pill-dot" aria-hidden />}
                   </span>
                 ),
-                ariaLabel: liveNow ? 'Trips, one happening now' : undefined,
+                ariaLabel: liveNow
+                  ? 'Trips, one happening now'
+                  : soon !== null
+                    ? `Trips, next one ${soon === 1 ? 'tomorrow' : `in ${soon} days`}`
+                    : undefined,
                 children: (
                   <TripsPanel trips={tripState.trips} store={tripStore} ready={tripState.ready} />
                 ),

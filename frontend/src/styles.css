@@ -3024,6 +3024,12 @@ textarea.notes-textarea {
   position: relative;
   display: inline-block;
 }
+/* "Trips · 5d": a trip a week or less away, said quietly on the pill. */
+.pill-soon {
+  color: var(--muted);
+  font-weight: var(--w-medium);
+  font-variant-numeric: tabular-nums;
+}
 .pill-label .pill-dot {
   position: absolute;
   top: -3px;
