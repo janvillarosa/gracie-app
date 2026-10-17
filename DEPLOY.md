@@ -23,6 +23,13 @@ Overview
   - Add a Railway volume mounted at `/data` so `/data/enc.key` persists across
     restarts. The API creates the key on first boot; attach the volume before boot so
     the key is retained.
+  - The key stays on the volume on purpose: nobody downloads it or holds a copy. The
+    cost is that Railway cannot overlap deploys of a volume-backed service (it stops
+    the old container before starting the new one), so every backend deploy has a
+    short outage. The server keeps it short by listening before the embedding model
+    loads (items added in those first seconds get keyword categories).
+- Healthcheck: set the service's Healthcheck Path to `/healthz`. Railway then marks a
+  deploy live only once the server answers, instead of as soon as the container starts.
 
 2) Frontend on Vercel
 - Project root: set the Root Directory to `frontend`.

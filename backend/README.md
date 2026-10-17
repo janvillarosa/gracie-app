@@ -132,7 +132,9 @@ Items added to lists are auto-assigned a category via a two-stage chain:
 2. Add the variables above to the service's **Variables** panel.
 3. Provide **≥ 512 MB RAM** (1 GB recommended) — the ONNX model raises the floor.
 4. Deploy with `EMBEDDING_ENABLED=false` first; confirm keyword categorization works.
-5. Set `EMBEDDING_ENABLED=true` and redeploy; logs should show the model loaded.
+5. Set `EMBEDDING_ENABLED=true` and redeploy; logs should show
+   `categorization: embedding ready in …`. The model loads in the background after the
+   server starts listening; until then items are categorized by keyword.
 6. To revert instantly: set `EMBEDDING_ENABLED=false` (no code redeploy needed).
 
 ## Notes

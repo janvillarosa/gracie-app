@@ -29,3 +29,12 @@ func TestRedactPlacesQueryOnlyTouchesRequestURI(t *testing.T) {
 		t.Fatalf("other routes must be untouched: %q", uri)
 	}
 }
+
+func TestHealthzIsPublicAndOK(t *testing.T) {
+	r := NewRouter(nil, Handlers{})
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/healthz", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status %d", rec.Code)
+	}
+}
