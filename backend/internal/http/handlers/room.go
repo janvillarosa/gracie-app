@@ -4,8 +4,10 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/janvillarosa/gracie-app/backend/internal/autopilot"
 	derr "github.com/janvillarosa/gracie-app/backend/internal/errors"
 	api "github.com/janvillarosa/gracie-app/backend/internal/http"
+	"github.com/janvillarosa/gracie-app/backend/internal/models"
 	"github.com/janvillarosa/gracie-app/backend/internal/services"
 	"github.com/janvillarosa/gracie-app/backend/internal/store"
 	"github.com/janvillarosa/gracie-app/backend/pkg/ids"
@@ -71,7 +73,8 @@ func (h *RoomHandler) GetMyRoom(w http.ResponseWriter, r *http.Request) {
 		"updated_at":       rm.UpdatedAt,
 		"my_deletion_vote": myVote,
 		"deletion_votes":   voteCount,
-		"suggestions_off":  rm.SuggestionsOff,
+		"autopilot_mode":   houseMode(rm),
+		"suggestions_off":  houseMode(rm) == autopilot.ModeOff,
 	}
 	api.WriteJSON(w, http.StatusOK, view)
 }
@@ -170,7 +173,8 @@ func (h *RoomHandler) JoinRoom(w http.ResponseWriter, r *http.Request) {
 		"members_meta":    membersMeta,
 		"created_at":      rm.CreatedAt,
 		"updated_at":      rm.UpdatedAt,
-		"suggestions_off": rm.SuggestionsOff,
+		"autopilot_mode":  houseMode(rm),
+		"suggestions_off": houseMode(rm) == autopilot.ModeOff,
 	})
 }
 
@@ -213,12 +217,14 @@ func (h *RoomHandler) JoinByToken(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	api.WriteJSON(w, http.StatusOK, map[string]any{
-		"display_name": rm.DisplayName,
-		"description":  rm.Description,
-		"members":      members,
-		"members_meta": membersMeta,
-		"created_at":   rm.CreatedAt,
-		"updated_at":   rm.UpdatedAt,
+		"display_name":    rm.DisplayName,
+		"description":     rm.Description,
+		"members":         members,
+		"members_meta":    membersMeta,
+		"created_at":      rm.CreatedAt,
+		"updated_at":      rm.UpdatedAt,
+		"autopilot_mode":  houseMode(rm),
+		"suggestions_off": houseMode(rm) == autopilot.ModeOff,
 	})
 }
 
@@ -250,9 +256,16 @@ func (h *RoomHandler) CancelDeletion(w http.ResponseWriter, r *http.Request) {
 }
 
 type updateSettingsReq struct {
-	DisplayName    *string `json:"display_name"`
-	Description    *string `json:"description"`
+	DisplayName *string `json:"display_name"`
+	Description *string `json:"description"`
+	// SuggestionsOff is the pre-mode switch, kept for one release; autopilot_mode wins when both are sent.
 	SuggestionsOff *bool   `json:"suggestions_off"`
+	AutopilotMode  *string `json:"autopilot_mode"`
+}
+
+// houseMode is the house's own setting (the server ceiling is applied where it is used, not shown here).
+func houseMode(rm *models.Room) autopilot.Mode {
+	return autopilot.HouseMode(rm.AutopilotMode, rm.SuggestionsOff)
 }
 
 func (h *RoomHandler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
@@ -286,11 +299,20 @@ func (h *RoomHandler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 		api.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": "description too long"})
 		return
 	}
-	if req.DisplayName == nil && req.Description == nil && req.SuggestionsOff == nil {
+	settings := services.RoomSettings{DisplayName: req.DisplayName, Description: req.Description, SuggestionsOff: req.SuggestionsOff}
+	if req.AutopilotMode != nil {
+		m, ok := autopilot.ParseMode(*req.AutopilotMode)
+		if !ok {
+			api.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": "autopilot_mode must be off, suggest or assist"})
+			return
+		}
+		settings.AutopilotMode = &m
+	}
+	if req.DisplayName == nil && req.Description == nil && req.SuggestionsOff == nil && req.AutopilotMode == nil {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
-	if err := h.Rooms.UpdateRoomSettings(r.Context(), u, req.DisplayName, req.Description, req.SuggestionsOff); err != nil {
+	if err := h.Rooms.UpdateRoomSettings(r.Context(), u, settings); err != nil {
 		code := http.StatusBadRequest
 		if err == derr.ErrNotFound {
 			code = http.StatusNotFound
@@ -319,11 +341,13 @@ func (h *RoomHandler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	api.WriteJSON(w, http.StatusOK, map[string]any{
-		"display_name": rm.DisplayName,
-		"description":  rm.Description,
-		"members":      members,
-		"members_meta": membersMeta,
-		"created_at":   rm.CreatedAt,
-		"updated_at":   rm.UpdatedAt,
+		"display_name":    rm.DisplayName,
+		"description":     rm.Description,
+		"members":         members,
+		"members_meta":    membersMeta,
+		"created_at":      rm.CreatedAt,
+		"updated_at":      rm.UpdatedAt,
+		"autopilot_mode":  houseMode(rm),
+		"suggestions_off": houseMode(rm) == autopilot.ModeOff,
 	})
 }

@@ -67,7 +67,8 @@ func (k KeyRef) ID() string { return k.RoomID + ":" + k.SubjectType + ":" + k.Ke
 // stored history, so a change takes effect without waiting for each key's next event.
 // 2: skip-aware, recent-cycle forecasts with repeating windows.
 // 3: home time: gaps, due dates and windows leave out the spans the whole house was away (trips).
-const ForecastVersion = 3
+// 4: a key automation asked for in its recent cycles forecasts from completions (RoleAutomated).
+const ForecastVersion = 4
 
 // KeyIntervals is the recomputed rhythm of one key.
 type KeyIntervals struct {

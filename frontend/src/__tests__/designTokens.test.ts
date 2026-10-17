@@ -166,6 +166,8 @@ describe('the app draws only with tokens', () => {
       '--day-colour',
       '--chip-w',
       '--gm-fill',
+      '--pos',
+      '--steps',
     ])
     expect(
       [...used].filter((v) => !defined.has(v) && !local.has(v) && !v.startsWith('--ant')),

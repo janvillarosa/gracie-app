@@ -1,0 +1,72 @@
+package replay
+
+import (
+	"testing"
+
+	"github.com/janvillarosa/gracie-app/backend/internal/testutil/households"
+)
+
+// The gate for offering assist: on the golden households, with the server's bars and lead,
+// precision >= PrecisionGate and at most one removal per house-week, while still adding things.
+func TestGoldenAssistMeetsGate(t *testing.T) {
+	w := households.Golden()
+	o := DefaultOptions()
+	o.Away = w.Away()
+	total, per := Replay(w.Events, o)
+	if total.Added < 20 || total.Precision() < PrecisionGate || total.RemovalsPerWeek() > 1 {
+		t.Fatalf("gate missed: adds %d precision %.3f removals/wk %.2f", total.Added, total.Precision(), total.RemovalsPerWeek())
+	}
+	// The weekend shopper is what assist is for: it should carry a real share of the shop.
+	if r := per[w.House("weekend-couple").Room]; r.OpenRecall() < 0.3 {
+		t.Errorf("weekend couple: open recall %.3f", r.OpenRecall())
+	}
+	// Irregular buyers and houses with too little history get nothing added.
+	for _, p := range []string{"solo-irregular", "new-house"} {
+		if r := per[w.House(p).Room]; r.Added != 0 {
+			t.Errorf("%s: assist added %d", p, r.Added)
+		}
+	}
+}
+
+// F1 (precision x open recall) must meet F1Goal (70%) and is ratcheted above it: raise the floor
+// when a change lifts it; never lower it.
+func TestGoldenAssistF1Floor(t *testing.T) {
+	// 2026-10-17: 76.1% now that assist adds what either bar picks (it was 77.7% on the run-fit
+	// bar alone, which added less; the modes no longer mix, so assist also adds what it once only
+	// suggested).
+	const floor = 0.76
+	w := households.Golden()
+	o := DefaultOptions()
+	o.Away = w.Away()
+	total, _ := Replay(w.Events, o)
+	if total.F1() < max(floor, F1Goal) {
+		t.Fatalf("F1 %.3f fell below the floor %.2f (goal %.2f)", total.F1(), floor, F1Goal)
+	}
+}
+
+// A stricter bar never adds more.
+func TestSweepIsMonotone(t *testing.T) {
+	w := households.Golden()
+	o := DefaultOptions()
+	o.Away = w.Away()
+	reps := Sweep(w.Events, o, []float64{0.65, 0.75, 0.8}, []float64{0.7})
+	for i := 1; i < len(reps); i++ {
+		if reps[i].Added > reps[i-1].Added {
+			t.Fatalf("score %.2f adds %d > score %.2f adds %d", reps[i].Policy.AssistMinScore, reps[i].Added, reps[i-1].Policy.AssistMinScore, reps[i-1].Added)
+		}
+	}
+}
+
+// The bar was tuned on the golden seed; households from other seeds must meet the goal and the
+// gate too, so it is not fitted to one year of made-up data.
+func TestHoldOutSeedsMeetGoal(t *testing.T) {
+	for _, seed := range []int64{1, 7, 42, 2025, 99991} {
+		w := households.Generate(seed)
+		o := DefaultOptions()
+		o.Away = w.Away()
+		r, _ := Replay(w.Events, o)
+		if r.F1() < F1Goal || r.Precision() < PrecisionGate || r.RemovalsPerWeek() > 1 {
+			t.Errorf("seed %d: F1 %.3f precision %.3f removals/wk %.2f", seed, r.F1(), r.Precision(), r.RemovalsPerWeek())
+		}
+	}
+}

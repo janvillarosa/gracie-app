@@ -13,7 +13,9 @@ the analytics aggregates and the live list; the only state is `Room.SuggestionsO
   scores it by **backtesting** its own history (Wilson lower bound of hits/trials). The fold stores it as
   `KeyIntervals.Add`; `Reader.Upcoming` reads keys whose window is open now. Tune `DefaultParams` with
   `suggest-eval`, not by feel. Adds are preferred; checks are the fallback; no profile is required.
-- **Service** (`services/suggestion_service.go`): `ForList` (home list, not already on the list, not ignored
+- **Service** (`services/autopilot_service.go`, see [autopilot.md](autopilot.md)): suggestions are the
+  autopilot's Suggest mode, served by `AutopilotService.Suggestions` through the shared planner
+  (`internal/autopilot`). The rules below are its filters. `Suggestions` (home list, not already on the list, not ignored
   this cycle, raw events newer than the rollup win) and `Ignore` (emits `item.suggestion_ignored`, a
   `RoleDismiss` event that counts against the forecast). Routes: `GET .../lists/{id}/suggestions`,
   `POST .../suggestions/ignore {key}`.
@@ -52,7 +54,10 @@ the analytics aggregates and the live list; the only state is `Room.SuggestionsO
   week ±1 holds ≥ 50% of the `run_how` peak), 3 (`unknown`), 4 (`unlikely`: < 10% of the peak); `idle_end_min` =
   clamp(4 × `run_gap_sec`, 15, 45 min); `burst_sec` = clamp(`run_gap_sec`/5, 5, 30 s); `typical` from 5 runs. Own
   rhythm at ≥ 3 runs, else the house's. Analytics off or the house setting off: the default 3 / 45 / 15.
-- **House setting:** `PUT /rooms/settings {suggestions_off}`; `GET /rooms/me` returns it.
+- **House setting:** the autopilot mode (only `suggest` shows suggestions; `off` shows nothing and `assist` adds what it would have suggested instead). See
+  [autopilot.md](autopilot.md). `suggestions_off` is still accepted and returned for one release.
+- **Deprecated routes:** `GET .../suggestions`, `POST .../suggestions/ignore` and `GET .../run-hint` keep their
+  paths and answers but send `Deprecation: true` with a successor link to `GET .../autopilot`.
 - Invariants: never add suggestion state that is not derivable from events and aggregates; an ignore must
   stay an event so the forecast sees it.
 
@@ -74,5 +79,5 @@ through suggestions swaps the card in place and the list never moves; the slot c
 Every slip is the same height (`min-height: 76px`, room for a two-line name). Any new row, typed or suggested, pops in (`row-in`, with the highlighter swipe). Taking or ignoring the slip pops it out (150ms) while the list glides up; it stays mounted
 until then (`leavingSuggestion`, `SUGGESTION_EXIT_MS`). Reduced motion gets a plain fade. The server decides everything (confidence, home list, house setting), so a
 failure or an empty answer just shows nothing. Events: `nudge.shown|tapped|dismissed` with
-`kind: 'recurring'`. The House settings page has the on/off switch (`suggestions_off`). Mid-shop the slip runs in
+`kind: 'recurring'`. The House settings page sets the autopilot mode (Off · Suggest · Assist). Mid-shop the slip runs in
 run mode (see [lists.md](lists.md), Shopping runs).

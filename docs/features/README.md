@@ -8,6 +8,7 @@ must never be missed. Update the note in the same commit when you change a featu
 |---|---|---|
 | Trips (offline sync, map, places, desk) | [trips.md](trips.md) | `2026-10-14-trips-api-persistence-design.md`, `2026-10-15-trips-ui-brief.md`, `2026-10-15-google-maps-migration.md` |
 | Behavior analytics | [analytics.md](analytics.md) | `2026-10-16-behavior-analytics-design.md`, `2026-10-16-analytics-backfill-design.md` |
+| Autopilot (modes, assist, action log) | [autopilot.md](autopilot.md) | plan `docs/superpowers/plans/2026-10-17-autopilot-engine.md` |
 | Smart suggestions | [suggestions.md](suggestions.md) | `2026-10-16-smart-suggestions-design.md` |
 | Lists (add bar, rows, undo) | [lists.md](lists.md) | `2026-10-14-list-autocomplete-and-rows-brief.md` |
 | Landing page | [landing.md](landing.md) | `2026-10-15-landing-page-brief.md` |

@@ -120,7 +120,7 @@ func TestForecastIsLearnedInHomeTime(t *testing.T) {
 		t.Fatal(err)
 	}
 	iv := r.aggs.Key("room_a:item:milk")["intervals"].(analytics.KeyIntervals)
-	if iv.Version != 3 || iv.Add == nil || iv.Add.EWMADays != 7 || iv.Add.CV > 1e-9 || math.Abs(iv.EWMADays-7) > 1e-9 {
+	if iv.Version != analytics.ForecastVersion || iv.Add == nil || iv.Add.EWMADays != 7 || iv.Add.CV > 1e-9 || math.Abs(iv.EWMADays-7) > 1e-9 {
 		t.Fatalf("home-time forecast: %+v add %+v", iv, iv.Add)
 	}
 }

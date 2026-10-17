@@ -998,6 +998,220 @@ h5.ant-typography {
   flex: none;
 }
 
+/* Autopilot (assist mode). The slip says what it added for the next run: a resting slip on the
+   list's sheet like the suggestion slip, but with no key and no warm edge, since nothing waits on
+   anyone. It settles in once; when it goes it folds its space away (grid rows 1fr to 0fr) so the
+   list closes up instead of jumping. Its disc holds the autopilot mark each added row carries. */
+.autopilot-reveal {
+  display: grid;
+  grid-template-rows: 1fr;
+}
+.autopilot-clip {
+  min-height: 0;
+}
+.autopilot-slip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-3);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
+  background: var(--paper-fill);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--slip-rest);
+}
+
+.autopilot-slip-mark {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: var(--control-sm);
+  height: var(--control-sm);
+  border-radius: var(--radius-pill);
+  background: var(--well-fill);
+  box-shadow: var(--well);
+  color: var(--ink);
+  font-size: var(--icon-sm);
+}
+
+.autopilot-slip-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.autopilot-slip-title {
+  color: var(--ink);
+  font-weight: var(--w-medium);
+  line-height: 1.35;
+}
+
+.autopilot-slip-undo {
+  flex: none;
+  white-space: nowrap;
+}
+
+/* The names stay on one line (two on a narrow phone) so the slip keeps one height. */
+.autopilot-slip-names {
+  color: var(--muted);
+  font-size: var(--t-meta);
+  line-height: 1.35;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+}
+
+@media (max-width: 400px) {
+  .autopilot-slip {
+    gap: var(--space-2);
+  }
+  .autopilot-slip-names {
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .autopilot-slip {
+    animation: autopilot-settle var(--dur-slow) var(--ease-out) both;
+  }
+  .autopilot-reveal {
+    transition: grid-template-rows var(--dur-base) var(--ease-out);
+  }
+  .autopilot-reveal.is-leaving .autopilot-slip {
+    transition:
+      opacity var(--dur-fast) ease,
+      transform var(--dur-fast) ease;
+  }
+}
+.autopilot-reveal.is-leaving {
+  grid-template-rows: 0fr;
+}
+.autopilot-reveal.is-leaving .autopilot-clip {
+  overflow: hidden;
+}
+.autopilot-reveal.is-leaving .autopilot-slip {
+  opacity: 0;
+  transform: scale(0.98);
+}
+
+@keyframes autopilot-settle {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* The autopilot stamp on a row: an icon-only state stamp outlined in ink, holding the service bell
+   (autopilot, at your service), so a row autopilot added reads at a glance beside the pastel category
+   stamps without borrowing yellow, red or blue. Tapping it opens why, under the words. */
+.item-stamps {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-inline-start: var(--space-1);
+}
+.item-stamps .item-cat {
+  margin: 0 !important;
+}
+/* The category stays in the list's category column: last on a wide list (stamps sit at the row's
+   end), first on a narrow one (stamps start under the words). */
+.item-stamps .item-auto {
+  order: -1;
+}
+.item-auto {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  width: 24px;
+  height: 18px;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-xs);
+  background: none;
+  color: var(--ink);
+  font: var(--w-bold) var(--t-stamp) var(--font-body);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+}
+/* Reaches the 44px touch target without growing the stamp. */
+.item-auto::before {
+  content: '';
+  position: absolute;
+  inset: -13px -10px;
+}
+.item-auto svg {
+  width: var(--icon-xs);
+  height: var(--icon-xs);
+}
+.item-auto[aria-expanded='true'] {
+  background: var(--well-fill);
+  box-shadow: var(--well);
+}
+.item-auto:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.item-row-completed .item-auto {
+  border-color: var(--border-strong);
+  color: var(--muted);
+}
+@media (hover: hover) {
+  .item-auto:hover {
+    background: var(--well-fill);
+  }
+}
+
+.item-why {
+  display: block;
+  flex-basis: 100%;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: var(--t-meta);
+  font-weight: var(--w-regular);
+  line-height: 1.35;
+}
+
+/* House settings: Autopilot's name, the slider, then one line about the chosen step that fades in
+   as the key lands. */
+.autopilot-pref {
+  display: grid;
+  gap: var(--space-2);
+}
+.autopilot-help > span {
+  display: block;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .item-why {
+    animation: autopilot-why var(--dur-fast) var(--ease-out) both;
+  }
+  .autopilot-help > span {
+    animation: autopilot-why var(--dur-base) var(--ease-out) both;
+  }
+}
+@keyframes autopilot-why {
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 /* Arrival. The slip is the one thing here that wants a tap, so it gets one authored moment and then
    rests: it settles in while the list below glides down (no jump), its warm edge flashes and fades, and
    the plus on the key turns once. Nothing loops. */
@@ -1866,22 +2080,25 @@ button.icon-disc:focus-visible {
 @container (max-width: 440px) {
   /* The two lines sit together in the middle of the row, so the stamp needs no pull-up and never
      covers a name that wraps to a second line. */
-  .items-list .item-row:has(.item-cat) {
+  .items-list .item-row:has(.item-stamps) {
     flex-wrap: wrap;
     align-content: center;
     row-gap: 0;
     padding-block: var(--space-2);
   }
   /* A zero-height break after the first line, so the stamp always starts the second one. */
-  .items-list .item-row:has(.item-cat)::after {
+  .items-list .item-row:has(.item-stamps)::after {
     content: '';
     order: 3;
     flex-basis: 100%;
     height: 0;
   }
-  .items-list .item-row .item-cat {
+  .items-list .item-row .item-stamps {
     order: 4;
-    margin: var(--space-1) 0 0 calc(22px + 14px) !important;
+    margin: var(--space-1) 0 0 calc(22px + 14px);
+  }
+  .items-list .item-stamps .item-auto {
+    order: 1;
   }
 }
 
@@ -3570,4 +3787,12 @@ textarea.notes-textarea {
   :root[data-motion='lite'] .house-loader .hm-pane {
     animation: hl-glow 1600ms ease-in-out infinite alternate;
   }
+}
+
+/* Lite tier: the autopilot slip appears and goes without the settle or the fold. */
+:root[data-motion='lite'] .autopilot-slip {
+  animation: none;
+}
+:root[data-motion='lite'] .autopilot-reveal {
+  transition: none;
 }

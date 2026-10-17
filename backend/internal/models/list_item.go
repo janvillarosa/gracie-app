@@ -18,6 +18,9 @@ type ListItem struct {
 	IsStarred   bool    `bson:"is_starred,omitempty" json:"is_starred"`
 	IsArchived  bool    `bson:"is_archived,omitempty" json:"is_archived"`
 	Completed   bool    `bson:"completed" json:"completed"`
+	// Source says who put the item on the list when it was not a person: "autopilot" for an
+	// assist-mode add (the app marks it and can show why). Empty for people's adds.
+	Source string `bson:"source,omitempty" json:"source,omitempty"`
 	// Actor and time stamps feed behavior analytics; absent on items that predate them.
 	CreatedBy   string     `bson:"created_by,omitempty" json:"-"`
 	CompletedAt *time.Time `bson:"completed_at,omitempty" json:"-"`

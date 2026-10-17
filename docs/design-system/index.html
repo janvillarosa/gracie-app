@@ -614,6 +614,41 @@
       <div style="margin-top:40px" class="composer"><span class="day">Today</span><span class="ph">Add a place, plan or idea</span><button class="btn key round" type="button" aria-label="Add"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button></div>
     </div>
   </section>
+  <section class="part">
+    <div class="part-head">
+      <div>
+        <h2>A matter of degree slides</h2>
+        <p><code>StepSlider</code> is for a setting that runs low to high, such as how much of the shopping a House hands to autopilot. A groove pressed into the sheet (<code>--well</code>) fills with key yellow up to a round paper key (<code>--control-md</code>, <code>--slip-rest</code>). The key carries the chosen stop's glyph and turns it a quarter as it lands. Drag it (it snaps on release), tap a stop's name, or use the arrow keys. A plain choice between unrelated options stays a <code>ChipGroup</code>.</p>
+      </div>
+    </div>
+    <div style="max-width:420px;display:grid;gap:var(--space-1);font-family:var(--font-body)">
+      <div style="position:relative;height:var(--control-lg)">
+        <span style="position:absolute;inset-inline:0;top:calc(50% - 5px);height:10px;border-radius:var(--radius-pill);background:var(--panel-subtle);box-shadow:var(--well);overflow:hidden"><span style="position:absolute;inset-block:0;left:0;width:50%;background:var(--brand-yellow)"></span></span>
+        <span style="position:absolute;top:50%;left:50%;width:var(--control-md);height:var(--control-md);margin:calc(var(--control-md) / -2) 0 0 calc(var(--control-md) / -2);display:grid;place-items:center;border:1px solid var(--border-strong);border-radius:var(--radius-pill);background:var(--panel);box-shadow:var(--slip-rest);color:var(--ink)"><svg width="16" height="16" viewBox="0 0 256 256" fill="none" stroke="currentColor" stroke-width="20" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M88 232h80"/><path d="M78 176a80 80 0 1 1 100 0c-8 6-10 14-10 24H88c0-10-2-18-10-24z"/></svg></span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);font-size:var(--t-meta);font-weight:var(--w-semibold);color:var(--muted)"><span>Off</span><span style="text-align:center;color:var(--ink)">Suggest</span><span style="text-align:end">Assist</span></div>
+    </div>
+  </section>
+  <section class="part">
+    <div class="part-head">
+      <div>
+        <h2>Autopilot is a quiet helper</h2>
+        <p>In assist mode autopilot puts the usual things on a list before the shop. Every row it added carries the <b>autopilot stamp</b>: an icon-only state stamp outlined in ink, holding the service bell (autopilot, at your service), beside the category stamp. The bell is autopilot's one mark: the slip and the slider's Assist stop carry it too. Monochrome ink sets it apart from the pastel category stamps without borrowing yellow, red or blue. Tapping it opens one muted line under the words saying why. Once per planned run, the <b>autopilot slip</b> lies on the list's sheet like the suggestion slip (<code>--slip-rest</code>) but with no key and no warm edge: "Added 4 for Saturday", the names, a quiet Undo all and a round "Got it".</p>
+      </div>
+    </div>
+    <div style="max-width:420px;display:grid;gap:var(--space-3)">
+      <div style="display:flex;align-items:center;gap:var(--space-2);padding:var(--space-2) var(--space-2) var(--space-2) var(--space-3);background:var(--panel);border:1px solid var(--border-strong);border-radius:var(--radius-lg);box-shadow:var(--slip-rest);font-family:var(--font-body);font-size:var(--t-body)">
+        <svg width="18" height="18" viewBox="0 0 256 256" fill="none" stroke="currentColor" stroke-width="20" stroke-linecap="round" stroke-linejoin="round" style="color:var(--muted);flex:none" aria-hidden="true"><path fill="currentColor" stroke="none" d="M24,180H232a12,12,0,0,0,0-24h-4.09A100.16,100.16,0,0,0,140,60.72V44h12a12,12,0,0,0,0-24H104a12,12,0,0,0,0,24h12V60.72A100.16,100.16,0,0,0,28.09,156H24a12,12,0,0,0,0,24ZM128,84a76.09,76.09,0,0,1,75.89,72H52.11A76.09,76.09,0,0,1,128,84ZM244,208a12,12,0,0,1-12,12H24a12,12,0,0,1,0-24H232A12,12,0,0,1,244,208Z"/></svg>
+        <span style="flex:1;display:flex;flex-direction:column;gap:1px"><span style="color:var(--ink);font-weight:var(--w-medium)">Added 4 for Saturday</span><span style="color:var(--muted);font-size:var(--t-meta)">Whole milk, Eggs and 2 more</span></span>
+        <button class="btn quiet" type="button">Undo all</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;min-height:52px;padding:0 var(--space-3);background:var(--panel);border:1px solid var(--border);border-radius:var(--radius-lg);font-family:var(--font-body);font-size:var(--t-body)">
+        <span style="width:22px;height:22px;border:1.5px solid var(--border-strong);border-radius:7px;flex:none"></span>
+        <span style="flex:1;color:var(--ink);font-weight:var(--w-medium)">Whole milk <span style="color:var(--muted);font-size:var(--t-meta)">2</span><span style="display:block;color:var(--muted);font-size:var(--t-meta);font-weight:var(--w-regular)">Added by autopilot. You buy it about every 9 days</span></span>
+        <span style="display:inline-grid;place-items:center;width:24px;height:18px;border:1px solid var(--ink);border-radius:var(--radius-xs);background:var(--panel-subtle);box-shadow:var(--well);color:var(--ink);font-size:var(--t-stamp);font-weight:var(--w-bold);letter-spacing:.06em;text-transform:uppercase;flex:none"><svg width="12" height="12" viewBox="0 0 256 256" fill="none" stroke="currentColor" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path fill="currentColor" stroke="none" d="M24,180H232a12,12,0,0,0,0-24h-4.09A100.16,100.16,0,0,0,140,60.72V44h12a12,12,0,0,0,0-24H104a12,12,0,0,0,0,24h12V60.72A100.16,100.16,0,0,0,28.09,156H24a12,12,0,0,0,0,24ZM128,84a76.09,76.09,0,0,1,75.89,72H52.11A76.09,76.09,0,0,1,128,84ZM244,208a12,12,0,0,1-12,12H24a12,12,0,0,1,0-24H232A12,12,0,0,1,244,208Z"/></svg></span>
+      </div>
+    </div>
+  </section>
   <!-- 5. Moments -->
   <section class="part">
     <div class="part-head">

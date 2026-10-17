@@ -52,6 +52,11 @@ func RegisterAnalyticsEvents(reg *analytics.Registry) {
 		// An add that came from tapping a suggestion. With the ignores, it is what decides whether the
 		// house is still interested (two ignores in a row pause suggestions on that list).
 		analytics.EventDef{Name: "item.suggestion_accepted"},
+		// Autopilot (assist mode). Its adds are stored but never rolled up, and are never requests
+		// (RoleAutomated), so forecasts cannot confirm themselves. Removing an autopilot item (a
+		// delete or Undo) is a real miss.
+		analytics.EventDef{Name: "item.autopilot_added", Skip: true, Role: analytics.RoleAutomated},
+		analytics.EventDef{Name: "item.autopilot_removed", Role: analytics.RoleDismiss, Props: map[string]analytics.PropSpec{"via": {Kind: analytics.PropEnum, Values: []string{"undo", "delete"}}}},
 
 		analytics.EventDef{Name: "house.created"},
 		analytics.EventDef{Name: "house.joined"},

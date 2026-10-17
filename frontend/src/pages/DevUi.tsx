@@ -2,7 +2,7 @@
 // Sheet variant, at phone and desktop widths side by side. Keep it in step with components/ui.
 import React, { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Airplane, Bed, Train } from '@phosphor-icons/react'
+import { Airplane, Bed, CallBell, Lightbulb, Moon, Train } from '@phosphor-icons/react'
 import {
   Button,
   Chip,
@@ -20,9 +20,26 @@ import {
   SheetFooter,
   SheetIdentity,
   Stamp,
+  StepSlider,
   Switch,
   type SheetVariant,
 } from '@components/ui'
+
+const DevStepSlider: React.FC = () => {
+  const [v, setV] = useState<'off' | 'suggest' | 'assist'>('suggest')
+  return (
+    <StepSlider
+      label="Autopilot"
+      value={v}
+      onChange={setV}
+      steps={[
+        { value: 'off', label: 'Off', icon: <Moon weight="bold" /> },
+        { value: 'suggest', label: 'Suggest', icon: <Lightbulb weight="bold" /> },
+        { value: 'assist', label: 'Assist', icon: <CallBell weight="bold" /> },
+      ]}
+    />
+  )
+}
 
 const CATEGORIES = ['food', 'sight', 'activity', 'transport', 'stay', 'shopping', 'other'] as const
 
@@ -82,6 +99,20 @@ const Gallery: React.FC = () => {
           ]}
           onChange={setKind}
           columns={3}
+        />
+      </Block>
+      <Block title="StepSlider (drag, tap a name, or arrow keys)">
+        <DevStepSlider />
+        <StepSlider
+          label="Disabled"
+          value="suggest"
+          disabled
+          onChange={() => {}}
+          steps={[
+            { value: 'off', label: 'Off', icon: <Moon weight="bold" /> },
+            { value: 'suggest', label: 'Suggest', icon: <Lightbulb weight="bold" /> },
+            { value: 'assist', label: 'Assist', icon: <CallBell weight="bold" /> },
+          ]}
         />
       </Block>
       <Block title="Field, Switch">

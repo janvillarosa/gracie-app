@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { CallBell, Lightbulb, Moon } from '@phosphor-icons/react'
 import { message } from 'antd'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { errorMessage } from '@lib/errors'
@@ -18,14 +19,31 @@ import {
   NavRow,
   SectionLabel,
   SheetIdentity,
-  Switch,
+  StepSlider,
   Paper,
   PaperStack,
 } from '@components/ui'
-import type { RoomView } from '@api/types'
+import { autopilotModeOf, type AutopilotMode, type RoomView } from '@api/types'
 import { useDocumentTitle } from '@lib/useDocumentTitle'
 
 const nameProblem = (v: string) => (v && !isValidDisplayName(v) ? NAME_RULE : '')
+
+// Low to high: how much of the shopping the House hands to autopilot. Assist's glyph, the service
+// bell (autopilot at your service), is the same mark its items carry on a list.
+const AUTOPILOT_STEPS: { value: AutopilotMode; label: string; icon: React.ReactNode }[] = [
+  { value: 'off', label: 'Off', icon: <Moon weight="bold" /> },
+  { value: 'suggest', label: 'Suggest', icon: <Lightbulb weight="bold" /> },
+  { value: 'assist', label: 'Assist', icon: <CallBell weight="bold" /> },
+]
+
+// One line under the chosen mode, in the House's words.
+const AUTOPILOT_HELP: Record<AutopilotMode, string> = {
+  off: 'Nothing is suggested or added.',
+  suggest:
+    'Suggests things your House usually adds, a little before they’re due. Nothing changes until someone taps.',
+  assist:
+    'Adds what it would have suggested to your lists before you shop. You can always undo. It never buys or books anything.',
+}
 
 /** House settings, laid out like Trip settings: the House's name (typed in place), what it is
  *  about, who is in it and how to invite someone, then the vote to delete it. Everything saves
@@ -80,17 +98,19 @@ export const RoomSettings: React.FC = () => {
     void save({ description }, 'Description saved.')
   }
 
-  // Smart suggestions: a House preference that saves on toggle, and rolls back if refused.
-  const suggestionsOn = !room.suggestions_off
-  const onToggleSuggestions = async (on: boolean) => {
+  // Autopilot: a House setting that saves on choice, and rolls back if refused.
+  const autopilotMode = autopilotModeOf(room)
+  const onAutopilotMode = async (mode: AutopilotMode) => {
+    if (mode === autopilotMode) return
     const before = qc.getQueryData<RoomView>(['my-room'])
     qc.setQueryData<RoomView | undefined>(['my-room'], (r) =>
-      r ? { ...r, suggestions_off: !on } : r,
+      r ? { ...r, autopilot_mode: mode, suggestions_off: mode === 'off' } : r,
     )
     try {
-      await updateRoomSettings(apiKey as string, { suggestions_off: !on })
+      await updateRoomSettings(apiKey as string, { autopilot_mode: mode })
       await qc.invalidateQueries({ queryKey: ['my-room'] })
       qc.invalidateQueries({ queryKey: ['suggestions'] })
+      qc.invalidateQueries({ queryKey: ['autopilot'] })
     } catch (e) {
       qc.setQueryData(['my-room'], before)
       message.error(errorMessage(e, 'Couldn’t save that. Try again.'))
@@ -177,20 +197,20 @@ export const RoomSettings: React.FC = () => {
 
           <SectionLabel>Lists</SectionLabel>
           <DetailGroup label="Lists">
-            <div className="pref">
-              <div className="pref-row">
-                <label htmlFor="smart-suggestions" className="pref-label">
-                  Smart suggestions
-                </label>
-                <Switch
-                  id="smart-suggestions"
-                  checked={suggestionsOn}
-                  onChange={(on) => void onToggleSuggestions(on)}
-                  aria-describedby="smart-suggestions-help"
-                />
-              </div>
-              <p className="pref-help" id="smart-suggestions-help">
-                Suggest things your House usually adds, a little before they’re due.
+            <div className="pref autopilot-pref">
+              <span className="pref-label" aria-hidden>
+                Autopilot
+              </span>
+              <StepSlider
+                label="Autopilot"
+                value={autopilotMode}
+                steps={AUTOPILOT_STEPS}
+                describedBy="autopilot-help"
+                onChange={(m) => void onAutopilotMode(m)}
+              />
+              <p className="pref-help autopilot-help" id="autopilot-help" aria-live="polite">
+                {/* Keyed so the new line fades in as the key lands. */}
+                <span key={autopilotMode}>{AUTOPILOT_HELP[autopilotMode]}</span>
               </p>
             </div>
           </DetailGroup>

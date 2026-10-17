@@ -35,6 +35,13 @@ is the only implementation (uses `go.mongodb.org/mongo-driver`). See
   (`.` and `$` become `_`). `ApplyBatch` writes aggregates, the dirty set and the watermark in one
   transaction; the watermark compares `ingested_at`, which Mongo keeps to the millisecond.
 
+- **Autopilot** (see [docs/features/autopilot.md](../../../docs/features/autopilot.md)): `autopilot_actions`
+  holds only applied (assist) actions: unique `action_id`; **unique `(room_id, kind, key, cycle)`** (one
+  action per thing per forecast cycle, however many instances tick); sparse `item_id`; `(list_id, created_at)`;
+  `(room_id, state)`; TTL `purge_at_ttl` (`purge_at` = resolution + 180 days). `Resolve` is a conditional
+  update on the expected state. `autopilot_state` (`_id: "tick"`) is the ticker lease. `rooms.autopilot_mode`
+  has a sparse index (`ListIDsByAutopilotMode`). A house's actions are deleted with it.
+
 - `store.BackfillReader` (`store/mongo/backfill_reader.go`) is a read-only, batched walk over users,
   rooms, lists, items and trips for the analytics backfill. It uses **allow-list projections**, so
   credential fields and trip text (titles, notes, places) are never loaded; keep it that way when adding fields.

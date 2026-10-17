@@ -46,6 +46,10 @@ func main() {
 		log.Fatalf("trips: ensure indexes: %v", err)
 	}
 	tx := mongostore.NewTx(mcli)
+	autopilotRepo := mongostore.NewAutopilotRepo(mcli)
+	if err := autopilotRepo.EnsureIndexes(ctx); err != nil {
+		log.Fatalf("autopilot: ensure indexes: %v", err)
+	}
 
 	// Behavior analytics: buffered, non-blocking event capture. Disabled -> NopRecorder.
 	analyticsReg := analytics.NewRegistry()
@@ -54,8 +58,9 @@ func main() {
 	var rollup *analytics.Worker
 	var purger *analytics.Purger
 	var insights *handlers.InsightsHandler
-	var suggestReader *analytics.Reader
-	var suggestEvents analytics.EventRepository
+	var analyticsReader *analytics.Reader
+	var analyticsEvents analytics.EventRepository
+	var awayCalendar analytics.AwayCalendar
 	if cfg.AnalyticsEnabled {
 		eventsRepo := mongostore.NewEventRepo(mcli)
 		if err := eventsRepo.EnsureIndexes(ctx); err != nil {
@@ -73,7 +78,7 @@ func main() {
 				purger = analytics.NewPurger(eventsRepo, aggRepo)
 				reader := analytics.NewReader(aggRepo).WithAway(awayCal)
 				insights = handlers.NewInsightsHandler(services.NewInsightsService(roomsRepo, reader))
-				suggestReader, suggestEvents = reader, eventsRepo
+				analyticsReader, analyticsEvents, awayCalendar = reader, eventsRepo, awayCal
 			}
 		}
 	}
@@ -108,6 +113,8 @@ func main() {
 	userSvc.UseListRepos(listsRepo, itemsRepo)
 	roomSvc.UseTripRepo(tripsRepo)
 	userSvc.UseTripRepo(tripsRepo)
+	roomSvc.UseAutopilotActions(autopilotRepo)
+	userSvc.UseAutopilotActions(autopilotRepo)
 	categorizers := buildCategorizers(ctx, cfg, indexArg(categoryIndex))
 	listSvc := services.NewListService(usersRepo, roomsRepo, listsRepo, itemsRepo, categorizers["grocery"])
 	tripSvc := services.NewTripService(roomsRepo, tripsRepo, listSvc, listsRepo)
@@ -116,8 +123,16 @@ func main() {
 	if legacyMode {
 		log.Printf("suggestions: SUGGESTIONS_MODE=%s is retired, running as on", cfg.SuggestionsMode)
 	}
-	suggestSvc := services.NewSuggestionService(roomsRepo, listsRepo, itemsRepo, suggestReader, suggestEvents, suggestMode)
+	autopilotSvc := services.NewAutopilotService(roomsRepo, listsRepo, itemsRepo, analyticsReader, analyticsEvents, suggestMode)
 	log.Printf("suggestions: mode %s", suggestMode)
+	// Assist mode: the planner knows when the house is away, applies through the action log and
+	// the list service, and hears back when its items are checked or removed.
+	if awayCalendar != nil {
+		autopilotSvc.UseAwayCalendar(awayCalendar)
+	}
+	autopilotSvc.UseExecutor(autopilotRepo, listSvc)
+	autopilotSvc.UseLead(cfg.AutopilotLead)
+	listSvc.UseItemHooks(autopilotSvc)
 
 	// Coordinates -> time zone for Google places sent without one. The tzf dataset
 	// (~34 MB heap, ~150 ms) loads lazily on the first such place, never at startup.
@@ -128,7 +143,7 @@ func main() {
 		log.Fatalf("auth service: %v", err)
 	}
 
-	for _, svc := range []interface{ UseRecorder(analytics.Recorder) }{userSvc, roomSvc, listSvc, tripSvc, authSvc, suggestSvc} {
+	for _, svc := range []interface{ UseRecorder(analytics.Recorder) }{userSvc, roomSvc, listSvc, tripSvc, authSvc, autopilotSvc} {
 		svc.UseRecorder(recorder)
 	}
 	if purger != nil {
@@ -145,13 +160,16 @@ func main() {
 
 	eventsHandler := handlers.NewEventsHandler(recorder, analyticsReg, ratelimit.New(cfg.AnalyticsEventsRPS, ratelimit.Burst(cfg.AnalyticsEventsRPS)))
 
-	r := router.NewRouter(usersRepo, router.Handlers{Auth: authHandler, User: userHandler, Room: roomHandler, List: listHandler, Trip: tripHandler, Events: eventsHandler, Insights: insights, Suggestions: handlers.NewSuggestionsHandler(suggestSvc)})
+	r := router.NewRouter(usersRepo, router.Handlers{Auth: authHandler, User: userHandler, Room: roomHandler, List: listHandler, Trip: tripHandler, Events: eventsHandler, Insights: insights, Autopilot: handlers.NewAutopilotHandler(autopilotSvc)})
 
 	// Google Maps Platform allows storing coordinates for 30 days: purge stale ones at startup
 	// and daily (plus up to an hour of jitter so instances do not fire together).
 	purgeCtx, stopPurge := context.WithCancel(context.Background())
 	defer stopPurge()
 	go tripSvc.RunCoordsPurge(purgeCtx, 24*time.Hour, time.Hour)
+	// Assist mode: plan and apply before each house's runs. The lease makes it safe on any number
+	// of instances; it does nothing while analytics is off.
+	go autopilotSvc.RunTicker(purgeCtx, cfg.AutopilotTickEvery, cfg.AutopilotTickEvery/10)
 	if rollup != nil {
 		// Fold raw events into aggregates; the lease makes it safe on any number of instances.
 		go rollup.RunFold(purgeCtx, cfg.AnalyticsFoldEvery, cfg.AnalyticsFoldEvery/10)

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/janvillarosa/gracie-app/backend/internal/analytics"
+	"github.com/janvillarosa/gracie-app/backend/internal/autopilot"
 	derr "github.com/janvillarosa/gracie-app/backend/internal/errors"
 	"github.com/janvillarosa/gracie-app/backend/internal/models"
 	"github.com/janvillarosa/gracie-app/backend/internal/store"
@@ -19,6 +20,8 @@ type RoomService struct {
 	items store.ListItemRepository
 	trips store.TripRepository
 	tx    store.TxRunner
+	// autopilot is the optional action log, deleted with the house.
+	autopilot store.AutopilotActionRepository
 	emitter
 }
 
@@ -136,6 +139,9 @@ func (s *RoomService) JoinRoom(ctx context.Context, joiner *models.User, roomID,
 	}); err != nil {
 		return nil, err
 	}
+	if deleteSolo != nil {
+		deleteAutopilotActions(ctx, s.autopilot, deleteSolo.RoomID)
+	}
 	if deleteSolo != nil && s.purger != nil {
 		// The solo house is gone; the person's own events stay (their profile is built from them).
 		if err := s.purger.ForgetRoomAggregates(ctx, deleteSolo.RoomID); err != nil {
@@ -210,28 +216,52 @@ func (s *RoomService) CancelDeletionVote(ctx context.Context, user *models.User)
 	return nil
 }
 
-// UpdateRoomSettings updates display name and/or description.
-func (s *RoomService) UpdateRoomSettings(ctx context.Context, user *models.User, displayName *string, description *string, suggestionsOff *bool) error {
+// RoomSettings are the house settings a member may change; nil fields are left as they are.
+type RoomSettings struct {
+	DisplayName *string
+	Description *string
+	// SuggestionsOff is the pre-mode switch, accepted for one release: true sets mode off, false
+	// turns an off house back to suggest (and leaves any other mode alone).
+	SuggestionsOff *bool
+	AutopilotMode  *autopilot.Mode
+}
+
+// UpdateRoomSettings applies the non-nil settings.
+func (s *RoomService) UpdateRoomSettings(ctx context.Context, user *models.User, in RoomSettings) error {
 	if user.RoomID == nil || *user.RoomID == "" {
 		return derr.ErrNotFound
 	}
 	now := time.Now().UTC()
 	var changed []string
-	if displayName != nil {
+	if in.DisplayName != nil {
 		changed = append(changed, "display_name")
-		if err := s.rooms.UpdateDisplayName(ctx, *user.RoomID, user.UserID, *displayName, now); err != nil {
+		if err := s.rooms.UpdateDisplayName(ctx, *user.RoomID, user.UserID, *in.DisplayName, now); err != nil {
 			return err
 		}
 	}
-	if description != nil {
+	if in.Description != nil {
 		changed = append(changed, "description")
-		if err := s.rooms.UpdateDescription(ctx, *user.RoomID, user.UserID, *description, now); err != nil {
+		if err := s.rooms.UpdateDescription(ctx, *user.RoomID, user.UserID, *in.Description, now); err != nil {
 			return err
 		}
 	}
-	if suggestionsOff != nil {
-		changed = append(changed, "suggestions_off")
-		if err := s.rooms.SetSuggestionsOff(ctx, *user.RoomID, user.UserID, *suggestionsOff, now); err != nil {
+	mode := in.AutopilotMode
+	if mode == nil && in.SuggestionsOff != nil {
+		rm, err := s.rooms.GetByID(ctx, *user.RoomID)
+		if err != nil {
+			return err
+		}
+		current := autopilot.HouseMode(rm.AutopilotMode, rm.SuggestionsOff)
+		switch {
+		case *in.SuggestionsOff:
+			mode = ref(autopilot.ModeOff)
+		case current == autopilot.ModeOff:
+			mode = ref(autopilot.ModeSuggest)
+		}
+	}
+	if mode != nil {
+		changed = append(changed, "autopilot_mode")
+		if err := s.rooms.SetAutopilotMode(ctx, *user.RoomID, user.UserID, string(*mode), now); err != nil {
 			return err
 		}
 	}
@@ -241,8 +271,12 @@ func (s *RoomService) UpdateRoomSettings(ctx context.Context, user *models.User,
 	return nil
 }
 
+// UseAutopilotActions injects the autopilot action log, so a deleted house's actions go with it.
+func (s *RoomService) UseAutopilotActions(r store.AutopilotActionRepository) { s.autopilot = r }
+
 func (s *RoomService) cleanupRoomResources(ctx context.Context, roomID string) {
 	s.purgeRoom(ctx, roomID)
+	deleteAutopilotActions(ctx, s.autopilot, roomID)
 	if s.trips != nil {
 		_ = s.trips.DeleteByRoom(ctx, roomID)
 	}

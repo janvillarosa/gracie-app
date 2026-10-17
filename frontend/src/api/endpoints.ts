@@ -1,5 +1,7 @@
 import { apiFetch, ApiError } from './client'
 import type {
+  AutopilotMode,
+  AutopilotView,
   CreateUserResponse,
   RoomView,
   User,
@@ -91,7 +93,7 @@ export async function cancelDeletion(apiKey: string): Promise<void> {
 
 export async function updateRoomSettings(
   apiKey: string,
-  params: { display_name?: string; description?: string; suggestions_off?: boolean },
+  params: { display_name?: string; description?: string; autopilot_mode?: AutopilotMode },
 ): Promise<RoomView> {
   return apiFetch<RoomView>(`/rooms/settings`, {
     method: 'PUT',
@@ -226,6 +228,28 @@ export async function createListItem(
     method: 'POST',
     apiKey,
     body: JSON.stringify(params),
+  })
+}
+
+/** The list's autopilot: the House's mode, what it applied lately and its suggestions. */
+export async function getListAutopilot(
+  apiKey: string,
+  roomId: string,
+  listId: string,
+): Promise<AutopilotView> {
+  return apiFetch<AutopilotView>(`/rooms/${roomId}/lists/${listId}/autopilot`, { apiKey })
+}
+
+/** Takes back one thing autopilot added: the item leaves the list. */
+export async function undoAutopilotAction(
+  apiKey: string,
+  roomId: string,
+  listId: string,
+  actionId: string,
+): Promise<void> {
+  return apiFetch<void>(`/rooms/${roomId}/lists/${listId}/autopilot/${actionId}/undo`, {
+    method: 'POST',
+    apiKey,
   })
 }
 

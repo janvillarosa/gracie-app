@@ -4,6 +4,7 @@
 //	suggest-eval shadow     score live item.suggestion_predicted events against what happened next
 //	suggest-eval backfill   turn existing list items into events (dry run unless -apply)
 //	suggest-eval tune       replay history across a grid of window, regularity and score settings
+//	suggest-eval autopilot  replay assist mode at each past run: precision, recall, removals per week
 //
 // It reads the same MONGODB_URI / MONGODB_DB as the server. backtest and shadow only read.
 // backtest -away-from-trips replays in home time, with each house's away spans built from its
@@ -23,6 +24,7 @@ import (
 	"github.com/janvillarosa/gracie-app/backend/internal/analytics"
 	"github.com/janvillarosa/gracie-app/backend/internal/analytics/eval"
 	"github.com/janvillarosa/gracie-app/backend/internal/analytics/predict"
+	"github.com/janvillarosa/gracie-app/backend/internal/autopilot/replay"
 	"github.com/janvillarosa/gracie-app/backend/internal/config"
 	"github.com/janvillarosa/gracie-app/backend/internal/models"
 	mongostore "github.com/janvillarosa/gracie-app/backend/internal/store/mongo"
@@ -48,6 +50,16 @@ func main() {
 		backtestSynthetic(*awayFromTrips)
 		return
 	}
+	if cmd == "autopilot" && *synth {
+		w := households.Golden()
+		var away map[string]predict.Away
+		if *awayFromTrips {
+			away = w.Away()
+		}
+		fmt.Println("== golden households (internal/testutil/households) ==")
+		autopilotReport(w.Events, away, personas(w))
+		return
+	}
 
 	cfg, err := config.Load()
 	if err != nil {
@@ -71,13 +83,21 @@ func main() {
 		tune(ctx, cli, *room, *minPrecision)
 	case "backfill":
 		backfill(ctx, cli, *room, *apply, time.Duration(cfg.AnalyticsRetentionDays)*24*time.Hour)
+	case "autopilot":
+		evs := loadEvents(ctx, cli, roomFilter(*room, bson.D{{Key: "subject.type", Value: "item"},
+			{Key: "name", Value: bson.D{{Key: "$in", Value: bson.A{"item.added", "item.checked", "item.deleted", "item.suggestion_ignored", "item.autopilot_removed"}}}}}))
+		var away map[string]predict.Away
+		if *awayFromTrips {
+			away = loadAway(ctx, cli, *room)
+		}
+		autopilotReport(evs, away, nil)
 	default:
 		usage()
 	}
 }
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: suggest-eval backtest|shadow|tune|backfill [-room ID] [-apply] [-min-precision 0.6] [-away-from-trips] [-synthetic]")
+	fmt.Fprintln(os.Stderr, "usage: suggest-eval backtest|shadow|tune|backfill|autopilot [-room ID] [-apply] [-min-precision 0.6] [-away-from-trips] [-synthetic]")
 	os.Exit(2)
 }
 
@@ -363,5 +383,50 @@ func explain(ctx context.Context, cli *mongostore.Client, room string) {
 			break
 		}
 		fmt.Printf("%-22s n %3d  every %5.1fd  cv %.2f  hits %2d/%-2d  score %.2f  %s\n", r.key, r.f.N, r.f.EWMADays, r.f.CV, r.f.Hits, r.f.Trials, r.f.Score, r.f.Series)
+	}
+}
+
+func personas(w households.World) map[string]string {
+	out := map[string]string{}
+	for _, h := range w.Houses {
+		out[h.Room] = h.Persona
+	}
+	return out
+}
+
+// autopilotReport replays assist mode (internal/autopilot/replay) and sweeps its bars. The gate
+// for making assist available: precision >= replay.PrecisionGate and at most 1 removal per house-week.
+func autopilotReport(evs []analytics.Event, away map[string]predict.Away, names map[string]string) {
+	o := replay.DefaultOptions()
+	o.Away = away
+	total, per := replay.Replay(evs, o)
+	fmt.Printf("assist bar: score >= %.2f, need >= %.2f, lead %s\n", o.Policy.AssistMinScore, o.Policy.AssistMinNeed, o.Lead)
+	fmt.Printf("  houses %d  runs %d  adds %d (%.2f per run)  bought in the run %d  bought later %d\n", total.Houses, total.Runs, total.Added, total.AddsPerRun(), total.Hits, total.Later)
+	fmt.Printf("  precision %.1f%%  recall %.1f%%  open recall %.1f%%  removals %.2f per house-week\n",
+		100*total.Precision(), 100*total.Recall(), 100*total.OpenRecall(), total.RemovalsPerWeek())
+	fmt.Printf("  F1 (precision x open recall) %.1f%%  goal %.0f%%\n", 100*total.F1(), 100*replay.F1Goal)
+	gate := total.Precision() >= replay.PrecisionGate && total.RemovalsPerWeek() <= 1 && total.F1() >= replay.F1Goal
+	fmt.Printf("  gate (precision >= %.0f%%, removals <= 1/week, F1 >= %.0f%%): %v\n", 100*replay.PrecisionGate, 100*replay.F1Goal, map[bool]string{true: "PASS", false: "MISS"}[gate])
+	fmt.Printf("  misses by reason: %v\n\n", total.Misses)
+	rooms := make([]string, 0, len(per))
+	for r := range per {
+		rooms = append(rooms, r)
+	}
+	sort.Strings(rooms)
+	for _, r := range rooms {
+		rep := per[r]
+		if rep.Runs == 0 {
+			continue
+		}
+		name := r
+		if n, ok := names[r]; ok {
+			name = n
+		}
+		fmt.Printf("  %-22s runs %3d  adds %3d  precision %5.1f%%  open recall %5.1f%%  removals/wk %.2f\n", name, rep.Runs, rep.Added, 100*rep.Precision(), 100*rep.OpenRecall(), rep.RemovalsPerWeek())
+	}
+	fmt.Println("\nbar sweep (score x need):")
+	for _, r := range replay.Sweep(evs, o, []float64{0.35, 0.45, 0.5, 0.55, 0.65, 0.8}, []float64{0.5, 0.6, 0.7}) {
+		fmt.Printf("  score>=%.2f need>=%.2f  adds %4d  precision %5.1f%%  open recall %5.1f%%  F1 %5.1f%%  removals/wk %.2f\n",
+			r.Policy.AssistMinScore, r.Policy.AssistMinNeed, r.Added, 100*r.Precision(), 100*r.OpenRecall(), 100*r.F1(), r.RemovalsPerWeek())
 	}
 }

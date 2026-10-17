@@ -28,7 +28,7 @@ type suggestRig struct {
 	m      memstore.Repos
 	reg    *analytics.Registry
 	lists  *ListService
-	svc    *SuggestionService
+	svc    *AutopilotService
 	user   *models.User
 	roomID string
 	list   string // groceries
@@ -53,7 +53,7 @@ func newSuggestRig(t *testing.T, mode SuggestionMode) *suggestRig {
 	groceries, _ := ls.CreateList(ctx, cu.User, roomID, "Groceries", "", "")
 	party, _ := ls.CreateList(ctx, cu.User, roomID, "Party", "", "")
 	r := &suggestRig{t: t, m: m, reg: reg, lists: ls, user: cu.User, roomID: roomID, list: groceries.ListID, other: party.ListID, now: time.Now().UTC()}
-	r.svc = NewSuggestionService(m.Rooms, m.Lists, m.Items, analytics.NewReader(m.Aggs), m.Events, mode).WithClock(func() time.Time { return r.now })
+	r.svc = NewAutopilotService(m.Rooms, m.Lists, m.Items, analytics.NewReader(m.Aggs), m.Events, mode).WithClock(func() time.Time { return r.now })
 	rec := storeRecorder{m.Events}
 	r.svc.UseRecorder(rec)
 	ls.UseRecorder(rec)
@@ -93,7 +93,7 @@ func (r *suggestRig) fold() {
 
 func (r *suggestRig) suggest() []Suggestion {
 	r.t.Helper()
-	out, err := r.svc.ForList(context.Background(), r.user, r.roomID, r.list, 3, "")
+	out, err := r.svc.Suggestions(context.Background(), r.user, r.roomID, r.list, 3, "")
 	if err != nil {
 		r.t.Fatal(err)
 	}
@@ -169,7 +169,7 @@ func TestOnlySuggestedOnItsHomeList(t *testing.T) {
 	if got := r.suggest(); len(got) != 0 {
 		t.Fatalf("chips live on the party list: %v", keysOf(got))
 	}
-	out, _ := r.svc.ForList(context.Background(), r.user, r.roomID, r.other, 3, "")
+	out, _ := r.svc.Suggestions(context.Background(), r.user, r.roomID, r.other, 3, "")
 	if len(out) != 1 {
 		t.Fatalf("party list: %+v", out)
 	}
@@ -244,7 +244,7 @@ func TestIgnoreValidatesKeyAndMembership(t *testing.T) {
 	if err := r.svc.Ignore(ctx, stranger, r.roomID, r.list, "whole milk", ""); !errors.Is(err, derr.ErrForbidden) {
 		t.Fatalf("stranger: %v", err)
 	}
-	if _, err := r.svc.ForList(ctx, stranger, r.roomID, r.list, 3, ""); !errors.Is(err, derr.ErrForbidden) {
+	if _, err := r.svc.Suggestions(ctx, stranger, r.roomID, r.list, 3, ""); !errors.Is(err, derr.ErrForbidden) {
 		t.Fatalf("stranger read: %v", err)
 	}
 }
@@ -302,20 +302,20 @@ func TestOffModeAndHouseSettingAndNoAnalytics(t *testing.T) {
 	r.svc.mode = SuggestionsOn
 	rs := NewRoomService(r.m.Users, r.m.Rooms, r.m.Tx)
 	off := true
-	if err := rs.UpdateRoomSettings(context.Background(), r.user, nil, nil, &off); err != nil {
+	if err := rs.UpdateRoomSettings(context.Background(), r.user, RoomSettings{SuggestionsOff: &off}); err != nil {
 		t.Fatal(err)
 	}
 	if got := r.suggest(); len(got) != 0 {
 		t.Fatalf("house turned it off: %+v", got)
 	}
 	off = false
-	_ = rs.UpdateRoomSettings(context.Background(), r.user, nil, nil, &off)
+	_ = rs.UpdateRoomSettings(context.Background(), r.user, RoomSettings{SuggestionsOff: &off})
 	if got := r.suggest(); len(got) != 1 {
 		t.Fatalf("back on: %+v", got)
 	}
 
-	bare := NewSuggestionService(r.m.Rooms, r.m.Lists, r.m.Items, nil, nil, SuggestionsOn)
-	if got, err := bare.ForList(context.Background(), r.user, r.roomID, r.list, 3, ""); err != nil || len(got) != 0 {
+	bare := NewAutopilotService(r.m.Rooms, r.m.Lists, r.m.Items, nil, nil, SuggestionsOn)
+	if got, err := bare.Suggestions(context.Background(), r.user, r.roomID, r.list, 3, ""); err != nil || len(got) != 0 {
 		t.Fatalf("analytics disabled: %+v %v", got, err)
 	}
 	if err := bare.Ignore(context.Background(), r.user, r.roomID, r.list, "whole milk", ""); err != nil {
@@ -430,7 +430,7 @@ func (r *suggestRig) orangesBothWays() {
 func TestLookAlikesAreOneSuggestion(t *testing.T) {
 	r := newSuggestRig(t, SuggestionsOn)
 	r.orangesBothWays()
-	got, err := r.svc.ForList(context.Background(), r.user, r.roomID, r.list, 5, "")
+	got, err := r.svc.Suggestions(context.Background(), r.user, r.roomID, r.list, 5, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -483,14 +483,14 @@ func (r *suggestRig) shopsEvery(days float64) {
 
 func (r *suggestRig) suggestDuring(during string) []Suggestion {
 	r.t.Helper()
-	out, err := r.svc.ForList(context.Background(), r.user, r.roomID, r.list, 3, during)
+	out, err := r.svc.Suggestions(context.Background(), r.user, r.roomID, r.list, 3, during)
 	if err != nil {
 		r.t.Fatal(err)
 	}
 	return out
 }
 
-func TestForListRunModeIncludesSoonDue(t *testing.T) {
+func TestSuggestionsRunModeIncludesSoonDue(t *testing.T) {
 	r := newSuggestRig(t, SuggestionsOn)
 	r.weekly("whole milk", r.list) // due at base; its window opens three days before
 	r.shopsEvery(7)
@@ -505,7 +505,7 @@ func TestForListRunModeIncludesSoonDue(t *testing.T) {
 	}
 }
 
-func TestForListRunModeLooksOnlyAsFarAsTheNextRun(t *testing.T) {
+func TestSuggestionsRunModeLooksOnlyAsFarAsTheNextRun(t *testing.T) {
 	r := newSuggestRig(t, SuggestionsOn)
 	r.weekly("whole milk", r.list)
 	r.shopsEvery(1) // they shop daily: no need to grab milk two days early
@@ -516,7 +516,7 @@ func TestForListRunModeLooksOnlyAsFarAsTheNextRun(t *testing.T) {
 	}
 }
 
-func TestForListRunModeCapsTheLookahead(t *testing.T) {
+func TestSuggestionsRunModeCapsTheLookahead(t *testing.T) {
 	r := newSuggestRig(t, SuggestionsOn)
 	r.history("item.added", "flour", r.list, 224, 196, 168, 140, 112, 84, 56, 28) // every four weeks, due now
 	r.shopsEvery(30)
@@ -527,7 +527,7 @@ func TestForListRunModeCapsTheLookahead(t *testing.T) {
 	}
 }
 
-func TestForListRunModeNeedsARunRhythm(t *testing.T) {
+func TestSuggestionsRunModeNeedsARunRhythm(t *testing.T) {
 	r := newSuggestRig(t, SuggestionsOn)
 	r.weekly("whole milk", r.list)
 	r.fold()
@@ -536,7 +536,7 @@ func TestForListRunModeNeedsARunRhythm(t *testing.T) {
 	}
 }
 
-func TestForListRunModeOrdersOpenThenSoonest(t *testing.T) {
+func TestSuggestionsRunModeOrdersOpenThenSoonest(t *testing.T) {
 	r := newSuggestRig(t, SuggestionsOn)
 	r.history("item.added", "whole milk", r.list, 56, 49, 42, 35, 28, 21, 14, 7)            // due now: open
 	r.history("item.added", "eggs", r.list, 52, 45, 38, 31, 24, 17, 10, 3)                  // due in 4 days
@@ -605,7 +605,7 @@ func TestRunIgnoreLapsesOnceDue(t *testing.T) {
 
 func TestRunModeRejectsUnknownDuring(t *testing.T) {
 	r := newSuggestRig(t, SuggestionsOn)
-	if _, err := r.svc.ForList(context.Background(), r.user, r.roomID, r.list, 1, "later"); !errors.Is(err, derr.ErrBadRequest) {
+	if _, err := r.svc.Suggestions(context.Background(), r.user, r.roomID, r.list, 1, "later"); !errors.Is(err, derr.ErrBadRequest) {
 		t.Fatalf("list: %v", err)
 	}
 	if err := r.svc.Ignore(context.Background(), r.user, r.roomID, r.list, "whole milk", "later"); !errors.Is(err, derr.ErrBadRequest) {

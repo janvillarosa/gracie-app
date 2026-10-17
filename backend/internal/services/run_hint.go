@@ -7,6 +7,7 @@ import (
 
 	"github.com/janvillarosa/gracie-app/backend/internal/analytics"
 	"github.com/janvillarosa/gracie-app/backend/internal/analytics/predict"
+	"github.com/janvillarosa/gracie-app/backend/internal/autopilot"
 	"github.com/janvillarosa/gracie-app/backend/internal/models"
 )
 
@@ -125,14 +126,14 @@ func clampDuration(d, lo, hi time.Duration) time.Duration {
 	return min(max(d, lo), hi)
 }
 
-// RunHintFor reads the person's and the house's profiles (point lookups) and computes the hint.
+// RunHint reads the person's and the house's profiles (point lookups) and computes the hint.
 // With analytics off, or suggestions off for the house, it answers with the default rule.
-func (s *SuggestionService) RunHintFor(ctx context.Context, user *models.User, roomID, listID string) (RunHint, error) {
+func (s *AutopilotService) RunHint(ctx context.Context, user *models.User, roomID, listID string) (RunHint, error) {
 	room, err := s.checkList(ctx, user, roomID, listID)
 	if err != nil {
 		return RunHint{}, err
 	}
-	if s.reader == nil || room.SuggestionsOff {
+	if s.reader == nil || houseMode(room) == autopilot.ModeOff {
 		return DefaultRunHint(), nil
 	}
 	own, err := s.reader.Profile(ctx, user.UserID)

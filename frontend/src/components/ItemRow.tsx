@@ -1,7 +1,7 @@
 import React from 'react'
 import { Button } from '@components/ui'
 import { Checkbox, List as AntList, Tag } from 'antd'
-import { DotsSixVertical, Trash } from '@phosphor-icons/react'
+import { CallBell, DotsSixVertical, Trash } from '@phosphor-icons/react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import type { ListItem } from '@api/types'
@@ -149,6 +149,8 @@ type Props = {
   onStartEdit: (it: ListItem) => void
   onSubmitEdit: (it: ListItem, next: string) => Promise<void> | void
   registerAnchor: (id: string, el: HTMLElement | null) => void
+  // Why autopilot added it ("You buy it about every 9 days"); shown when its mark is tapped.
+  reason?: string
 }
 
 const editValue = (it: ListItem) =>
@@ -167,6 +169,7 @@ export const ItemRow = React.memo<Props>(function ItemRow({
   onStartEdit,
   onSubmitEdit,
   registerAnchor,
+  reason,
 }) {
   const busy = saving || editing
   const completed = variant === 'completed'
@@ -204,6 +207,9 @@ export const ItemRow = React.memo<Props>(function ItemRow({
 
   const swipe = useSwipeToDelete(leave, busy || leaving || variant === 'completed')
   const qtyText = [it.quantity, it.unit].filter(Boolean).join(' ')
+  const byAutopilot = it.source === 'autopilot'
+  const [why, setWhy] = React.useState(false)
+  const whyId = `why-${it.item_id}`
 
   const body = (
     <div ref={rowRef} className={completed ? 'item-row item-row-completed' : 'item-row'}>
@@ -235,13 +241,40 @@ export const ItemRow = React.memo<Props>(function ItemRow({
               {it.description}
             </span>
             {qtyText && <span className="item-qty">{qtyText}</span>}
+            {byAutopilot && why && (
+              <span className="item-why" id={whyId}>
+                Added by autopilot. {reason ?? 'You usually buy it around now'}
+              </span>
+            )}
           </div>
         )}
       </div>
-      {showCategory && it.category && !editing && (
-        <Tag className={`category-tag item-cat ${getCategoryClass(it.category)}`}>
-          {it.category}
-        </Tag>
+      {!editing && (byAutopilot || (showCategory && it.category)) && (
+        // The row's stamps travel together: on a narrow list they drop under the words as one. CSS
+        // orders them so the category keeps the list's category column at every width.
+        <span className="item-stamps">
+          {showCategory && it.category && (
+            <Tag className={`category-tag item-cat ${getCategoryClass(it.category)}`}>
+              {it.category}
+            </Tag>
+          )}
+          {byAutopilot && (
+            <button
+              type="button"
+              className="item-auto"
+              aria-label={`Added by autopilot. Why ${it.description}?`}
+              aria-expanded={why}
+              aria-controls={why ? whyId : undefined}
+              title="Added by autopilot"
+              onClick={(e) => {
+                e.stopPropagation()
+                setWhy((w) => !w)
+              }}
+            >
+              <CallBell weight="bold" aria-hidden />
+            </button>
+          )}
+        </span>
       )}
       <Button
         kind="text"
