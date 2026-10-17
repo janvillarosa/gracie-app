@@ -527,6 +527,10 @@ button.ui-note:focus-visible {
   color: var(--ink);
   box-shadow: var(--shadow-key);
 }
+/* A selected tile is Key Yellow: its disc goes to plain paper so it never reads yellow on yellow. */
+.ui-choice[aria-pressed='true'] .icon-disc {
+  --ground: var(--panel);
+}
 .ui-choice:focus-visible {
   box-shadow: var(--focus-ring);
   outline: none;
@@ -655,11 +659,6 @@ input.ui-sheet-title.has-error:focus-visible {
 }
 .ui-sheet-identity.has-tile .ui-sheet-lead {
   min-height: 0;
-}
-.ui-sheet-identity.has-tile .list-icon {
-  width: var(--control-lg);
-  height: var(--control-lg);
-  font-size: var(--icon-xl);
 }
 .ui-sheet-identity.has-tile input.ui-sheet-title {
   font-size: var(--t-title) !important;

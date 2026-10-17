@@ -2213,11 +2213,6 @@
   gap: var(--space-4);
   min-height: 64px;
 }
-.trip-desk-icon {
-  width: 52px;
-  height: 52px;
-  font-size: var(--icon-2xl);
-}
 .trip-desk-text {
   flex: 1 1 auto;
   min-width: 0;

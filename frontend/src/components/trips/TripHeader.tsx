@@ -8,7 +8,7 @@ import { countdown, routeText, shortDay, shortRange, tripPhase } from '@lib/trip
 import { AVATAR_SIZE } from '@components/Avatar'
 import { AvatarStack } from '@components/AvatarStack'
 import type { Member } from '@lib/trips/hooks'
-import { toTripEmoji } from '../../icons'
+import { TripIconDisc } from '@components/IconDiscs'
 
 // An everyday save takes about a second; saying "Syncing…" for it would push the plan down and
 // back on every edit. Only a sync still waiting after this long is worth a line.
@@ -199,9 +199,7 @@ export const TripHeader: React.FC<HeaderProps> = ({
       <Paper className="paper-meta is-desk">
         {banner}
         <div className="trip-desk-head">
-          <span className="list-icon trip-desk-icon" aria-hidden>
-            {toTripEmoji(trip.icon)}
-          </span>
+          <TripIconDisc icon={trip.icon} size="lg" />
           <div className="trip-desk-text">
             <Typography.Title level={2} className="trip-desk-title">
               <span className="trip-title-text">{trip.title}</span>
@@ -226,9 +224,7 @@ export const TripHeader: React.FC<HeaderProps> = ({
             level={2}
             style={{ margin: 0, lineHeight: 1.2, display: 'flex', alignItems: 'center' }}
           >
-            <span className="list-icon list-icon-title" aria-hidden>
-              {toTripEmoji(trip.icon)}
-            </span>
+            <TripIconDisc icon={trip.icon} className="icon-disc-title" />
             <span className="trip-title-text">{trip.title}</span>
           </Typography.Title>
         </div>

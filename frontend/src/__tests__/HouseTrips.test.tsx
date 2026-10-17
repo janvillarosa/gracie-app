@@ -156,7 +156,7 @@ describe('Trips pill', () => {
     expect(screen.getByText('No dates yet')).toBeInTheDocument()
     // The list-row anatomy: an icon circle, a name, a muted line, and a chevron.
     const row = screen.getByText('Lisbon & Porto').closest('.ant-list-item') as HTMLElement
-    expect(row.querySelector('.list-icon')).toHaveTextContent('🧳')
+    expect(row.querySelector('.icon-disc')).toHaveTextContent('🧳')
     expect(row.querySelector('.list-row-caret')).not.toBeNull()
   })
 
@@ -244,7 +244,7 @@ describe('Lists pill', () => {
     expect(await screen.findByText('For Lisbon & Porto')).toBeInTheDocument()
     const row = screen.getByText('For Lisbon & Porto').closest('.ant-list-item') as HTMLElement
     expect(within(row).getByText('Packing')).toBeInTheDocument()
-    expect(row.querySelector('.list-icon')).toHaveTextContent('🧳')
+    expect(row.querySelector('.icon-disc')).toHaveTextContent('🧳')
     // The Lists pill is the same pill as everywhere else.
     expect(document.querySelector('.ant-tabs')).toBeNull()
   })
