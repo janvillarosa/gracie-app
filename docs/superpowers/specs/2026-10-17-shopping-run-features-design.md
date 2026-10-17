@@ -124,7 +124,7 @@ nightly full pass fills the rest. No backfill is needed.
   - It **counts** toward the two-ignores pause (the house said no twice).
   - It is **excluded** from the forecast's dismiss series. Turning down eggs three days early is
     not evidence the rhythm is wrong, so it must not lower the item's score. *(My call.)*
-  - It skips that item for the rest of this run. It can return when it is actually due.
+  - It hides that item from run mode only until it is actually due (its window open); then it can return.
 
 ## 2. Run done (announced, with an ink stamp)
 
@@ -143,7 +143,8 @@ yellow key.
 - **Trigger:** while a run is on (section 1), the last unchecked item is checked or Clear done is tapped.
   At most once per run. It opens 350ms after the last check.
 - **Content:** the stamp ("Run done", today's date), "{n} items · {m} min" (drop minutes under 1), and,
-  only when ≥ 5 runs are learned and this run was ≥ 3 min quicker than usual, "4 min quicker than usual"
+  only when ≥ 5 runs are learned, this run is at least ¾ the usual size (a top-up shop is not "quick") and
+  it was ≥ 3 min quicker than usual, "4 min quicker than usual"
   in `--ok-ink`. Never "slower". The key cheers, a different word each run (Jan's idea: "Nice!", "Huzzah!",
   "Amazing!", "Woohoo!", "Ta-da!", "Sorted!", "Brilliant!", "All stocked!"), never the same twice in a row.
 - **One celebration:** the check that finishes a run throws no confetti; the stamp is the moment.

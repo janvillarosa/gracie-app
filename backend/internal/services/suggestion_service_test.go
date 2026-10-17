@@ -586,6 +586,23 @@ func TestRunIgnoreDoesNotBlockNormalMode(t *testing.T) {
 	}
 }
 
+func TestRunIgnoreLapsesOnceDue(t *testing.T) {
+	r := newSuggestRig(t, SuggestionsOn)
+	r.weekly("whole milk", r.list)
+	r.shopsEvery(7)
+	r.fold()
+	due := r.now
+	r.now = due.Add(-5 * 24 * time.Hour) // Monday: not due yet, turned down mid-shop
+	if err := r.svc.Ignore(context.Background(), r.user, r.roomID, r.list, "whole milk", DuringRun); err != nil {
+		t.Fatal(err)
+	}
+	r.now = due // the next shop, when it is actually due
+	got := r.suggestDuring(DuringRun)
+	if len(got) != 1 || got[0].DueInDays != 0 {
+		t.Fatalf("an early run-mode ignore must not hide it once it is due: %+v", got)
+	}
+}
+
 func TestRunModeRejectsUnknownDuring(t *testing.T) {
 	r := newSuggestRig(t, SuggestionsOn)
 	if _, err := r.svc.ForList(context.Background(), r.user, r.roomID, r.list, 1, "later"); !errors.Is(err, derr.ErrBadRequest) {

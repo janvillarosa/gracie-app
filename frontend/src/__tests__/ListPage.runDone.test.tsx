@@ -70,7 +70,7 @@ describe('ListPage run done', () => {
   it('a quick run against learned habits says so', async () => {
     setupRunPage({
       items: ['Milk', 'Eggs', 'Bread'],
-      hint: { typical: { minutes: 25, items: 10 } },
+      hint: { typical: { minutes: 25, items: 3 } },
     })
     await checkOff('Milk')
     await checkOff('Eggs')

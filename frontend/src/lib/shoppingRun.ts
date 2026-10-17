@@ -106,16 +106,20 @@ export function useShoppingRun(hint: RunHint | undefined) {
   }
 }
 
-/** What the run-done announcement says. A run noticeably quicker than usual gets a word of praise; a slow
- *  one gets nothing (it is a reward, not a report card). */
+// A run is compared with the usual one only when it is about as big (a top-up shop is not "quick").
+const COMPARABLE_SHARE = 0.75
+
+/** What the run-done announcement says. A run noticeably quicker than a usual run of its size gets a
+ *  word of praise; a slow one gets nothing (it is a reward, not a report card). */
 export function runDoneLines(
   runChecks: number,
   minutes: number,
-  typical?: { minutes: number },
+  typical?: { minutes: number; items: number },
 ): string[] {
   const items = `${runChecks} ${runChecks === 1 ? 'item' : 'items'}`
   const lines = ['Run done', minutes >= 1 ? `${items} · ${minutes} min` : items]
-  const quicker = typical ? typical.minutes - minutes : 0
+  const comparable = !!typical && runChecks >= Math.ceil(typical.items * COMPARABLE_SHARE)
+  const quicker = comparable && typical ? typical.minutes - minutes : 0
   if (quicker >= 3) lines.push(`${quicker} min quicker than usual`)
   return lines
 }

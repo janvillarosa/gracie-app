@@ -236,8 +236,8 @@ the analytics aggregates and the live list; the only state is `Room.SuggestionsO
   lookahead = `Containers["list:<id>"].IntervalDay` of the house profile, capped at 14 days; no learned run rhythm
   means nothing in run mode. Open ones first, then soonest (`due_in_days`), then score, before the limit applies.
   `POST .../suggestions/ignore {key, during:"run"}` emits the ignore with `props.during`: it counts toward the
-  two-ignores pause, is **not** a forecast miss (the rollup skips it), and only hides the key from run mode this
-  cycle. Run-mode predictions carry `during` and their own deterministic id. Any other `during` is a 400.
+  two-ignores pause, is **not** a forecast miss (the rollup skips it), and only hides the key from run mode until
+  its window opens. Run-mode predictions carry `during` and their own deterministic id. Any other `during` is a 400.
 - **Run hint:** `GET .../lists/{id}/run-hint` (`services/run_hint.go`, pure `ComputeRunHint`) tells the client how
   to spot a run: `checks_to_start` 2 (`expected`: in the `next_run` window ±1 h with confidence ≥ 0.5, or the hour of
   week ±1 holds ≥ 50% of the `run_how` peak), 3 (`unknown`), 4 (`unlikely`: < 10% of the peak); `idle_end_min` =

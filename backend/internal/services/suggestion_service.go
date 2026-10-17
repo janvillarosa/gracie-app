@@ -404,8 +404,9 @@ func (s *SuggestionService) currentCycleIsOpen(ctx context.Context, roomID strin
 	for _, e := range evs {
 		switch e.Name {
 		case "item.suggestion_ignored":
-			// A run-mode ignore only hides the key from run mode for this cycle.
-			if e.Props["during"] == DuringRun && !c.duringRn {
+			// A run-mode ignore turns down something early, mid-shop: it only hides the key from run
+			// mode, and only until the key is actually due (window open), when it may come back.
+			if e.Props["during"] == DuringRun && (!c.duringRn || c.dueIn == 0) {
 				continue
 			}
 			if e.OccurredAt.After(c.add.LastAt) {

@@ -222,7 +222,7 @@ export async function startMockTrips() {
           checks_to_start: 2,
           idle_end_min: 20,
           burst_sec: 5,
-          typical: { minutes: 25, items: 10 },
+          typical: { minutes: 25, items: 6 },
         },
       }),
     ),

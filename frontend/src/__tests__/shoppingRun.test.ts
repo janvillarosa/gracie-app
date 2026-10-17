@@ -126,15 +126,21 @@ describe('runDoneLines', () => {
     expect(runDoneLines(1, 3)).toEqual(['Run done', '1 item · 3 min'])
   })
   it('praises a run at least three minutes quicker than usual', () => {
-    expect(runDoneLines(14, 18, { minutes: 22 })).toEqual([
+    expect(runDoneLines(14, 18, { minutes: 22, items: 12 })).toEqual([
       'Run done',
       '14 items · 18 min',
       '4 min quicker than usual',
     ])
   })
+  it('only compares like with like: a small top-up shop is not "quicker than usual"', () => {
+    expect(runDoneLines(3, 2, { minutes: 24, items: 12 })).toEqual(['Run done', '3 items · 2 min'])
+    expect(runDoneLines(9, 15, { minutes: 24, items: 12 })).toHaveLength(3)
+    expect(runDoneLines(8, 15, { minutes: 24, items: 12 })).toHaveLength(2)
+  })
+
   it('never mentions a run that was only a little quicker, or slower', () => {
-    expect(runDoneLines(14, 20, { minutes: 22 })).toHaveLength(2)
-    expect(runDoneLines(14, 30, { minutes: 22 })).toHaveLength(2)
+    expect(runDoneLines(14, 20, { minutes: 22, items: 12 })).toHaveLength(2)
+    expect(runDoneLines(14, 30, { minutes: 22, items: 12 })).toHaveLength(2)
   })
 })
 
