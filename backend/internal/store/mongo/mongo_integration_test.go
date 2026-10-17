@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -16,6 +17,7 @@ import (
 	derr "github.com/janvillarosa/gracie-app/backend/internal/errors"
 	"github.com/janvillarosa/gracie-app/backend/internal/models"
 	"github.com/janvillarosa/gracie-app/backend/internal/trips"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 func randHex(n int) string {
@@ -155,18 +157,21 @@ func TestMongoRoomRepoCRUD(t *testing.T) {
 	if err := rr.UpdateDescription(context.Background(), rm.RoomID, "u2", "Desc", time.Now().UTC()); err != nil {
 		t.Fatalf("upd desc: %v", err)
 	}
-	// smart suggestions setting: only "off" is stored; on is the absent field
-	if err := rr.SetSuggestionsOff(context.Background(), rm.RoomID, "u2", true, time.Now().UTC()); err != nil {
-		t.Fatalf("suggestions off: %v", err)
+	// autopilot mode: a house from before modes has suggestions_off stored; writing a mode clears it
+	if _, err := rr.col().UpdateOne(context.Background(), bson.D{{Key: "room_id", Value: rm.RoomID}}, bson.D{{Key: "$set", Value: bson.D{{Key: "suggestions_off", Value: true}}}}); err != nil {
+		t.Fatalf("seed suggestions_off: %v", err)
 	}
-	if got, _ := rr.GetByID(context.Background(), rm.RoomID); got == nil || !got.SuggestionsOff {
-		t.Fatalf("suggestions_off not stored: %+v", got)
+	if err := rr.SetAutopilotMode(context.Background(), rm.RoomID, "u2", "assist", time.Now().UTC()); err != nil {
+		t.Fatalf("set mode: %v", err)
 	}
-	if err := rr.SetSuggestionsOff(context.Background(), rm.RoomID, "u2", false, time.Now().UTC()); err != nil {
-		t.Fatalf("suggestions on: %v", err)
+	if got, _ := rr.GetByID(context.Background(), rm.RoomID); got == nil || got.AutopilotMode != "assist" || got.SuggestionsOff {
+		t.Fatalf("mode not stored or suggestions_off kept: %+v", got)
 	}
-	if got, _ := rr.GetByID(context.Background(), rm.RoomID); got == nil || got.SuggestionsOff {
-		t.Fatalf("suggestions_off not cleared: %+v", got)
+	if ids, err := rr.ListIDsByAutopilotMode(context.Background(), "assist", 10); err != nil || !slices.Contains(ids, rm.RoomID) {
+		t.Fatalf("list by mode: %v %v", ids, err)
+	}
+	if err := rr.SetAutopilotMode(context.Background(), rm.RoomID, "stranger", "off", time.Now().UTC()); err != derr.ErrNotFound {
+		t.Fatalf("non-member set mode: %v", err)
 	}
 	if err := rr.Delete(context.Background(), rm.RoomID); err != nil {
 		t.Fatalf("delete: %v", err)

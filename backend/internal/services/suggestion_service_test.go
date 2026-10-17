@@ -302,14 +302,14 @@ func TestOffModeAndHouseSettingAndNoAnalytics(t *testing.T) {
 	r.svc.mode = SuggestionsOn
 	rs := NewRoomService(r.m.Users, r.m.Rooms, r.m.Tx)
 	off := true
-	if err := rs.UpdateRoomSettings(context.Background(), r.user, nil, nil, &off); err != nil {
+	if err := rs.UpdateRoomSettings(context.Background(), r.user, RoomSettings{SuggestionsOff: &off}); err != nil {
 		t.Fatal(err)
 	}
 	if got := r.suggest(); len(got) != 0 {
 		t.Fatalf("house turned it off: %+v", got)
 	}
 	off = false
-	_ = rs.UpdateRoomSettings(context.Background(), r.user, nil, nil, &off)
+	_ = rs.UpdateRoomSettings(context.Background(), r.user, RoomSettings{SuggestionsOff: &off})
 	if got := r.suggest(); len(got) != 1 {
 		t.Fatalf("back on: %+v", got)
 	}

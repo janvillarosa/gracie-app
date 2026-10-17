@@ -303,16 +303,31 @@ func (r *RoomRepo) UpdateDescription(_ context.Context, roomID string, _ string,
 	rm.UpdatedAt = updatedAt
 	return nil
 }
-func (r *RoomRepo) SetSuggestionsOff(_ context.Context, roomID string, _ string, off bool, updatedAt time.Time) error {
+func (r *RoomRepo) SetAutopilotMode(_ context.Context, roomID string, _ string, mode string, updatedAt time.Time) error {
 	r.st.mu.Lock()
 	defer r.st.mu.Unlock()
 	rm, ok := r.st.rooms[roomID]
 	if !ok {
 		return derr.ErrNotFound
 	}
-	rm.SuggestionsOff = off
+	rm.AutopilotMode, rm.SuggestionsOff = mode, false
 	rm.UpdatedAt = updatedAt
 	return nil
+}
+func (r *RoomRepo) ListIDsByAutopilotMode(_ context.Context, mode string, limit int) ([]string, error) {
+	r.st.mu.Lock()
+	defer r.st.mu.Unlock()
+	var out []string
+	for id, rm := range r.st.rooms {
+		if rm.AutopilotMode == mode {
+			out = append(out, id)
+		}
+	}
+	sort.Strings(out)
+	if len(out) > limit {
+		out = out[:limit]
+	}
+	return out, nil
 }
 func (r *RoomRepo) UpdateDisplayName(_ context.Context, roomID string, _ string, displayName string, updatedAt time.Time) error {
 	r.st.mu.Lock()

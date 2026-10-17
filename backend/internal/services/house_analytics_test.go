@@ -32,7 +32,7 @@ func TestHouseAndAccountEventsEmitted(t *testing.T) {
 		t.Fatal(err)
 	}
 	newName := "Home"
-	if err := rs.UpdateRoomSettings(ctx, a.User, &newName, nil, nil); err != nil {
+	if err := rs.UpdateRoomSettings(ctx, a.User, RoomSettings{DisplayName: &newName}); err != nil {
 		t.Fatal(err)
 	}
 	if err := us.UpdateProfile(ctx, a.User.UserID, &newName, nil); err != nil {

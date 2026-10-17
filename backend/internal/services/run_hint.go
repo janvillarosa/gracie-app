@@ -7,6 +7,7 @@ import (
 
 	"github.com/janvillarosa/gracie-app/backend/internal/analytics"
 	"github.com/janvillarosa/gracie-app/backend/internal/analytics/predict"
+	"github.com/janvillarosa/gracie-app/backend/internal/autopilot"
 	"github.com/janvillarosa/gracie-app/backend/internal/models"
 )
 
@@ -132,7 +133,7 @@ func (s *SuggestionService) RunHintFor(ctx context.Context, user *models.User, r
 	if err != nil {
 		return RunHint{}, err
 	}
-	if s.reader == nil || room.SuggestionsOff {
+	if s.reader == nil || autopilot.HouseMode(room.AutopilotMode, room.SuggestionsOff) == autopilot.ModeOff {
 		return DefaultRunHint(), nil
 	}
 	own, err := s.reader.Profile(ctx, user.UserID)

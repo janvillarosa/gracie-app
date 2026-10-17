@@ -11,6 +11,7 @@ import (
 
 	"github.com/janvillarosa/gracie-app/backend/internal/analytics"
 	"github.com/janvillarosa/gracie-app/backend/internal/analytics/predict"
+	"github.com/janvillarosa/gracie-app/backend/internal/autopilot"
 	derr "github.com/janvillarosa/gracie-app/backend/internal/errors"
 	"github.com/janvillarosa/gracie-app/backend/internal/models"
 	"github.com/janvillarosa/gracie-app/backend/internal/parse"
@@ -150,7 +151,7 @@ func (s *SuggestionService) ForList(ctx context.Context, user *models.User, room
 		return nil, err
 	}
 	out := []Suggestion{}
-	if s.mode == SuggestionsOff || s.reader == nil || s.events == nil || room.SuggestionsOff {
+	if s.mode == SuggestionsOff || s.reader == nil || s.events == nil || autopilot.HouseMode(room.AutopilotMode, room.SuggestionsOff) == autopilot.ModeOff {
 		return out, nil
 	}
 	now := s.now().UTC()
