@@ -153,6 +153,44 @@ export async function startMockTrips() {
       score: 0.7,
     },
   ]
+  // What each mode includes, as the server's feature table says (autopilot.Tiers).
+  const featuresOf = (m: 'off' | 'suggest' | 'assist') =>
+    m === 'off'
+      ? []
+      : m === 'suggest'
+        ? ['run_hint', 'suggestions', 'up_next']
+        : ['auto_add', 'run_hint', 'up_next']
+  // Up next: the House's usual walk through the shop over Groceries, and "shopping now" (ready).
+  // ?upnext=off hides it.
+  const walk: Record<string, number> = {
+    oregano: 0.1,
+    'dill plant': 0.15,
+    'oat milk': 0.3,
+    'whole milk': 0.35,
+    'sourdough loaf from the corner bakery': 0.55,
+    bananas: 0.7,
+    'kitchen roll': 0.85,
+    'basmati rice': 0.95,
+  }
+  const upNext = (listId: string) => {
+    if (listId !== 'list_groceries' || autopilotMode === 'off') return undefined
+    if (new URLSearchParams(window.location.search).get('upnext') === 'off') return undefined
+    return {
+      ready: true,
+      route: groceries.flatMap((row, i) =>
+        row.archived || walk[row.description.toLowerCase()] === undefined
+          ? []
+          : [
+              {
+                item_id: `item_groc_${i}`,
+                key: row.description.toLowerCase(),
+                spot: walk[row.description.toLowerCase()],
+                done: !!row.completed,
+              },
+            ],
+      ),
+    }
+  }
   const spent = new Set<string>()
   const handlers = [
     ...tripHandlers(srv, { latencyMs: 80 }),
@@ -183,11 +221,21 @@ export async function startMockTrips() {
         display_name: 'The Villarosa House (synthetic)',
         members: ['Jan', 'Mia'],
         autopilot_mode: autopilotMode,
+        autopilot_features: featuresOf(autopilotMode),
       })
     }),
-    http.get('/api/rooms/:roomId/lists/:listId/autopilot', () =>
+    http.get('/api/rooms/:roomId/lists/:listId/autopilot', ({ params }) =>
       HttpResponse.json({
         mode: autopilotMode,
+        features: featuresOf(autopilotMode),
+        stack:
+          autopilotMode === 'off'
+            ? []
+            : [
+                ...(upNext(params.listId as string) ? ['up_next'] : []),
+                autopilotMode === 'assist' ? 'auto_add' : 'suggestions',
+              ],
+        up_next: upNext(params.listId as string),
         applied:
           autopilotMode === 'assist'
             ? groceries.flatMap((row, i) =>
