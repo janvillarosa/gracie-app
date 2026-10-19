@@ -101,6 +101,21 @@ func (r *TripRepo) ListCoordsExpired(ctx context.Context, before time.Time, limi
 	return out, nil
 }
 
+func (r *TripRepo) ListCurrent(ctx context.Context, fromDate string, limit int) ([]models.Trip, error) {
+	cur, err := r.col().Find(ctx, bson.D{{Key: "deleted_at", Value: nil}, {Key: "$or", Value: bson.A{
+		bson.D{{Key: "end_date", Value: bson.D{{Key: "$gte", Value: fromDate}}}},
+		bson.D{{Key: "end_date", Value: nil}},
+	}}}, options.Find().SetLimit(int64(limit)))
+	if err != nil {
+		return nil, err
+	}
+	var out []models.Trip
+	if err := cur.All(ctx, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // LinkPackingList uses an update pipeline so version and v can be incremented from the
 // stored value in the same atomic write.
 func (r *TripRepo) LinkPackingList(ctx context.Context, tripID, roomID string, expect *string, listID string, at time.Time) (bool, error) {

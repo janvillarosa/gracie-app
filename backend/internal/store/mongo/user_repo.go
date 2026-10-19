@@ -133,7 +133,36 @@ func (r *UserRepo) UpdatePreferences(ctx context.Context, userID string, prefs m
 	if prefs.TripsShowNextStop != nil {
 		set = append(set, bson.E{Key: "preferences.trips_show_next_stop", Value: *prefs.TripsShowNextStop})
 	}
+	for _, f := range []struct {
+		path string
+		v    *bool
+	}{
+		{"preferences.notify_item_adds", prefs.NotifyItemAdds},
+		{"preferences.notify_autopilot", prefs.NotifyAutopilot},
+		{"preferences.notify_trips", prefs.NotifyTrips},
+	} {
+		if f.v != nil {
+			set = append(set, bson.E{Key: f.path, Value: *f.v})
+		}
+	}
 	res, err := r.col().UpdateOne(ctx, filterByUserID(userID), bson.D{{Key: "$set", Value: set}})
+	if err != nil {
+		return err
+	}
+	if res.MatchedCount == 0 {
+		return derr.ErrNotFound
+	}
+	return nil
+}
+
+func (r *UserRepo) SetTestAccount(ctx context.Context, userID string, on bool, updatedAt time.Time) error {
+	op := bson.D{{Key: "$set", Value: bson.D{{Key: "updated_at", Value: updatedAt.UTC()}}}}
+	if on {
+		op = bson.D{{Key: "$set", Value: bson.D{{Key: "test_account", Value: true}, {Key: "updated_at", Value: updatedAt.UTC()}}}}
+	} else {
+		op = append(op, bson.E{Key: "$unset", Value: bson.D{{Key: "test_account", Value: ""}}})
+	}
+	res, err := r.col().UpdateOne(ctx, filterByUserID(userID), op)
 	if err != nil {
 		return err
 	}

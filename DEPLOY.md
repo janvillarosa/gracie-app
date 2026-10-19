@@ -17,6 +17,12 @@ Overview
   - `ENC_KEY_FILE` = `/data/enc.key` (see persistence below)
   - `API_KEY_TTL_HOURS` = `720` (optional)
   - `CORS_ORIGIN` = `https://<your-vercel-domain>` (only needed if you skip Vercel rewrites)
+  - Push notifications (optional; off until both keys are set): run
+    `cd backend && go run ./cmd/gen-vapid`, then set `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` and
+    `VAPID_SUBJECT` (`mailto:you@example.com`). Keep the private key secret and do not rotate it
+    casually: a new pair invalidates every device. See `docs/features/notifications.md`.
+  - Test accounts (optional): grant one with `testaccount grant <username>`, a command shipped in the
+    image next to the server (run it with the same environment). See `docs/features/test-mode.md`.
   - Embedding (optional): `EMBEDDING_ENABLED`, `EMBEDDING_MODEL_PATH`,
     `EMBED_THRESHOLD`, `EMBED_TOPK` — see `backend/README.md`.
 - Persistence (encryption key):

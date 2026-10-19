@@ -57,12 +57,14 @@ type Repos struct {
 	Aggs   *AggRepo
 	// Autopilot is the autopilot action log.
 	Autopilot *AutopilotRepo
+	// Push holds push subscriptions and the notification outbox.
+	Push *PushRepo
 }
 
 // Compose returns in-memory repos + a no-op Tx runner.
 func Compose() Repos {
 	st := NewStore()
-	return Repos{Tx: Tx{}, Users: &UserRepo{st}, Rooms: &RoomRepo{st}, Lists: &ListRepo{st}, Items: &ListItemRepo{st}, Trips: &TripRepo{st}, Events: NewEventRepo(), Aggs: NewAggRepo(), Autopilot: NewAutopilotRepo()}
+	return Repos{Tx: Tx{}, Users: &UserRepo{st}, Rooms: &RoomRepo{st}, Lists: &ListRepo{st}, Items: &ListItemRepo{st}, Trips: &TripRepo{st}, Events: NewEventRepo(), Aggs: NewAggRepo(), Autopilot: NewAutopilotRepo(), Push: NewPushRepo()}
 }
 
 // UserRepo
@@ -162,6 +164,27 @@ func (r *UserRepo) UpdatePreferences(_ context.Context, userID string, prefs mod
 		v := *prefs.TripsShowNextStop
 		u.Preferences.TripsShowNextStop = &v
 	}
+	for _, f := range []struct{ src, dst **bool }{
+		{&prefs.NotifyItemAdds, &u.Preferences.NotifyItemAdds},
+		{&prefs.NotifyAutopilot, &u.Preferences.NotifyAutopilot},
+		{&prefs.NotifyTrips, &u.Preferences.NotifyTrips},
+	} {
+		if *f.src != nil {
+			v := **f.src
+			*f.dst = &v
+		}
+	}
+	u.UpdatedAt = updatedAt
+	return nil
+}
+func (r *UserRepo) SetTestAccount(_ context.Context, userID string, on bool, updatedAt time.Time) error {
+	r.st.mu.Lock()
+	defer r.st.mu.Unlock()
+	u, ok := r.st.users[userID]
+	if !ok {
+		return derr.ErrNotFound
+	}
+	u.TestAccount = on
 	u.UpdatedAt = updatedAt
 	return nil
 }

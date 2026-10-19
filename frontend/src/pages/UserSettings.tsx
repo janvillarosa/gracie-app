@@ -16,7 +16,9 @@ import {
 import type { User } from '@api/types'
 import { AVATAR_SIZE, Avatar } from '@components/Avatar'
 import { HouseLoader } from '@components/HouseLoader'
+import { NotificationsPreference } from '@components/NotificationsPreference'
 import { TopNav } from '@components/TopNav'
+import { TestModePanel } from '@components/TestModePanel'
 import { TripsPreference } from '@components/trips/TripsPreference'
 import {
   Button,
@@ -170,6 +172,16 @@ export const UserSettings: React.FC = () => {
           <DetailGroup label="Just for you">
             <TripsPreference />
           </DetailGroup>
+
+          <SectionLabel>Notifications</SectionLabel>
+          <NotificationsPreference />
+
+          {me.test_account && (
+            <>
+              <SectionLabel>Test mode</SectionLabel>
+              <TestModePanel />
+            </>
+          )}
 
           <footer className="ui-sheet-footer account-settings-footer">
             <span className="ui-sheet-who">Your avatar is made from your account.</span>

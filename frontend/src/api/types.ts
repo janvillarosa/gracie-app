@@ -9,6 +9,8 @@ export type User = {
   avatar_style?: string
   // Per-account preferences (kept on the account, not on the device).
   preferences?: { trips_show_next_stop?: boolean }
+  // A test account sees the Test mode panel in Account settings (absent for everyone else).
+  test_account?: boolean
 }
 
 export type RoomView = {
@@ -135,3 +137,25 @@ export type ListIcon =
   | 'BROCCOLI'
   | 'TV'
   | 'SUNFLOWER'
+
+// Which push notifications this person gets, on every device they turned them on.
+export type NotificationPrefs = {
+  itemAdds: boolean
+  autopilot: boolean
+  tripReminders: boolean
+}
+
+// A browser's push subscription, as the server stores it (PushSubscription.toJSON plus the UA).
+export type PushSubscriptionBody = {
+  endpoint: string
+  keys: { p256dh: string; auth: string }
+  userAgent: string
+}
+
+// Test mode: an action the server offers a test account (it owns the list and the wording).
+export type TestAction = {
+  id: string
+  label: string
+  description: string
+  touches_house: boolean
+}

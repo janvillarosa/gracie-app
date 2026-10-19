@@ -111,6 +111,18 @@ func (r *TripRepo) DeleteByRoom(_ context.Context, roomID string) error {
 	return nil
 }
 
+func (r *TripRepo) ListCurrent(_ context.Context, fromDate string, limit int) ([]models.Trip, error) {
+	r.st.mu.RLock()
+	defer r.st.mu.RUnlock()
+	var out []models.Trip
+	for _, t := range r.st.trips {
+		if t.DeletedAt == nil && (t.EndDate == nil || *t.EndDate >= fromDate) && len(out) < limit {
+			out = append(out, *t.Clone())
+		}
+	}
+	return out, nil
+}
+
 func (r *TripRepo) ListCoordsExpired(_ context.Context, before time.Time, limit int) ([]models.Trip, error) {
 	r.st.mu.RLock()
 	defer r.st.mu.RUnlock()

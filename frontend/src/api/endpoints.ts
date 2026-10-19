@@ -9,6 +9,9 @@ import type {
   ListItem,
   ListIcon,
   ListSuggestion,
+  NotificationPrefs,
+  PushSubscriptionBody,
+  TestAction,
   RunHint,
   PantryItem,
 } from './types'
@@ -340,4 +343,52 @@ export async function setMyPreferences(
 ): Promise<void> {
   // 204: the caller re-reads /me.
   await apiFetch<void>('/me', { method: 'PUT', apiKey, body: JSON.stringify({ preferences }) })
+}
+
+// Web Push: the server's VAPID public key (base64url), to subscribe with.
+export async function getPushKey(apiKey: string): Promise<{ publicKey: string }> {
+  return apiFetch<{ publicKey: string }>('/push/key', { apiKey })
+}
+
+// Idempotent: the server upserts by endpoint (and moves it to this account if another had it).
+export async function putPushSubscription(
+  apiKey: string,
+  body: PushSubscriptionBody,
+): Promise<void> {
+  await apiFetch<void>('/push/subscriptions', { method: 'PUT', apiKey, body: JSON.stringify(body) })
+}
+
+export async function deletePushSubscription(apiKey: string, endpoint: string): Promise<void> {
+  await apiFetch<void>('/push/subscriptions', {
+    method: 'DELETE',
+    apiKey,
+    body: JSON.stringify({ endpoint }),
+  })
+}
+
+export async function getNotificationPrefs(apiKey: string): Promise<NotificationPrefs> {
+  return apiFetch<NotificationPrefs>('/me/notifications', { apiKey })
+}
+
+export async function setNotificationPrefs(
+  apiKey: string,
+  prefs: NotificationPrefs,
+): Promise<void> {
+  await apiFetch<void>('/me/notifications', {
+    method: 'PUT',
+    apiKey,
+    body: JSON.stringify(prefs),
+  })
+}
+
+// Test accounts only (404 for anyone else).
+export async function listTestActions(apiKey: string): Promise<{ actions: TestAction[] }> {
+  return apiFetch<{ actions: TestAction[] }>('/test/actions', { apiKey })
+}
+
+export async function runTestAction(apiKey: string, id: string): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(`/test/actions/${encodeURIComponent(id)}`, {
+    method: 'POST',
+    apiKey,
+  })
 }

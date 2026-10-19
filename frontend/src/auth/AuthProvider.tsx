@@ -11,6 +11,7 @@ import { useNavigate } from 'react-router-dom'
 import { getMe } from '@api/endpoints'
 import { wipeTripData } from '@lib/trips/store'
 import { setAnalyticsKey, startAppTracking } from '@lib/analytics'
+import { disablePush, resyncPush } from '@lib/push'
 
 export type SignOutReason = 'user' | 'expired'
 
@@ -35,10 +36,16 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
   const navigate = useNavigate()
 
   const signingOut = useRef<Promise<number> | null>(null)
+  // The key being signed out of, for taking this device's push subscription off the server.
+  const keyRef = useRef(apiKey)
+  keyRef.current = apiKey
 
   const signOut = useCallback(
     (reason: SignOutReason = 'user', wrap?: (commit: () => void) => void) => {
       if (signingOut.current) return signingOut.current
+      // A signed-out device gets no one's notifications. A refused key can't ask the server, so
+      // then only the browser's subscription goes.
+      void disablePush(reason === 'user' ? keyRef.current : null)
       const commit = () => {
         localStorage.removeItem(STORAGE_KEY)
         setApiKeyState(null)
@@ -82,6 +89,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
       if (!apiKey) return
       try {
         await getMe(apiKey)
+        void resyncPush(apiKey)
       } catch (e) {
         // Only a refused key ends the session. Offline, a timeout or a 5xx says nothing about the
         // key, and signing out here would wipe the device's unsynced trips.

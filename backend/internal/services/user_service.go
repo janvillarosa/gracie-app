@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"log"
 	"regexp"
 	"time"
 
@@ -22,8 +23,13 @@ type UserService struct {
 	tx    store.TxRunner
 	// autopilot is the optional action log, deleted with the house.
 	autopilot store.AutopilotActionRepository
+	// push is the optional device store; a deleted account's devices go with it.
+	push store.PushSubscriptionRepository
 	emitter
 }
+
+// UsePushSubscriptions lets account deletion remove the account's devices (optional).
+func (s *UserService) UsePushSubscriptions(r store.PushSubscriptionRepository) { s.push = r }
 
 func NewUserService(users store.UserRepository, rooms store.RoomRepository, tx store.TxRunner) *UserService {
 	return &UserService{users: users, rooms: rooms, tx: tx}
@@ -214,6 +220,11 @@ func (s *UserService) DeleteAccount(ctx context.Context, userID string) error {
 		}
 	}
 	s.purgeUser(ctx, userID)
+	if s.push != nil {
+		if err := s.push.DeleteByUser(ctx, userID); err != nil {
+			log.Printf("push: delete devices of %s: %v", userID, err)
+		}
+	}
 	if deletedRoomID != "" {
 		go s.cleanupRoomResources(context.Background(), deletedRoomID)
 	}

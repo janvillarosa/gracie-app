@@ -25,6 +25,7 @@ type ListService struct {
 	items       store.ListItemRepository
 	categorizer categorization.Categorizer
 	hooks       ItemHooks
+	notifier    ItemNotifier
 	emitter
 }
 
@@ -37,6 +38,9 @@ type ItemHooks interface {
 
 // UseItemHooks injects the outcome hooks (optional).
 func (s *ListService) UseItemHooks(h ItemHooks) { s.hooks = h }
+
+// UseNotifier injects the push notifier that hears about adds (optional).
+func (s *ListService) UseNotifier(n ItemNotifier) { s.notifier = n }
 
 func NewListService(users store.UserRepository, rooms store.RoomRepository, lists store.ListRepository, items store.ListItemRepository, categorizer categorization.Categorizer) *ListService {
 	return &ListService{users: users, rooms: rooms, lists: lists, items: items, categorizer: categorizer}
@@ -204,6 +208,9 @@ func (s *ListService) CreateItem(ctx context.Context, user *models.User, roomID,
 		return nil, err
 	}
 	s.emitItem(ctx, "item.added", user, it)
+	if s.notifier != nil {
+		s.notifier.ItemAdded(ctx, user.UserID, it)
+	}
 	return it, nil
 }
 
@@ -216,6 +223,9 @@ func (s *ListService) CreateSystemItem(ctx context.Context, actorID, source, roo
 		return nil, err
 	}
 	s.emitItem(ctx, "item."+source+"_added", &models.User{UserID: actorID}, it)
+	if s.notifier != nil {
+		s.notifier.SystemItemAdded(ctx, source, it)
+	}
 	return it, nil
 }
 
