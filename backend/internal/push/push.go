@@ -83,6 +83,26 @@ func ValidateEndpoint(endpoint string) error {
 	return ErrEndpoint
 }
 
+// ServiceName names the push service behind an endpoint, for people reading a test result.
+func ServiceName(endpoint string) string {
+	u, err := url.Parse(endpoint)
+	if err != nil {
+		return "unknown"
+	}
+	host := strings.ToLower(u.Hostname())
+	switch {
+	case strings.HasSuffix(host, "push.apple.com"):
+		return "Apple"
+	case strings.HasSuffix(host, "googleapis.com"):
+		return "Google"
+	case strings.HasSuffix(host, "mozilla.com"):
+		return "Mozilla"
+	case strings.HasSuffix(host, "notify.windows.com"):
+		return "Windows"
+	}
+	return "unknown"
+}
+
 // Topic derives a valid Topic header (at most 32 URL-safe base64 characters) from any id.
 func Topic(id string) string {
 	sum := sha256.Sum256([]byte(id))
@@ -95,9 +115,14 @@ type WebPush struct {
 	client                   *http.Client
 }
 
+// librarySubject adapts a VAPID contact for webpush-go, which puts "mailto:" in front of anything
+// that is not an https: URL. A mailto: address must therefore go in bare, or the token's subject
+// reads "mailto:mailto:..." and the push services refuse it (403).
+func librarySubject(subject string) string { return strings.TrimPrefix(subject, "mailto:") }
+
 // NewWebPush builds a sender. subject is a mailto: or https: contact for the push services.
 func NewWebPush(publicKey, privateKey, subject string) *WebPush {
-	return &WebPush{public: publicKey, private: privateKey, subject: subject, client: &http.Client{
+	return &WebPush{public: publicKey, private: privateKey, subject: librarySubject(subject), client: &http.Client{
 		Timeout: 10 * time.Second,
 		// Never follow a redirect: the endpoint was validated, its redirect target was not.
 		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },

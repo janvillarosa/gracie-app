@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/janvillarosa/gracie-app/backend/internal/autopilot"
@@ -113,14 +114,26 @@ func (s *TestModeService) UseNotify(n *NotifyService) {
 		ID: "push.test", Label: "Send me a test push",
 		Description: "Pushes a sample notification to your own devices right now.",
 		Run: func(ctx context.Context, u *models.User) (string, error) {
-			sent, devices, err := n.SendTest(ctx, u)
+			results, err := n.SendTest(ctx, u)
 			if err != nil {
 				return "", err
 			}
-			if devices == 0 {
+			if len(results) == 0 {
 				return "You have no devices yet. Turn on notifications on this phone first.", nil
 			}
-			return fmt.Sprintf("Sent to %d of %d devices.", sent, devices), nil
+			sent, notes := 0, make([]string, 0, len(results))
+			for _, r := range results {
+				if r.ok() {
+					sent++
+				} else {
+					notes = append(notes, r.Describe())
+				}
+			}
+			msg := fmt.Sprintf("Sent to %d of %d devices.", sent, len(results))
+			if len(notes) > 0 {
+				msg += " " + strings.Join(notes, "; ") + "."
+			}
+			return msg, nil
 		},
 	})
 	s.Add(TestAction{

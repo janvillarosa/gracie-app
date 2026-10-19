@@ -56,7 +56,7 @@ func TestTestModePushTestGoesToOwnDevicesOnly(t *testing.T) {
 	r.subscribe(t, r.ben, ep("ben"))
 	r.send.status[ep("ana-2")] = 410
 	msg, err := tm.Run(ctx, r.ana, "push.test")
-	if err != nil || msg != "Sent to 1 of 2 devices." {
+	if err != nil || msg != "Sent to 1 of 2 devices. Google: subscription expired, removed (410)." {
 		t.Fatalf("run: %q %v", msg, err)
 	}
 	for _, s := range r.send.sent {
