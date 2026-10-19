@@ -4,7 +4,9 @@ Bauhouse takes the next in-app step for a house by itself, from what the house a
 [analytics](analytics.md); today's [smart suggestions](suggestions.md) are its Suggest mode.
 
 Plan: `docs/superpowers/plans/2026-10-17-autopilot-engine.md` (v4, with diagrams). Benchmark:
-`docs/superpowers/qa/autopilot-benchmark-2026-10-17.md`.
+`docs/superpowers/qa/autopilot-benchmark-2026-10-17.md`. Up next: spec
+`docs/superpowers/specs/2026-10-19-up-next-design.md`, plan `docs/superpowers/plans/2026-10-19-up-next.md`,
+benchmark `docs/superpowers/qa/up-next-benchmark-2026-10-19.md`.
 
 ## Modes (a house setting)
 
@@ -13,6 +15,22 @@ Plan: `docs/superpowers/plans/2026-10-17-autopilot-engine.md` (v4, with diagrams
 | `off` | Nothing is proposed or done. |
 | `suggest` | **The default.** Proposes only: a slip someone taps to accept. Nothing changes until a person acts. Exactly today's smart suggestions. |
 | `assist` | Puts things on lists by itself, before the shop: in-app and reversible, each marked, with a reason and Undo. **It never suggests:** if something is good enough to suggest, assist adds it. It never acts outside Bauhouse. |
+
+## Which mode has which feature: one table
+
+`autopilot.Tiers` (`internal/autopilot/features.go`) maps each **feature** to the modes that have it. The modes
+are exclusive, not a ladder (assist has no suggestion slip), so it is feature → modes, not a minimum tier. Every
+gate asks `autopilot.Has(mode, feature)`; none compares a mode. The server sends the House's resolved list
+(`autopilot_features` on the room payloads, `features` on `GET .../autopilot`) and the frontend asks
+`hasFeature(room, 'up_next')` (`lib/autopilotFeatures.ts`; a copy of the table keyed by mode is its fallback for
+an older server, to go after one release). Moving a feature between tiers is a one-line change.
+
+| Feature | Off | Suggest | Assist |
+|---|---|---|---|
+| `suggestions` (the suggestion slip) | | ✓ | |
+| `auto_add` (assist adds, marks, Undo, the "Added 3" slip) | | | ✓ |
+| `run_hint` (learned run detection) | | ✓ | ✓ |
+| `up_next` (the usual route through the shop) | | ✓ | ✓ |
 
 **The modes do not mix.** A house is in exactly one, and only Suggest shows suggestions: on assist the
 suggestions endpoint answers with nothing and the List page shows only the autopilot slip.
@@ -76,6 +94,50 @@ _Backend paths are relative to `backend/`; packages live under `backend/internal
   once the List page reads `GET .../autopilot` for suggestions and the run hint.
 - **Store:** `autopilot_actions` (see `internal/store/CLAUDE.md`), deleted with the house (room deletion,
   account deletion, and the solo house a joiner dissolves).
+
+## Up next (the usual route through the shop)
+
+On a list the House shops, **Up next** names the item it usually grabs next, learned from the order past runs were
+checked off. It is autopilot's guess (the service bell, "Usually next · then Bread") and never adds, removes or
+reorders anything. On Suggest and Assist.
+
+- **Route** (`analytics/predict/route.go`, pure): per run (`predict.RunSpans`) the distinct keys in check order
+  (look-alikes merged in `analytics.RunOrders`); a run counts with ≥ 4 keys. A key's **spot** is its position
+  0..1, a recency-weighted mean over the last 12 runs (half-life 4); seen in ≥ 2 runs to get one. The route is
+  stored on the **house** profile only (`ContainerRhythm.Route`, `{runs, score, spots}`). Its **score** is a
+  backtest: learn from the runs before each run, and a pick is a hit when the named key is checked within the
+  next 2 check-offs (Wilson lower bound). `Policy.RouteClears`: ≥ 5 runs and score ≥ 0.60
+  (`UpNextMinRuns`, `UpNextMinScore`, set by `suggest-eval upnext`). A house without a consistent walk (two
+  stores, no habit, only top-ups) gets nothing.
+- **Pick rule** (`autopilot.PickUpNext`; TS twin `lib/upNext.ts`, which returns `{next, after}`): the unchecked item
+  with the smallest spot at or after the anchor (the last checked item with a spot; none = the start), doubling
+  back when nothing is ahead; the next strictly later spot is the "then". Both run
+  `internal/autopilot/testdata/upnext_cases.json`.
+- **View** (`GET .../autopilot`): `up_next {ready, run?, route[]}` and `stack`. The server owns "the current run"
+  (every member's `item.checked` within `RunGap`, so a reload or second phone has the same anchor; last week's
+  uncleared checks never count). `ready` = a run in progress, or the House's usual run window is open with
+  confidence ≥ `MinRunConfidence`; a run in progress keeps it true after the profile moves on.
+- **Frontend** (`useUpNext`, `UpNextSlip`): shows as soon as `ready`, else after the first check-off of the visit;
+  stays for the visit while something is left to name. Tick checks the item off and the slip hands off in place;
+  the round ✕ puts it away for this run (`localStorage` `gracie_up_next_hidden_<listId>`, keyed to the run, 12 h
+  at most), never a forecast signal. Events: `nudge.shown|tapped|dismissed|followed {kind: 'up_next'}`
+  (`followed` also has `hit`: the next check-off was the pick or the one after).
+- **Freshness:** the page reads the view on load and after an Undo; there is no refetch on focus, so an item
+  added mid-shop is not named until the next load, and the server's `ready` is only read then (the client latches
+  it for the visit). The route learns from **finished** runs only (a run still going when the profile recomputes is
+  left out), and a ✕ made before the run carries into it if the run begins within about two hours of the hide.
+- **Eval gate:** `go run ./cmd/suggest-eval upnext -synthetic` replays the route personas; ship bar hit rate ≥ 70%
+  where it speaks and silent on two stores, random and top-ups (`replay/upnext_test.go`). **Before deploy**, run
+  `suggest-eval upnext` on real data and record it in the QA note; below the bar it stays silent by design.
+
+## One autopilot slip at a time
+
+Autopilot floats **one** slip to the person; the rest wait behind it on the Z axis (`SlipStack`: the front in full,
+up to two slip edges peeking, display-only), never a second slip down the page. The server orders them
+(`autopilot.SlipOrder`: `up_next`, `auto_add`, `suggestions`) and sends the ones this list has something for as
+`stack`; a slip the server did not order goes to the back. Closing the front slip brings the next one forward.
+The List page keeps its own suggestions query (add/ignore flows) and reads the view for the route, the applied
+adds and the order.
 
 ## Invariants
 

@@ -119,7 +119,6 @@ describe('ListPage autopilot', () => {
     const calls = setup('suggest')
     expect(await screen.findByRole('region', { name: 'Suggestion' })).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Added by autopilot' })).toBeNull()
-    expect(calls.autopilot).toBe(0)
   })
 
   it('marks autopilot items and says why when the mark is tapped', async () => {
@@ -161,10 +160,10 @@ describe('ListPage autopilot', () => {
     expect(calls.undone).toEqual([])
   })
 
-  it('in suggest mode it never asks for the autopilot view', async () => {
-    const calls = setup('suggest')
+  it('in suggest mode the autopilot view brings no assist slip and no marks, even if it lists adds', async () => {
+    setup('suggest')
     await screen.findByText('Jam')
-    expect(calls.autopilot).toBe(0)
     expect(screen.queryByRole('region', { name: 'Added by autopilot' })).toBeNull()
+    expect(screen.queryByText(/You buy it about every/)).toBeNull() // no reasons
   })
 })

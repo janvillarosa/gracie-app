@@ -1,5 +1,7 @@
 package autopilot
 
+import "github.com/janvillarosa/gracie-app/backend/internal/analytics/predict"
+
 // Policy holds the bars, by intrusiveness. Tune them with `suggest-eval autopilot`, not by feel.
 type Policy struct {
 	// The suggest bar: today's Forecast.Confident (predict.DefaultParams MinScore and MaxCV).
@@ -14,6 +16,10 @@ type Policy struct {
 	MinRunConfidence float64
 	// MaxPerRun caps how many things assist adds for one run.
 	MaxPerRun int
+	// The Up next bar: a house's route is trusted once it has been learned from UpNextMinRuns
+	// runs and has predicted the next check-off at least UpNextMinScore of the time.
+	UpNextMinRuns  int
+	UpNextMinScore float64
 }
 
 // DefaultPolicy's run-fit bar was set with `suggest-eval autopilot` on the golden households
@@ -24,6 +30,11 @@ var DefaultPolicy = Policy{
 	SuggestMinScore: 0.65, SuggestMaxCV: 0.5,
 	AssistMinScore: 0.50, AssistMinNeed: 0.60,
 	MinRunConfidence: 0.5, MaxPerRun: 8,
+	// Up next's bar was set with `suggest-eval upnext -synthetic` on the route personas (2026-10-19):
+	// from 0.55 up, no persona that should stay silent (two stores, random, top-ups) ever spoke on
+	// six seeds; 0.60 is the middle of that plateau (pooled hit rate 86.5%, coverage 31%). Lower
+	// bars speak on the two-store house; higher ones go quiet for a house that changed its walk.
+	UpNextMinRuns: 5, UpNextMinScore: 0.60,
 }
 
 // Decide turns a proposal into what to do with it under the house's mode. The modes do not mix:
@@ -51,4 +62,9 @@ func (p Policy) Clears(pr Proposal) bool {
 		return pr.Confidence >= p.AssistMinScore && pr.Need >= p.AssistMinNeed
 	}
 	return pr.Confidence >= p.SuggestMinScore
+}
+
+// RouteClears reports whether a learned route is good enough to order Up next by.
+func (p Policy) RouteClears(r *predict.Route) bool {
+	return r != nil && r.Runs >= p.UpNextMinRuns && r.Score >= p.UpNextMinScore
 }

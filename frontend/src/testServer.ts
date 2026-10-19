@@ -18,6 +18,10 @@ export const server = setupServer(
   ...tripHandlers(tripServer),
   http.get('/api/rooms/:roomId/pantry', () => json([])),
   http.get('/api/rooms/:roomId/lists/:listId/suggestions', () => json({ suggestions: [] })),
+  // The list's autopilot (Up next, the slip stack): nothing, unless a test says otherwise.
+  http.get('/api/rooms/:roomId/lists/:listId/autopilot', () =>
+    json({ mode: 'suggest', features: [], stack: [], applied: [], suggestions: [] }),
+  ),
   http.get('/api/rooms/:roomId/lists/:listId/run-hint', () =>
     json({ run_hint: { likely: 'unknown', checks_to_start: 3, idle_end_min: 45, burst_sec: 15 } }),
   ),

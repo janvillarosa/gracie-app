@@ -426,6 +426,8 @@ The desk has its own, coarser grain (`--grain-desk`), so paper and desk read as 
 
 The stacked look comes from overlap (`PaperStack`): each sheet after the first is slid 20px over the one before and lifted; the sheets beneath lose their foot edge under it; one or two more sheets peek out at the foot (10px and 18px, at 14px and 28px insets), each a fraction of a degree off true (`--peek-tilt-1`, `--peek-tilt-2`), like a real pile. On arrival the stack assembles bottom-up.
 
+**Autopilot floats one slip at a time** (`SlipStack`). Slips lie on the list's sheet like the smart-suggestion slip, and when autopilot has more than one thing to show (Up next, "Added 3 for Saturday", a suggestion) they are a pile on the Z axis, never a column down the page: the front slip is in full, and one or two more slip edges peek out beneath its foot (the peek tilts above), display-only. The server orders them (`up_next`, then `auto_add`, then `suggestions`); closing the front slip brings the next one forward. The list below never moves for a second slip.
+
 Things pressed **into** the paper are wells (`--well`, a soft inner shadow along the top): detail groups, the PillNav track, stamps. A well is never a card on the sheet.
 
 The yellow key is the one control with real lift: a 2px deep-yellow underside, a warm drop that grows on hover, and when pressed it sinks its whole underside (`--key-travel`). Quiet buttons are slips of paper: a hair above the page (`--slip-rest`), a hair higher under the pointer (`--slip-hover`), pressed into the page when pressed (`--slip-press`).

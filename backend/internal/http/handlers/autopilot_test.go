@@ -192,3 +192,25 @@ func TestAutopilotViewAndUndoAuth(t *testing.T) {
 		t.Fatalf("unknown action: %d", w.Code)
 	}
 }
+
+func TestAutopilotViewDuringAndStackShape(t *testing.T) {
+	r, _ := newSuggestionsRouter(t)
+	base := "/rooms/room_1/lists/list_1/autopilot"
+	if w := call(r, "mia", http.MethodGet, base+"?during=bogus", ""); w.Code != http.StatusBadRequest {
+		t.Fatalf("during=bogus = %d, want 400", w.Code)
+	}
+	w := call(r, "mia", http.MethodGet, base+"?during=run", "")
+	if w.Code != http.StatusOK {
+		t.Fatalf("during=run = %d %s", w.Code, w.Body)
+	}
+	var v map[string]json.RawMessage
+	if err := json.Unmarshal(w.Body.Bytes(), &v); err != nil {
+		t.Fatal(err)
+	}
+	if string(v["stack"]) != "[]" {
+		t.Errorf("stack = %s, want [] (never null)", v["stack"])
+	}
+	if _, ok := v["up_next"]; ok {
+		t.Errorf("up_next present with nothing learned: %s", v["up_next"])
+	}
+}

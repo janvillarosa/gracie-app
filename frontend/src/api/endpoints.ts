@@ -234,13 +234,19 @@ export async function createListItem(
   })
 }
 
-/** The list's autopilot: the House's mode, what it applied lately and its suggestions. */
+/** The list's autopilot: the House's mode, its slip stack, what it applied lately and its
+ *  suggestions. `during: 'run'` (mid-shop) widens the suggestions to what comes due before the
+ *  next run. */
 export async function getListAutopilot(
   apiKey: string,
   roomId: string,
   listId: string,
+  during?: 'run',
 ): Promise<AutopilotView> {
-  return apiFetch<AutopilotView>(`/rooms/${roomId}/lists/${listId}/autopilot`, { apiKey })
+  return apiFetch<AutopilotView>(
+    `/rooms/${roomId}/lists/${listId}/autopilot${during ? `?during=${during}` : ''}`,
+    { apiKey },
+  )
 }
 
 /** Takes back one thing autopilot added: the item leaves the list. */

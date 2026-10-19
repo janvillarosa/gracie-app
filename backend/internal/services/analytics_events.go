@@ -7,6 +7,13 @@ import (
 
 var nudgeProps = map[string]analytics.PropSpec{"kind": {Kind: analytics.PropString, MaxLen: 32}}
 
+// nudgeFollowedProps adds whether the person did what the nudge pointed to (Up next: the item it
+// named, or the one after it, was the next thing checked).
+var nudgeFollowedProps = map[string]analytics.PropSpec{
+	"kind": {Kind: analytics.PropString, MaxLen: 32},
+	"hit":  {Kind: analytics.PropBool},
+}
+
 var predictedProps = map[string]analytics.PropSpec{
 	"mode":      {Kind: analytics.PropEnum, Values: []string{"shadow", "on"}}, // "shadow": events from before shadow mode was retired
 	"score_pct": {Kind: analytics.PropInt},
@@ -81,6 +88,7 @@ func RegisterAnalyticsEvents(reg *analytics.Registry) {
 		analytics.EventDef{Name: "nudge.shown", Client: true, Props: nudgeProps},
 		analytics.EventDef{Name: "nudge.tapped", Client: true, Props: nudgeProps},
 		analytics.EventDef{Name: "nudge.dismissed", Client: true, Props: nudgeProps},
+		analytics.EventDef{Name: "nudge.followed", Client: true, Props: nudgeFollowedProps},
 		// A shopping run finished on a list (the run-done stamp landed).
 		analytics.EventDef{Name: "list.run_stamped", Client: true, Props: map[string]analytics.PropSpec{"items": {Kind: analytics.PropInt}, "minutes": {Kind: analytics.PropInt}}},
 	)

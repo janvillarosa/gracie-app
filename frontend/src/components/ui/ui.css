@@ -1478,6 +1478,41 @@ input.ui-sheet-title.has-error:focus-visible {
   }
 }
 
+/* ---- SlipStack: autopilot's one slip, with the rest peeking out beneath it -------------------
+   A slip lies on the list's sheet (a hair above the page, never a paper height), so the slips
+   under it are slip edges too: two thin, slightly off-true sheets under its foot. They sit in the
+   space the front slip's own bottom margin already leaves, so the list never moves for them. */
+.slip-stack {
+  position: relative;
+  isolation: isolate;
+}
+.slip-stack > :first-child {
+  position: relative;
+  z-index: 1;
+}
+.slip-stack-peek {
+  position: absolute;
+  z-index: 0;
+  left: 14px;
+  right: 14px;
+  bottom: -6px;
+  height: 24px;
+  background: var(--grain-paper), var(--panel);
+  border: 1px solid var(--border-strong);
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  box-shadow: var(--peek-shadow);
+  transform: rotate(var(--peek-tilt-1));
+  transform-origin: 50% 0;
+  pointer-events: none;
+}
+.slip-stack-peek.is-2 {
+  z-index: -1;
+  left: 26px;
+  right: 26px;
+  bottom: -11px;
+  transform: rotate(var(--peek-tilt-2));
+}
+
 /* ---- PrintSheet: what a page prints -------------------------------------------------------------
    A document, not a screenshot. Hidden on screen. When printing it is the only thing on the page:
    every other child of body (the app's root, toasts, menus) is hidden, and the desk shell's fixed

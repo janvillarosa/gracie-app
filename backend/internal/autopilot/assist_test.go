@@ -67,3 +67,20 @@ func TestFitRunHomeTime(t *testing.T) {
 		t.Fatalf("with a trip: %+v", fit)
 	}
 }
+
+func TestRouteClears(t *testing.T) {
+	p := autopilot.DefaultPolicy
+	for name, c := range map[string]struct {
+		r    *predict.Route
+		want bool
+	}{
+		"nil":        {nil, false},
+		"four runs":  {&predict.Route{Runs: 4, Score: 0.9}, false},
+		"just under": {&predict.Route{Runs: 8, Score: p.UpNextMinScore - 0.01}, false},
+		"at the bar": {&predict.Route{Runs: p.UpNextMinRuns, Score: p.UpNextMinScore}, true},
+	} {
+		if got := p.RouteClears(c.r); got != c.want {
+			t.Errorf("%s: RouteClears = %v, want %v", name, got, c.want)
+		}
+	}
+}

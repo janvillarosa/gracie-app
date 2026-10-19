@@ -65,16 +65,17 @@ func (h *RoomHandler) GetMyRoom(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	view := map[string]any{
-		"display_name":     rm.DisplayName,
-		"description":      rm.Description,
-		"members":          members,
-		"members_meta":     membersMeta,
-		"created_at":       rm.CreatedAt,
-		"updated_at":       rm.UpdatedAt,
-		"my_deletion_vote": myVote,
-		"deletion_votes":   voteCount,
-		"autopilot_mode":   houseMode(rm),
-		"suggestions_off":  houseMode(rm) == autopilot.ModeOff,
+		"display_name":       rm.DisplayName,
+		"description":        rm.Description,
+		"members":            members,
+		"members_meta":       membersMeta,
+		"created_at":         rm.CreatedAt,
+		"updated_at":         rm.UpdatedAt,
+		"my_deletion_vote":   myVote,
+		"deletion_votes":     voteCount,
+		"autopilot_mode":     houseMode(rm),
+		"autopilot_features": autopilot.Features(houseMode(rm)),
+		"suggestions_off":    houseMode(rm) == autopilot.ModeOff,
 	}
 	api.WriteJSON(w, http.StatusOK, view)
 }
@@ -167,14 +168,15 @@ func (h *RoomHandler) JoinRoom(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	api.WriteJSON(w, http.StatusOK, map[string]any{
-		"display_name":    rm.DisplayName,
-		"description":     rm.Description,
-		"members":         members,
-		"members_meta":    membersMeta,
-		"created_at":      rm.CreatedAt,
-		"updated_at":      rm.UpdatedAt,
-		"autopilot_mode":  houseMode(rm),
-		"suggestions_off": houseMode(rm) == autopilot.ModeOff,
+		"display_name":       rm.DisplayName,
+		"description":        rm.Description,
+		"members":            members,
+		"members_meta":       membersMeta,
+		"created_at":         rm.CreatedAt,
+		"updated_at":         rm.UpdatedAt,
+		"autopilot_mode":     houseMode(rm),
+		"autopilot_features": autopilot.Features(houseMode(rm)),
+		"suggestions_off":    houseMode(rm) == autopilot.ModeOff,
 	})
 }
 
@@ -217,14 +219,15 @@ func (h *RoomHandler) JoinByToken(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	api.WriteJSON(w, http.StatusOK, map[string]any{
-		"display_name":    rm.DisplayName,
-		"description":     rm.Description,
-		"members":         members,
-		"members_meta":    membersMeta,
-		"created_at":      rm.CreatedAt,
-		"updated_at":      rm.UpdatedAt,
-		"autopilot_mode":  houseMode(rm),
-		"suggestions_off": houseMode(rm) == autopilot.ModeOff,
+		"display_name":       rm.DisplayName,
+		"description":        rm.Description,
+		"members":            members,
+		"members_meta":       membersMeta,
+		"created_at":         rm.CreatedAt,
+		"updated_at":         rm.UpdatedAt,
+		"autopilot_mode":     houseMode(rm),
+		"autopilot_features": autopilot.Features(houseMode(rm)),
+		"suggestions_off":    houseMode(rm) == autopilot.ModeOff,
 	})
 }
 
@@ -341,13 +344,14 @@ func (h *RoomHandler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	api.WriteJSON(w, http.StatusOK, map[string]any{
-		"display_name":    rm.DisplayName,
-		"description":     rm.Description,
-		"members":         members,
-		"members_meta":    membersMeta,
-		"created_at":      rm.CreatedAt,
-		"updated_at":      rm.UpdatedAt,
-		"autopilot_mode":  houseMode(rm),
-		"suggestions_off": houseMode(rm) == autopilot.ModeOff,
+		"display_name":       rm.DisplayName,
+		"description":        rm.Description,
+		"members":            members,
+		"members_meta":       membersMeta,
+		"created_at":         rm.CreatedAt,
+		"updated_at":         rm.UpdatedAt,
+		"autopilot_mode":     houseMode(rm),
+		"autopilot_features": autopilot.Features(houseMode(rm)),
+		"suggestions_off":    houseMode(rm) == autopilot.ModeOff,
 	})
 }

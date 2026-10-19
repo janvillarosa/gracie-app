@@ -1,0 +1,268 @@
+[
+  {
+    "name": "start: no anchor names the lowest spot",
+    "route": [
+      {
+        "item_id": "i1",
+        "key": "bananas",
+        "spot": 0,
+        "done": false
+      },
+      {
+        "item_id": "i2",
+        "key": "milk",
+        "spot": 0.25,
+        "done": false
+      },
+      {
+        "item_id": "i3",
+        "key": "eggs",
+        "spot": 0.5,
+        "done": false
+      },
+      {
+        "item_id": "i4",
+        "key": "bread",
+        "spot": 0.75,
+        "done": false
+      },
+      {
+        "item_id": "i5",
+        "key": "cheese",
+        "spot": 1,
+        "done": false
+      }
+    ],
+    "anchor": "",
+    "next": "i1",
+    "then": "i2"
+  },
+  {
+    "name": "after anchor: the next spot on from it",
+    "route": [
+      {
+        "item_id": "i1",
+        "key": "bananas",
+        "spot": 0,
+        "done": true
+      },
+      {
+        "item_id": "i2",
+        "key": "milk",
+        "spot": 0.25,
+        "done": true
+      },
+      {
+        "item_id": "i3",
+        "key": "eggs",
+        "spot": 0.5,
+        "done": false
+      },
+      {
+        "item_id": "i4",
+        "key": "bread",
+        "spot": 0.75,
+        "done": false
+      },
+      {
+        "item_id": "i5",
+        "key": "cheese",
+        "spot": 1,
+        "done": false
+      }
+    ],
+    "anchor": "i2",
+    "next": "i3",
+    "then": "i4"
+  },
+  {
+    "name": "double back: nothing ahead of the anchor",
+    "route": [
+      {
+        "item_id": "i1",
+        "key": "bananas",
+        "spot": 0,
+        "done": false
+      },
+      {
+        "item_id": "i2",
+        "key": "milk",
+        "spot": 0.25,
+        "done": false
+      },
+      {
+        "item_id": "i3",
+        "key": "eggs",
+        "spot": 0.5,
+        "done": false
+      },
+      {
+        "item_id": "i4",
+        "key": "bread",
+        "spot": 0.75,
+        "done": true
+      },
+      {
+        "item_id": "i5",
+        "key": "cheese",
+        "spot": 1,
+        "done": true
+      }
+    ],
+    "anchor": "i4",
+    "next": "i1",
+    "then": "i2"
+  },
+  {
+    "name": "unknown anchor is the start of the route",
+    "route": [
+      {
+        "item_id": "i1",
+        "key": "bananas",
+        "spot": 0,
+        "done": true
+      },
+      {
+        "item_id": "i2",
+        "key": "milk",
+        "spot": 0.25,
+        "done": false
+      },
+      {
+        "item_id": "i3",
+        "key": "eggs",
+        "spot": 0.5,
+        "done": false
+      },
+      {
+        "item_id": "i4",
+        "key": "bread",
+        "spot": 0.75,
+        "done": false
+      },
+      {
+        "item_id": "i5",
+        "key": "cheese",
+        "spot": 1,
+        "done": false
+      }
+    ],
+    "anchor": "zzz",
+    "next": "i2",
+    "then": "i3"
+  },
+  {
+    "name": "look-alike items share a spot: the unchecked one is named",
+    "route": [
+      {
+        "item_id": "a1",
+        "key": "bananas",
+        "spot": 0,
+        "done": true
+      },
+      {
+        "item_id": "a2",
+        "key": "milk",
+        "spot": 0.25,
+        "done": true
+      },
+      {
+        "item_id": "a3",
+        "key": "eggs",
+        "spot": 0.5,
+        "done": true
+      },
+      {
+        "item_id": "a4",
+        "key": "eggs",
+        "spot": 0.5,
+        "done": false
+      },
+      {
+        "item_id": "a5",
+        "key": "bread",
+        "spot": 0.75,
+        "done": false
+      }
+    ],
+    "anchor": "a3",
+    "next": "a4",
+    "then": "a5"
+  },
+  {
+    "name": "nothing left",
+    "route": [
+      {
+        "item_id": "i1",
+        "key": "bananas",
+        "spot": 0,
+        "done": true
+      },
+      {
+        "item_id": "i2",
+        "key": "milk",
+        "spot": 0.25,
+        "done": true
+      },
+      {
+        "item_id": "i3",
+        "key": "eggs",
+        "spot": 0.5,
+        "done": true
+      },
+      {
+        "item_id": "i4",
+        "key": "bread",
+        "spot": 0.75,
+        "done": true
+      },
+      {
+        "item_id": "i5",
+        "key": "cheese",
+        "spot": 1,
+        "done": true
+      }
+    ],
+    "anchor": "i5",
+    "next": "",
+    "then": ""
+  },
+  {
+    "name": "then is empty on the last one",
+    "route": [
+      {
+        "item_id": "i1",
+        "key": "bananas",
+        "spot": 0,
+        "done": true
+      },
+      {
+        "item_id": "i2",
+        "key": "milk",
+        "spot": 0.25,
+        "done": true
+      },
+      {
+        "item_id": "i3",
+        "key": "eggs",
+        "spot": 0.5,
+        "done": true
+      },
+      {
+        "item_id": "i4",
+        "key": "bread",
+        "spot": 0.75,
+        "done": true
+      },
+      {
+        "item_id": "i5",
+        "key": "cheese",
+        "spot": 1,
+        "done": false
+      }
+    ],
+    "anchor": "i4",
+    "next": "i5",
+    "then": ""
+  }
+]

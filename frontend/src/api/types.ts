@@ -27,11 +27,15 @@ export type RoomView = {
   // The House's autopilot: off, suggest (the default) or assist. Older servers send only
   // suggestions_off; read it through autopilotModeOf.
   autopilot_mode?: AutopilotMode
+  // What the House's mode includes (the server's one feature table); read it through hasFeature.
+  autopilot_features?: AutopilotFeature[]
   // Deprecated: derived from autopilot_mode for one release.
   suggestions_off?: boolean
 }
 
 export type AutopilotMode = 'off' | 'suggest' | 'assist'
+
+export type AutopilotFeature = 'suggestions' | 'auto_add' | 'run_hint' | 'up_next'
 
 export const autopilotModeOf = (room: {
   autopilot_mode?: AutopilotMode
@@ -88,8 +92,23 @@ export type AutopilotApplied = {
   confidence: number
 }
 
+// A live list item with a spot on the House's route through the shop, checked or not.
+export type RouteItem = { item_id: string; key: string; spot: number; done: boolean }
+
+// Up next: the learned route over this list and the run in progress, if any.
+export type AutopilotUpNext = {
+  // The House is probably shopping now: a run is on, or its usual window is open.
+  ready: boolean
+  run?: { started_at: string; anchor_item_id?: string }
+  route: RouteItem[]
+}
+
 export type AutopilotView = {
   mode: AutopilotMode
+  features: AutopilotFeature[]
+  // The slips this list has something to show, front to back: autopilot floats one at a time.
+  stack: AutopilotFeature[]
+  up_next?: AutopilotUpNext
   applied: AutopilotApplied[]
   suggestions: ListSuggestion[]
 }
