@@ -25,8 +25,13 @@ type UserService struct {
 	autopilot store.AutopilotActionRepository
 	// push is the optional device store; a deleted account's devices go with it.
 	push store.PushSubscriptionRepository
+	// sessions are the optional signed-in devices; a deleted account's sessions end with it.
+	sessions *SessionService
 	emitter
 }
+
+// UseSessions lets account deletion end the account's sessions (optional).
+func (s *UserService) UseSessions(sessions *SessionService) { s.sessions = sessions }
 
 // UsePushSubscriptions lets account deletion remove the account's devices (optional).
 func (s *UserService) UsePushSubscriptions(r store.PushSubscriptionRepository) { s.push = r }
@@ -220,6 +225,11 @@ func (s *UserService) DeleteAccount(ctx context.Context, userID string) error {
 		}
 	}
 	s.purgeUser(ctx, userID)
+	if s.sessions != nil {
+		if err := s.sessions.EndAll(ctx, userID, ""); err != nil {
+			log.Printf("sessions: end sessions of %s: %v", userID, err)
+		}
+	}
 	if s.push != nil {
 		if err := s.push.DeleteByUser(ctx, userID); err != nil {
 			log.Printf("push: delete devices of %s: %v", userID, err)

@@ -10,6 +10,9 @@ is the only implementation (uses `go.mongodb.org/mongo-driver`). See
   (AES-GCM of the bcrypt hash), `api_key_hash` (bcrypt, optional), `api_key_lookup`
   (SHA-256 hex, optional — **unique PARTIAL index**, only where the field is a
   string), `room_id` (nullable), `test_account` (bool, set only by `cmd/testaccount`), `created_at`, `updated_at`.
+- **`sessions`** — one per signed-in device: `session_id` (unique), `user_id`, `key_hash` (bcrypt),
+  `key_lookup` (SHA-256, unique), `created_at`, `expires_at` (TTL `expires_at_ttl`). `TrimByUser` keeps the
+  newest 20. `LiveIDs` checks `expires_at` itself, since the TTL sweep lags.
 - **`rooms`** — `room_id` (unique), `member_ids[]`, `display_name?`, `description?`,
   `share_token` (indexed), `deletion_votes` (map user_id→timestamp), timestamps.
 - **`lists`** — `list_id` (unique), `room_id` (indexed), `name`, `description?`,
@@ -48,7 +51,9 @@ is the only implementation (uses `go.mongodb.org/mongo-driver`). See
   `(status, send_after)` for `Claim`, TTL `expire_at_ttl`. `Claim` is a `findOneAndUpdate` with a lease.
   `EnqueueRun` (check-off runs) matches the key's job with `last_at` within the gap and updates it with a
   pipeline (dedupes names, counts only while pending); with none it inserts, and a duplicate-key race merges.
-  `users.api_key_issued_at` is set by `SetAPIKey`; push skips devices last refreshed before it.
+  `push_subscriptions.session_id` (sparse index) ties a device to its session; `DeleteBySessions` runs when
+  sessions end. `users.api_key_issued_at` is set by `SetAPIKey`; for legacy-key devices (no session) push
+  skips those last refreshed before it.
   `users.preferences.notify_*` are the per-kind switches (nil = on).
 
 - `store.BackfillReader` (`store/mongo/backfill_reader.go`) is a read-only, batched walk over users,

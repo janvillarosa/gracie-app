@@ -37,7 +37,13 @@ replays assist mode (precision, recall, removals per week).
 - **Signup (API key):** create user + API key (bcrypt hash + SHA-256 lookup) and a
   solo room; set `room_id`. Transactional.
 - **Register/Login (email+password):** password is bcrypt-hashed then AES-encrypted
-  at rest; login rotates and returns the API key.
+  at rest. Login creates a **per-device session** (`sessions`, `SessionService`) and returns its key, so
+  signing in on one device never signs out another (max 20 per user, 30-day expiry). `POST /auth/logout`
+  ends only the caller's session. A password change ends every session and the legacy key, then gives
+  the current device a new session. Account deletion ends all sessions.
+- **Legacy keys:** before sessions, each user had one API key (`users.api_key_*`) that login rotated.
+  The auth middleware tries sessions first, then that key, so old logins and `POST /users` signups keep
+  working. Never reintroduce a rotate-on-login: it made two devices sign each other out in a loop.
 - **Share:** `GET /rooms/share` returns the current 5-char code (URL-safe, excludes I/O/L), minting one only if none exists (atomic set-if-absent); `POST` rotates it. Joining clears it (single use).
 - **Join:** validate share code, add joiner to the room, set their `room_id`; if the
   joiner had a solo room, delete it in the same transaction.
@@ -46,8 +52,8 @@ replays assist mode (precision, recall, removals per week).
 
 ## Key design decisions
 
-- API keys are returned only once (signup/login). A separate SHA-256 `api_key_lookup`
-  enables indexed lookup without scanning; the key itself is bcrypt-hashed.
+- API keys are returned only once (signup/login). A separate SHA-256 lookup (`api_key_lookup`,
+  `sessions.key_lookup`) enables indexed lookup without scanning; the key itself is bcrypt-hashed.
 - Error mapping is minimal (401/403/404/409). Room views are sanitized — internal IDs
   are not exposed.
 - Categorization failures degrade to `General` rather than failing item creation.

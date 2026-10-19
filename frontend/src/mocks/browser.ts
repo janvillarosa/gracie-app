@@ -251,6 +251,8 @@ export async function startMockTrips() {
       if (body?.endpoint) pushSubs.delete(body.endpoint)
       return new HttpResponse(null, { status: 204 })
     }),
+    // Signing out ends only this device's session.
+    http.post('/api/auth/logout', () => new HttpResponse(null, { status: 204 })),
     http.get('/api/me/notifications', () => HttpResponse.json(notifyPrefs)),
     http.put('/api/me/notifications', async ({ request }) => {
       notifyPrefs = { ...notifyPrefs, ...((await request.json().catch(() => ({}))) as object) }

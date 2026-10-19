@@ -7,7 +7,10 @@ import (
 
 type ctxKey string
 
-const userKey ctxKey = "user"
+const (
+	userKey    ctxKey = "user"
+	sessionKey ctxKey = "session"
+)
 
 func WithUser(ctx context.Context, u *models.User) context.Context {
 	return context.WithValue(ctx, userKey, u)
@@ -20,4 +23,15 @@ func UserFrom(ctx context.Context) (*models.User, bool) {
 		}
 	}
 	return nil, false
+}
+
+// WithSession records the signed-in device's session id (empty for a legacy per-user key).
+func WithSession(ctx context.Context, sessionID string) context.Context {
+	return context.WithValue(ctx, sessionKey, sessionID)
+}
+
+// SessionFrom returns the request's session id, or "" for a legacy per-user key.
+func SessionFrom(ctx context.Context) string {
+	id, _ := ctx.Value(sessionKey).(string)
+	return id
 }

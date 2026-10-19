@@ -26,6 +26,7 @@ func (r *PushRepo) EnsureIndexes(ctx context.Context) error {
 	if _, err := r.subs().Indexes().CreateMany(ctx, []mgo.IndexModel{
 		{Keys: bson.D{{Key: "endpoint", Value: 1}}, Options: options.Index().SetUnique(true)},
 		{Keys: bson.D{{Key: "user_id", Value: 1}, {Key: "created_at", Value: 1}}},
+		{Keys: bson.D{{Key: "session_id", Value: 1}}, Options: options.Index().SetSparse(true)},
 	}); err != nil {
 		return err
 	}
@@ -46,7 +47,7 @@ func (r *PushRepo) EnsureIndexes(ctx context.Context) error {
 func (r *PushRepo) Upsert(ctx context.Context, s *models.PushSubscription) error {
 	_, err := r.subs().UpdateOne(ctx, bson.D{{Key: "endpoint", Value: s.Endpoint}}, bson.D{
 		{Key: "$set", Value: bson.D{
-			{Key: "user_id", Value: s.UserID}, {Key: "p256dh_enc", Value: s.P256dhEnc}, {Key: "auth_enc", Value: s.AuthEnc},
+			{Key: "user_id", Value: s.UserID}, {Key: "session_id", Value: s.SessionID}, {Key: "p256dh_enc", Value: s.P256dhEnc}, {Key: "auth_enc", Value: s.AuthEnc},
 			{Key: "user_agent", Value: s.UserAgent}, {Key: "updated_at", Value: s.UpdatedAt.UTC()},
 		}},
 		{Key: "$setOnInsert", Value: bson.D{{Key: "sub_id", Value: s.SubID}, {Key: "created_at", Value: s.CreatedAt.UTC()}}},
@@ -54,7 +55,7 @@ func (r *PushRepo) Upsert(ctx context.Context, s *models.PushSubscription) error
 	if mgo.IsDuplicateKeyError(err) {
 		// Two upserts of a new endpoint raced; the loser's update now matches.
 		_, err = r.subs().UpdateOne(ctx, bson.D{{Key: "endpoint", Value: s.Endpoint}}, bson.D{{Key: "$set", Value: bson.D{
-			{Key: "user_id", Value: s.UserID}, {Key: "p256dh_enc", Value: s.P256dhEnc}, {Key: "auth_enc", Value: s.AuthEnc},
+			{Key: "user_id", Value: s.UserID}, {Key: "session_id", Value: s.SessionID}, {Key: "p256dh_enc", Value: s.P256dhEnc}, {Key: "auth_enc", Value: s.AuthEnc},
 			{Key: "user_agent", Value: s.UserAgent}, {Key: "updated_at", Value: s.UpdatedAt.UTC()},
 		}}})
 	}
@@ -73,6 +74,14 @@ func (r *PushRepo) DeleteEndpoint(ctx context.Context, endpoint string) error {
 
 func (r *PushRepo) DeleteByUser(ctx context.Context, userID string) error {
 	_, err := r.subs().DeleteMany(ctx, bson.D{{Key: "user_id", Value: userID}})
+	return err
+}
+
+func (r *PushRepo) DeleteBySessions(ctx context.Context, sessionIDs []string) error {
+	if len(sessionIDs) == 0 {
+		return nil
+	}
+	_, err := r.subs().DeleteMany(ctx, bson.D{{Key: "session_id", Value: bson.D{{Key: "$in", Value: sessionIDs}}}})
 	return err
 }
 

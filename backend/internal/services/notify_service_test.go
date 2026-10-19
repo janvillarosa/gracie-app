@@ -537,3 +537,28 @@ func TestNotifyRefreshedDeviceCountsAgain(t *testing.T) {
 		t.Fatalf("refreshed phone skipped: %d", n)
 	}
 }
+
+func TestNotifyFollowsSessions(t *testing.T) {
+	r := newNotifyRig(t)
+	ctx := context.Background()
+	r.svc.UseSessions(r.m.Sessions)
+	live := &models.Session{SessionID: "ses_live", UserID: "u_ben", KeyLookup: "l1", CreatedAt: r.now, ExpiresAt: r.now.Add(time.Hour)}
+	old := &models.Session{SessionID: "ses_old", UserID: "u_ben", KeyLookup: "l2", CreatedAt: r.now, ExpiresAt: r.now.Add(time.Minute)}
+	_ = r.m.Sessions.Insert(ctx, live)
+	_ = r.m.Sessions.Insert(ctx, old)
+	for name, sid := range map[string]string{"ben-live": "ses_live", "ben-old": "ses_old", "ben-gone": "ses_gone", "ben-legacy": ""} {
+		if err := r.svc.Subscribe(ctx, r.ben, SubscribeInput{SessionID: sid, Endpoint: ep(name), P256dh: b64(65), Auth: b64(16)}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	_, _ = r.lists.CreateItem(ctx, r.ana, r.roomID, r.listID, "Milk", "", "", "")
+	r.now = r.now.Add(defaultCoalesce) // past ses_old's expiry
+	r.dispatch(t)
+	got := map[string]bool{}
+	for _, s := range r.send.sent {
+		got[s.Endpoint] = true
+	}
+	if !got[ep("ben-live")] || !got[ep("ben-legacy")] || got[ep("ben-old")] || got[ep("ben-gone")] {
+		t.Fatalf("sent to %v", got)
+	}
+}

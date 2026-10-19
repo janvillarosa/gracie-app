@@ -144,6 +144,15 @@ func main() {
 	if err != nil {
 		log.Fatalf("auth service: %v", err)
 	}
+	// Per-device sessions: each login gets its own key, so signing in on one device never signs
+	// out another. Keys issued before sessions keep working through the middleware's fallback.
+	sessionsRepo := mongostore.NewSessionRepo(mcli)
+	if err := sessionsRepo.EnsureIndexes(ctx); err != nil {
+		log.Fatalf("sessions: ensure indexes: %v", err)
+	}
+	sessionSvc := services.NewSessionService(sessionsRepo, usersRepo, time.Duration(cfg.APIKeyTTLHours)*time.Hour)
+	authSvc.UseSessions(sessionSvc)
+	userSvc.UseSessions(sessionSvc)
 
 	for _, svc := range []interface{ UseRecorder(analytics.Recorder) }{userSvc, roomSvc, listSvc, tripSvc, authSvc, autopilotSvc} {
 		svc.UseRecorder(recorder)
@@ -177,6 +186,13 @@ func main() {
 			notifySvc.UseCoalesce(cfg.PushCoalesce)
 			notifySvc.UseTrips(tripsRepo)
 			listSvc.UseNotifier(notifySvc)
+			notifySvc.UseSessions(sessionsRepo)
+			// A device's notifications end with its session.
+			sessionSvc.OnEnd(func(ctx context.Context, ids []string) {
+				if err := pushRepo.DeleteBySessions(ctx, ids); err != nil {
+					log.Printf("push: delete devices of ended sessions: %v", err)
+				}
+			})
 			userSvc.UsePushSubscriptions(pushRepo)
 			pushHandler = handlers.NewPushHandler(notifySvc)
 			log.Printf("push: enabled")
@@ -198,7 +214,7 @@ func main() {
 
 	eventsHandler := handlers.NewEventsHandler(recorder, analyticsReg, ratelimit.New(cfg.AnalyticsEventsRPS, ratelimit.Burst(cfg.AnalyticsEventsRPS)))
 
-	r := router.NewRouter(usersRepo, router.Handlers{Auth: authHandler, User: userHandler, Room: roomHandler, List: listHandler, Trip: tripHandler, Events: eventsHandler, Insights: insights, Autopilot: handlers.NewAutopilotHandler(autopilotSvc), Push: pushHandler, TestMode: testModeHandler})
+	r := router.NewRouter(usersRepo, router.Handlers{Auth: authHandler, User: userHandler, Room: roomHandler, List: listHandler, Trip: tripHandler, Events: eventsHandler, Insights: insights, Autopilot: handlers.NewAutopilotHandler(autopilotSvc), Push: pushHandler, TestMode: testModeHandler, Sessions: sessionSvc})
 
 	// Google Maps Platform allows storing coordinates for 30 days: purge stale ones at startup
 	// and daily (plus up to an hour of jitter so instances do not fire together).

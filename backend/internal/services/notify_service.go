@@ -57,6 +57,7 @@ type NotifyService struct {
 	lists    store.ListRepository
 	trips    store.TripRepository
 	subs     store.PushSubscriptionRepository
+	sessions store.SessionRepository
 	jobs     store.PushJobRepository
 	sender   push.Sender
 	pubKey   string
@@ -81,11 +82,17 @@ func (s *NotifyService) UseCoalesce(d time.Duration) {
 	}
 }
 
+// UseSessions ties devices to the session that subscribed them: a device is notified only while
+// its session lives (optional; without it only the legacy per-user key rule applies).
+func (s *NotifyService) UseSessions(sessions store.SessionRepository) { s.sessions = sessions }
+
 // PublicKey is the VAPID key browsers subscribe with.
 func (s *NotifyService) PublicKey() string { return s.pubKey }
 
 // SubscribeInput is one browser's PushSubscription.toJSON().
 type SubscribeInput struct {
+	// SessionID is the caller's signed-in session ("" for a legacy per-user key).
+	SessionID string
 	Endpoint  string
 	P256dh    string
 	Auth      string
@@ -115,7 +122,7 @@ func (s *NotifyService) Subscribe(ctx context.Context, u *models.User, in Subscr
 	}
 	now := s.now().UTC()
 	if err := s.subs.Upsert(ctx, &models.PushSubscription{
-		SubID: ids.NewID("psub"), UserID: u.UserID, Endpoint: in.Endpoint, P256dhEnc: p, AuthEnc: a,
+		SubID: ids.NewID("psub"), UserID: u.UserID, SessionID: in.SessionID, Endpoint: in.Endpoint, P256dhEnc: p, AuthEnc: a,
 		UserAgent: ua, CreatedAt: now, UpdatedAt: now,
 	}); err != nil {
 		return err
@@ -301,7 +308,11 @@ func (s *NotifyService) send(ctx context.Context, j *models.PushJob) (int, bool)
 	if err != nil {
 		return 0, true
 	}
-	return s.deliver(ctx, currentDevices(devices, to), msg, push.Topic(j.JobID))
+	devices, err = s.currentDevices(ctx, devices, to, now)
+	if err != nil {
+		return 0, true // the session check failed: try the job again rather than drop it
+	}
+	return s.deliver(ctx, devices, msg, push.Topic(j.JobID))
 }
 
 // loggedIn reports whether the user's key is still valid: an expired key means nobody is signed in.
@@ -309,21 +320,40 @@ func loggedIn(u *models.User, now time.Time) bool {
 	return u.APIKeyExpiresAt == nil || now.Before(*u.APIKeyExpiresAt)
 }
 
-// currentDevices keeps the devices that belong to their user's current login. Logging in rotates
-// the key, which signs out every other device; such a device was last refreshed (the app does on
-// every start) before the new key was issued. It is skipped, not deleted: the dispatcher may have
-// read the user just before a login, so deleting could drop the new device. Stale rows go when the
-// app reopens (it signs out and unsubscribes) or when the push service answers 404/410.
-func currentDevices(devices []models.PushSubscription, users map[string]*models.User) []models.PushSubscription {
+// currentDevices keeps the devices that are still signed in. A device subscribed under a session
+// counts while that session lives (sign-out deletes it outright). A device from a legacy per-user
+// key counts unless it was last refreshed (the app does on every start) before that key was
+// replaced. Stale devices are skipped, not deleted, so a key change racing a dispatch can't drop a
+// live one; they go when their app reopens or on a 404/410.
+func (s *NotifyService) currentDevices(ctx context.Context, devices []models.PushSubscription, users map[string]*models.User, now time.Time) ([]models.PushSubscription, error) {
+	var live map[string]bool
+	if s.sessions != nil {
+		var sids []string
+		for _, d := range devices {
+			if d.SessionID != "" {
+				sids = append(sids, d.SessionID)
+			}
+		}
+		var err error
+		if live, err = s.sessions.LiveIDs(ctx, sids, now); err != nil {
+			log.Printf("push: check sessions: %v", err)
+			return nil, err
+		}
+	}
 	out := devices[:0:0]
 	for _, d := range devices {
 		u := users[d.UserID]
-		if u == nil || (u.APIKeyIssuedAt != nil && d.UpdatedAt.Before(*u.APIKeyIssuedAt)) {
-			continue
+		switch {
+		case u == nil:
+		case d.SessionID != "":
+			if live[d.SessionID] {
+				out = append(out, d)
+			}
+		case u.APIKeyIssuedAt == nil || !d.UpdatedAt.Before(*u.APIKeyIssuedAt):
+			out = append(out, d)
 		}
-		out = append(out, d)
 	}
-	return out
+	return out, nil
 }
 
 // DeviceResult is how one device took a message.

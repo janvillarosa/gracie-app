@@ -59,12 +59,14 @@ type Repos struct {
 	Autopilot *AutopilotRepo
 	// Push holds push subscriptions and the notification outbox.
 	Push *PushRepo
+	// Sessions are the signed-in devices.
+	Sessions *SessionRepo
 }
 
 // Compose returns in-memory repos + a no-op Tx runner.
 func Compose() Repos {
 	st := NewStore()
-	return Repos{Tx: Tx{}, Users: &UserRepo{st}, Rooms: &RoomRepo{st}, Lists: &ListRepo{st}, Items: &ListItemRepo{st}, Trips: &TripRepo{st}, Events: NewEventRepo(), Aggs: NewAggRepo(), Autopilot: NewAutopilotRepo(), Push: NewPushRepo()}
+	return Repos{Tx: Tx{}, Users: &UserRepo{st}, Rooms: &RoomRepo{st}, Lists: &ListRepo{st}, Items: &ListItemRepo{st}, Trips: &TripRepo{st}, Events: NewEventRepo(), Aggs: NewAggRepo(), Autopilot: NewAutopilotRepo(), Push: NewPushRepo(), Sessions: NewSessionRepo()}
 }
 
 // UserRepo

@@ -26,6 +26,8 @@ export const server = setupServer(
     json({ run_hint: { likely: 'unknown', checks_to_start: 3, idle_end_min: 45, burst_sec: 15 } }),
   ),
   http.post('/api/events', () => json({ accepted: 0, rejected: 0 })),
+  // Signing out ends this device's session on the server.
+  http.post('/api/auth/logout', () => new Response(null, { status: 204 })),
   // Clear completed waits behind its Undo toast, so it can land after the test that cleared.
   http.post('/api/rooms/:roomId/lists/:listId/clear', () => new Response(null, { status: 204 })),
   http.get('/api/rooms/me', () => json({ display_name: 'The House', members: [] })),

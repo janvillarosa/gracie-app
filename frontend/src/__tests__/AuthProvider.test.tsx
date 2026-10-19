@@ -10,7 +10,7 @@ vi.mock('react-router-dom', async () => {
 
 vi.mock('@api/endpoints', async () => {
   const mod = await vi.importActual<typeof import('@api/endpoints')>('@api/endpoints')
-  return { ...mod, getMe: vi.fn() }
+  return { ...mod, getMe: vi.fn(), logoutSession: vi.fn(() => Promise.resolve()) }
 })
 
 const mount = async () => {
@@ -28,6 +28,7 @@ const mount = async () => {
 describe('AuthProvider', () => {
   beforeEach(() => {
     navigateMock.mockClear()
+    ;(endpoints.logoutSession as unknown as ReturnType<typeof vi.fn>).mockClear()
     localStorage.clear()
   })
 
@@ -66,6 +67,8 @@ describe('AuthProvider', () => {
     )
     await waitFor(() => expect(localStorage.getItem('gracie_api_key')).toBeNull())
     expect(navigateMock).toHaveBeenCalledWith('/login', { replace: true })
+    // A refused key has no session left to end.
+    expect(endpoints.logoutSession).not.toHaveBeenCalled()
   })
 
   it('logging out signs out at once but keeps changes that could not be sent', async () => {
@@ -103,6 +106,8 @@ describe('AuthProvider', () => {
     getByText('out').click()
     await waitFor(() => expect(localStorage.getItem('gracie_api_key')).toBeNull())
     await waitFor(() => expect(getPendingOnLogout()).toBe(1))
+    // Only this device's session ends, with the key it held, once the queue was tried.
+    await waitFor(() => expect(endpoints.logoutSession).toHaveBeenCalledWith('good'))
     expect((await indexedDB.databases()).map((d) => d.name)).toContain('bauhouse-trips-u_out')
     await resetTripStores()
     await wipeTripDatabases()

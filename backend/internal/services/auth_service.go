@@ -20,8 +20,13 @@ type AuthService struct {
 	users store.UserRepository
 	key   []byte
 	ttl   time.Duration
+	// sessions issues per-device keys; without it login rotates the legacy per-user key.
+	sessions *SessionService
 	emitter
 }
+
+// UseSessions makes login create a per-device session instead of replacing the user's one key.
+func (s *AuthService) UseSessions(sessions *SessionService) { s.sessions = sessions }
 
 func NewAuthService(users store.UserRepository, encKeyPath string, ttlHours int) (*AuthService, error) {
 	key, err := crypto.LoadOrCreateKey(encKeyPath)
@@ -87,19 +92,23 @@ func (s *AuthService) Login(ctx context.Context, username, password string) (*Lo
 	if bcrypt.CompareHashAndPassword(ph, []byte(password)) != nil {
 		return nil, derr.ErrUnauthorized
 	}
-	// Rotate API key and return plain to client
-	plain, hash, err := apiauth.GenerateAPIKey()
+	var plain string
+	if s.sessions != nil {
+		// A new session for this device; the user's other devices stay signed in.
+		var sess *models.Session
+		if plain, sess, err = s.sessions.Create(ctx, u.UserID); err != nil {
+			return nil, err
+		}
+		// A password change that landed after the check above ended every session but this
+		// one: re-read, and refuse a login made with a password that is no longer current.
+		if cur, err := s.users.GetByID(ctx, u.UserID); err != nil || cur.PasswordEnc != u.PasswordEnc {
+			_ = s.sessions.End(ctx, sess.SessionID)
+			return nil, derr.ErrUnauthorized
+		}
+	} else {
+		plain, err = s.rotateLegacyKey(ctx, u.UserID, time.Now().UTC())
+	}
 	if err != nil {
-		return nil, err
-	}
-	lookup := apiauth.DeriveLookup(plain)
-	now := time.Now().UTC()
-	var exp *time.Time
-	if s.ttl > 0 {
-		e := now.Add(s.ttl)
-		exp = &e
-	}
-	if err := s.users.SetAPIKey(ctx, u.UserID, hash, lookup, exp, now); err != nil {
 		return nil, err
 	}
 	roomID := ""
@@ -146,20 +155,51 @@ func (s *AuthService) ChangePassword(ctx context.Context, userID, current, next 
 		return "", err
 	}
 
-	// Rotate API key
+	// A new password signs the account out everywhere: the legacy key is replaced and every
+	// session ends. This device gets a fresh key, so it stays signed in.
+	plain, err := s.rotateLegacyKey(ctx, userID, now)
+	if err != nil {
+		return "", err
+	}
+	if s.sessions != nil {
+		if err := s.sessions.EndAll(ctx, userID, ""); err != nil {
+			return "", err
+		}
+		if plain, _, err = s.sessions.Create(ctx, userID); err != nil {
+			return "", err
+		}
+	}
+	s.emitUser(ctx, "user.password_changed", userID, "", nil)
+	return plain, nil
+}
+
+// rotateLegacyKey replaces the user's own API key (the one logins used before sessions) and
+// returns the new plain key.
+func (s *AuthService) rotateLegacyKey(ctx context.Context, userID string, now time.Time) (string, error) {
 	plain, hash, err := apiauth.GenerateAPIKey()
 	if err != nil {
 		return "", err
 	}
-	lookup := apiauth.DeriveLookup(plain)
 	var exp *time.Time
 	if s.ttl > 0 {
 		e := now.Add(s.ttl)
 		exp = &e
 	}
-	if err := s.users.SetAPIKey(ctx, userID, hash, lookup, exp, now); err != nil {
+	if err := s.users.SetAPIKey(ctx, userID, hash, apiauth.DeriveLookup(plain), exp, now); err != nil {
 		return "", err
 	}
-	s.emitUser(ctx, "user.password_changed", userID, "", nil)
 	return plain, nil
+}
+
+// Logout signs the current device out: its session ends (with its push devices). A legacy key is
+// replaced (and the new one thrown away), so it stops working: only one device can hold it.
+func (s *AuthService) Logout(ctx context.Context, userID, sessionID string) error {
+	if sessionID == "" {
+		_, err := s.rotateLegacyKey(ctx, userID, time.Now().UTC())
+		return err
+	}
+	if s.sessions == nil {
+		return nil
+	}
+	return s.sessions.End(ctx, sessionID)
 }

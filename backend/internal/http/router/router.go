@@ -30,6 +30,8 @@ type Handlers struct {
 	// TestMode is optional: when nil, the test mode routes are not mounted. They answer 404 to
 	// every account that is not a test account.
 	TestMode *handlers.TestModeHandler
+	// Sessions resolves per-device session keys; when nil only the legacy per-user key works.
+	Sessions authmw.SessionResolver
 }
 
 // redactPlacesQuery keeps /places/* query strings (search text, exact coordinates) out of
@@ -81,7 +83,7 @@ func NewRouter(userFinder authmw.UserFinder, h Handlers) http.Handler {
 
 	// Authenticated endpoints
 	r.Group(func(ar chi.Router) {
-		ar.Use(authmw.AuthMiddleware(userFinder))
+		ar.Use(authmw.AuthMiddleware(userFinder, h.Sessions))
 		if tzStore, ok := userFinder.(authmw.TZStore); ok {
 			ar.Use(authmw.SyncTimezone(tzStore))
 		}
@@ -90,6 +92,7 @@ func NewRouter(userFinder authmw.UserFinder, h Handlers) http.Handler {
 		ar.Put("/me", h.User.UpdateMe)
 		ar.Patch("/me", h.User.UpdateMePartial)
 		ar.Post("/me/password", h.Auth.ChangePassword)
+		ar.Post("/auth/logout", h.Auth.Logout)
 		ar.Delete("/me", h.User.DeleteMe)
 
 		ar.Get("/rooms/me", h.Room.GetMyRoom)

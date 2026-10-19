@@ -110,6 +110,22 @@ type AutopilotActionRepository interface {
 	AcquireLease(ctx context.Context, owner string, ttl time.Duration, now time.Time) (bool, error)
 }
 
+// SessionRepository stores signed-in devices.
+type SessionRepository interface {
+	// Insert returns derr.ErrConflict when the key lookup is already taken.
+	Insert(ctx context.Context, s *models.Session) error
+	// GetByLookup returns derr.ErrNotFound when no session has the key.
+	GetByLookup(ctx context.Context, lookup string) (*models.Session, error)
+	Delete(ctx context.Context, sessionID string) error
+	// DeleteByUser ends every session of the user except keepID (empty keeps none) and returns
+	// the ids it ended.
+	DeleteByUser(ctx context.Context, userID, keepID string) ([]string, error)
+	// TrimByUser keeps the user's newest keep sessions, ends the rest and returns their ids.
+	TrimByUser(ctx context.Context, userID string, keep int) ([]string, error)
+	// LiveIDs returns which of these sessions exist and have not expired at now.
+	LiveIDs(ctx context.Context, ids []string, now time.Time) (map[string]bool, error)
+}
+
 // PushSubscriptionRepository stores Web Push subscriptions, one per endpoint.
 type PushSubscriptionRepository interface {
 	// Upsert stores s by endpoint: an existing endpoint takes s's user and keys, keeping its sub_id.
@@ -119,6 +135,8 @@ type PushSubscriptionRepository interface {
 	// DeleteEndpoint removes the endpoint whoever owns it (the push service said it is gone).
 	DeleteEndpoint(ctx context.Context, endpoint string) error
 	DeleteByUser(ctx context.Context, userID string) error
+	// DeleteBySessions removes the devices of these sessions (they signed out or were ended).
+	DeleteBySessions(ctx context.Context, sessionIDs []string) error
 	// ListByUsers returns the subscriptions of these users, oldest first.
 	ListByUsers(ctx context.Context, userIDs []string) ([]models.PushSubscription, error)
 	MarkOK(ctx context.Context, endpoint string, at time.Time) error
