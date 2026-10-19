@@ -243,7 +243,7 @@ export const ItemRow = React.memo<Props>(function ItemRow({
             {qtyText && <span className="item-qty">{qtyText}</span>}
             {byAutopilot && why && (
               <span className="item-why" id={whyId}>
-                Added by autopilot. {reason ?? 'You usually buy it around now'}
+                Added by Butler. {reason ?? 'You usually buy it around now'}
               </span>
             )}
           </div>
@@ -262,10 +262,10 @@ export const ItemRow = React.memo<Props>(function ItemRow({
             <button
               type="button"
               className="item-auto"
-              aria-label={`Added by autopilot. Why ${it.description}?`}
+              aria-label={`Added by Butler. Why ${it.description}?`}
               aria-expanded={why}
               aria-controls={why ? whyId : undefined}
-              title="Added by autopilot"
+              title="Added by Butler"
               onClick={(e) => {
                 e.stopPropagation()
                 setWhy((w) => !w)

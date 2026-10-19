@@ -184,7 +184,7 @@ func (s *TestModeService) UseNotify(n *NotifyService) {
 // UseAutopilot registers the autopilot actions.
 func (s *TestModeService) UseAutopilot(a *AutopilotService) {
 	s.Add(TestAction{
-		ID: "autopilot.tick", Label: "Run autopilot for my house", TouchesHouse: true,
+		ID: "autopilot.tick", Label: "Run Butler for my house", TouchesHouse: true,
 		Description: "Runs one assist pass for your house now, as the 15-minute ticker would.",
 		Run: func(ctx context.Context, u *models.User) (string, error) {
 			if u.RoomID == nil {
@@ -195,11 +195,11 @@ func (s *TestModeService) UseAutopilot(a *AutopilotService) {
 				return "", err
 			}
 			if houseMode(room) != autopilot.ModeAssist {
-				return "Your house is not on assist mode, so autopilot adds nothing.", nil
+				return "Your house is not on assist mode, so Butler adds nothing.", nil
 			}
 			n, err := a.TickRoom(ctx, room.RoomID)
 			if errors.Is(err, ErrAutopilotUnavailable) {
-				return "Autopilot is not running on this server (analytics is off).", nil
+				return "Butler is not running on this server (analytics is off).", nil
 			}
 			if err != nil {
 				return "", err

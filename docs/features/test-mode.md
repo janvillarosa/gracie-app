@@ -1,7 +1,7 @@
 # Test mode
 
 A standing set of switches for test accounts, to try a real flow of the app in production: send
-yourself a push, simulate a housemate's adds, run autopilot for your house. It is always deployed
+yourself a push, simulate a housemate's adds, run Butler for your house. It is always deployed
 and inert until an account is granted.
 
 ```
@@ -37,7 +37,7 @@ On Railway, run it as a one-off command in the service shell with the same envir
   is a test account; otherwise it is refused with 409 and a message. Actions that stay with the caller
   (a push to their own devices) always run.
 - **Real flows, not fakes.** Actions call the same services the app uses (the outbox, the dispatcher, the
-  autopilot pass), so what you see is what users get.
+  Butler pass), so what you see is what users get.
 - **Audited and limited.** Every run, and every refusal, is logged (`testmode: <user> ran <id>`); runs are
   limited to 1 per second with a burst of 5 per user.
 - Test accounts' activity still feeds behavior analytics, so it can teach a house's forecast fake habits. Use a

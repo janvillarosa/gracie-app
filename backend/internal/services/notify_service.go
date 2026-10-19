@@ -196,7 +196,7 @@ func (s *NotifyService) ItemAdded(ctx context.Context, actorID string, it *model
 	}, false)
 }
 
-// SystemItemAdded queues "Autopilot added <items>" for the whole house; one tick's adds merge.
+// SystemItemAdded queues "Butler added <items>" for the whole house; one tick's adds merge.
 func (s *NotifyService) SystemItemAdded(ctx context.Context, source string, it *models.ListItem) {
 	if source != SourceAutopilot {
 		return
@@ -416,7 +416,7 @@ func (s *NotifyService) message(ctx context.Context, j *models.PushJob) (push.Me
 	if err != nil {
 		return msg, false, err
 	}
-	who, verb := "Autopilot", "added"
+	who, verb := "Butler", "added"
 	if j.Kind != models.PushKindAutopilot {
 		who = "Someone"
 		if u, err := s.users.GetByID(ctx, j.ActorID); err == nil && u.Name != "" {

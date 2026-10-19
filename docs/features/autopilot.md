@@ -1,4 +1,6 @@
-# Autopilot
+# Butler
+
+User-facing name **Butler**; internal name autopilot (packages, routes, fields, events and CSS classes keep it).
 
 Bauhouse takes the next in-app step for a house by itself, from what the house already does. Built on
 [analytics](analytics.md); today's [smart suggestions](suggestions.md) are its Suggest mode.
@@ -33,9 +35,9 @@ an older server, to go after one release). Moving a feature between tiers is a o
 | `up_next` (the usual route through the shop) | | ✓ | ✓ |
 
 **The modes do not mix.** A house is in exactly one, and only Suggest shows suggestions: on assist the
-suggestions endpoint answers with nothing and the List page shows only the autopilot slip.
+suggestions endpoint answers with nothing and the List page shows only the Butler slip.
 
-Full autopilot (buying, booking, messaging for the house) is **not a mode**: it needs a new mode and the
+Acting for the house outside Bauhouse (buying, booking, messaging for the house) is **not a mode**: it needs a new mode and the
 house's explicit consent. `autopilot.Effect` has only in-app values and the executor refuses anything else
 (`ErrExternalEffect`).
 
@@ -81,7 +83,7 @@ _Backend paths are relative to `backend/`; packages live under `backend/internal
   forecast's `LastAt` date, so a retry or another instance is a no-op), then creates the item with
   `ListService.CreateSystemItem` as `system:autopilot`, `ListItem.Source = "autopilot"`. A failed create
   deletes the row so a later tick can retry.
-- **Outcomes** (`ListService.UseItemHooks`): checking an autopilot item confirms its action; deleting one
+- **Outcomes** (`ListService.UseItemHooks`): checking a Butler item confirms its action; deleting one
   still unchecked marks it removed; `POST .../autopilot/{action_id}/undo` marks it undone and removes the
   item (no hook re-entry). Removed and undone emit `item.autopilot_removed {via: delete|undo}` (a dismiss
   that counts against the forecast); the action row then blocks a re-add in that cycle, and the event closes
@@ -98,7 +100,7 @@ _Backend paths are relative to `backend/`; packages live under `backend/internal
 ## Up next (the usual route through the shop)
 
 On a list the House shops, **Up next** names the item it usually grabs next, learned from the order past runs were
-checked off. It is autopilot's guess (the service bell, "Usually next · then Bread") and never adds, removes or
+checked off. It is Butler's guess (the service bell, "Usually next · then Bread") and never adds, removes or
 reorders anything. On Suggest and Assist.
 
 - **Route** (`analytics/predict/route.go`, pure): per run (`predict.RunSpans`) the distinct keys in check order
@@ -130,9 +132,9 @@ reorders anything. On Suggest and Assist.
   where it speaks and silent on two stores, random and top-ups (`replay/upnext_test.go`). **Before deploy**, run
   `suggest-eval upnext` on real data and record it in the QA note; below the bar it stays silent by design.
 
-## One autopilot slip at a time
+## One Butler slip at a time
 
-Autopilot floats **one** slip to the person; the rest wait behind it on the Z axis (`SlipStack`: the front in full,
+Butler floats **one** slip to the person; the rest wait behind it on the Z axis (`SlipStack`: the front in full,
 up to two slip edges peeking, display-only), never a second slip down the page. The server orders them
 (`autopilot.SlipOrder`: `up_next`, `auto_add`, `suggestions`) and sends the ones this list has something for as
 `stack`; a slip the server did not order goes to the back. Closing the front slip brings the next one forward.
@@ -141,9 +143,9 @@ adds and the order.
 
 ## Invariants
 
-- **Autopilot adds are never requests.** `item.autopilot_added` is `Skip: true` with `RoleAutomated`; a key
+- **Butler adds are never requests.** `item.autopilot_added` is `Skip: true` with `RoleAutomated`; a key
   with an automated add in its recent cycles forecasts from completions (`ForecastVersion` 4). Its actor is
-  `system:autopilot`, so it is never a profile, a turn or "who did it last". Checking an autopilot item off
+  `system:autopilot`, so it is never a profile, a turn or "who did it last". Checking a Butler item off
   is a normal `item.checked`.
 - **Suggestions stay stateless; only applied actions are stored**, because "did we already add this?" must
   be exact and the recorder may drop events.
@@ -169,15 +171,15 @@ add was suggested, so the modes mixed; Jan chose exclusive modes, trading precis
 _Frontend paths are relative to `frontend/src/`._
 
 - **House settings** (`RoomSettings`): "Autopilot" as a `StepSlider` (Off · Suggest · Assist, low to high; glyphs
-  moon, lightbulb and the service bell, autopilot's one mark), saved on choice with a rollback, and one line under the chosen mode
+  moon, lightbulb and the service bell, Butler's one mark), saved on choice with a rollback, and one line under the chosen mode
   (`AUTOPILOT_HELP`) that fades in as the key lands. `autopilotModeOf` reads older
   servers' `suggestions_off`.
 - **List page:** on assist only, it reads `GET .../autopilot` (`['autopilot', roomId, listId]`). Rows with
-  `source: 'autopilot'` carry the autopilot stamp (`ItemRow`, an icon-only, ink-outlined state stamp holding the
+  `source: 'autopilot'` carry the Butler stamp (`ItemRow`, an icon-only, ink-outlined state stamp holding the
   service bell, beside the category stamp); tapping it says why
   (`reasonText`: "You buy it about every 9 days"). Once per planned run `AutopilotSlip` reads "Added 3 for
   Saturday" (`addedLine`) with Undo all (one undo per action) and Got it; it folds away on Got it or a successful Undo all, and the
   undone rows leave only after it has; the run it was closed for is kept
   in `localStorage` `gracie_autopilot_seen_<listId>`. On assist the page never asks for suggestions (it waits
   for the House's mode first), so the two slips never stack. Suggest mode keeps today's suggestion slip unchanged.
-- The mock (`VITE_MOCK_TRIPS=1`) starts on assist with three autopilot items; `?autopilot=suggest|off`.
+- The mock (`VITE_MOCK_TRIPS=1`) starts on assist with three Butler items; `?autopilot=suggest|off`.

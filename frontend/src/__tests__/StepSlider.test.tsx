@@ -14,7 +14,7 @@ const Harness = ({ onChange }: { onChange?: (m: Mode) => void }) => {
   const [v, setV] = useState<Mode>('suggest')
   return (
     <StepSlider
-      label="Autopilot"
+      label="Butler"
       value={v}
       steps={steps}
       onChange={(m) => {
@@ -28,7 +28,7 @@ const Harness = ({ onChange }: { onChange?: (m: Mode) => void }) => {
 describe('StepSlider', () => {
   it('is one slider whose value is the step’s name', () => {
     render(<Harness />)
-    const s = screen.getByRole('slider', { name: 'Autopilot' })
+    const s = screen.getByRole('slider', { name: 'Butler' })
     expect(s).toHaveAttribute('aria-valuenow', '1')
     expect(s).toHaveAttribute('aria-valuetext', 'Suggest')
     expect(s).toHaveAttribute('aria-valuemax', '2')
@@ -39,7 +39,7 @@ describe('StepSlider', () => {
   it('moves with the arrow keys, Home and End, and stops at the ends', async () => {
     const seen: Mode[] = []
     render(<Harness onChange={(m) => seen.push(m)} />)
-    const s = screen.getByRole('slider', { name: 'Autopilot' })
+    const s = screen.getByRole('slider', { name: 'Butler' })
     s.focus()
     await userEvent.keyboard('{ArrowRight}{ArrowRight}{Home}{ArrowLeft}{End}')
     expect(seen).toEqual(['assist', 'off', 'assist'])

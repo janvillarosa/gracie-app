@@ -29,7 +29,7 @@ const DevStepSlider: React.FC = () => {
   const [v, setV] = useState<'off' | 'suggest' | 'assist'>('suggest')
   return (
     <StepSlider
-      label="Autopilot"
+      label="Butler"
       value={v}
       onChange={setV}
       steps={[

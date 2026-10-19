@@ -15,7 +15,7 @@ const KINDS: { key: keyof NotificationPrefs; label: string; help: string }[] = [
     label: 'List activity',
     help: 'When a housemate adds things or starts checking them off.',
   },
-  { key: 'autopilot', label: 'Autopilot adds things', help: 'When it fills a list for you.' },
+  { key: 'autopilot', label: 'Butler adds things', help: 'When it fills a list for you.' },
   { key: 'tripReminders', label: 'Trip reminders', help: 'When a to-do or booking is due.' },
 ]
 
@@ -105,7 +105,7 @@ export const NotificationsPreference: React.FC = () => {
     body = (
       <div className="pref notify-off">
         <p className="pref-help">
-          Hear when housemates or autopilot add things, and before trip plans are due. Even with
+          Hear when housemates or Butler add things, and before trip plans are due. Even with
           Bauhouse closed.
         </p>
         <Button kind="key" onClick={turnOn} disabled={busy || on === null}>
