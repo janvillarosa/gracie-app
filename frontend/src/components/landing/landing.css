@@ -3895,6 +3895,8 @@ p.ld-done-toggle {
 }
 
 .ld-bsheet {
+  /* The field around it sets white text; the paper is drawn in ink, as in the app. */
+  color: var(--ink);
   padding-bottom: 8px;
   box-shadow:
     var(--paper-edge),
