@@ -169,12 +169,17 @@ func (a analyticsSignals) Usual(ctx context.Context, roomID string, keys []strin
 	return out, nil
 }
 
-// displayFor picks how to show key: the most recent wording the house used for it or any
-// look-alike ("Oranges" if that is what they typed last), with that item's usual quantity.
+// displayFor picks how to show key: the pantry entry for it (spelling variants already folded
+// in) or, failing that, the most recent look-alike ("Oranges" for "orange"), with its usual
+// quantity.
 func displayFor(pantry map[string]*PantryItem, key string) *PantryItem {
-	best := pantry[key]
+	own := pantryKey(key)
+	best := pantry[own]
+	if best != nil {
+		return best
+	}
 	for k, p := range pantry {
-		if k == key || !parse.Similar(key, k) {
+		if k == own || !parse.Similar(key, k) {
 			continue
 		}
 		if best == nil || p.LastAddedAt.After(best.LastAddedAt) {
