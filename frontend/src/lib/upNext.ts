@@ -20,7 +20,9 @@ export function pickUpNext(
     seen.add(it.key)
     open.push(it)
   }
-  const bySpot = (a: RouteItem, b: RouteItem) => a.spot - b.spot || a.key.localeCompare(b.key)
+  // Ties go to the smaller key by byte order, like the Go rule (not localeCompare).
+  const bySpot = (a: RouteItem, b: RouteItem) =>
+    a.spot - b.spot || (a.key < b.key ? -1 : a.key > b.key ? 1 : 0)
   open.sort(bySpot)
   const next = open.find((it) => it.spot >= anchor) ?? open[0]
   if (!next) return {}

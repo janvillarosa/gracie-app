@@ -122,6 +122,10 @@ reorders anything. On Suggest and Assist.
   the round ✕ puts it away for this run (`localStorage` `gracie_up_next_hidden_<listId>`, keyed to the run, 12 h
   at most), never a forecast signal. Events: `nudge.shown|tapped|dismissed|followed {kind: 'up_next'}`
   (`followed` also has `hit`: the next check-off was the pick or the one after).
+- **Freshness:** the page reads the view on load and after an Undo; there is no refetch on focus, so an item
+  added mid-shop is not named until the next load, and the server's `ready` is only read then (the client latches
+  it for the visit). The route learns from **finished** runs only (a run still going when the profile recomputes is
+  left out), and a ✕ made before the run carries into it if the run begins within about two hours of the hide.
 - **Eval gate:** `go run ./cmd/suggest-eval upnext -synthetic` replays the route personas; ship bar hit rate ≥ 70%
   where it speaks and silent on two stores, random and top-ups (`replay/upnext_test.go`). **Before deploy**, run
   `suggest-eval upnext` on real data and record it in the QA note; below the bar it stays silent by design.

@@ -186,3 +186,30 @@ func TestViewRejectsUnknownDuring(t *testing.T) {
 		t.Fatalf("during=run: %v", err)
 	}
 }
+
+// failChecked fails the run scan (item.checked) and nothing else.
+type failChecked struct{ analytics.EventRepository }
+
+func (f failChecked) ListByContainer(ctx context.Context, roomID, ct, id string, names []string, since time.Time, limit int) ([]analytics.Event, error) {
+	if len(names) == 1 && names[0] == "item.checked" {
+		return nil, errors.New("boom")
+	}
+	return f.EventRepository.ListByContainer(ctx, roomID, ct, id, names, since, limit)
+}
+
+// Up next is a nicety: when it cannot be built, the view still carries everything else.
+func TestViewSurvivesUpNextFailing(t *testing.T) {
+	r := newSuggestRig(t, SuggestionsOn)
+	r.weekly("yogurt", r.list)
+	r.fold()
+	r.setRoute(shopSpots, 0.8, -10*time.Minute, 0.8)
+	r.item("Milk", false)
+	r.svc.events = failChecked{r.m.Events}
+	v, err := r.svc.View(context.Background(), r.user, r.roomID, r.list, "")
+	if err != nil {
+		t.Fatalf("one failing slip must not fail the view: %v", err)
+	}
+	if v.UpNext != nil || !slices.Equal(v.Stack, []autopilot.Feature{autopilot.FeatureSuggestions}) {
+		t.Fatalf("view = %+v", v)
+	}
+}

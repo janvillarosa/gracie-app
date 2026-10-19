@@ -21,4 +21,12 @@ describe('pickUpNext', () => {
     expect(next?.item_id ?? '').toBe(c.next)
     expect(after?.item_id ?? '').toBe(c.then)
   })
+
+  it('breaks a tie on spot by byte order, as the Go rule does (not by locale)', () => {
+    const route = [
+      { item_id: 'a', key: 'a', spot: 0.5, done: false },
+      { item_id: 'B', key: 'B', spot: 0.5, done: false },
+    ]
+    expect(pickUpNext(route).next?.item_id).toBe('B') // 'B' (0x42) sorts before 'a' (0x61)
+  })
 })

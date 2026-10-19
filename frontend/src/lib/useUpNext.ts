@@ -18,7 +18,8 @@ type Args = {
   onEvent: (e: UpNextEvent) => void
 }
 
-const dayKey = (ms: number) => new Date(ms).toISOString().slice(0, 10)
+// The day in the person's own time, so a shop that crosses UTC midnight keeps its key.
+const dayKey = (ms: number) => new Date(ms).toLocaleDateString('en-CA')
 
 /** Up next on the List page: the item the House usually grabs next, from the server's route over
  *  this list. The server says whether the slip is allowed (its stack) and where the run stands;
@@ -49,9 +50,10 @@ export function useUpNext({ view, items, listId, onEvent }: Args) {
   )
   const runKey = up?.run?.started_at ?? `window-${dayKey(Date.now())}`
   // biome-ignore lint/correctness/useExhaustiveDependencies: hiddenTick re-reads storage after a hide
+  const runStartedAt = up?.run ? Date.parse(up.run.started_at) : undefined
   const hidden = useMemo(
-    () => isUpNextHidden(listId, runKey, Date.now()),
-    [listId, runKey, hiddenTick],
+    () => isUpNextHidden(listId, runKey, Date.now(), runStartedAt),
+    [listId, runKey, runStartedAt, hiddenTick],
   )
 
   const allowed = !!up && (latched || up.ready || visitAnchor !== null)

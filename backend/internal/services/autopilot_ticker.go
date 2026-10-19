@@ -211,8 +211,10 @@ func (s *AutopilotService) View(ctx context.Context, user *models.User, roomID, 
 	if v.Suggestions, err = s.Suggestions(ctx, user, roomID, listID, 3, during); err != nil {
 		return nil, err
 	}
+	// Up next is a nicety: if it cannot be built the rest of the view still stands.
 	if v.UpNext, err = s.upNext(ctx, room, roomID, listID); err != nil {
-		return nil, err
+		log.Printf("autopilot: up next for list %s: %v", listID, err)
+		v.UpNext = nil
 	}
 	v.Stack = slipStack(mode, v)
 	return v, nil

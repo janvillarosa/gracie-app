@@ -1024,6 +1024,15 @@ h5.ant-typography {
   flex: none;
   display: inline-flex;
 }
+/* The tick is tapped one-handed in the aisle: its label fills a 44px target, not just the box. */
+.upnext-check .ant-checkbox-wrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--control-lg);
+  height: var(--control-lg);
+  margin: 0;
+}
 
 .upnext-text {
   flex: 1 1 auto;

@@ -182,7 +182,13 @@ func BuildProfileAway(reg *Registry, id string, events []Event, now time.Time, a
 			cr.NextRun = &NextWindow{Start: w.Start, End: w.End, Confidence: w.Confidence}
 		}
 		if scope == "h" {
-			if r := predict.LearnRoute(RunOrders(es, spans)); r.Runs > 0 {
+			// A run still going has not told us its order yet (four items checked early in a shop
+			// would read as the whole walk), so the route learns from finished runs only.
+			done := spans
+			if n := len(done); n > 0 && now.Sub(done[n-1].End) <= predict.RunGap {
+				done = done[:n-1]
+			}
+			if r := predict.LearnRoute(RunOrders(es, done)); r.Runs > 0 {
 				cr.Route = &r
 			}
 		}

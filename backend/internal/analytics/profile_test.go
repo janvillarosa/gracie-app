@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"reflect"
 	"testing"
 	"time"
 
@@ -356,6 +357,28 @@ func TestHouseProfileLearnsRoute(t *testing.T) {
 	}
 	if got := r.Spots["eggs"]; got <= r.Spots["milk"] || got >= r.Spots["bread"] {
 		t.Fatalf("eggs should sit between milk and bread: %+v", r.Spots)
+	}
+}
+
+// A run still going when the profile is recomputed (the next check could be a minute away) has not
+// told us its order yet: four items checked early in a shop would read as the whole walk.
+func TestRouteIgnoresTheRunInProgress(t *testing.T) {
+	walk := []string{"bananas", "milk", "eggs", "bread", "cheese", "rice", "soap", "tea"}
+	done := routeRuns(sameOrder(6, walk...))
+	now := time.Date(2026, 11, 1, 9, 0, 0, 0, ny)
+	want := analytics.BuildProfile(fullRegistry(), "h:room_1", done, now).Containers["list:list_1"].Route
+
+	words := sameOrder(6, walk...)
+	words = append(words, walk[:4]) // the seventh shop, four items in
+	lastStart := time.Date(2026, 9, 1, 10, 0, 0, 0, ny).AddDate(0, 0, 7*6)
+	mid := analytics.BuildProfile(fullRegistry(), "h:room_1", routeRuns(words), lastStart.Add(10*time.Minute)).Containers["list:list_1"].Route
+	if want == nil || mid == nil || mid.Runs != want.Runs || !reflect.DeepEqual(mid.Spots, want.Spots) {
+		t.Fatalf("a run in progress changed the route:\n done: %+v\n mid:  %+v", want, mid)
+	}
+	// Once it has been quiet for a while it is a finished (short) run and counts.
+	later := analytics.BuildProfile(fullRegistry(), "h:room_1", routeRuns(words), lastStart.Add(3*time.Hour)).Containers["list:list_1"].Route
+	if later == nil || later.Runs != want.Runs+1 {
+		t.Fatalf("a finished run should count: %+v", later)
 	}
 }
 
