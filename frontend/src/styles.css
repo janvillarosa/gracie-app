@@ -998,6 +998,77 @@ h5.ant-typography {
   flex: none;
 }
 
+/* Up next (autopilot, mid-shop): the item the House usually grabs next. It lies on the list's sheet
+   like the suggestion slip (same paper, edge weight, radius and 76px height, so a hand-off to the
+   next pick never moves the list) but has no key and no warm edge, since nothing waits on a tap.
+   Its reason line wears autopilot's mark. */
+.upnext-slip {
+  margin: 0 0 var(--space-3);
+  padding: var(--space-1) var(--space-3);
+  background: var(--paper-fill);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--slip-rest);
+}
+
+.upnext-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 76px;
+  padding: var(--space-2) 0 var(--space-2) var(--space-1);
+}
+
+.upnext-check {
+  flex: none;
+  display: inline-flex;
+}
+
+.upnext-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.upnext-name {
+  color: var(--ink);
+  font-weight: var(--w-medium);
+  line-height: 1.35;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.upnext-why {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--muted);
+  font-size: var(--t-meta);
+  line-height: 1.35;
+}
+
+/* The autopilot mark, as a stamp on the reason line (the row's own stamp is a button). */
+.upnext-mark {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 18px;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-xs);
+  color: var(--ink);
+}
+.upnext-mark svg {
+  width: var(--icon-xs);
+  height: var(--icon-xs);
+}
+
 /* Autopilot (assist mode). The slip says what it added for the next run: a resting slip on the
    list's sheet like the suggestion slip, but with no key and no warm edge, since nothing waits on
    anyone. It settles in once; when it goes it folds its space away (grid rows 1fr to 0fr) so the
@@ -1598,7 +1669,8 @@ button.icon-disc:focus-visible {
   justify-content: center;
 }
 
-.items-list .checkbox-anchor .ant-checkbox-inner {
+.items-list .checkbox-anchor .ant-checkbox-inner,
+.upnext-check .ant-checkbox-inner {
   width: 22px;
   height: 22px;
   border-radius: 7px;
@@ -1607,25 +1679,29 @@ button.icon-disc:focus-visible {
   transition: background-color var(--dur-fast) ease, border-color var(--dur-fast) ease, transform var(--dur-base) var(--ease-out);
 }
 
-.items-list .checkbox-anchor .ant-checkbox-inner::after {
+.items-list .checkbox-anchor .ant-checkbox-inner::after,
+.upnext-check .ant-checkbox-inner::after {
   width: 7px;
   height: 12px;
   border-width: 2.5px;
   border-color: var(--ink);
 }
 
-.items-list .checkbox-anchor .ant-checkbox-checked .ant-checkbox-inner {
+.items-list .checkbox-anchor .ant-checkbox-checked .ant-checkbox-inner,
+.upnext-check .ant-checkbox-checked .ant-checkbox-inner {
   background: var(--brand-yellow);
   border-color: var(--brand-yellow-deep);
   animation: check-pop var(--dur-slow) var(--ease-out);
 }
 
-.items-list .checkbox-anchor .ant-checkbox-checked::after {
+.items-list .checkbox-anchor .ant-checkbox-checked::after,
+.upnext-check .ant-checkbox-checked::after {
   display: none;
 }
 
 @media (hover: hover) {
-  .items-list .checkbox-anchor .ant-checkbox:not(.ant-checkbox-checked):not(.ant-checkbox-disabled):hover .ant-checkbox-inner {
+  .items-list .checkbox-anchor .ant-checkbox:not(.ant-checkbox-checked):not(.ant-checkbox-disabled):hover .ant-checkbox-inner,
+  .upnext-check .ant-checkbox:not(.ant-checkbox-checked):not(.ant-checkbox-disabled):hover .ant-checkbox-inner {
     border-color: var(--brand-yellow-deep);
     background: color-mix(in srgb, var(--brand-yellow) 12%, white);
   }
