@@ -25,6 +25,8 @@ type Handlers struct {
 	Insights *handlers.InsightsHandler
 	// Autopilot is optional: when nil, the autopilot and suggestion routes are not mounted.
 	Autopilot *handlers.AutopilotHandler
+	// Push is optional: when nil (no VAPID keys), the push routes are not mounted.
+	Push *handlers.PushHandler
 }
 
 // redactPlacesQuery keeps /places/* query strings (search text, exact coordinates) out of
@@ -124,6 +126,13 @@ func NewRouter(userFinder authmw.UserFinder, h Handlers) http.Handler {
 			ar.Get("/me/insights", h.Insights.Mine)
 			ar.Get("/rooms/{room_id}/insights", h.Insights.House)
 			ar.Get("/rooms/{room_id}/insights/periods/{period}", h.Insights.HousePeriod)
+		}
+		if h.Push != nil {
+			ar.Get("/push/key", h.Push.Key)
+			ar.Put("/push/subscriptions", h.Push.Subscribe)
+			ar.Delete("/push/subscriptions", h.Push.Unsubscribe)
+			ar.Get("/me/notifications", h.Push.Prefs)
+			ar.Put("/me/notifications", h.Push.SetPrefs)
 		}
 		if h.Events != nil {
 			ar.Post("/events", h.Events.Ingest)

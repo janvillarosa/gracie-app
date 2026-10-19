@@ -11,9 +11,11 @@ import (
 
 	"github.com/janvillarosa/gracie-app/backend/internal/analytics"
 	"github.com/janvillarosa/gracie-app/backend/internal/config"
+	"github.com/janvillarosa/gracie-app/backend/internal/crypto"
 	"github.com/janvillarosa/gracie-app/backend/internal/http/handlers"
 	"github.com/janvillarosa/gracie-app/backend/internal/http/router"
 	"github.com/janvillarosa/gracie-app/backend/internal/parse"
+	"github.com/janvillarosa/gracie-app/backend/internal/push"
 	"github.com/janvillarosa/gracie-app/backend/internal/ratelimit"
 	"github.com/janvillarosa/gracie-app/backend/internal/services"
 	"github.com/janvillarosa/gracie-app/backend/internal/services/categorization"
@@ -156,11 +158,38 @@ func main() {
 	roomHandler := handlers.NewRoomHandler(roomSvc, usersRepo, []byte(cfg.AvatarSalt))
 	listHandler := handlers.NewListHandler(listSvc)
 
+	// Push notifications: off (no routes, no outbox writes) until the VAPID keys are set.
+	var notifySvc *services.NotifyService
+	var pushHandler *handlers.PushHandler
+	if cfg.PushEnabled() {
+		pushRepo := mongostore.NewPushRepo(mcli)
+		encKey, kerr := crypto.LoadOrCreateKey(cfg.EncKeyFile)
+		switch {
+		case kerr != nil:
+			log.Printf("push: enc key: %v (push disabled)", kerr)
+		default:
+			if err := pushRepo.EnsureIndexes(ctx); err != nil {
+				log.Printf("push: ensure indexes failed: %v (push disabled)", err)
+				break
+			}
+			sender := push.NewWebPush(cfg.VAPIDPublicKey, cfg.VAPIDPrivateKey, cfg.VAPIDSubject)
+			notifySvc = services.NewNotifyService(usersRepo, roomsRepo, listsRepo, pushRepo, pushRepo, sender, cfg.VAPIDPublicKey, encKey)
+			notifySvc.UseCoalesce(cfg.PushCoalesce)
+			notifySvc.UseTrips(tripsRepo)
+			listSvc.UseNotifier(notifySvc)
+			userSvc.UsePushSubscriptions(pushRepo)
+			pushHandler = handlers.NewPushHandler(notifySvc)
+			log.Printf("push: enabled")
+		}
+	} else {
+		log.Printf("push: disabled (VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY not set)")
+	}
+
 	tripHandler := handlers.NewTripHandler(tripSvc, ratelimit.New(cfg.TripsUserRPS, ratelimit.Burst(cfg.TripsUserRPS)))
 
 	eventsHandler := handlers.NewEventsHandler(recorder, analyticsReg, ratelimit.New(cfg.AnalyticsEventsRPS, ratelimit.Burst(cfg.AnalyticsEventsRPS)))
 
-	r := router.NewRouter(usersRepo, router.Handlers{Auth: authHandler, User: userHandler, Room: roomHandler, List: listHandler, Trip: tripHandler, Events: eventsHandler, Insights: insights, Autopilot: handlers.NewAutopilotHandler(autopilotSvc)})
+	r := router.NewRouter(usersRepo, router.Handlers{Auth: authHandler, User: userHandler, Room: roomHandler, List: listHandler, Trip: tripHandler, Events: eventsHandler, Insights: insights, Autopilot: handlers.NewAutopilotHandler(autopilotSvc), Push: pushHandler})
 
 	// Google Maps Platform allows storing coordinates for 30 days: purge stale ones at startup
 	// and daily (plus up to an hour of jitter so instances do not fire together).
@@ -170,6 +199,11 @@ func main() {
 	// Assist mode: plan and apply before each house's runs. The lease makes it safe on any number
 	// of instances; it does nothing while analytics is off.
 	go autopilotSvc.RunTicker(purgeCtx, cfg.AutopilotTickEvery, cfg.AutopilotTickEvery/10)
+	if notifySvc != nil {
+		// Claims are atomic and reminders keyed once, so both are safe on any number of instances.
+		go notifySvc.RunDispatch(purgeCtx, cfg.PushDispatchEvery)
+		go notifySvc.RunTripReminders(purgeCtx, cfg.PushRemindEvery)
+	}
 	if rollup != nil {
 		// Fold raw events into aggregates; the lease makes it safe on any number of instances.
 		go rollup.RunFold(purgeCtx, cfg.AnalyticsFoldEvery, cfg.AnalyticsFoldEvery/10)

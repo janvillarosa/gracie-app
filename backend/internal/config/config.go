@@ -37,7 +37,17 @@ type Config struct {
 	// next run must be before assist plans for it.
 	AutopilotTickEvery time.Duration
 	AutopilotLead      time.Duration
+	// Push notifications (Web Push). Off unless both VAPID keys are set.
+	VAPIDPublicKey    string
+	VAPIDPrivateKey   string
+	VAPIDSubject      string
+	PushDispatchEvery time.Duration
+	PushCoalesce      time.Duration
+	PushRemindEvery   time.Duration
 }
+
+// PushEnabled reports whether push notifications are configured.
+func (c *Config) PushEnabled() bool { return c.VAPIDPublicKey != "" && c.VAPIDPrivateKey != "" }
 
 func getEnv(key, def string) string {
 	if v := os.Getenv(key); v != "" {
@@ -71,6 +81,12 @@ func Load() (*Config, error) {
 	cfg.SuggestionsMode = getEnv("SUGGESTIONS_MODE", "on")
 	cfg.AutopilotTickEvery = getEnvDuration("AUTOPILOT_TICK_EVERY", 15*time.Minute)
 	cfg.AutopilotLead = getEnvDuration("AUTOPILOT_LEAD", 18*time.Hour)
+	cfg.VAPIDPublicKey = os.Getenv("VAPID_PUBLIC_KEY")
+	cfg.VAPIDPrivateKey = os.Getenv("VAPID_PRIVATE_KEY")
+	cfg.VAPIDSubject = getEnv("VAPID_SUBJECT", "mailto:admin@bauhouse.app")
+	cfg.PushDispatchEvery = getEnvDuration("PUSH_DISPATCH_EVERY", 15*time.Second)
+	cfg.PushCoalesce = getEnvDuration("PUSH_COALESCE", 90*time.Second)
+	cfg.PushRemindEvery = getEnvDuration("PUSH_REMIND_EVERY", 15*time.Minute)
 
 	if cfg.MongoURI == "" || cfg.MongoDB == "" {
 		return nil, fmt.Errorf("missing Mongo configuration (MONGODB_URI, MONGODB_DB)")
