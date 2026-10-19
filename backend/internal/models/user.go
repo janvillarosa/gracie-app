@@ -5,6 +5,10 @@ import "time"
 // UserPreferences holds per-user settings. A nil field means "use the default".
 type UserPreferences struct {
 	TripsShowNextStop *bool `bson:"trips_show_next_stop,omitempty" json:"trips_show_next_stop,omitempty"`
+	// Push notification switches, one per kind. Nil means on.
+	NotifyItemAdds  *bool `bson:"notify_item_adds,omitempty" json:"-"`
+	NotifyAutopilot *bool `bson:"notify_autopilot,omitempty" json:"-"`
+	NotifyTrips     *bool `bson:"notify_trips,omitempty" json:"-"`
 }
 
 type User struct {
@@ -26,4 +30,20 @@ type User struct {
 // TripsShowNextStop resolves the preference; the default is true.
 func (u *User) TripsShowNextStop() bool {
 	return u.Preferences.TripsShowNextStop == nil || *u.Preferences.TripsShowNextStop
+}
+
+// Notifies reports whether the user wants push notifications of this kind (default on).
+func (u *User) Notifies(kind string) bool {
+	var v *bool
+	switch kind {
+	case PushKindItemAdds:
+		v = u.Preferences.NotifyItemAdds
+	case PushKindAutopilot:
+		v = u.Preferences.NotifyAutopilot
+	case PushKindTrip:
+		v = u.Preferences.NotifyTrips
+	default:
+		return false
+	}
+	return v == nil || *v
 }

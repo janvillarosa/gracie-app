@@ -108,6 +108,35 @@ type AutopilotActionRepository interface {
 	AcquireLease(ctx context.Context, owner string, ttl time.Duration, now time.Time) (bool, error)
 }
 
+// PushSubscriptionRepository stores Web Push subscriptions, one per endpoint.
+type PushSubscriptionRepository interface {
+	// Upsert stores s by endpoint: an existing endpoint takes s's user and keys, keeping its sub_id.
+	Upsert(ctx context.Context, s *models.PushSubscription) error
+	// DeleteForUser removes the endpoint only if it belongs to userID.
+	DeleteForUser(ctx context.Context, userID, endpoint string) error
+	// DeleteEndpoint removes the endpoint whoever owns it (the push service said it is gone).
+	DeleteEndpoint(ctx context.Context, endpoint string) error
+	DeleteByUser(ctx context.Context, userID string) error
+	// ListByUsers returns the subscriptions of these users, oldest first.
+	ListByUsers(ctx context.Context, userIDs []string) ([]models.PushSubscription, error)
+	MarkOK(ctx context.Context, endpoint string, at time.Time) error
+}
+
+// PushJobRepository is the notification outbox.
+type PushJobRepository interface {
+	// Enqueue merges j into the pending job with its coalesce key (adding Names and Count), or
+	// inserts it. With once, a job with the key in any state (sent ones included) absorbs it, so
+	// the key is sent at most once while that job is kept.
+	Enqueue(ctx context.Context, j *models.PushJob, once bool) error
+	// Claim takes one due job: pending with send_after <= now, or sending with a lapsed lease.
+	// It sets status sending, the lease and attempts+1. It returns nil, nil when none is due.
+	Claim(ctx context.Context, now time.Time, lease time.Duration) (*models.PushJob, error)
+	// Finish marks the job done; it is kept until expireAt.
+	Finish(ctx context.Context, jobID string, expireAt time.Time) error
+	// Retry puts a claimed job back to pending, due at sendAfter.
+	Retry(ctx context.Context, jobID string, sendAfter time.Time) error
+}
+
 // AutopilotRetention is how long a resolved action is kept (its key blocks a re-add meanwhile).
 const AutopilotRetention = 180 * 24 * time.Hour
 
@@ -137,6 +166,9 @@ type TripRepository interface {
 	// ListCoordsExpired returns up to limit trips (including soft-deleted ones) whose stored
 	// Google coordinates were due to expire before `before`. Served from an index on coords_expire_at.
 	ListCoordsExpired(ctx context.Context, before time.Time, limit int) ([]models.Trip, error)
+	// ListCurrent returns up to limit live trips that have not ended before fromDate (YYYY-MM-DD),
+	// undated trips included. Trip reminders read it.
+	ListCurrent(ctx context.Context, fromDate string, limit int) ([]models.Trip, error)
 }
 
 // BackfillReader is a read-only walk over every domain document, used by the analytics

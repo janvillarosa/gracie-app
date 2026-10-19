@@ -42,6 +42,12 @@ is the only implementation (uses `go.mongodb.org/mongo-driver`). See
   update on the expected state. `autopilot_state` (`_id: "tick"`) is the ticker lease. `rooms.autopilot_mode`
   has a sparse index (`ListIDsByAutopilotMode`). A house's actions are deleted with it.
 
+- **Push** (see [docs/features/notifications.md](../../../docs/features/notifications.md)): `push_subscriptions`
+  (unique `endpoint`; keys encrypted at rest) and the `push_jobs` outbox: unique `job_id`, a **partial unique
+  index on `coalesce_key` where `status` is pending** (one pending job per key; later adds merge into it),
+  `(status, send_after)` for `Claim`, TTL `expire_at_ttl`. `Claim` is a `findOneAndUpdate` with a lease.
+  `users.preferences.notify_*` are the per-kind switches (nil = on).
+
 - `store.BackfillReader` (`store/mongo/backfill_reader.go`) is a read-only, batched walk over users,
   rooms, lists, items and trips for the analytics backfill. It uses **allow-list projections**, so
   credential fields and trip text (titles, notes, places) are never loaded; keep it that way when adding fields.

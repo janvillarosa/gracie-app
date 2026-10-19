@@ -133,6 +133,18 @@ func (r *UserRepo) UpdatePreferences(ctx context.Context, userID string, prefs m
 	if prefs.TripsShowNextStop != nil {
 		set = append(set, bson.E{Key: "preferences.trips_show_next_stop", Value: *prefs.TripsShowNextStop})
 	}
+	for _, f := range []struct {
+		path string
+		v    *bool
+	}{
+		{"preferences.notify_item_adds", prefs.NotifyItemAdds},
+		{"preferences.notify_autopilot", prefs.NotifyAutopilot},
+		{"preferences.notify_trips", prefs.NotifyTrips},
+	} {
+		if f.v != nil {
+			set = append(set, bson.E{Key: f.path, Value: *f.v})
+		}
+	}
 	res, err := r.col().UpdateOne(ctx, filterByUserID(userID), bson.D{{Key: "$set", Value: set}})
 	if err != nil {
 		return err
