@@ -1,5 +1,5 @@
-import { ghostRemainder, rankSuggestions } from '@lib/suggest'
 import type { PantryItem } from '@api/types'
+import { ghostRemainder, rankSuggestions } from '@lib/suggest'
 
 const p = (description: string, extra: Partial<PantryItem> = {}): PantryItem => ({
   description,
@@ -42,6 +42,33 @@ describe('rankSuggestions', () => {
     expect(rankSuggestions('b', pantry, 2)).toHaveLength(2)
   })
 
+  it('folds spacing and plurals after the literal tiers', () => {
+    const beans = [p('Butter beans'), p('Chickpeas'), p('Peanut butter')]
+    expect(rankSuggestions('butterbean', beans, 5).map((s) => s.item.description)).toEqual([
+      'Butter beans',
+    ])
+    const [chick] = rankSuggestions('chick pea', beans, 5)
+    expect(chick).toMatchObject({ start: 0, length: 'Chickpeas'.length })
+    expect(rankSuggestions('butter', beans, 5).map((s) => s.item.description)).toEqual([
+      'Butter beans',
+      'Peanut butter',
+    ])
+  })
+
+  it('forgives a typo from five letters, last of all', () => {
+    expect(rankSuggestions('bananna', pantry, 5).map((s) => s.item.description)).toEqual([
+      'Bananas',
+    ])
+    expect(rankSuggestions('brocoli', [p('Broccoli')], 5)).toHaveLength(1)
+    expect(rankSuggestions('rhubrab', pantry, 5).map((s) => s.item.description)).toEqual([])
+  })
+
+  it('does not fuzz short words or change the first letter', () => {
+    expect(rankSuggestions('pea', [p('Tea')], 5)).toEqual([])
+    expect(rankSuggestions('milk', [p('Silk')], 5)).toEqual([])
+    expect(rankSuggestions('nanana', pantry, 5)).toEqual([])
+  })
+
   it('returns nothing for empty or quantity-only input', () => {
     expect(rankSuggestions('', pantry, 5)).toEqual([])
     expect(rankSuggestions('2', pantry, 5)).toEqual([])
@@ -53,6 +80,11 @@ describe('ghostRemainder', () => {
     const [top] = rankSuggestions('bas', pantry, 1)
     expect(ghostRemainder('bas', top)).toBe('mati rice')
     expect(ghostRemainder('2 kg bas', top)).toBe('mati rice')
+  })
+
+  it('is empty for a folded or typo match', () => {
+    const [top] = rankSuggestions('butterbean', [p('Butter beans')], 1)
+    expect(ghostRemainder('butterbean', top)).toBe('')
   })
 
   it('is empty when the match is not a prefix', () => {

@@ -66,6 +66,7 @@ import {
 } from '@dnd-kit/sortable'
 import { ListIconDisc } from '@components/IconDiscs'
 import { confettiAt } from '@lib/confetti'
+import { compactKey } from '@lib/itemKey'
 import { parseInput } from '@lib/parseInput'
 import { timeAgo } from '@lib/time'
 import { getCategoryClass } from '@lib/category'
@@ -477,12 +478,13 @@ export const ListPage: React.FC = () => {
   // Keep suggestions current without a refetch: an added item moves to the front of the
   // pantry (or joins it) so it is the first suggestion next time.
   const bumpPantry = (created: ListItem) => {
-    const key = created.description.trim().toLowerCase()
+    // Spelling variants share one entry, as on the server ("Chick peas" refreshes "Chickpeas").
+    const key = compactKey(created.description)
     qc.setQueryData<PantryItem[]>(['pantry', roomId], (prev) => {
       if (!prev) return prev
-      const hit = prev.find((p) => p.description.trim().toLowerCase() === key)
+      const hit = prev.find((p) => compactKey(p.description) === key)
       const entry: PantryItem = {
-        description: created.description,
+        description: hit && !hit.common ? hit.description : created.description,
         category: created.category || hit?.category || '',
         quantity: created.quantity || hit?.quantity || '',
         unit: created.unit || hit?.unit || '',
