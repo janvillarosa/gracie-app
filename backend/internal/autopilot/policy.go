@@ -30,8 +30,11 @@ var DefaultPolicy = Policy{
 	SuggestMinScore: 0.65, SuggestMaxCV: 0.5,
 	AssistMinScore: 0.50, AssistMinNeed: 0.60,
 	MinRunConfidence: 0.5, MaxPerRun: 8,
-	// The score bar is provisional until the route eval sets it.
-	UpNextMinRuns: 5, UpNextMinScore: 0.5,
+	// Up next's bar was set with `suggest-eval upnext -synthetic` on the route personas (2026-10-19):
+	// from 0.55 up, no persona that should stay silent (two stores, random, top-ups) ever spoke on
+	// six seeds; 0.60 is the middle of that plateau (pooled hit rate 86.5%, coverage 31%). Lower
+	// bars speak on the two-store house; higher ones go quiet for a house that changed its walk.
+	UpNextMinRuns: 5, UpNextMinScore: 0.60,
 }
 
 // Decide turns a proposal into what to do with it under the house's mode. The modes do not mix:

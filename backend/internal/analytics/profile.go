@@ -182,7 +182,7 @@ func BuildProfileAway(reg *Registry, id string, events []Event, now time.Time, a
 			cr.NextRun = &NextWindow{Start: w.Start, End: w.End, Confidence: w.Confidence}
 		}
 		if scope == "h" {
-			if r := predict.LearnRoute(runOrders(es, spans)); r.Runs > 0 {
+			if r := predict.LearnRoute(RunOrders(es, spans)); r.Runs > 0 {
 				cr.Route = &r
 			}
 		}
@@ -198,10 +198,10 @@ func BuildProfileAway(reg *Registry, id string, events []Event, now time.Time, a
 	return p
 }
 
-// runOrders turns a container's completions (time-ordered) into one RunOrder per span: the
+// RunOrders turns a container's completions (time-ordered) into one RunOrder per span: the
 // distinct things in the order they were first checked. Look-alike names ("egg", "eggs") are
 // one thing, named by their most recent wording so every run speaks of it the same way.
-func runOrders(es []Event, spans []predict.RunSpan) []predict.RunOrder {
+func RunOrders(es []Event, spans []predict.RunSpan) []predict.RunOrder {
 	type cluster struct{ name string }
 	var clusters []*cluster
 	of := map[string]*cluster{} // key -> its cluster

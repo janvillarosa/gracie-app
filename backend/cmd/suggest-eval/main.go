@@ -5,6 +5,7 @@
 //	suggest-eval backfill   turn existing list items into events (dry run unless -apply)
 //	suggest-eval tune       replay history across a grid of window, regularity and score settings
 //	suggest-eval autopilot  replay assist mode at each past run: precision, recall, removals per week
+//	suggest-eval upnext     replay Up next at each past run: coverage and hit rate (-synthetic: the route personas)
 //
 // It reads the same MONGODB_URI / MONGODB_DB as the server. backtest and shadow only read.
 // backtest -away-from-trips replays in home time, with each house's away spans built from its
@@ -50,6 +51,10 @@ func main() {
 		backtestSynthetic(*awayFromTrips)
 		return
 	}
+	if cmd == "upnext" && *synth {
+		upNextSynthetic()
+		return
+	}
 	if cmd == "autopilot" && *synth {
 		w := households.Golden()
 		var away map[string]predict.Away
@@ -83,6 +88,8 @@ func main() {
 		tune(ctx, cli, *room, *minPrecision)
 	case "backfill":
 		backfill(ctx, cli, *room, *apply, time.Duration(cfg.AnalyticsRetentionDays)*24*time.Hour)
+	case "upnext":
+		upNextReport(ctx, cli, *room)
 	case "autopilot":
 		evs := loadEvents(ctx, cli, roomFilter(*room, bson.D{{Key: "subject.type", Value: "item"},
 			{Key: "name", Value: bson.D{{Key: "$in", Value: bson.A{"item.added", "item.checked", "item.deleted", "item.suggestion_ignored", "item.autopilot_removed"}}}}}))
@@ -97,7 +104,7 @@ func main() {
 }
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: suggest-eval backtest|shadow|tune|backfill|autopilot [-room ID] [-apply] [-min-precision 0.6] [-away-from-trips] [-synthetic]")
+	fmt.Fprintln(os.Stderr, "usage: suggest-eval backtest|shadow|tune|backfill|autopilot|upnext [-room ID] [-apply] [-min-precision 0.6] [-away-from-trips] [-synthetic]")
 	os.Exit(2)
 }
 
