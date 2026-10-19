@@ -40,7 +40,7 @@ func TestTestModeHidesFromEveryoneElse(t *testing.T) {
 		t.Fatalf("unknown action: %v", err)
 	}
 	acts, err := tm.List(r.ana)
-	if err != nil || len(acts) != 4 || acts[0].ID != "push.test" {
+	if err != nil || len(acts) != 5 || acts[0].ID != "push.test" {
 		t.Fatalf("list: %+v %v", acts, err)
 	}
 }
@@ -151,5 +151,24 @@ func TestTestModeAutopilotRunsOnlyTheTestersHouse(t *testing.T) {
 	// A server with no executor says so instead of failing.
 	if _, err := NewAutopilotService(r.m.Rooms, r.m.Lists, r.m.Items, nil, nil, SuggestionsOn).TickRoom(ctx, r.roomID); err != ErrAutopilotUnavailable {
 		t.Fatalf("unavailable: %v", err)
+	}
+}
+
+func TestTestModeSimulatedChecksWorkEveryTap(t *testing.T) {
+	r, tm := newTestModeRig(t)
+	ctx := context.Background()
+	r.subscribe(t, r.ana, ep("ana"))
+	for range 2 {
+		if _, err := tm.Run(ctx, r.ana, "push.checks"); err != nil {
+			t.Fatal(err)
+		}
+		r.now = r.now.Add(defaultCoalesce)
+		if n := r.dispatch(t); n != 1 {
+			t.Fatalf("sent %d", n)
+		}
+		if b := r.send.sent[len(r.send.sent)-1].Msg.Body; b != "Someone is checking off Test item 1, Test item 2 and 1 more" {
+			t.Fatalf("body %q", b)
+		}
+		r.now = r.now.Add(time.Minute)
 	}
 }

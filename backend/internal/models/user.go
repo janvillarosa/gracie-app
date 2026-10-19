@@ -19,6 +19,10 @@ type User struct {
 	APIKeyHash      string     `bson:"api_key_hash,omitempty" json:"-"`
 	APIKeyLookup    string     `bson:"api_key_lookup,omitempty" json:"-"`
 	APIKeyExpiresAt *time.Time `bson:"api_key_expires_at,omitempty" json:"-"`
+	// APIKeyIssuedAt is when the current key was issued (login rotates it). A push device last
+	// refreshed before it belongs to an older login and is skipped. Absent on keys issued before
+	// it was recorded.
+	APIKeyIssuedAt *time.Time `bson:"api_key_issued_at,omitempty" json:"-"`
 	// TZ is the last-seen IANA zone (from the X-Timezone header), used by background jobs.
 	TZ string `bson:"tz,omitempty" json:"-"`
 	// TestAccount marks an account that may use test mode (internal/services TestModeService). It is
@@ -39,7 +43,7 @@ func (u *User) TripsShowNextStop() bool {
 func (u *User) Notifies(kind string) bool {
 	var v *bool
 	switch kind {
-	case PushKindItemAdds:
+	case PushKindItemAdds, PushKindItemChecks: // one "List activity" switch
 		v = u.Preferences.NotifyItemAdds
 	case PushKindAutopilot:
 		v = u.Preferences.NotifyAutopilot

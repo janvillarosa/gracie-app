@@ -91,3 +91,22 @@ func TestMongoSetTestAccount(t *testing.T) {
 		t.Fatal("unknown user should be not found")
 	}
 }
+
+func TestMongoSetAPIKeyRecordsIssueTime(t *testing.T) {
+	c := connectOrSkip(t)
+	ur := NewUserRepo(c)
+	ctx := context.Background()
+	now := time.Now().UTC().Truncate(time.Millisecond)
+	u := &models.User{UserID: "usr_" + randHex(4), Name: "A", CreatedAt: now, UpdatedAt: now}
+	if err := ur.Put(ctx, u); err != nil {
+		t.Fatal(err)
+	}
+	exp := now.Add(time.Hour)
+	if err := ur.SetAPIKey(ctx, u.UserID, "h", "lookup-"+randHex(4), &exp, now); err != nil {
+		t.Fatal(err)
+	}
+	got, _ := ur.GetByID(ctx, u.UserID)
+	if got.APIKeyIssuedAt == nil || !got.APIKeyIssuedAt.Equal(now) {
+		t.Fatalf("issued at: %v", got.APIKeyIssuedAt)
+	}
+}

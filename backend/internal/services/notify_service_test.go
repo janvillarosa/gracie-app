@@ -365,3 +365,175 @@ func TestTripRemindersOncePerStart(t *testing.T) {
 		t.Fatalf("bodies: %v", bodies)
 	}
 }
+
+// item makes an item on the rig's list (as Ben, so no add notification reaches Ben).
+func (r *notifyRig) item(t *testing.T, name string) *models.ListItem {
+	t.Helper()
+	it, err := r.lists.CreateItem(context.Background(), r.ben, r.roomID, r.listID, name, "", "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return it
+}
+
+func (r *notifyRig) check(t *testing.T, u *models.User, it *models.ListItem, done bool) {
+	t.Helper()
+	if _, err := r.lists.UpdateItem(context.Background(), u, r.roomID, r.listID, it.ItemID, nil, &done, nil, nil, nil, nil); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// sentTo returns the bodies pushed to one endpoint since the last call, and forgets them.
+func (r *notifyRig) sentTo(endpoint string) []string {
+	var out []string
+	for _, s := range r.send.sent {
+		if s.Endpoint == endpoint {
+			out = append(out, s.Msg.Body)
+		}
+	}
+	r.send.sent = nil
+	return out
+}
+
+func TestNotifyCheckOffsOncePerRun(t *testing.T) {
+	r := newNotifyRig(t)
+	r.subscribe(t, r.ana, ep("ana"))
+	r.subscribe(t, r.ben, ep("ben"))
+	milk, eggs, bread, jam, tea, rice := r.item(t, "Milk"), r.item(t, "Eggs"), r.item(t, "Bread"), r.item(t, "Jam"), r.item(t, "Tea"), r.item(t, "Rice")
+	r.now = r.now.Add(defaultCoalesce)
+	r.dispatch(t) // Ben's adds go to Ana; not what this test is about
+	r.sentTo("")
+
+	// Ana starts shopping: an uncheck and recheck of Milk counts once.
+	r.check(t, r.ana, milk, true)
+	r.check(t, r.ana, eggs, true)
+	r.check(t, r.ana, milk, false)
+	r.check(t, r.ana, milk, true)
+	r.check(t, r.ana, bread, true)
+	r.now = r.now.Add(defaultCoalesce)
+	r.dispatch(t)
+	var tag string
+	var bodies []string
+	for _, s := range r.send.sent {
+		if s.Endpoint == ep("ben") {
+			tag = s.Msg.Tag
+			bodies = append(bodies, s.Msg.Body)
+		}
+	}
+	if len(bodies) != 1 || bodies[0] != "Ana is checking off Milk, Eggs and 1 more" {
+		t.Fatalf("first run: %v", bodies)
+	}
+	if got := r.sentTo(ep("ana")); len(got) != 0 {
+		t.Fatalf("Ana heard about her own check-offs: %v", got)
+	}
+	r.check(t, r.ana, jam, true) // keeps the run open; Ben's copy was taken above
+	r.now = r.now.Add(time.Hour)
+	if n := r.dispatch(t); n != 0 {
+		t.Fatalf("a check-off mid-run notified again: %d", n)
+	}
+	if tag != "list:"+r.listID+":checks" {
+		t.Fatalf("tag %q", tag)
+	}
+
+	// Still the same run: under two quiet hours since the last check-off (Jam).
+	r.now = r.now.Add(59 * time.Minute)
+	r.check(t, r.ana, tea, true)
+	r.now = r.now.Add(defaultCoalesce)
+	if n := r.dispatch(t); n != 0 {
+		t.Fatalf("a check-off in the same run notified: %d", n)
+	}
+
+	// Over two quiet hours later: a new run.
+	r.now = r.now.Add(checkRunGap + time.Minute)
+	r.check(t, r.ana, rice, true)
+	r.now = r.now.Add(defaultCoalesce)
+	r.dispatch(t)
+	if got := r.sentTo(ep("ben")); len(got) != 1 || got[0] != "Ana is checking off Rice" {
+		t.Fatalf("new run: %v", got)
+	}
+}
+
+func TestNotifyCheckOffWording(t *testing.T) {
+	r := newNotifyRig(t)
+	r.subscribe(t, r.ben, ep("ben"))
+	items := []*models.ListItem{r.item(t, "Milk"), r.item(t, "Eggs"), r.item(t, "Bread"), r.item(t, "Jam")}
+	r.now = r.now.Add(defaultCoalesce)
+	r.dispatch(t)
+	r.sentTo("")
+	for _, it := range items {
+		r.check(t, r.ana, it, true)
+	}
+	r.now = r.now.Add(defaultCoalesce)
+	r.dispatch(t)
+	if got := r.sentTo(ep("ben")); len(got) != 1 || got[0] != "Ana is checking off Milk, Eggs and 2 more" {
+		t.Fatalf("wording: %v", got)
+	}
+}
+
+func TestNotifyListActivitySwitchCoversCheckOffs(t *testing.T) {
+	r := newNotifyRig(t)
+	ctx := context.Background()
+	r.subscribe(t, r.ben, ep("ben"))
+	milk := r.item(t, "Milk")
+	off := false
+	if _, err := r.svc.SetPrefs(ctx, r.ben, NotifyPrefsPatch{ItemAdds: &off}); err != nil {
+		t.Fatal(err)
+	}
+	r.check(t, r.ana, milk, true)
+	r.now = r.now.Add(defaultCoalesce)
+	if n := r.dispatch(t); n != 0 {
+		t.Fatalf("List activity off, still notified: %d", n)
+	}
+}
+
+func TestNotifyOnlyLoggedInDevices(t *testing.T) {
+	r := newNotifyRig(t)
+	ctx := context.Background()
+	r.subscribe(t, r.ben, ep("ben-old"))
+	// Ben logs in on a new phone: the key rotates, which signs the old phone out.
+	r.now = r.now.Add(time.Minute)
+	exp := r.now.Add(30 * 24 * time.Hour)
+	if err := r.m.Users.SetAPIKey(ctx, "u_ben", "hash", "lookup-2", &exp, r.now); err != nil {
+		t.Fatal(err)
+	}
+	r.now = r.now.Add(time.Second)
+	r.subscribe(t, r.ben, ep("ben-new"))
+	_, _ = r.lists.CreateItem(ctx, r.ana, r.roomID, r.listID, "Milk", "", "", "")
+	r.now = r.now.Add(defaultCoalesce)
+	r.dispatch(t)
+	if old := r.sentTo(ep("ben-old")); len(old) != 0 {
+		t.Fatal("a signed-out phone was notified")
+	}
+	if subs, _ := r.m.Push.ListByUsers(ctx, []string{"u_ben"}); len(subs) != 2 {
+		t.Fatalf("the stale phone must be skipped, not deleted: %d devices", len(subs))
+	}
+
+	// The key expires: nobody is signed in, nothing is sent.
+	expired := r.now.Add(-time.Minute)
+	if err := r.m.Users.SetAPIKey(ctx, "u_ben", "hash", "lookup-3", &expired, r.now.Add(-time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	_, _ = r.lists.CreateItem(ctx, r.ana, r.roomID, r.listID, "Eggs", "", "", "")
+	r.now = r.now.Add(defaultCoalesce)
+	if n := r.dispatch(t); n != 0 {
+		t.Fatalf("sent with an expired key: %d", n)
+	}
+}
+
+func TestNotifyRefreshedDeviceCountsAgain(t *testing.T) {
+	r := newNotifyRig(t)
+	ctx := context.Background()
+	r.subscribe(t, r.ben, ep("ben"))
+	r.now = r.now.Add(time.Minute)
+	if err := r.m.Users.SetAPIKey(ctx, "u_ben", "hash", "lookup-2", nil, r.now); err != nil {
+		t.Fatal(err)
+	}
+	// The app starts on that phone with the new key and refreshes its subscription.
+	r.now = r.now.Add(time.Second)
+	r.subscribe(t, r.ben, ep("ben"))
+	_, _ = r.lists.CreateItem(ctx, r.ana, r.roomID, r.listID, "Milk", "", "", "")
+	r.now = r.now.Add(defaultCoalesce)
+	if n := r.dispatch(t); n != 1 {
+		t.Fatalf("refreshed phone skipped: %d", n)
+	}
+}

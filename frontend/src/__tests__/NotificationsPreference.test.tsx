@@ -70,7 +70,7 @@ describe('Notifications in Account settings', () => {
     await waitFor(() => expect(key).toBeEnabled())
     expect(screen.queryByRole('switch')).toBeNull()
     await userEvent.click(key)
-    expect(await screen.findByRole('switch', { name: 'Housemates add things' })).toBeChecked()
+    expect(await screen.findByRole('switch', { name: 'List activity' })).toBeChecked()
     expect(screen.getByRole('switch', { name: 'Autopilot adds things' })).toBeChecked()
     expect(screen.getByRole('switch', { name: 'Trip reminders' })).not.toBeChecked()
     expect(fake.requestPermission).toHaveBeenCalledTimes(1)

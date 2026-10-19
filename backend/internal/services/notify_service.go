@@ -33,13 +33,17 @@ const (
 	pushKeep = 7 * 24 * time.Hour
 	// maxSubsPerUser caps one person's devices; the oldest goes when a new one subscribes.
 	maxSubsPerUser = 10
+	// checkRunGap ends a run of check-offs: after this long with none, the next one is a new run
+	// and notifies again.
+	checkRunGap = 2 * time.Hour
 )
 
-// ItemNotifier hears about adds to a list. ListService calls it after the item is written; it
-// never fails or slows the add (it only writes to the outbox).
+// ItemNotifier hears about adds to and check-offs on a list. ListService calls it after the write;
+// it never fails or slows the write (it only writes to the outbox).
 type ItemNotifier interface {
 	ItemAdded(ctx context.Context, actorID string, it *models.ListItem)
 	SystemItemAdded(ctx context.Context, source string, it *models.ListItem)
+	ItemChecked(ctx context.Context, actorID string, it *models.ListItem)
 }
 
 // NotifyService owns push notifications: devices, each person's switches, the outbox and the
@@ -146,7 +150,7 @@ func (s *NotifyService) ForgetUser(ctx context.Context, userID string) {
 	}
 }
 
-// NotifyPrefs are a person's switches, one per kind.
+// NotifyPrefs are a person's switches. ItemAdds is "List activity": adds and check-offs.
 type NotifyPrefs struct {
 	ItemAdds      bool `json:"itemAdds"`
 	Autopilot     bool `json:"autopilot"`
@@ -201,6 +205,21 @@ func (s *NotifyService) SystemItemAdded(ctx context.Context, source string, it *
 		CoalesceKey: "autopilot:" + it.RoomID + ":" + it.ListID, Kind: models.PushKindAutopilot,
 		RoomID: it.RoomID, ActorID: ActorAutopilot, ListID: it.ListID, Names: []string{it.Description}, Count: 1,
 	}, false)
+}
+
+// ItemChecked queues "<actor> is checking off <items>" for the rest of the house, once per run: a
+// run is the person's check-offs on the list with no quiet gap over checkRunGap. The check-offs in
+// the first merge window are named; the rest of the run is silent.
+func (s *NotifyService) ItemChecked(ctx context.Context, actorID string, it *models.ListItem) {
+	now := s.now().UTC()
+	j := &models.PushJob{
+		CoalesceKey: "check:" + it.RoomID + ":" + it.ListID + ":" + actorID, Kind: models.PushKindItemChecks,
+		RoomID: it.RoomID, ActorID: actorID, ListID: it.ListID, URL: "/app/lists/" + it.ListID,
+		Names: []string{it.Description}, Count: 1, SendAfter: now.Add(s.coalesce), CreatedAt: now, ExpireAt: now.Add(pushKeep),
+	}
+	if err := s.jobs.EnqueueRun(ctx, j, checkRunGap, now); err != nil {
+		log.Printf("push: enqueue %s: %v", j.CoalesceKey, err)
+	}
 }
 
 func (s *NotifyService) enqueue(ctx context.Context, j *models.PushJob, once bool) {
@@ -261,25 +280,50 @@ func (s *NotifyService) send(ctx context.Context, j *models.PushJob) (int, bool)
 	if !ok {
 		return 0, false
 	}
-	var to []string
+	now := s.now().UTC()
+	to := map[string]*models.User{}
+	var ids []string
 	for _, id := range room.MemberIDs {
 		if id == j.ActorID || (len(j.Recipients) > 0 && !slices.Contains(j.Recipients, id)) {
 			continue
 		}
 		u, err := s.users.GetByID(ctx, id)
-		if err != nil || !u.Notifies(j.Kind) {
+		if err != nil || !u.Notifies(j.Kind) || !loggedIn(u, now) {
 			continue
 		}
-		to = append(to, id)
+		to[id] = u
+		ids = append(ids, id)
 	}
-	if len(to) == 0 {
+	if len(ids) == 0 {
 		return 0, false
 	}
-	devices, err := s.subs.ListByUsers(ctx, to)
+	devices, err := s.subs.ListByUsers(ctx, ids)
 	if err != nil {
 		return 0, true
 	}
-	return s.deliver(ctx, devices, msg, push.Topic(j.JobID))
+	return s.deliver(ctx, currentDevices(devices, to), msg, push.Topic(j.JobID))
+}
+
+// loggedIn reports whether the user's key is still valid: an expired key means nobody is signed in.
+func loggedIn(u *models.User, now time.Time) bool {
+	return u.APIKeyExpiresAt == nil || now.Before(*u.APIKeyExpiresAt)
+}
+
+// currentDevices keeps the devices that belong to their user's current login. Logging in rotates
+// the key, which signs out every other device; such a device was last refreshed (the app does on
+// every start) before the new key was issued. It is skipped, not deleted: the dispatcher may have
+// read the user just before a login, so deleting could drop the new device. Stale rows go when the
+// app reopens (it signs out and unsubscribes) or when the push service answers 404/410.
+func currentDevices(devices []models.PushSubscription, users map[string]*models.User) []models.PushSubscription {
+	out := devices[:0:0]
+	for _, d := range devices {
+		u := users[d.UserID]
+		if u == nil || (u.APIKeyIssuedAt != nil && d.UpdatedAt.Before(*u.APIKeyIssuedAt)) {
+			continue
+		}
+		out = append(out, d)
+	}
+	return out
 }
 
 // DeviceResult is how one device took a message.
@@ -372,17 +416,22 @@ func (s *NotifyService) message(ctx context.Context, j *models.PushJob) (push.Me
 	if err != nil {
 		return msg, false, err
 	}
-	who := "Autopilot"
-	if j.Kind == models.PushKindItemAdds {
+	who, verb := "Autopilot", "added"
+	if j.Kind != models.PushKindAutopilot {
 		who = "Someone"
 		if u, err := s.users.GetByID(ctx, j.ActorID); err == nil && u.Name != "" {
 			who = u.Name
 		}
 	}
-	msg.Title = l.Name
-	msg.Body = who + " added " + itemPhrase(j.Names, j.Count)
-	// One notification per list on the phone: a newer one replaces it.
+	// One notification per list and kind on the phone: a newer one replaces it, and a check-off
+	// never hides an unread add.
 	msg.Tag = "list:" + j.ListID
+	if j.Kind == models.PushKindItemChecks {
+		verb = "is checking off"
+		msg.Tag += ":checks"
+	}
+	msg.Title = l.Name
+	msg.Body = who + " " + verb + " " + itemPhrase(j.Names, j.Count)
 	return msg, true, nil
 }
 

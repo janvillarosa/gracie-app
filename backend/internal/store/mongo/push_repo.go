@@ -173,3 +173,49 @@ func (r *PushRepo) Retry(ctx context.Context, jobID string, sendAfter time.Time)
 	}
 	return err
 }
+
+func (r *PushRepo) EnqueueRun(ctx context.Context, j *models.PushJob, gap time.Duration, now time.Time) error {
+	now = now.UTC()
+	name := ""
+	if len(j.Names) > 0 {
+		name = j.Names[0]
+	}
+	filter := bson.D{{Key: "coalesce_key", Value: j.CoalesceKey}, {Key: "last_at", Value: bson.D{{Key: "$gte", Value: now.Add(-gap)}}}}
+	names := bson.D{{Key: "$ifNull", Value: bson.A{"$names", bson.A{}}}}
+	// Only a pending job still takes the event into its message, and a repeated name (uncheck,
+	// recheck) only once; a claimed or sent job just keeps the run alive.
+	takes := bson.D{{Key: "$and", Value: bson.A{
+		bson.D{{Key: "$eq", Value: bson.A{"$status", models.PushJobPending}}},
+		bson.D{{Key: "$not", Value: bson.A{bson.D{{Key: "$in", Value: bson.A{name, names}}}}}},
+	}}}
+	update := mgo.Pipeline{{{Key: "$set", Value: bson.D{
+		{Key: "last_at", Value: bson.D{{Key: "$max", Value: bson.A{"$last_at", now}}}},
+		{Key: "count", Value: bson.D{{Key: "$cond", Value: bson.A{takes, bson.D{{Key: "$add", Value: bson.A{"$count", 1}}}, "$count"}}}},
+		{Key: "names", Value: bson.D{{Key: "$cond", Value: bson.A{
+			bson.D{{Key: "$and", Value: bson.A{takes, bson.D{{Key: "$lt", Value: bson.A{bson.D{{Key: "$size", Value: names}}, maxNames}}}}}},
+			bson.D{{Key: "$concatArrays", Value: bson.A{names, bson.A{name}}}},
+			names,
+		}}}},
+	}}}}
+	merge := func() (bool, error) {
+		res, err := r.jobs().UpdateOne(ctx, filter, update)
+		return err == nil && res.MatchedCount > 0, err
+	}
+	if ok, err := merge(); ok || err != nil {
+		return err
+	}
+	job := *j
+	if job.JobID == "" {
+		job.JobID = ids.NewID("pj")
+	}
+	job.Status, job.Attempts, job.Count, job.LastAt = models.PushJobPending, 0, 1, &now
+	job.Names = job.Names[:min(len(job.Names), 1)]
+	if _, err := r.jobs().InsertOne(ctx, &job); err != nil {
+		if mgo.IsDuplicateKeyError(err) {
+			// Another instance started the run first: merge into it.
+			_, err = merge()
+		}
+		return err
+	}
+	return nil
+}

@@ -4,9 +4,12 @@ import "time"
 
 // Push notification kinds. Each has its own switch in UserPreferences.
 const (
-	PushKindItemAdds  = "item_adds"
-	PushKindAutopilot = "autopilot"
-	PushKindTrip      = "trip"
+	PushKindItemAdds = "item_adds"
+	// PushKindItemChecks is "<person> is checking off …". It shares the "List activity" switch
+	// (UserPreferences.NotifyItemAdds) with adds.
+	PushKindItemChecks = "item_checks"
+	PushKindAutopilot  = "autopilot"
+	PushKindTrip       = "trip"
 )
 
 // Push job states.
@@ -55,7 +58,9 @@ type PushJob struct {
 	SendAfter  time.Time  `bson:"send_after"`
 	LeaseUntil *time.Time `bson:"lease_until,omitempty"`
 	Attempts   int        `bson:"attempts"`
-	CreatedAt  time.Time  `bson:"created_at"`
+	// LastAt is the latest event merged into a run job (check-offs); the run ends after a quiet gap.
+	LastAt    *time.Time `bson:"last_at,omitempty"`
+	CreatedAt time.Time  `bson:"created_at"`
 	// ExpireAt drives the TTL index: a done job is kept a week (it dedupes trip reminders), and
 	// a pending one that never sends is dropped after that too.
 	ExpireAt time.Time `bson:"expire_at"`

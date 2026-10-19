@@ -128,3 +128,58 @@ func TestPushJobsOnceAndRetry(t *testing.T) {
 		t.Fatalf("once job sent twice: %+v", got)
 	}
 }
+
+func runJob(name string, now time.Time) *models.PushJob {
+	return &models.PushJob{CoalesceKey: "check:r1:l1:u1", Kind: models.PushKindItemChecks, RoomID: "r1", ActorID: "u1", ListID: "l1",
+		URL: "/app/lists/l1", Names: []string{name}, Count: 1, SendAfter: now.Add(90 * time.Second), CreatedAt: now, ExpireAt: now.Add(7 * 24 * time.Hour)}
+}
+
+func TestPushRunsMergeDedupeAndEndAfterAGap(t *testing.T) {
+	r := pushRepo(t)
+	ctx := context.Background()
+	now := time.Now().UTC().Truncate(time.Millisecond)
+	gap := 2 * time.Hour
+	// Two instances start the same run at once; then a recheck of Milk counts once.
+	var wg sync.WaitGroup
+	for _, n := range []string{"Milk", "Eggs"} {
+		wg.Add(1)
+		go func(n string) {
+			defer wg.Done()
+			if err := r.EnqueueRun(ctx, runJob(n, now), gap, now); err != nil {
+				t.Error(err)
+			}
+		}(n)
+	}
+	wg.Wait()
+	for _, n := range []string{"Milk", "Bread"} {
+		if err := r.EnqueueRun(ctx, runJob(n, now.Add(time.Second)), gap, now.Add(time.Second)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	j, err := r.Claim(ctx, now.Add(2*time.Minute), time.Minute)
+	if err != nil || j == nil {
+		t.Fatalf("claim: %v %v", j, err)
+	}
+	if j.Count != 3 || len(j.Names) != 3 || j.LastAt == nil || !j.LastAt.Equal(now.Add(time.Second)) {
+		t.Fatalf("merged run: count=%d names=%v last=%v", j.Count, j.Names, j.LastAt)
+	}
+	_ = r.Finish(ctx, j.JobID, now.Add(time.Hour))
+
+	// Inside the gap after it was sent: silent, but the run stays open.
+	later := now.Add(time.Hour)
+	if err := r.EnqueueRun(ctx, runJob("Jam", later), gap, later); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := r.Claim(ctx, later.Add(time.Hour), time.Minute); got != nil {
+		t.Fatalf("a mid-run check-off made a job: %+v", got)
+	}
+	// Over the gap since the last check-off: a new run, a new job.
+	next := later.Add(gap + time.Minute)
+	if err := r.EnqueueRun(ctx, runJob("Rice", next), gap, next); err != nil {
+		t.Fatal(err)
+	}
+	j2, _ := r.Claim(ctx, next.Add(2*time.Minute), time.Minute)
+	if j2 == nil || j2.JobID == j.JobID || j2.Count != 1 || len(j2.Names) != 1 || j2.Names[0] != "Rice" {
+		t.Fatalf("new run: %+v", j2)
+	}
+}
