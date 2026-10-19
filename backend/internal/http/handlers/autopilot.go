@@ -91,7 +91,7 @@ func (h *AutopilotHandler) View(w http.ResponseWriter, r *http.Request) {
 		api.WriteJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
 		return
 	}
-	v, err := h.svc.View(r.Context(), u, chi.URLParam(r, "room_id"), chi.URLParam(r, "list_id"))
+	v, err := h.svc.View(r.Context(), u, chi.URLParam(r, "room_id"), chi.URLParam(r, "list_id"), r.URL.Query().Get("during"))
 	if err != nil {
 		api.WriteJSON(w, statusFromErr(err), map[string]string{"error": err.Error()})
 		return

@@ -162,7 +162,7 @@ func TestTickExpiresStaleActions(t *testing.T) {
 func TestViewNeverApplies(t *testing.T) {
 	r := assistHouse(t, 10*time.Hour)
 	ctx := context.Background()
-	v, err := r.svc.View(ctx, r.user, r.roomID, r.list)
+	v, err := r.svc.View(ctx, r.user, r.roomID, r.list, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -170,7 +170,7 @@ func TestViewNeverApplies(t *testing.T) {
 		t.Fatalf("view applied something: %+v", v)
 	}
 	r.tick()
-	v, _ = r.svc.View(ctx, r.user, r.roomID, r.list)
+	v, _ = r.svc.View(ctx, r.user, r.roomID, r.list, "")
 	if len(v.Applied) != 2 || v.Applied[0].Reason.Code != "every_days" || v.Applied[0].ItemID == "" {
 		t.Fatalf("applied: %+v", v.Applied)
 	}
@@ -188,7 +188,7 @@ func TestAssistAddsWhatWouldBeSuggested(t *testing.T) {
 	if n := r.tick(); n != 1 {
 		t.Fatalf("added %d, want the suggestion's thing", n)
 	}
-	v, err := r.svc.View(ctx, r.user, r.roomID, r.list)
+	v, err := r.svc.View(ctx, r.user, r.roomID, r.list, "")
 	if err != nil || len(v.Suggestions) != 0 || len(v.Applied) != 1 || v.Applied[0].Key != "yogurt" {
 		t.Fatalf("view: %+v %v", v, err)
 	}
@@ -198,7 +198,7 @@ func TestUndoMarksUndoneAndDismisses(t *testing.T) {
 	r := assistHouse(t, 10*time.Hour)
 	ctx := context.Background()
 	r.tick()
-	v, _ := r.svc.View(ctx, r.user, r.roomID, r.list)
+	v, _ := r.svc.View(ctx, r.user, r.roomID, r.list, "")
 	a := v.Applied[0]
 	if err := r.svc.Undo(ctx, r.user, r.roomID, r.list, a.ActionID); err != nil {
 		t.Fatal(err)

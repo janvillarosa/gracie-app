@@ -174,19 +174,28 @@ type AppliedView struct {
 // AutopilotView is GET .../autopilot: the house's mode, what autopilot applied to this list lately
 // (still wanted or bought), and what it suggests.
 type AutopilotView struct {
-	Mode        autopilot.Mode      `json:"mode"`
-	Features    []autopilot.Feature `json:"features"`
+	Mode     autopilot.Mode      `json:"mode"`
+	Features []autopilot.Feature `json:"features"`
+	// Stack is the slips this list has something to show, front to back: autopilot floats one at
+	// a time and the rest wait behind it (autopilot.SlipOrder).
+	Stack       []autopilot.Feature `json:"stack"`
+	UpNext      *UpNextView         `json:"up_next,omitempty"`
 	Applied     []AppliedView       `json:"applied"`
 	Suggestions []Suggestion        `json:"suggestions"`
 }
 
-// View reads the list's autopilot. It never applies anything.
-func (s *AutopilotService) View(ctx context.Context, user *models.User, roomID, listID string) (*AutopilotView, error) {
+// View reads the list's autopilot. It never applies anything. during "run" (mid-shop) widens the
+// suggestions to what comes due before the next run, as GET .../suggestions?during=run does.
+func (s *AutopilotService) View(ctx context.Context, user *models.User, roomID, listID, during string) (*AutopilotView, error) {
+	if !validDuring(during) {
+		return nil, derr.ErrBadRequest
+	}
 	room, err := s.checkList(ctx, user, roomID, listID)
 	if err != nil {
 		return nil, err
 	}
-	v := &AutopilotView{Mode: houseMode(room), Features: autopilot.Features(houseMode(room)), Applied: []AppliedView{}, Suggestions: []Suggestion{}}
+	mode := houseMode(room)
+	v := &AutopilotView{Mode: mode, Features: autopilot.Features(mode), Stack: []autopilot.Feature{}, Applied: []AppliedView{}, Suggestions: []Suggestion{}}
 	if s.actions != nil {
 		acts, err := s.actions.ListByList(ctx, listID, s.now().Add(-viewWindow))
 		if err != nil {
@@ -199,9 +208,13 @@ func (s *AutopilotService) View(ctx context.Context, user *models.User, roomID, 
 			v.Applied = append(v.Applied, AppliedView{ActionID: a.ActionID, ItemID: a.ItemID, Key: a.Key, State: a.State, RunAt: a.RunAt, Reason: a.Reason, Confidence: a.Confidence})
 		}
 	}
-	if v.Suggestions, err = s.Suggestions(ctx, user, roomID, listID, 3, ""); err != nil {
+	if v.Suggestions, err = s.Suggestions(ctx, user, roomID, listID, 3, during); err != nil {
 		return nil, err
 	}
+	if v.UpNext, err = s.upNext(ctx, room, roomID, listID); err != nil {
+		return nil, err
+	}
+	v.Stack = slipStack(mode, v)
 	return v, nil
 }
 
