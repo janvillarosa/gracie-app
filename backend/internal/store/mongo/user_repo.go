@@ -109,7 +109,8 @@ func (r *UserRepo) GetByAPIKeyLookup(ctx context.Context, lookup string) (*model
 }
 
 func (r *UserRepo) SetAPIKey(ctx context.Context, userID string, hash, lookup string, expiresAt *time.Time, updatedAt time.Time) error {
-	setDoc := bson.D{{Key: "api_key_hash", Value: hash}, {Key: "api_key_lookup", Value: lookup}, {Key: "updated_at", Value: updatedAt.UTC()}}
+	setDoc := bson.D{{Key: "api_key_hash", Value: hash}, {Key: "api_key_lookup", Value: lookup},
+		{Key: "api_key_issued_at", Value: updatedAt.UTC()}, {Key: "updated_at", Value: updatedAt.UTC()}}
 	if expiresAt != nil {
 		setDoc = append(setDoc, bson.E{Key: "api_key_expires_at", Value: expiresAt.UTC()})
 	}

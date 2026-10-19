@@ -148,6 +148,17 @@ func (s *TestModeService) UseNotify(n *NotifyService) {
 		},
 	})
 	s.Add(TestAction{
+		ID: "push.checks", Label: "Simulate a housemate checking items", TouchesHouse: true,
+		Description: "A made-up housemate checks off three items on your first list. One \"is checking off\" notification should arrive after the merge window.",
+		Run: func(ctx context.Context, u *models.User) (string, error) {
+			list, err := n.SimulateChecks(ctx, u)
+			if err != nil {
+				return "", err
+			}
+			return fmt.Sprintf("Queued three check-offs on %q. They go out as one notification in about %s.", list, n.Coalesce().Round(time.Second)), nil
+		},
+	})
+	s.Add(TestAction{
 		ID: "push.trip", Label: "Queue a trip reminder",
 		Description: "Queues a sample trip reminder for you alone. It follows your trip reminders switch and goes out with the next dispatch.",
 		Run: func(ctx context.Context, u *models.User) (string, error) {

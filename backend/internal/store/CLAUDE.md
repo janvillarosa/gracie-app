@@ -46,6 +46,9 @@ is the only implementation (uses `go.mongodb.org/mongo-driver`). See
   (unique `endpoint`; keys encrypted at rest) and the `push_jobs` outbox: unique `job_id`, a **partial unique
   index on `coalesce_key` where `status` is pending** (one pending job per key; later adds merge into it),
   `(status, send_after)` for `Claim`, TTL `expire_at_ttl`. `Claim` is a `findOneAndUpdate` with a lease.
+  `EnqueueRun` (check-off runs) matches the key's job with `last_at` within the gap and updates it with a
+  pipeline (dedupes names, counts only while pending); with none it inserts, and a duplicate-key race merges.
+  `users.api_key_issued_at` is set by `SetAPIKey`; push skips devices last refreshed before it.
   `users.preferences.notify_*` are the per-kind switches (nil = on).
 
 - `store.BackfillReader` (`store/mongo/backfill_reader.go`) is a read-only, batched walk over users,

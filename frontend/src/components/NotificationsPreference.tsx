@@ -10,7 +10,11 @@ import { IOS_INSTALL_STEPS } from '@lib/installPrompt'
 import { disablePush, enablePush, isPushOn, pushSupport, type PushSupport } from '@lib/push'
 
 const KINDS: { key: keyof NotificationPrefs; label: string; help: string }[] = [
-  { key: 'itemAdds', label: 'Housemates add things', help: 'One note for a few adds in a row.' },
+  {
+    key: 'itemAdds',
+    label: 'List activity',
+    help: 'When a housemate adds things or starts checking them off.',
+  },
   { key: 'autopilot', label: 'Autopilot adds things', help: 'When it fills a list for you.' },
   { key: 'tripReminders', label: 'Trip reminders', help: 'When a to-do or booking is due.' },
 ]

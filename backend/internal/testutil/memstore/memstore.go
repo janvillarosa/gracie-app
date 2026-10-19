@@ -113,7 +113,7 @@ func (r *UserRepo) GetByAPIKeyLookup(_ context.Context, lookup string) (*models.
 	}
 	return nil, derr.ErrUnauthorized
 }
-func (r *UserRepo) SetAPIKey(_ context.Context, userID string, hash, lookup string, _ *time.Time, updatedAt time.Time) error {
+func (r *UserRepo) SetAPIKey(_ context.Context, userID string, hash, lookup string, expiresAt *time.Time, updatedAt time.Time) error {
 	r.st.mu.Lock()
 	defer r.st.mu.Unlock()
 	u, ok := r.st.users[userID]
@@ -128,6 +128,12 @@ func (r *UserRepo) SetAPIKey(_ context.Context, userID string, hash, lookup stri
 		u.APIKeyLookup = lookup
 		r.st.byLookup[lookup] = userID
 	}
+	if expiresAt != nil {
+		e := *expiresAt
+		u.APIKeyExpiresAt = &e
+	}
+	issued := updatedAt
+	u.APIKeyIssuedAt = &issued
 	u.UpdatedAt = updatedAt
 	return nil
 }

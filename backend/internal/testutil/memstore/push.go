@@ -180,3 +180,37 @@ func (r *PushRepo) Jobs() []models.PushJob {
 	}
 	return out
 }
+
+func (r *PushRepo) EnqueueRun(_ context.Context, j *models.PushJob, gap time.Duration, now time.Time) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	name := ""
+	if len(j.Names) > 0 {
+		name = j.Names[0]
+	}
+	for _, x := range r.jobs {
+		if x.CoalesceKey != j.CoalesceKey || x.LastAt == nil || x.LastAt.Before(now.Add(-gap)) {
+			continue
+		}
+		if now.After(*x.LastAt) {
+			t := now
+			x.LastAt = &t
+		}
+		if x.Status == models.PushJobPending && !slices.Contains(x.Names, name) {
+			x.Count++
+			if len(x.Names) < pushMaxNames {
+				x.Names = append(x.Names, name)
+			}
+		}
+		return nil
+	}
+	cp := *j
+	if cp.JobID == "" {
+		cp.JobID = ids.NewID("pj")
+	}
+	t := now
+	cp.Status, cp.Attempts, cp.Count, cp.LastAt = models.PushJobPending, 0, 1, &t
+	cp.Names = slices.Clone(j.Names[:min(len(j.Names), 1)])
+	r.jobs = append(r.jobs, &cp)
+	return nil
+}

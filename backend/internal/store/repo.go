@@ -130,6 +130,11 @@ type PushJobRepository interface {
 	// inserts it. With once, a job with the key in any state (sent ones included) absorbs it, so
 	// the key is sent at most once while that job is kept.
 	Enqueue(ctx context.Context, j *models.PushJob, once bool) error
+	// EnqueueRun merges j into its key's run: the job whose last event (last_at) is within gap of
+	// now. A pending run job takes j's name (once, while it has room) and count; a run job already
+	// claimed or sent only records the event, so later events in a run are silent. With no run in
+	// the gap, j starts a new one.
+	EnqueueRun(ctx context.Context, j *models.PushJob, gap time.Duration, now time.Time) error
 	// Claim takes one due job: pending with send_after <= now, or sending with a lapsed lease.
 	// It sets status sending, the lease and attempts+1. It returns nil, nil when none is due.
 	Claim(ctx context.Context, now time.Time, lease time.Duration) (*models.PushJob, error)

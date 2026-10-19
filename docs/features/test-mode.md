@@ -49,6 +49,7 @@ On Railway, run it as a one-off command in the service shell with the same envir
 |---|---|---|
 | `push.test` | no | Pushes a sample to your own devices now (no outbox, no switches). |
 | `push.burst` | yes | A made-up housemate adds five items to the first list through the outbox; one merged notification follows after the merge window. |
+| `push.checks` | yes | A made-up housemate checks off three items on the first list; one "is checking off" notification follows after the merge window. Each tap is its own run, so it works every time. |
 | `push.trip` | no | Queues a sample trip reminder for you alone (it follows your trip switch). |
 | `push.dispatch` | no | Sends every due notification now. |
 | `autopilot.tick` | yes | Runs one assist pass for your house (it must be on assist mode). |

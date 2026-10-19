@@ -403,6 +403,9 @@ func (s *ListService) UpdateItem(ctx context.Context, user *models.User, roomID,
 		if *completed && latest.Source != "" && s.hooks != nil {
 			s.hooks.ItemChecked(ctx, user.UserID, latest)
 		}
+		if *completed && s.notifier != nil {
+			s.notifier.ItemChecked(ctx, user.UserID, latest)
+		}
 	}
 	if starred != nil && *starred != wasStarred {
 		name := "item.unstarred"

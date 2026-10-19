@@ -13,9 +13,11 @@ a new pair invalidates every device's subscription.
 | Kind (`PushKind*`) | When | Who | Switch |
 |---|---|---|---|
 | `item_adds` | A person adds items to a list. Adds by the same person to the same list merge for 90 s into one notification ("Ana added Milk, Eggs and 2 more"). | The rest of the house, never the actor. | `itemAdds` |
+| `item_checks` | A person starts checking items off a list: "Ana is checking off Milk, Eggs and 2 more". Once per *run*: the person's check-offs on that list with no quiet gap over 2 h. The first 90 s are merged and named; the rest of the run is silent. An uncheck never notifies, and a recheck is not counted twice. | The rest of the house, never the actor. | `itemAdds` (shared) |
 | `autopilot` | Assist mode added items (`CreateSystemItem` with source autopilot). One tick's adds merge. | The whole house. | `autopilot` |
 | `trip` | A timed to-do starts within the hour, or a booking within 24 h. Sent once per item and start time; sent again if the start moves. | The trip's travellers (all members when none are set). | `tripReminders` |
 
+The app shows `itemAdds` as one **List activity** switch covering adds and check-offs.
 All switches default on (`User.Notifies`). They live in `User.Preferences` (`notify_*`) and are
 read/written through `GET`/`PUT /me/notifications` (camelCase JSON, partial updates).
 
@@ -41,6 +43,15 @@ event -> NotifyService.enqueue -> push_jobs (Mongo outbox, coalesced by key)
 - **Delivery.** `Claim` is a `findOneAndUpdate` with a lease, so instances never double-send. A lapsed
   lease is retried. A 429/5xx/network failure retries with backoff up to 5 attempts; a retry may reach a
   device twice, and the notification `tag` makes the phone replace the first copy. 404/410 deletes the device.
+- **Check-off runs** use `EnqueueRun`: one job per `check:<room>:<list>:<actor>` whose `last_at` is within 2 h.
+  A pending run job takes new names (deduplicated, at most 5); a claimed or sent one only moves `last_at`, which
+  keeps the run open. No job in the gap starts a new run. Check-offs carry their own phone tag
+  (`list:<id>:checks`), so they never replace an unread add.
+- **Signed-in devices only.** A user whose key has expired gets nothing. Login rotates the key and records
+  `api_key_issued_at`; a device last refreshed before it (the app refreshes on every start) belongs to an older
+  login and is skipped, not deleted, so a login racing a dispatch can't drop the new device. Stale rows go when
+  that app reopens (it signs out and unsubscribes) or on a 404/410. One rotating key per user means effectively
+  one signed-in device; true multi-device needs per-device sessions.
 - **Trip reminders** use `once` jobs keyed `trip:todo:<id>:<start>` / `trip:booking:<id>:<start>`; a done job is
   kept 7 days (TTL on `expire_at`), which is what makes them send once.
 - **Wording happens at send time** from the stored names and count, so a merged job reads well. Payload is
