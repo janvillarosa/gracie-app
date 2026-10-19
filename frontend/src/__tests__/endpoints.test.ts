@@ -229,3 +229,20 @@ describe('endpoints — error predicates', () => {
     expect(api.isConflict(undefined)).toBe(false)
   })
 })
+
+describe('test mode endpoints', () => {
+  it('lists actions and runs one by id', async () => {
+    const seen: string[] = []
+    server.use(
+      http.get('/api/test/actions', () => Response.json({ actions: [] })),
+      http.post('/api/test/actions/:id', ({ params, request }) => {
+        seen.push(`${request.method} ${params.id}`)
+        return Response.json({ message: 'ok' })
+      }),
+    )
+    const { listTestActions, runTestAction } = await import('@api/endpoints')
+    expect(await listTestActions('k')).toEqual({ actions: [] })
+    expect(await runTestAction('k', 'push.test')).toEqual({ message: 'ok' })
+    expect(seen).toEqual(['POST push.test'])
+  })
+})

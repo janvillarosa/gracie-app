@@ -3589,6 +3589,9 @@ textarea.notes-textarea {
   color: var(--text);
   font-size: var(--t-meta);
 }
+.test-result {
+  color: var(--ink);
+}
 .notify-device {
   justify-items: start;
 }
