@@ -315,3 +315,89 @@ func TestProfileLearnsWhatARunLooksLike(t *testing.T) {
 		t.Fatalf("run shape: minutes %v items %v gap %v", c.RunMinutes, c.RunItems, c.RunGapSec)
 	}
 }
+
+// routeRuns builds one shopping run per day on list_1: every wording list is checked a minute
+// apart, in order. words[run] is that run's order.
+func routeRuns(words [][]string) []analytics.Event {
+	var evs []analytics.Event
+	start := time.Date(2026, 9, 1, 10, 0, 0, 0, ny)
+	for r, order := range words {
+		day := start.AddDate(0, 0, 7*r)
+		for i, w := range order {
+			id := fmt.Sprintf("rt%d_%d", r, i)
+			key := w
+			evs = append(evs, localEv(id, "item.checked", "mia", day.Add(time.Duration(i)*time.Minute), func(e *analytics.Event) {
+				inList(e)
+				e.Key = key
+			}))
+		}
+	}
+	return evs
+}
+
+func sameOrder(n int, order ...string) [][]string {
+	out := make([][]string, n)
+	for i := range out {
+		out[i] = order
+	}
+	return out
+}
+
+func TestHouseProfileLearnsRoute(t *testing.T) {
+	evs := routeRuns(sameOrder(6, "milk", "eggs", "bread", "apples", "rice"))
+	now := time.Date(2026, 11, 1, 9, 0, 0, 0, ny)
+	p := analytics.BuildProfile(fullRegistry(), "h:room_1", evs, now)
+	r := p.Containers["list:list_1"].Route
+	if r == nil || r.Runs != 6 {
+		t.Fatalf("route: %+v", r)
+	}
+	if got := r.Spots["bread"]; math.Abs(got-0.5) > 0.01 {
+		t.Fatalf("bread spot %v, want the middle (0.5): %+v", got, r.Spots)
+	}
+	if got := r.Spots["eggs"]; got <= r.Spots["milk"] || got >= r.Spots["bread"] {
+		t.Fatalf("eggs should sit between milk and bread: %+v", r.Spots)
+	}
+}
+
+func TestPersonProfileHasNoRoute(t *testing.T) {
+	evs := routeRuns(sameOrder(6, "milk", "eggs", "bread", "apples", "rice"))
+	now := time.Date(2026, 11, 1, 9, 0, 0, 0, ny)
+	p := analytics.BuildProfile(fullRegistry(), "u:mia", evs, now)
+	if c := p.Containers["list:list_1"]; c.Runs == 0 || c.Route != nil {
+		t.Fatalf("person route: %+v", c)
+	}
+}
+
+func TestRouteMergesLookAlikes(t *testing.T) {
+	var words [][]string
+	for i := 0; i < 6; i++ {
+		egg := "egg"
+		if i >= 3 {
+			egg = "eggs" // the newest wording
+		}
+		words = append(words, []string{"milk", egg, "bread", "apples", "rice"})
+	}
+	now := time.Date(2026, 11, 1, 9, 0, 0, 0, ny)
+	p := analytics.BuildProfile(fullRegistry(), "h:room_1", routeRuns(words), now)
+	r := p.Containers["list:list_1"].Route
+	if r == nil {
+		t.Fatal("no route")
+	}
+	if _, ok := r.Spots["eggs"]; !ok {
+		t.Fatalf("want one spot under the newest wording: %+v", r.Spots)
+	}
+	if _, ok := r.Spots["egg"]; ok {
+		t.Fatalf("old wording should be merged: %+v", r.Spots)
+	}
+}
+
+func TestRouteDedupesRepeatedChecks(t *testing.T) {
+	// "milk" checked twice in a run must not break the order: the first check wins.
+	words := sameOrder(6, "milk", "eggs", "milk", "bread", "apples")
+	now := time.Date(2026, 11, 1, 9, 0, 0, 0, ny)
+	p := analytics.BuildProfile(fullRegistry(), "h:room_1", routeRuns(words), now)
+	r := p.Containers["list:list_1"].Route
+	if r == nil || r.Spots["milk"] >= r.Spots["eggs"] {
+		t.Fatalf("route: %+v", r)
+	}
+}

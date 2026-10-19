@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/janvillarosa/gracie-app/backend/internal/analytics/predict"
+	"github.com/janvillarosa/gracie-app/backend/internal/parse"
 )
 
 // ProfileWindow is how much raw history a profile is computed from.
@@ -44,6 +45,9 @@ type ContainerRhythm struct {
 	RunMinutes float64 `bson:"run_minutes,omitempty" json:"run_minutes,omitempty"`
 	RunItems   float64 `bson:"run_items,omitempty" json:"run_items,omitempty"`
 	RunGapSec  float64 `bson:"run_gap_sec,omitempty" json:"run_gap_sec,omitempty"`
+	// Route is the house's usual walk through the shop, learned from check-off order. House
+	// profiles only; nil when the container has no runs.
+	Route *predict.Route `bson:"route,omitempty" json:"route,omitempty"`
 }
 
 // NextWindow is a predicted time range with a confidence between 0 and 1.
@@ -177,6 +181,11 @@ func BuildProfileAway(reg *Registry, id string, events []Event, now time.Time, a
 		if w, ok := predict.NextWindowAway(rhythm, runHOW, loc, now, away); ok {
 			cr.NextRun = &NextWindow{Start: w.Start, End: w.End, Confidence: w.Confidence}
 		}
+		if scope == "h" {
+			if r := predict.LearnRoute(runOrders(es, spans)); r.Runs > 0 {
+				cr.Route = &r
+			}
+		}
 		p.Containers[k] = cr
 	}
 	if len(p.Containers) == 0 {
@@ -187,6 +196,52 @@ func BuildProfileAway(reg *Registry, id string, events []Event, now time.Time, a
 	p.Assigned = assignedStats(reg, owner, scope, evs)
 	p.Engagement = engagement(reg, evs, loc, now)
 	return p
+}
+
+// runOrders turns a container's completions (time-ordered) into one RunOrder per span: the
+// distinct things in the order they were first checked. Look-alike names ("egg", "eggs") are
+// one thing, named by their most recent wording so every run speaks of it the same way.
+func runOrders(es []Event, spans []predict.RunSpan) []predict.RunOrder {
+	type cluster struct{ name string }
+	var clusters []*cluster
+	of := map[string]*cluster{} // key -> its cluster
+	for _, e := range es {
+		if e.Key == "" {
+			continue
+		}
+		c := of[e.Key]
+		if c == nil {
+			for _, o := range clusters {
+				if parse.Similar(o.name, e.Key) {
+					c = o
+					break
+				}
+			}
+			if c == nil {
+				c = &cluster{}
+				clusters = append(clusters, c)
+				c.name = e.Key
+			}
+			of[e.Key] = c
+		}
+		c.name = e.Key // events are oldest first, so the last one standing is the newest wording
+	}
+	out := make([]predict.RunOrder, 0, len(spans))
+	for _, sp := range spans {
+		var order predict.RunOrder
+		seen := map[*cluster]bool{}
+		for _, e := range es {
+			if e.OccurredAt.Before(sp.Start) || e.OccurredAt.After(sp.End) || e.Key == "" {
+				continue
+			}
+			if c := of[e.Key]; !seen[c] {
+				seen[c] = true
+				order = append(order, c.name)
+			}
+		}
+		out = append(out, order)
+	}
+	return out
 }
 
 // tripHabits reads days_to_start off trip events: per trip the earliest (largest) lead for
