@@ -86,6 +86,11 @@ Full behavior lives in [docs/features/](../docs/features/README.md). The rules y
   the run hint and assist. Every effect is in-app (`autopilot.Effect`); anything external needs a new mode and
   consent. Autopilot adds are `RoleAutomated`, never requests, and act as `system:autopilot`.
 
+- **Push notifications** ([notifications.md](../docs/features/notifications.md)): optional, off without the VAPID
+  keys. Notifications go through the `push_jobs` outbox (written after the domain write, never in its transaction,
+  never failing it) and are sent by `NotifyService.RunDispatch`. Only `push.ValidateEndpoint`-approved hosts may
+  be contacted, on subscribe and on send.
+
 ## Testing
 
 The fast path is in-process and honest:
