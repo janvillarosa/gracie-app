@@ -16,15 +16,14 @@ import (
 const actorTest = "system:test"
 
 // SendTest pushes a sample straight to the user's own devices: no outbox, no switches, nobody else.
-// It returns how many devices took it and how many the user has.
-func (s *NotifyService) SendTest(ctx context.Context, u *models.User) (sent, devices int, err error) {
+// It returns how each of the user's devices took it.
+func (s *NotifyService) SendTest(ctx context.Context, u *models.User) ([]DeviceResult, error) {
 	subs, err := s.subs.ListByUsers(ctx, []string{u.UserID})
 	if err != nil {
-		return 0, 0, err
+		return nil, err
 	}
 	msg := push.Message{Title: "Bauhouse", Body: "Test notification: it works.", URL: "/app", Tag: "test:" + u.UserID}
-	sent, _ = s.deliver(ctx, subs, msg, push.Topic(ids.NewID("test")))
-	return sent, len(subs), nil
+	return s.deliverEach(ctx, subs, msg, push.Topic(ids.NewID("test"))), nil
 }
 
 // SimulateAdds queues five adds from a made-up housemate to the house's first list, through the

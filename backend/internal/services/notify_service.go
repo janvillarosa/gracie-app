@@ -282,37 +282,81 @@ func (s *NotifyService) send(ctx context.Context, j *models.PushJob) (int, bool)
 	return s.deliver(ctx, devices, msg, push.Topic(j.JobID))
 }
 
+// DeviceResult is how one device took a message.
+type DeviceResult struct {
+	Service string // Apple, Google, ...
+	Status  int    // the push service's HTTP status; 0 when it could not be reached
+	Err     string
+	Removed bool // the device was dropped (the push service said it is gone, or its keys were unreadable)
+}
+
+func (r DeviceResult) ok() bool { return r.Err == "" && r.Status >= 200 && r.Status < 300 }
+
+// Describe words the result for a person: "Apple: refused our key (403)".
+func (r DeviceResult) Describe() string {
+	switch {
+	case r.ok():
+		return r.Service + ": ok"
+	case r.Err != "" && r.Status == 0:
+		return r.Service + ": " + r.Err
+	case r.Status == 401 || r.Status == 403:
+		return fmt.Sprintf("%s: refused our key (%d)", r.Service, r.Status)
+	case push.Gone(r.Status):
+		return fmt.Sprintf("%s: subscription expired, removed (%d)", r.Service, r.Status)
+	}
+	return fmt.Sprintf("%s: status %d", r.Service, r.Status)
+}
+
 // deliver pushes msg to every device and reports how many the push services accepted and whether
 // any asked to try later. Devices the push service says are gone are removed.
 func (s *NotifyService) deliver(ctx context.Context, devices []models.PushSubscription, msg push.Message, topic string) (int, bool) {
-	payload, _ := json.Marshal(msg)
 	sent, retry := 0, false
+	for _, r := range s.deliverEach(ctx, devices, msg, topic) {
+		switch {
+		case r.ok():
+			sent++
+		case r.Removed:
+		case r.Status == 0 || push.Retryable(r.Status):
+			retry = true
+		}
+	}
+	return sent, retry
+}
+
+// deliverEach sends to every device and reports each one's result.
+func (s *NotifyService) deliverEach(ctx context.Context, devices []models.PushSubscription, msg push.Message, topic string) []DeviceResult {
+	payload, _ := json.Marshal(msg)
+	out := make([]DeviceResult, 0, len(devices))
 	for _, d := range devices {
+		r := DeviceResult{Service: push.ServiceName(d.Endpoint)}
 		p, err1 := crypto.Decrypt(s.encKey, d.P256dhEnc)
 		a, err2 := crypto.Decrypt(s.encKey, d.AuthEnc)
 		if err1 != nil || err2 != nil {
 			log.Printf("push: device %s: keys unreadable, removing", d.SubID)
 			_ = s.subs.DeleteEndpoint(ctx, d.Endpoint)
+			r.Err, r.Removed = "keys unreadable, removed", true
+			out = append(out, r)
 			continue
 		}
 		status, err := s.sender.Send(ctx, push.Subscription{Endpoint: d.Endpoint, P256dh: string(p), Auth: string(a)},
 			payload, push.Options{Topic: topic, TTL: 24 * time.Hour})
+		r.Status = status
 		switch {
 		case err != nil:
-			log.Printf("push: send %s to device %s: %v", topic, d.SubID, err)
-			retry = true
+			log.Printf("push: send %s to %s device %s: %v", topic, r.Service, d.SubID, err)
+			r.Err = "could not reach the push service"
 		case push.Gone(status):
+			log.Printf("push: %s device %s is gone (%d), removed", r.Service, d.SubID, status)
 			_ = s.subs.DeleteEndpoint(ctx, d.Endpoint)
-		case push.Retryable(status):
-			retry = true
+			r.Removed = true
 		case status >= 200 && status < 300:
-			sent++
 			_ = s.subs.MarkOK(ctx, d.Endpoint, s.now().UTC())
-		default:
-			log.Printf("push: send %s to device %s: status %d", topic, d.SubID, status)
+		case !push.Retryable(status):
+			log.Printf("push: send %s to %s device %s: status %d", topic, r.Service, d.SubID, status)
 		}
+		out = append(out, r)
 	}
-	return sent, retry
+	return out
 }
 
 // message words the job. ok is false when there is nothing to say any more (the list is gone).
