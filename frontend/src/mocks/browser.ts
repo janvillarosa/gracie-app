@@ -279,7 +279,27 @@ export async function startMockTrips() {
       return new HttpResponse(null, { status: 204 })
     }),
     http.get('/api/rooms/:roomId/lists', () => HttpResponse.json(lists)),
-    http.get('/api/rooms/:roomId/pantry', () => HttpResponse.json([])),
+    // A few house staples so the add bar's slips show: "chick pea" and "bananna" find theirs, and
+    // Oat milk is already on the list.
+    http.get('/api/rooms/:roomId/pantry', () =>
+      HttpResponse.json(
+        [
+          ['Oat milk', 'Dairy', '2', 'L'],
+          ['Chickpeas', 'Pantry', '2', 'tin'],
+          ['Butter beans', 'Pantry', '1', 'tin'],
+          ['Bananas', 'Produce', '6', ''],
+          ['Broccoli', 'Produce', '', ''],
+        ].map(([description, category, quantity, unit], i) => ({
+          description,
+          category,
+          quantity,
+          unit,
+          times_added: 9 - i,
+          last_added_at: now,
+          common: false,
+        })),
+      ),
+    ),
     http.get('/api/rooms/:roomId/lists/:listId/items', ({ params, request }) => {
       const pack = params.listId === srv.listId
       const withDone = new URL(request.url).searchParams.get('include_completed') === 'true'
@@ -303,13 +323,18 @@ export async function startMockTrips() {
           .filter((r, i) => !rows[i].archived && (withDone || !r.completed)),
       )
     }),
-    // Checking off and Clear completed (groceries only), so a shopping run can be walked through.
+    // Checking off, a quantity bump from the add bar and Clear completed (groceries only), so a
+    // shopping run can be walked through.
     http.patch('/api/rooms/:roomId/lists/:listId/items/:itemId', async ({ params, request }) => {
-      const body = (await request.json().catch(() => ({}))) as { completed?: boolean }
+      const body = (await request.json().catch(() => ({}))) as {
+        completed?: boolean
+        quantity?: string
+      }
       const i = Number(String(params.itemId).replace('item_groc_', ''))
       const row = groceries[i]
       if (!row) return new HttpResponse(null, { status: 404 })
       if (body.completed !== undefined) row.completed = body.completed
+      if (body.quantity !== undefined) row.quantity = body.quantity
       return HttpResponse.json({
         ...row,
         item_id: params.itemId,

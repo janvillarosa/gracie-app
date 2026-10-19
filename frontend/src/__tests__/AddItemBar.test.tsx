@@ -81,6 +81,47 @@ describe('AddItemBar suggestions', () => {
     })
   })
 
+  it('says a slip is on the list and bumps that item instead of adding another', async () => {
+    const onCreate = vi.fn().mockResolvedValue(undefined)
+    const onBump = vi.fn().mockResolvedValue(undefined)
+    const milk = {
+      item_id: 'i1',
+      list_id: 'l1',
+      room_id: 'r1',
+      description: 'Basmati  Rice',
+      quantity: '2',
+      completed: false,
+      created_at: '2026-01-01T00:00:00Z',
+      updated_at: '2026-01-01T00:00:00Z',
+    }
+    render(<AddItemBar onCreate={onCreate} pantry={pantry} onList={[milk]} onBump={onBump} />)
+    const input = screen.getByRole('combobox')
+    await userEvent.type(input, 'bas')
+    const slip = await screen.findByRole('option', { name: /on list, 2/ })
+    await userEvent.click(slip)
+    expect(onBump).toHaveBeenCalledWith(milk, expect.objectContaining({ description: 'bas' }))
+    expect(onCreate).not.toHaveBeenCalled()
+    expect(input).toHaveValue('')
+  })
+
+  it('restores the text when a bump fails', async () => {
+    const onBump = vi.fn().mockRejectedValue(new Error('boom'))
+    const done = {
+      item_id: 'i2',
+      list_id: 'l1',
+      room_id: 'r1',
+      description: 'Bananas',
+      completed: true,
+      created_at: '2026-01-01T00:00:00Z',
+      updated_at: '2026-01-01T00:00:00Z',
+    }
+    render(<AddItemBar onCreate={vi.fn()} pantry={pantry} onList={[done]} onBump={onBump} />)
+    const input = screen.getByRole('combobox')
+    await userEvent.type(input, 'ban')
+    await userEvent.click(await screen.findByRole('option', { name: /checked off/ }))
+    await waitFor(() => expect(input).toHaveValue('ban'))
+  })
+
   it('never hijacks Enter: with no slip highlighted it adds exactly what was typed', async () => {
     const onCreate = vi.fn().mockResolvedValue(undefined)
     render(<AddItemBar onCreate={onCreate} pantry={pantry} />)
