@@ -263,4 +263,50 @@ describe('ListPage add bar', () => {
     await setup(listItems)
     expect(await screen.findByText(/^2 to get · updated/)).toBeInTheDocument()
   })
+
+  it('picking a slip for an item on the list bumps it instead of adding a row', async () => {
+    const at = new Date().toISOString()
+    const row = (item_id: string, description: string, extra = {}) => ({
+      item_id,
+      list_id: 'list-1',
+      room_id: 'room-1',
+      description,
+      completed: false,
+      created_at: at,
+      updated_at: at,
+      ...extra,
+    })
+    const { roomId, listId } = await setup([row('a', 'Chickpeas', { quantity: '1', unit: 'tin' })])
+    const patches: any[] = []
+    let created = 0
+    server.use(
+      http.get(`/api/rooms/${roomId}/pantry`, () =>
+        Response.json([
+          {
+            description: 'Chickpeas',
+            category: 'Pantry',
+            quantity: '1',
+            unit: 'tin',
+            times_added: 3,
+            last_added_at: at,
+            common: false,
+          },
+        ]),
+      ),
+      http.patch(`/api/rooms/${roomId}/lists/${listId}/items/a`, async ({ request }) => {
+        const body = await request.json()
+        patches.push(body)
+        return Response.json(row('a', 'Chickpeas', { quantity: '2', unit: 'tin' }))
+      }),
+      http.post(`/api/rooms/${roomId}/lists/${listId}/items`, () => {
+        created += 1
+        return Response.json(row('z', 'Chickpeas'))
+      }),
+    )
+    await screen.findByText('Chickpeas')
+    await userEvent.type(screen.getByRole('combobox'), 'chick pea')
+    await userEvent.click(await screen.findByRole('option', { name: /on list, 1 tin/ }))
+    await waitFor(() => expect(patches).toEqual([{ quantity: '2' }]))
+    expect(created).toBe(0)
+  })
 })

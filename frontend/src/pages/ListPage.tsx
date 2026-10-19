@@ -67,6 +67,7 @@ import {
 import { ListIconDisc } from '@components/IconDiscs'
 import { confettiAt } from '@lib/confetti'
 import { compactKey } from '@lib/itemKey'
+import { bumpQuantity } from '@lib/bumpQuantity'
 import { parseInput } from '@lib/parseInput'
 import { timeAgo } from '@lib/time'
 import { getCategoryClass } from '@lib/category'
@@ -270,6 +271,8 @@ export const ListPage: React.FC = () => {
 
   // Always derive items and sorted views before any early returns to keep hook order stable
   const items = itemsQuery.data ?? []
+  // Rows the server has confirmed; a placeholder can't be updated yet.
+  const settledItems = useMemo(() => items.filter((x) => !x.item_id.startsWith('tmp-')), [items])
 
   // Autopilot (assist mode): what it put on this list, why, and the once-per-run slip. Only asked
   // for when the House is on assist; a failure just means no marks' reasons and no slip.
@@ -707,6 +710,38 @@ export const ListPage: React.FC = () => {
       settle()
     }
   })
+
+  // Picking an add-bar slip for an item already on the list: a checked-off row comes back; an
+  // open one gets more (the typed amount when it fits, else one). A quantity that isn't a plain
+  // number ("a few") is left alone. Rejects so the bar can restore the text.
+  const onBumpItem = useStableCallback(
+    async (it: ListItem, typed: { quantity?: string; unit?: string }) => {
+      let patch: { completed?: boolean; quantity?: string }
+      if (it.completed) {
+        patch = { completed: false }
+      } else {
+        const next = bumpQuantity(it, typed)
+        if (next === null) {
+          show('Already on the list.')
+          return
+        }
+        patch = { quantity: next }
+      }
+      inFlight.current += 1
+      const rollback = await applyOptimistic((items) =>
+        items.map((x) => (x.item_id === it.item_id ? { ...x, ...patch } : x)),
+      )
+      try {
+        await updateListItem(apiKey!, roomId!, listId, it.item_id, patch)
+      } catch (e) {
+        rollback()
+        msgApi.error(errorMessage(e, 'Couldn’t update that item. Try again.'))
+        throw e
+      } finally {
+        settle()
+      }
+    },
+  )
 
   // Deleting is deferred for a few seconds so it can be undone: the row leaves the list at
   // once, the request is sent when the toast closes (or the page is left).
@@ -1208,6 +1243,8 @@ export const ListPage: React.FC = () => {
                         onCreate={onCreateItem}
                         pantry={pantryQuery.data}
                         listId={listId}
+                        onList={settledItems}
+                        onBump={onBumpItem}
                       />
                     </>
                   ),
