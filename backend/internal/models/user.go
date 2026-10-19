@@ -20,7 +20,10 @@ type User struct {
 	APIKeyLookup    string     `bson:"api_key_lookup,omitempty" json:"-"`
 	APIKeyExpiresAt *time.Time `bson:"api_key_expires_at,omitempty" json:"-"`
 	// TZ is the last-seen IANA zone (from the X-Timezone header), used by background jobs.
-	TZ          string          `bson:"tz,omitempty" json:"-"`
+	TZ string `bson:"tz,omitempty" json:"-"`
+	// TestAccount marks an account that may use test mode (internal/services TestModeService). It is
+	// set only by the operator command cmd/testaccount, never through the API.
+	TestAccount bool            `bson:"test_account,omitempty" json:"-"`
 	RoomID      *string         `bson:"room_id,omitempty" json:"room_id,omitempty"`
 	Preferences UserPreferences `bson:"preferences,omitempty" json:"preferences"`
 	CreatedAt   time.Time       `bson:"created_at" json:"created_at"`

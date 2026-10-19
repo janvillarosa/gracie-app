@@ -155,6 +155,23 @@ func (r *UserRepo) UpdatePreferences(ctx context.Context, userID string, prefs m
 	return nil
 }
 
+func (r *UserRepo) SetTestAccount(ctx context.Context, userID string, on bool, updatedAt time.Time) error {
+	op := bson.D{{Key: "$set", Value: bson.D{{Key: "updated_at", Value: updatedAt.UTC()}}}}
+	if on {
+		op = bson.D{{Key: "$set", Value: bson.D{{Key: "test_account", Value: true}, {Key: "updated_at", Value: updatedAt.UTC()}}}}
+	} else {
+		op = append(op, bson.E{Key: "$unset", Value: bson.D{{Key: "test_account", Value: ""}}})
+	}
+	res, err := r.col().UpdateOne(ctx, filterByUserID(userID), op)
+	if err != nil {
+		return err
+	}
+	if res.MatchedCount == 0 {
+		return derr.ErrNotFound
+	}
+	return nil
+}
+
 func (r *UserRepo) SetRoomID(ctx context.Context, userID string, roomID *string, updatedAt time.Time) error {
 	if roomID == nil || *roomID == "" {
 		_, err := r.col().UpdateOne(ctx, filterByUserID(userID), bson.D{{Key: "$unset", Value: bson.D{{Key: "room_id", Value: ""}}}, {Key: "$set", Value: bson.D{{Key: "updated_at", Value: updatedAt.UTC()}}}})

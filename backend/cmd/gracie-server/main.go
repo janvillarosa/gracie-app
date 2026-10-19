@@ -185,11 +185,20 @@ func main() {
 		log.Printf("push: disabled (VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY not set)")
 	}
 
+	// Test mode: a standing set of switches for accounts flagged with cmd/testaccount. It is inert
+	// (every route answers 404) until an account is granted.
+	testModeSvc := services.NewTestModeService(usersRepo, roomsRepo)
+	if notifySvc != nil {
+		testModeSvc.UseNotify(notifySvc)
+	}
+	testModeSvc.UseAutopilot(autopilotSvc)
+	testModeHandler := handlers.NewTestModeHandler(testModeSvc, ratelimit.New(1, 5))
+
 	tripHandler := handlers.NewTripHandler(tripSvc, ratelimit.New(cfg.TripsUserRPS, ratelimit.Burst(cfg.TripsUserRPS)))
 
 	eventsHandler := handlers.NewEventsHandler(recorder, analyticsReg, ratelimit.New(cfg.AnalyticsEventsRPS, ratelimit.Burst(cfg.AnalyticsEventsRPS)))
 
-	r := router.NewRouter(usersRepo, router.Handlers{Auth: authHandler, User: userHandler, Room: roomHandler, List: listHandler, Trip: tripHandler, Events: eventsHandler, Insights: insights, Autopilot: handlers.NewAutopilotHandler(autopilotSvc), Push: pushHandler})
+	r := router.NewRouter(usersRepo, router.Handlers{Auth: authHandler, User: userHandler, Room: roomHandler, List: listHandler, Trip: tripHandler, Events: eventsHandler, Insights: insights, Autopilot: handlers.NewAutopilotHandler(autopilotSvc), Push: pushHandler, TestMode: testModeHandler})
 
 	// Google Maps Platform allows storing coordinates for 30 days: purge stale ones at startup
 	// and daily (plus up to an hour of jitter so instances do not fire together).

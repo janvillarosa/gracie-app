@@ -13,4 +13,5 @@ must never be missed. Update the note in the same commit when you change a featu
 | Lists (add bar, rows, undo) | [lists.md](lists.md) | `2026-10-14-list-autocomplete-and-rows-brief.md` |
 | Landing page | [landing.md](landing.md) | `2026-10-15-landing-page-brief.md` |
 | Push notifications (Web Push, outbox, reminders) | [notifications.md](notifications.md) | plan `~/.claude/plans/push-notifications-for-bauhouse-compiled-heron.md` |
+| Test mode (test accounts, action switches) | [test-mode.md](test-mode.md) | none |
 | Categorization | [backend/CLAUDE.md](../../backend/CLAUDE.md) | `2026-06-28-embedding-categorization-design.md`, `2026-06-28-category-index-design.md` |

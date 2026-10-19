@@ -279,6 +279,12 @@ func (s *NotifyService) send(ctx context.Context, j *models.PushJob) (int, bool)
 	if err != nil {
 		return 0, true
 	}
+	return s.deliver(ctx, devices, msg, push.Topic(j.JobID))
+}
+
+// deliver pushes msg to every device and reports how many the push services accepted and whether
+// any asked to try later. Devices the push service says are gone are removed.
+func (s *NotifyService) deliver(ctx context.Context, devices []models.PushSubscription, msg push.Message, topic string) (int, bool) {
 	payload, _ := json.Marshal(msg)
 	sent, retry := 0, false
 	for _, d := range devices {
@@ -290,10 +296,10 @@ func (s *NotifyService) send(ctx context.Context, j *models.PushJob) (int, bool)
 			continue
 		}
 		status, err := s.sender.Send(ctx, push.Subscription{Endpoint: d.Endpoint, P256dh: string(p), Auth: string(a)},
-			payload, push.Options{Topic: push.Topic(j.JobID), TTL: 24 * time.Hour})
+			payload, push.Options{Topic: topic, TTL: 24 * time.Hour})
 		switch {
 		case err != nil:
-			log.Printf("push: send %s to device %s: %v", j.JobID, d.SubID, err)
+			log.Printf("push: send %s to device %s: %v", topic, d.SubID, err)
 			retry = true
 		case push.Gone(status):
 			_ = s.subs.DeleteEndpoint(ctx, d.Endpoint)
@@ -303,7 +309,7 @@ func (s *NotifyService) send(ctx context.Context, j *models.PushJob) (int, bool)
 			sent++
 			_ = s.subs.MarkOK(ctx, d.Endpoint, s.now().UTC())
 		default:
-			log.Printf("push: send %s to device %s: status %d", j.JobID, d.SubID, status)
+			log.Printf("push: send %s to device %s: status %d", topic, d.SubID, status)
 		}
 	}
 	return sent, retry

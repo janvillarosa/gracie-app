@@ -62,3 +62,32 @@ func TestMongoUserPreferencesNestedSetRoundTrip(t *testing.T) {
 		t.Fatalf("unknown user should be not found")
 	}
 }
+
+func TestMongoSetTestAccount(t *testing.T) {
+	c := connectOrSkip(t)
+	ur := NewUserRepo(c)
+	ctx := context.Background()
+	now := time.Now().UTC()
+	u := &models.User{UserID: "usr_" + randHex(4), Name: "A", CreatedAt: now, UpdatedAt: now}
+	if err := ur.Put(ctx, u); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := ur.GetByID(ctx, u.UserID); got.TestAccount {
+		t.Fatal("a new account must not be a test account")
+	}
+	if err := ur.SetTestAccount(ctx, u.UserID, true, now); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := ur.GetByID(ctx, u.UserID); !got.TestAccount {
+		t.Fatal("not granted")
+	}
+	if err := ur.SetTestAccount(ctx, u.UserID, false, now); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := ur.GetByID(ctx, u.UserID); got.TestAccount {
+		t.Fatal("not revoked")
+	}
+	if err := ur.SetTestAccount(ctx, "usr_missing", true, now); err == nil {
+		t.Fatal("unknown user should be not found")
+	}
+}

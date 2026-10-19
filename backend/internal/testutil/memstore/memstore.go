@@ -177,6 +177,17 @@ func (r *UserRepo) UpdatePreferences(_ context.Context, userID string, prefs mod
 	u.UpdatedAt = updatedAt
 	return nil
 }
+func (r *UserRepo) SetTestAccount(_ context.Context, userID string, on bool, updatedAt time.Time) error {
+	r.st.mu.Lock()
+	defer r.st.mu.Unlock()
+	u, ok := r.st.users[userID]
+	if !ok {
+		return derr.ErrNotFound
+	}
+	u.TestAccount = on
+	u.UpdatedAt = updatedAt
+	return nil
+}
 func (r *UserRepo) SetRoomID(_ context.Context, userID string, roomID *string, updatedAt time.Time) error {
 	r.st.mu.Lock()
 	defer r.st.mu.Unlock()

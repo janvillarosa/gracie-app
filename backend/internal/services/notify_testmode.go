@@ -1,0 +1,68 @@
+package services
+
+import (
+	"context"
+	"fmt"
+	"time"
+
+	derr "github.com/janvillarosa/gracie-app/backend/internal/errors"
+	"github.com/janvillarosa/gracie-app/backend/internal/models"
+	"github.com/janvillarosa/gracie-app/backend/internal/push"
+	"github.com/janvillarosa/gracie-app/backend/pkg/ids"
+)
+
+// actorTest is the actor of simulated adds. As a system:* actor it matches no person, so the whole
+// house, the tester included, hears about them.
+const actorTest = "system:test"
+
+// SendTest pushes a sample straight to the user's own devices: no outbox, no switches, nobody else.
+// It returns how many devices took it and how many the user has.
+func (s *NotifyService) SendTest(ctx context.Context, u *models.User) (sent, devices int, err error) {
+	subs, err := s.subs.ListByUsers(ctx, []string{u.UserID})
+	if err != nil {
+		return 0, 0, err
+	}
+	msg := push.Message{Title: "Bauhouse", Body: "Test notification: it works.", URL: "/app", Tag: "test:" + u.UserID}
+	sent, _ = s.deliver(ctx, subs, msg, push.Topic(ids.NewID("test")))
+	return sent, len(subs), nil
+}
+
+// SimulateAdds queues five adds from a made-up housemate to the house's first list, through the
+// real outbox, so the merge window and the wording can be watched. It returns the list's name.
+func (s *NotifyService) SimulateAdds(ctx context.Context, u *models.User) (string, error) {
+	if u.RoomID == nil {
+		return "", derr.ErrBadRequest
+	}
+	lists, err := s.lists.ListByRoom(ctx, *u.RoomID)
+	if err != nil {
+		return "", err
+	}
+	for _, l := range lists {
+		if l.IsDeleted {
+			continue
+		}
+		for i := 1; i <= 5; i++ {
+			s.ItemAdded(ctx, actorTest, &models.ListItem{RoomID: *u.RoomID, ListID: l.ListID, Description: fmt.Sprintf("Test item %d", i)})
+		}
+		return l.Name, nil
+	}
+	return "", fmt.Errorf("the house has no list to add to: %w", derr.ErrBadRequest)
+}
+
+// QueueTripSample queues a sample trip reminder for the user alone, due now. It goes through the
+// outbox and the user's trip switch like a real reminder.
+func (s *NotifyService) QueueTripSample(ctx context.Context, u *models.User) error {
+	if u.RoomID == nil {
+		return derr.ErrBadRequest
+	}
+	now := s.now().UTC()
+	s.enqueue(ctx, &models.PushJob{
+		CoalesceKey: fmt.Sprintf("test-trip:%s:%d", u.UserID, now.UnixNano()), Kind: models.PushKindTrip,
+		RoomID: *u.RoomID, Recipients: []string{u.UserID}, URL: "/app", Title: "Lisbon (test)",
+		Body: "Tram 28 at 10:30", SendAfter: now,
+	}, false)
+	return nil
+}
+
+// Coalesce is how long adds wait to merge.
+func (s *NotifyService) Coalesce() time.Duration { return s.coalesce }

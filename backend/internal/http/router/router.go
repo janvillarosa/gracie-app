@@ -27,6 +27,9 @@ type Handlers struct {
 	Autopilot *handlers.AutopilotHandler
 	// Push is optional: when nil (no VAPID keys), the push routes are not mounted.
 	Push *handlers.PushHandler
+	// TestMode is optional: when nil, the test mode routes are not mounted. They answer 404 to
+	// every account that is not a test account.
+	TestMode *handlers.TestModeHandler
 }
 
 // redactPlacesQuery keeps /places/* query strings (search text, exact coordinates) out of
@@ -133,6 +136,10 @@ func NewRouter(userFinder authmw.UserFinder, h Handlers) http.Handler {
 			ar.Delete("/push/subscriptions", h.Push.Unsubscribe)
 			ar.Get("/me/notifications", h.Push.Prefs)
 			ar.Put("/me/notifications", h.Push.SetPrefs)
+		}
+		if h.TestMode != nil {
+			ar.Get("/test/actions", h.TestMode.List)
+			ar.Post("/test/actions/{id}", h.TestMode.Run)
 		}
 		if h.Events != nil {
 			ar.Post("/events", h.Events.Ingest)

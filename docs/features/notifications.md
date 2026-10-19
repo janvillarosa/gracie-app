@@ -72,6 +72,11 @@ event -> NotifyService.enqueue -> push_jobs (Mongo outbox, coalesced by key)
 `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (a `mailto:`), `PUSH_DISPATCH_EVERY` (15s),
 `PUSH_COALESCE` (90s), `PUSH_REMIND_EVERY` (15m).
 
+## Trying it in production
+
+Grant yourself test mode (see [test-mode.md](test-mode.md)), turn on notifications on your phone, then use
+the Test mode panel in Account settings: "Send me a test push", "Simulate five adds", "Run the dispatcher now".
+
 ## Code map
 
 `internal/push` (sender, endpoint validation) · `services/notify_service.go` (devices, switches, outbox,

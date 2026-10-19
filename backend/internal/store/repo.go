@@ -23,6 +23,8 @@ type UserRepository interface {
 	UpdateTZ(ctx context.Context, userID string, tz string) error
 	// UpdatePreferences sets only the non-nil preference fields (nested $set), leaving the rest untouched.
 	UpdatePreferences(ctx context.Context, userID string, prefs models.UserPreferences, updatedAt time.Time) error
+	// SetTestAccount turns test mode on or off for the account (operator command only).
+	SetTestAccount(ctx context.Context, userID string, on bool, updatedAt time.Time) error
 	SetRoomID(ctx context.Context, userID string, roomID *string, updatedAt time.Time) error
 	UpdateUsername(ctx context.Context, userID string, username string, updatedAt time.Time) error
 	UpdatePasswordEnc(ctx context.Context, userID string, enc string, updatedAt time.Time) error

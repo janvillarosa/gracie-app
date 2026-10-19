@@ -71,6 +71,27 @@ func (s *AutopilotService) TickOnce(ctx context.Context) (int, error) {
 	return added, nil
 }
 
+// ErrAutopilotUnavailable is returned when the server cannot run autopilot at all (analytics or the
+// operator switch is off).
+var ErrAutopilotUnavailable = errors.New("autopilot is not running on this server")
+
+// TickRoom runs one assist pass for a single house, for test mode. It takes no lease: the unique
+// action key keeps it exact next to the ticker. It returns how many items it added.
+func (s *AutopilotService) TickRoom(ctx context.Context, roomID string) (int, error) {
+	if !s.enabled() || s.actions == nil || s.listSvc == nil {
+		return 0, ErrAutopilotUnavailable
+	}
+	now := s.now().UTC()
+	n, err := s.tickHouse(ctx, roomID, now)
+	if err != nil {
+		return n, err
+	}
+	if err := s.expire(ctx, roomID, now); err != nil {
+		log.Printf("autopilot: expire house %s: %v", roomID, err)
+	}
+	return n, nil
+}
+
 func (s *AutopilotService) tickHouse(ctx context.Context, roomID string, now time.Time) (int, error) {
 	room, err := s.rooms.GetByID(ctx, roomID)
 	if err != nil {

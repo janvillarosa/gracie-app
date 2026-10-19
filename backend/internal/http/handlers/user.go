@@ -55,14 +55,15 @@ func (h *UserHandler) GetMe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	respUser := map[string]interface{}{
-		"user_id":     u.UserID,
-		"name":        u.Name,
-		"username":    u.Username,
-		"room_id":     u.RoomID,
-		"created_at":  u.CreatedAt,
-		"updated_at":  u.UpdatedAt,
-		"avatar_key":  ids.DeriveAvatarKey(u.UserID, h.AvatarSalt),
-		"preferences": map[string]interface{}{"trips_show_next_stop": u.TripsShowNextStop()},
+		"user_id":      u.UserID,
+		"name":         u.Name,
+		"username":     u.Username,
+		"room_id":      u.RoomID,
+		"created_at":   u.CreatedAt,
+		"updated_at":   u.UpdatedAt,
+		"avatar_key":   ids.DeriveAvatarKey(u.UserID, h.AvatarSalt),
+		"preferences":  map[string]interface{}{"trips_show_next_stop": u.TripsShowNextStop()},
+		"test_account": u.TestAccount,
 	}
 	api.WriteJSON(w, http.StatusOK, respUser)
 }
