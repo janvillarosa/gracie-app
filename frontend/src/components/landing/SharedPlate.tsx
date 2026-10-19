@@ -139,13 +139,13 @@ export const SharedPlate: React.FC = () => {
         <SetWords
           id={`${base}-h`}
           className="ld-h2"
-          lines={['Lists for', 'the house.']}
-          accent={{ word: 'house', tone: 'red' }}
+          lines={['Lists that sort', 'themselves.']}
+          accent={{ word: 'themselves', tone: 'red' }}
         />
         <p className="ld-body" data-reveal style={{ '--i': 1 } as React.CSSProperties}>
-          Type “oat milk” and it goes under Dairy on its own. After two letters Bauhouse suggests
-          what your house buys every week, so you rarely type a whole word. Everyone at home adds to
-          the same list.
+          Type “oat milk” and it goes under Dairy on its own. After two letters Bauhouse finishes
+          the word with what your House buys, so you rarely type a whole one. Everyone at home adds
+          to the same list, and your phone tells you when someone starts the shop.
         </p>
       </div>
     </section>

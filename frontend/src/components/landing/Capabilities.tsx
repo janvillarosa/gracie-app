@@ -64,9 +64,9 @@ const TripSheet: React.FC = () => (
           <figcaption>Santa Apolónia, where Saturday’s 09:09 to Porto leaves from.</figcaption>
         </figure>
         <p className="ld-capsheet-text">
-          On the trip it’s the other way round: less planning, just what’s next. Whoever booked the
-          train types it in once, code included. At the check-in desk anyone in the House can pull
-          it up, instead of waiting on the one person with the email.
+          On the trip it’s the other way round. Your phone shows what’s next and not much else.
+          Whoever booked the train types it in once, code included. At the check-in desk anyone in
+          the House can pull it up, instead of waiting on the one person with the email.
         </p>
       </div>
       <div className="ld-device-stage is-phone" data-reveal>

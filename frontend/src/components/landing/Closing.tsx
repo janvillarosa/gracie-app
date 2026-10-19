@@ -51,8 +51,8 @@ export const FreeReceipt: React.FC = () => (
         accent={{ word: 'nothing', tone: 'mark' }}
       />
       <p className="ld-body" data-reveal style={{ '--i': 1 } as React.CSSProperties}>
-        There are no ads, there’s no paid plan waiting down the line, and you won’t need a card. Add
-        everyone you live with and make as many lists and trips as you want.
+        Bauhouse has no ads and no paid plan waiting down the line, and signing up doesn’t ask for a
+        card. Add everyone you live with and make as many lists and trips as you like.
       </p>
       <InstallLine />
       <TransitionLink
