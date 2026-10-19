@@ -65,7 +65,8 @@ the analytics aggregates and the live list; the only state is `Room.SuggestionsO
 
 _Frontend paths are relative to `frontend/src/`._
 
-`ListPage` asks `GET /rooms/{id}/lists/{list}/suggestions?limit=1` and shows the answer as one
+The suggestion slip is one member of autopilot's slip stack (`SlipStack`): when Up next or the assist slip has
+something to show it is in front and the suggestion waits behind it. `ListPage` asks `GET /rooms/{id}/lists/{list}/suggestions?limit=1` and shows the answer as one
 `SuggestionStack` row above the items: a paper slip (`--slip-rest`, not a lift: it lies on the list's sheet) with the item, "You add it weekly", a yellow Add (this
 page's one key; a round plus at 400px and narrower, `NARROW_SLIP`, so the name keeps the room; the name wraps to two lines before it is cut) and a round "not now" X. Never inside the list or the add bar. Add goes through `onCreateItem`
 with `source: 'suggestion'`; Ignore posts the key. Both pop the slip at once and the server is asked for the

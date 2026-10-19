@@ -28,6 +28,10 @@ _Frontend paths are relative to `frontend/src/`._
 
 ## Autopilot on a list
 
+Autopilot floats one slip at a time (`SlipStack`): while shopping, **Up next** is in front and the suggestion
+slip or the "Added 3" slip wait behind it until the person puts it away with the round ✕. See
+[autopilot.md](autopilot.md#up-next-the-usual-route-through-the-shop).
+
 In assist mode autopilot puts the usual things on the list before the shop: those rows carry the autopilot
 mark and a reason, and a slip says what was added for which run, with Undo all. Swipe-deleting an autopilot
 row that was not bought counts as a miss. See [autopilot.md](autopilot.md).
