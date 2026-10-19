@@ -157,7 +157,7 @@ func (s *AutopilotService) Suggestions(ctx context.Context, user *models.User, r
 	out := []Suggestion{}
 	mode := houseMode(room)
 	// The modes do not mix: on assist, what would be suggested is added instead (by the ticker).
-	if !s.enabled() || mode != autopilot.ModeSuggest {
+	if !s.enabled() || !autopilot.Has(mode, autopilot.FeatureSuggestions) {
 		return out, nil
 	}
 	h := autopilot.HorizonNow

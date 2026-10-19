@@ -3,6 +3,7 @@ package handlers_test
 import (
 	"encoding/json"
 	"net/http"
+	"slices"
 	"testing"
 )
 
@@ -62,5 +63,31 @@ func TestAutopilotModeSetting(t *testing.T) {
 	f.do(http.MethodPut, "/rooms/settings", `{"suggestions_off":false}`)
 	if got := f.modeOf(t); got.AutopilotMode != "assist" {
 		t.Fatalf("assist kept: %+v", got)
+	}
+}
+
+func TestAutopilotFeaturesOnRoomPayload(t *testing.T) {
+	f := newTripFixture(t, nil, nil)
+	features := func() []string {
+		rec := f.do(http.MethodGet, "/rooms/me", "")
+		var v struct {
+			Features []string `json:"autopilot_features"`
+		}
+		if err := json.Unmarshal(rec.Body.Bytes(), &v); err != nil {
+			t.Fatal(err)
+		}
+		if v.Features == nil {
+			t.Fatalf("autopilot_features missing: %s", rec.Body)
+		}
+		return v.Features
+	}
+	if got := features(); !slices.Equal(got, []string{"run_hint", "suggestions", "up_next"}) {
+		t.Fatalf("suggest: %v", got)
+	}
+	if rec := f.do(http.MethodPut, "/rooms/settings", `{"autopilot_mode":"off"}`); rec.Code != http.StatusOK {
+		t.Fatalf("set off: %d", rec.Code)
+	}
+	if got := features(); len(got) != 0 {
+		t.Fatalf("off: %v", got)
 	}
 }

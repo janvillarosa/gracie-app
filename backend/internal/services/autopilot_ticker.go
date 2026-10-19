@@ -53,9 +53,13 @@ func (s *AutopilotService) TickOnce(ctx context.Context) (int, error) {
 	if err != nil || !ok {
 		return 0, err
 	}
-	rooms, err := s.rooms.ListIDsByAutopilotMode(ctx, string(autopilot.ModeAssist), autopilotHouseScan)
-	if err != nil {
-		return 0, err
+	var rooms []string
+	for _, m := range autopilot.Tiers[autopilot.FeatureAutoAdd] {
+		ids, err := s.rooms.ListIDsByAutopilotMode(ctx, string(m), autopilotHouseScan)
+		if err != nil {
+			return 0, err
+		}
+		rooms = append(rooms, ids...)
 	}
 	added := 0
 	for _, roomID := range rooms {
@@ -77,7 +81,7 @@ func (s *AutopilotService) tickHouse(ctx context.Context, roomID string, now tim
 		return 0, err
 	}
 	// Re-read per house: a switch away from assist stops it at once.
-	if houseMode(room) != autopilot.ModeAssist {
+	if !autopilot.Has(houseMode(room), autopilot.FeatureAutoAdd) {
 		return 0, nil
 	}
 	lists, err := s.lists.ListByRoom(ctx, roomID)
@@ -170,9 +174,10 @@ type AppliedView struct {
 // AutopilotView is GET .../autopilot: the house's mode, what autopilot applied to this list lately
 // (still wanted or bought), and what it suggests.
 type AutopilotView struct {
-	Mode        autopilot.Mode `json:"mode"`
-	Applied     []AppliedView  `json:"applied"`
-	Suggestions []Suggestion   `json:"suggestions"`
+	Mode        autopilot.Mode      `json:"mode"`
+	Features    []autopilot.Feature `json:"features"`
+	Applied     []AppliedView       `json:"applied"`
+	Suggestions []Suggestion        `json:"suggestions"`
 }
 
 // View reads the list's autopilot. It never applies anything.
@@ -181,7 +186,7 @@ func (s *AutopilotService) View(ctx context.Context, user *models.User, roomID, 
 	if err != nil {
 		return nil, err
 	}
-	v := &AutopilotView{Mode: houseMode(room), Applied: []AppliedView{}, Suggestions: []Suggestion{}}
+	v := &AutopilotView{Mode: houseMode(room), Features: autopilot.Features(houseMode(room)), Applied: []AppliedView{}, Suggestions: []Suggestion{}}
 	if s.actions != nil {
 		acts, err := s.actions.ListByList(ctx, listID, s.now().Add(-viewWindow))
 		if err != nil {
