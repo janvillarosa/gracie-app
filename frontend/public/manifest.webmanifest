@@ -1,6 +1,12 @@
 {
+  "id": "/",
   "name": "Bauhouse",
   "short_name": "Bauhouse",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "theme_color": "#eaeaea",
+  "background_color": "#ffd417",
   "icons": [
     {
       "src": "/web-app-manifest-192x192.png",
@@ -14,8 +20,5 @@
       "type": "image/png",
       "purpose": "maskable"
     }
-  ],
-  "theme_color": "#eaeaea",
-  "background_color": "#ffd417",
-  "display": "standalone"
+  ]
 }

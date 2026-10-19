@@ -10,6 +10,12 @@ type InstallPromptEvent = Event & {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
 }
 
+/** Adding Bauhouse to the Home Screen by hand, on an iPhone or iPad (Safari has no install API). */
+export const IOS_INSTALL_STEPS = [
+  'Tap Share in Safari’s toolbar.',
+  'Choose Add to Home Screen.',
+] as const
+
 /** How this browser can put Bauhouse on the home screen: it already has (`installed`), from our
  *  button (`prompt`), by hand from Safari's Share menu (`ios`), or we can't tell (`browser`). */
 export type InstallWay = 'installed' | 'prompt' | 'ios' | 'browser'
