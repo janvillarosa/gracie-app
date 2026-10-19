@@ -154,7 +154,33 @@ export async function startMockTrips() {
     },
   ]
   const spent = new Set<string>()
+  // Push: the mock keeps prefs and subscriptions in memory. The key is a valid P-256 point, so a
+  // real browser can subscribe with it (pushes need the real server).
+  let notifyPrefs = { itemAdds: true, autopilot: true, tripReminders: true }
+  const pushSubs = new Map<string, unknown>()
   const handlers = [
+    http.get('/api/push/key', () =>
+      HttpResponse.json({
+        publicKey:
+          'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U',
+      }),
+    ),
+    http.put('/api/push/subscriptions', async ({ request }) => {
+      const body = (await request.json().catch(() => null)) as { endpoint?: string } | null
+      if (!body?.endpoint) return HttpResponse.json({ error: 'endpoint required' }, { status: 400 })
+      pushSubs.set(body.endpoint, body)
+      return new HttpResponse(null, { status: 204 })
+    }),
+    http.delete('/api/push/subscriptions', async ({ request }) => {
+      const body = (await request.json().catch(() => null)) as { endpoint?: string } | null
+      if (body?.endpoint) pushSubs.delete(body.endpoint)
+      return new HttpResponse(null, { status: 204 })
+    }),
+    http.get('/api/me/notifications', () => HttpResponse.json(notifyPrefs)),
+    http.put('/api/me/notifications', async ({ request }) => {
+      notifyPrefs = { ...notifyPrefs, ...((await request.json().catch(() => ({}))) as object) }
+      return new HttpResponse(null, { status: 204 })
+    }),
     ...tripHandlers(srv, { latencyMs: 80 }),
     http.get('/api/me', () => HttpResponse.json(user())),
     http.put('/api/me', async ({ request }) => {

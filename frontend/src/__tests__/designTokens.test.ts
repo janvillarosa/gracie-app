@@ -190,7 +190,7 @@ describe('the desk under the browser bars', () => {
     expect(tone).toBeDefined()
     const html = read(join(SRC, '..', 'index.html'))
     expect(html).toContain(`<meta name="theme-color" content="${tone}" />`)
-    const manifest = JSON.parse(read(join(SRC, 'assets', 'site.webmanifest')))
+    const manifest = JSON.parse(read(join(SRC, '..', 'public', 'manifest.webmanifest')))
     expect(manifest.theme_color.toLowerCase()).toBe(tone?.toLowerCase())
   })
 })

@@ -3,8 +3,21 @@
   "installCommand": "pnpm install",
   "buildCommand": "pnpm build",
   "outputDirectory": "dist",
+  "headers": [
+    {
+      "source": "/sw.js",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache" },
+        { "key": "Content-Type", "value": "application/javascript; charset=utf-8" }
+      ]
+    },
+    {
+      "source": "/manifest.webmanifest",
+      "headers": [{ "key": "Content-Type", "value": "application/manifest+json" }]
+    }
+  ],
   "rewrites": [
     { "source": "/api/:path*", "destination": "https://gracie-app-production.up.railway.app/:path*" },
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/((?!sw\\.js$|manifest\\.webmanifest$).*)", "destination": "/index.html" }
   ]
 }

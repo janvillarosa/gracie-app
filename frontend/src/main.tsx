@@ -12,6 +12,7 @@ import './styles.css'
 import { setupPWAAssets } from '@lib/pwaAssets'
 import { listenForInstallPrompt } from '@lib/installPrompt'
 import { initMotion } from '@lib/motion'
+import { registerServiceWorker } from '@lib/push'
 
 // Hoisted so the theme object keeps a stable identity across renders.
 const antdThemeConfig = {
@@ -85,6 +86,8 @@ async function boot() {
     const { startMockTrips } = await import('./mocks/browser')
     await startMockTrips()
   }
+  // The push worker (public/sw.js); skipped in mock mode, where MSW's worker holds the scope.
+  void registerServiceWorker()
   mount()
 }
 
