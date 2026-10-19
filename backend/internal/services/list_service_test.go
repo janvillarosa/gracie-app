@@ -92,7 +92,7 @@ func TestGetPantryRanksHouseHistoryAndSeedsCommon(t *testing.T) {
 	cu, _ := us.CreateUserWithSoloRoom(ctx, "A")
 	roomID := *cu.User.RoomID
 	l, _ := ls.CreateList(ctx, cu.User, roomID, "Groceries", "", "")
-	for _, d := range []string{"Oat milk", "oat  milk", "Bananas", "Oat milk"} {
+	for _, d := range []string{"Oat milk", "oat  milk", "Bananas", "Oat milk", "Egg"} {
 		if _, err := ls.CreateItem(ctx, cu.User, roomID, l.ListID, d, "", "", ""); err != nil {
 			t.Fatalf("create %q: %v", d, err)
 		}
@@ -109,9 +109,44 @@ func TestGetPantryRanksHouseHistoryAndSeedsCommon(t *testing.T) {
 		t.Fatalf("sparse house should be padded with common items")
 	}
 	for _, p := range got {
-		if p.Common && (p.Description == "Bananas" || p.Description == "Oat milk") {
+		if p.Common && (p.Description == "Bananas" || p.Description == "Oat milk" || pantryKey(p.Description) == "egg") {
 			t.Fatalf("common set duplicated a house item: %+v", p)
 		}
+	}
+}
+
+func TestPantryMergesSpellingVariants(t *testing.T) {
+	base := time.Date(2026, 10, 1, 9, 0, 0, 0, time.UTC)
+	descs := []string{"Butterbean", "Chickpeas", "Butter beans", "chick peas", "Butter  beans", "butter bean", "Chickpeas"}
+	items := make([]models.ListItem, len(descs))
+	for i, d := range descs {
+		items[i] = models.ListItem{Description: d, Category: "Pantry", Quantity: "1", Unit: "tin", CreatedAt: base.Add(-time.Duration(i) * time.Hour)}
+	}
+	byKey, order := pantryByKey(items)
+	if len(order) != 2 {
+		t.Fatalf("want 2 merged entries, got %v", order)
+	}
+	beans, peas := byKey["butterbean"], byKey["chickpea"]
+	if beans == nil || beans.TimesAdded != 4 || beans.Description != "Butter beans" {
+		t.Fatalf("butter beans: most used spelling, all adds counted: %+v", beans)
+	}
+	if peas == nil || peas.TimesAdded != 3 || peas.Description != "Chickpeas" {
+		t.Fatalf("chickpeas: %+v", peas)
+	}
+	if !beans.LastAddedAt.Equal(base) || beans.Quantity != "1" || beans.Unit != "tin" {
+		t.Fatalf("newest add and usual quantity span the group: %+v", beans)
+	}
+}
+
+func TestPantrySpellingTieGoesToNewest(t *testing.T) {
+	base := time.Date(2026, 10, 1, 9, 0, 0, 0, time.UTC)
+	items := []models.ListItem{
+		{Description: "Chick peas", CreatedAt: base},
+		{Description: "Chickpeas", CreatedAt: base.Add(-time.Hour)},
+	}
+	byKey, _ := pantryByKey(items)
+	if got := byKey["chickpea"].Description; got != "Chick peas" {
+		t.Fatalf("tie should go to the newest spelling, got %q", got)
 	}
 }
 

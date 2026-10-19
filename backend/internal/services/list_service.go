@@ -2,7 +2,9 @@ package services
 
 import (
 	"context"
+	"slices"
 	"sort"
+	"strings"
 	"time"
 	"unicode"
 	"unicode/utf8"
@@ -449,28 +451,38 @@ const pantrySeedThreshold = 60
 // usualQtyWindow is how many of an item's latest adds decide its usual quantity.
 const usualQtyWindow = 10
 
-// pantryByKey groups items (newest first, as ListByRoom returns them) by normalized key, so
-// the first sighting of a key carries its most recent description and category. Quantity and
-// unit are the usual pair: the most common among the latest usualQtyWindow adds, ties to the
-// most recent (an add without a quantity counts too, so "milk" typed bare stays bare). order
-// lists keys in first-seen order.
+// pantryKey is how the pantry tells two adds are the same thing: spacing, hyphens and simple
+// plurals are folded, so "Chick peas", "Chickpeas" and "chickpea" share one entry.
+func pantryKey(description string) string {
+	return parse.CompactKey(parse.NormalizeKey(description))
+}
+
+// pantryByKey groups items by pantryKey, newest add first (the store sorts by last update, so
+// it re-sorts by creation). The entry
+// is named with the spelling the house uses most (ties to the most recent) and carries the most
+// recent category. Quantity and unit are the usual pair: the most common among the latest
+// usualQtyWindow adds, ties to the most recent (an add without a quantity counts too, so "milk"
+// typed bare stays bare). order lists keys in first-seen order.
 func pantryByKey(items []models.ListItem) (byKey map[string]*PantryItem, order []string) {
 	byKey = make(map[string]*PantryItem)
 	recent := make(map[string][][2]string) // key -> latest (quantity, unit) pairs, newest first
+	names := make(map[string][]string)     // key -> descriptions, newest first
+	items = slices.Clone(items)
+	sort.SliceStable(items, func(i, j int) bool { return items[i].CreatedAt.After(items[j].CreatedAt) })
 	for _, it := range items {
-		key := parse.NormalizeKey(it.Description)
+		key := pantryKey(it.Description)
 		if key == "" {
 			continue
 		}
 		if len(recent[key]) < usualQtyWindow {
 			recent[key] = append(recent[key], [2]string{it.Quantity, it.Unit})
 		}
+		names[key] = append(names[key], strings.Join(strings.Fields(it.Description), " "))
 		if p, ok := byKey[key]; ok {
 			p.TimesAdded++
 			continue
 		}
 		byKey[key] = &PantryItem{
-			Description: it.Description,
 			Category:    it.Category,
 			TimesAdded:  1,
 			LastAddedAt: it.CreatedAt,
@@ -481,13 +493,16 @@ func pantryByKey(items []models.ListItem) (byKey map[string]*PantryItem, order [
 		usual := mostCommon(pairs)
 		byKey[key].Quantity, byKey[key].Unit = usual[0], usual[1]
 	}
+	for key, ns := range names {
+		byKey[key].Description = mostCommon(ns)
+	}
 	return byKey, order
 }
 
-// mostCommon returns the pair seen most often; on a tie, the one seen first (the most recent).
-func mostCommon(pairs [][2]string) [2]string {
-	counts := make(map[[2]string]int, len(pairs))
-	var best [2]string
+// mostCommon returns the value seen most often; on a tie, the one seen first (the most recent).
+func mostCommon[T comparable](pairs []T) T {
+	counts := make(map[T]int, len(pairs))
+	var best T
 	for _, p := range pairs {
 		counts[p]++
 	}
@@ -524,7 +539,7 @@ func (s *ListService) GetPantry(ctx context.Context, user *models.User, roomID s
 
 	if len(out) < pantrySeedThreshold {
 		for _, a := range categorization.GroceryAnchors {
-			if _, ok := byKey[a.Term]; ok {
+			if _, ok := byKey[pantryKey(a.Term)]; ok {
 				continue
 			}
 			out = append(out, PantryItem{

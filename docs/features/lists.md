@@ -10,6 +10,18 @@ _Frontend paths are relative to `frontend/src/`._
   (fetched once in `ListPage`, filtered client-side by `lib/suggest.ts`). Enter only takes a
   slip the user explicitly arrowed to; otherwise it adds the typed text. Each pantry entry carries the item's usual quantity (the most common of its last 10 adds), which a picked slip pre-fills. `ListPage.bumpPantry`
   keeps the cached pantry current after each add.
+  - **Spelling variants are one entry.** The pantry groups adds by `parse.CompactKey` (spaces,
+    hyphens and simple plurals folded), so "Chick peas", "Chickpeas" and "chickpea" share their
+    history. The entry is named with the spelling the house uses most (ties to the newest).
+    `lib/itemKey.ts` mirrors `CompactKey` in the browser; keep the two in step.
+  - **Ranking tiers:** prefix, later word start, substring (3+ letters), then folded spacing and
+    plurals ("chick pea" finds Chickpeas), then a typo away (5+ letters, same first letter:
+    "bananna" finds Bananas). The last two highlight the whole name and show no ghost text.
+  - **On the list already:** a slip for an item on the list says "on list" (or "checked off").
+    Picking it calls `ListPage.onBumpItem` instead of adding a row: a checked-off row comes back,
+    an open one gains the typed amount when the units agree, else one (`lib/bumpQuantity.ts`); a
+    quantity that isn't a plain number is left alone with an "Already on the list" toast. Plain
+    Enter on typed text still adds a row.
 - **Rows:** swipe-left (touch) and the hover trash (desktop) both go through `onDeleteItem`,
   which defers the request ~5s behind an Undo toast and flushes on unmount. **Clear completed**
   (`onClearCompleted`) works the same way: rows leave at once, the `/clear` request waits for the

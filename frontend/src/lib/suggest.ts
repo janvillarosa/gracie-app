@@ -1,4 +1,5 @@
 import type { PantryItem } from '@api/types'
+import { compactKey, levenshtein } from '@lib/itemKey'
 import { parseInput } from '@lib/parseInput'
 
 export type Suggestion = {
@@ -10,16 +11,35 @@ export type Suggestion = {
 
 const norm = (s: string) => s.toLowerCase().replace(/\s+/g, ' ').trim()
 
+// How many edits a typo match may take: none under five letters (too many short words are a letter
+// apart), one up to seven, two from eight.
+const typoBudget = (len: number) => (len < 5 ? 0 : len < 8 ? 1 : 2)
+
+// Whether the compact query is a typo or two away from the start of the compact name. The
+// first letter must agree, and the prefix may run a letter short or long (a missed or
+// doubled letter).
+function nearPrefix(cq: string, cname: string): boolean {
+  const budget = typoBudget(cq.length)
+  if (!budget || cq[0] !== cname[0]) return false
+  for (let n = cq.length - 1; n <= cq.length + 1; n++) {
+    if (n <= cname.length && levenshtein(cq, cname.slice(0, n)) <= budget) return true
+  }
+  return false
+}
+
 /**
  * Ranks pantry entries against what the user has typed. The typed text is parsed first,
  * so "2 kg bas" matches on "bas". Tiers: name starts with the query, a later word starts
- * with it, then (3+ chars) anywhere. Within a tier the pantry's own order wins, which the
- * backend sorts by how often and how recently the house bought it.
+ * with it, (3+ chars) anywhere, the same once spacing and plurals are folded ("chick pea"
+ * finds Chickpeas), then a typo away ("bananna" finds Bananas). Within a tier the pantry's
+ * own order wins, which the backend sorts by how often and how recently the house bought it.
+ * The last two tiers highlight the whole name, since no span of it was typed as such.
  */
 export function rankSuggestions(input: string, pantry: PantryItem[], limit: number): Suggestion[] {
   const q = norm(parseInput(input).description)
   if (!q || limit <= 0) return []
-  const tiers: Suggestion[][] = [[], [], []]
+  const cq = compactKey(q)
+  const tiers: Suggestion[][] = [[], [], [], [], []]
   for (const item of pantry) {
     const name = item.description
     const lower = name.toLowerCase()
@@ -39,8 +59,16 @@ export function rankSuggestions(input: string, pantry: PantryItem[], limit: numb
         if (at >= 0) tier = 2
       }
     }
+    let length = q.length
+    if (tier < 0 && cq) {
+      const cname = compactKey(name)
+      if (cname.startsWith(cq)) tier = 3
+      else if (nearPrefix(cq, cname)) tier = 4
+      at = 0
+      length = name.length
+    }
     if (tier < 0) continue
-    tiers[tier].push({ item, start: at, length: q.length })
+    tiers[tier].push({ item, start: at, length })
     if (tier === 0 && tiers[0].length >= limit) break
   }
   return tiers.flat().slice(0, limit)
@@ -50,6 +78,9 @@ export function rankSuggestions(input: string, pantry: PantryItem[], limit: numb
 export function ghostRemainder(input: string, top: Suggestion | undefined): string {
   if (!top || top.start !== 0) return ''
   const typed = parseInput(input).description
-  if (!typed || input.includes('\n')) return ''
-  return top.item.description.slice(typed.trim().length)
+  const t = typed.trim()
+  if (!t || input.includes('\n')) return ''
+  // A folded or typo match also starts at 0, but its name doesn't extend what was typed.
+  if (!top.item.description.toLowerCase().startsWith(t.toLowerCase())) return ''
+  return top.item.description.slice(t.length)
 }
