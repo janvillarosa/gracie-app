@@ -38,6 +38,10 @@ export function UpNextSlip({ next, thenName, onDone, onHide }: Props) {
             {thenName ? `Usually next · then ${thenName}` : 'Usually next'}
           </span>
         </div>
+        {/* Announced politely when a tick hands the slip to the next pick. */}
+        <span className="upnext-announce" role="status">
+          Up next: {next.name}
+        </span>
         <Button iconOnly title="Not now" aria-label="Hide up next" onClick={onHide}>
           <X size={18} aria-hidden />
         </Button>

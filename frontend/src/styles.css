@@ -1012,6 +1012,7 @@ h5.ant-typography {
 }
 
 .upnext-row {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--space-3);
@@ -1051,6 +1052,15 @@ h5.ant-typography {
   color: var(--muted);
   font-size: var(--t-meta);
   line-height: 1.35;
+}
+
+.upnext-announce {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 /* The autopilot mark, as a stamp on the reason line (the row's own stamp is a button). */

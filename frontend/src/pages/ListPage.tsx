@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { Paper, PaperStack, Button, InkStamp, Sheet, SheetActions } from '@components/ui'
+import { Paper, PaperStack, Button, InkStamp, Sheet, SheetActions, SlipStack } from '@components/ui'
 import { errorMessage } from '@lib/errors'
 import { useLocation, useParams } from 'react-router-dom'
 import { useTransitionNavigate } from '@lib/viewTransition'
@@ -25,8 +25,7 @@ import {
   ignoreListSuggestion,
   undoAutopilotAction,
 } from '@api/endpoints'
-import type { List, ListItem, ListSuggestion, PantryItem } from '@api/types'
-import { autopilotModeOf } from '@api/types'
+import type { AutopilotFeature, List, ListItem, ListSuggestion, PantryItem } from '@api/types'
 import {
   Typography,
   Space,
@@ -75,6 +74,9 @@ import { ItemRow, reorderLock } from '@components/ItemRow'
 import { AddItemBar } from '@components/AddItemBar'
 import { SuggestionStack, type SlipPhase } from '@components/SuggestionSlip'
 import { AutopilotSlip } from '@components/AutopilotSlip'
+import { UpNextSlip } from '@components/UpNextSlip'
+import { hasFeature } from '@lib/autopilotFeatures'
+import { useUpNext, type UpNextEvent } from '@lib/useUpNext'
 import { latestRun, markRunSeen, reasonText, seenRun } from '@lib/autopilot'
 import { track } from '@lib/analytics'
 import { nextCheer, runDoneLines, useShoppingRun } from '@lib/shoppingRun'
@@ -240,14 +242,18 @@ export const ListPage: React.FC = () => {
   // before the next shop). The server decides (and answers with nothing when the feature is off);
   // a failure just means no slip.
   // The modes do not mix: on assist, autopilot adds what it would have suggested, so the list
-  // never asks for (or shows) a suggestion; the autopilot slip below says what was added.
-  const assist = !!houseQuery.data && autopilotModeOf(houseQuery.data) === 'assist'
+  // never asks for (or shows) a suggestion; the autopilot slip below says what was added. What a
+  // House's mode includes is the server's one feature table: ask it, never compare modes.
+  const house = houseQuery.data
+  const hasSuggestions = !!house && hasFeature(house, 'suggestions')
+  const hasAutoAdd = !!house && hasFeature(house, 'auto_add')
+  const hasUpNext = !!house && hasFeature(house, 'up_next')
   const suggestionsKey = ['suggestions', roomId, listId, during ?? 'normal']
   const suggestionsQuery = useQuery({
     queryKey: suggestionsKey,
     queryFn: () => getListSuggestions(apiKey!, roomId!, listId, during),
-    // Wait for the House's mode, so an assist list never asks.
-    enabled: !!roomId && !!listId && !!houseQuery.data && !assist,
+    // Wait for the House's mode, so a list that has no suggestions never asks.
+    enabled: !!roomId && !!listId && hasSuggestions,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
     retry: false,
@@ -257,7 +263,7 @@ export const ListPage: React.FC = () => {
   // then held), so going through suggestions swaps the card in place instead of moving the list. The
   // slot only collapses (once) when there is no next suggestion.
   const [spent, setSpent] = useState<{ s: ListSuggestion; phase: SlipPhase } | null>(null)
-  const suggestions = assist
+  const suggestions = !hasSuggestions
     ? []
     : spent
       ? [spent.s]
@@ -270,18 +276,27 @@ export const ListPage: React.FC = () => {
   // Always derive items and sorted views before any early returns to keep hook order stable
   const items = itemsQuery.data ?? []
 
-  // Autopilot (assist mode): what it put on this list, why, and the once-per-run slip. Only asked
-  // for when the House is on assist; a failure just means no marks' reasons and no slip.
+  // Autopilot: what it put on this list and why (assist), Up next's route, and the order its slips
+  // go in. Only asked for when the House has one of those; a failure just means no marks' reasons
+  // and no slips.
   const autopilotKey = ['autopilot', roomId, listId]
   const autopilotQuery = useQuery({
     queryKey: autopilotKey,
     queryFn: () => getListAutopilot(apiKey!, roomId!, listId),
-    enabled: !!roomId && !!listId && assist,
+    enabled: !!roomId && !!listId && (hasAutoAdd || hasUpNext),
     refetchOnWindowFocus: false,
     retry: false,
     staleTime: 60_000,
   })
-  const autopilotApplied = autopilotQuery.data?.applied
+  // What autopilot added is only for a House that lets it add (assist); Up next shares the view.
+  const autopilotApplied = hasAutoAdd ? autopilotQuery.data?.applied : undefined
+  // Up next: the item the House usually grabs next. Its events ride the nudge tracking below.
+  const upNext = useUpNext({
+    view: hasUpNext ? autopilotQuery.data : undefined,
+    items,
+    listId,
+    onEvent: (e) => upNextNudge(e),
+  })
   const reasons = useMemo(() => {
     const m = new Map<string, string>()
     for (const a of autopilotApplied ?? []) m.set(a.item_id, reasonText(a.reason))
@@ -295,7 +310,20 @@ export const ListPage: React.FC = () => {
         .filter((it): it is ListItem => !!it)
     : []
   const showAutopilotSlip =
-    assist && !!autopilotRun && autopilotRun.runAt !== seenRunAt && slipItems.length > 0
+    hasAutoAdd && !!autopilotRun && autopilotRun.runAt !== seenRunAt && slipItems.length > 0
+  // Autopilot floats one slip at a time: the ones that have something to show, in the server's
+  // order, are a pile (the front in full, the rest peeking). One it did not order goes to the back.
+  const slipIds = (
+    [
+      upNext.pick && 'up_next',
+      showAutopilotSlip && 'auto_add',
+      suggestions.length > 0 && 'suggestions',
+    ].filter(Boolean) as AutopilotFeature[]
+  ).sort((a, b) => {
+    const order = autopilotQuery.data?.stack ?? []
+    const at = (f: AutopilotFeature) => (order.includes(f) ? order.indexOf(f) : order.length)
+    return at(a) - at(b)
+  })
   const refreshAfterUndo = () =>
     Promise.all([
       qc.invalidateQueries({ queryKey: ['list-items', listId] }),
@@ -548,6 +576,12 @@ export const ListPage: React.FC = () => {
       container: { type: 'list', id: listId },
       props: { kind: 'recurring' },
     })
+  const upNextNudge = (e: UpNextEvent) =>
+    track(`nudge.${e.type}`, {
+      subject: { type: 'nudge', id: 'up_next' },
+      container: { type: 'list', id: listId },
+      props: e.type === 'followed' ? { kind: 'up_next', hit: e.hit } : { kind: 'up_next' },
+    })
 
   // Taking or ignoring the slip pops it; the server is then asked what (if anything) comes next.
   const dropSuggestion = (key: string) =>
@@ -607,7 +641,9 @@ export const ListPage: React.FC = () => {
 
   // nudge.shown once per slip per visit, not once per render.
   const shownKeys = useRef(new Set<string>())
-  const suggestionKeys = suggestions.map((s) => s.key).join('\n')
+  // Only when it is the front slip: one waiting behind Up next has not been shown yet.
+  const suggestionKeys =
+    slipIds[0] === 'suggestions' ? suggestions.map((s) => s.key).join('\n') : ''
   useEffect(() => {
     for (const key of suggestionKeys ? suggestionKeys.split('\n') : []) {
       if (shownKeys.current.has(key)) continue
@@ -681,6 +717,8 @@ export const ListPage: React.FC = () => {
     if (isTemp(it.item_id)) return
     if (savingItemId === it.item_id || editingItemId === it.item_id) return
     const next = !it.completed
+    if (next) upNext.onChecked(it.item_id)
+    else upNext.onUnchecked(it.item_id)
     // The last item of a run gets the stamp instead of confetti.
     const finishesRun = next ? run.check() && incompleteCount === 1 : false
     inFlight.current += 1
@@ -1085,22 +1123,41 @@ export const ListPage: React.FC = () => {
                           )}
                         </Sheet>
                       )}
-                      {showAutopilotSlip && autopilotRun && (
-                        <AutopilotSlip
-                          names={slipItems.map((it) => it.description)}
-                          runAt={new Date(autopilotRun.runAt)}
-                          now={new Date()}
-                          onUndoAll={onUndoAllAutopilot}
-                          onDismiss={dismissAutopilotSlip}
-                        />
-                      )}
-                      <SuggestionStack
-                        suggestions={suggestions}
-                        during={during}
-                        phase={spent?.phase}
-                        onAdd={onAddSuggestion}
-                        onIgnore={onIgnoreSuggestion}
-                      />
+                      <SlipStack>
+                        {slipIds.map((id) =>
+                          id === 'up_next' && upNext.pick ? (
+                            <UpNextSlip
+                              key={id}
+                              next={{ itemId: upNext.pick.itemId, name: upNext.pick.name }}
+                              thenName={upNext.pick.thenName}
+                              onDone={(itemId) => {
+                                upNext.tapped()
+                                const it = items.find((x) => x.item_id === itemId)
+                                if (it) void onToggleComplete(it)
+                              }}
+                              onHide={upNext.hide}
+                            />
+                          ) : id === 'auto_add' && autopilotRun ? (
+                            <AutopilotSlip
+                              key={id}
+                              names={slipItems.map((it) => it.description)}
+                              runAt={new Date(autopilotRun.runAt)}
+                              now={new Date()}
+                              onUndoAll={onUndoAllAutopilot}
+                              onDismiss={dismissAutopilotSlip}
+                            />
+                          ) : (
+                            <SuggestionStack
+                              key={id}
+                              suggestions={suggestions}
+                              during={during}
+                              phase={spent?.phase}
+                              onAdd={onAddSuggestion}
+                              onIgnore={onIgnoreSuggestion}
+                            />
+                          ),
+                        )}
+                      </SlipStack>
                       <Space
                         // Remount when the items arrive so a skeleton hands over with a fade
                         key={itemsQuery.isLoading ? 'loading' : 'ready'}
