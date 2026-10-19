@@ -3740,3 +3740,413 @@ p.ld-done-toggle {
 .ld-nav {
   max-width: calc(var(--ld-max) + 2 * var(--ld-gutter));
 }
+
+/* ---- Butler: a week on one list, on an ink field ------------------------------------------------ */
+/* Black tie. The field runs the full width; its content keeps the page column: the words beside the
+   House's list, which lies on the ink like paper on a desk, and the week's three moments across the
+   foot. Yellow stays off the field: the slip's Add on the white sheet is the one yellow control, and
+   the name sits on the highlighter. */
+.ld-butler {
+  --ld-butler-quiet: var(--ld-on-ink-muted);
+  --ld-butler-track: var(--ld-ink-track);
+  background: var(--ink);
+  color: #fff;
+  padding: var(--ld-section) var(--ld-edge);
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+  grid-template-areas:
+    'copy stage'
+    'moments moments';
+  column-gap: 72px;
+  row-gap: 88px;
+  align-items: center;
+  scroll-margin-top: 0;
+}
+
+.ld-butler-copy {
+  grid-area: copy;
+}
+
+.ld-butler-stage {
+  grid-area: stage;
+}
+
+.ld-butler .ld-h2 {
+  color: #fff;
+}
+
+.ld-butler .ld-set::before {
+  background: #fff;
+}
+
+/* On the ink the highlighter is solid yellow; the translucent one would turn olive. */
+.ld-butler .ld-w-in.is-mark {
+  background: var(--brand-yellow);
+}
+
+.ld-butler .ld-body {
+  margin-top: 28px;
+}
+
+/* The three moments: a rule over each, ink once it is the one showing. While the page turns them
+   by itself, the rule fills across as the moment holds, so the visitor sees what comes next. */
+.ld-moments {
+  grid-area: moments;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.ld-moment {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  padding: 0 0 16px;
+  border: 0;
+  background: none;
+  color: #fff;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ld-moment-rule {
+  position: relative;
+  display: block;
+  height: 4px;
+  margin-bottom: 14px;
+  background: var(--ld-butler-track);
+  overflow: hidden;
+}
+
+.ld-moment-rule::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  transform: scaleX(0);
+  transform-origin: left;
+}
+
+.ld-moment.is-on .ld-moment-rule::after {
+  transform: none;
+}
+
+.ld-moment-when {
+  font-size: var(--ld-small);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--ld-butler-quiet);
+}
+
+.ld-moment-title {
+  font-family: var(--font-headings);
+  font-size: var(--ld-title);
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.ld-moment-text {
+  max-width: 40ch;
+  margin-top: 4px;
+  line-height: 1.5;
+  color: var(--ld-butler-quiet);
+}
+
+.ld-moment.is-on .ld-moment-text {
+  color: #fff;
+}
+
+.ld-moment:focus-visible {
+  border-radius: 4px;
+}
+
+@media (hover: hover) {
+  .ld-moment:not(.is-on):hover .ld-moment-rule {
+    background: var(--ld-on-ink-muted);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ld-moment.is-running .ld-moment-rule::after {
+    animation: ld-moment-fill var(--hold) linear both;
+  }
+}
+
+@keyframes ld-moment-fill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: none;
+  }
+}
+
+/* The House's list: a sheet set down a little off true on the yellow. */
+.ld-butler-stage {
+  display: flex;
+  justify-content: center;
+}
+
+.ld-butler-desk {
+  width: min(100%, 540px);
+  transform: rotate(-1.2deg);
+}
+
+.ld-bsheet {
+  /* The field around it sets white text; the paper is drawn in ink, as in the app. */
+  color: var(--ink);
+  padding-bottom: 8px;
+  box-shadow:
+    var(--paper-edge),
+    0 2px 0 var(--border-strong),
+    0 30px 60px -24px rgba(0, 0, 0, 0.7); /* taste-skill-ignore: data-ui app card */
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ld-bsheet {
+    animation: ld-sheet-swap 420ms var(--ease-out) both;
+  }
+}
+
+.ld-bsheet .ld-app-head {
+  padding-bottom: 14px;
+}
+
+/* The slips, as the List page lays them on the sheet: paper, an edge, 76px tall. */
+.ld-bslip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 76px;
+  margin: 0 0 10px;
+  padding: 8px 8px 8px 14px;
+  background: var(--paper-fill);
+  border: 1px solid var(--border-strong); /* taste-skill-ignore: data-ui fragment */
+  border-radius: var(--radius-lg);
+  box-shadow: var(--slip-rest);
+}
+
+.ld-bslip.is-suggest {
+  border-color: color-mix(in srgb, var(--brand-yellow-deep) 60%, var(--border));
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ld-bslip {
+    animation: ld-bslip-in 520ms var(--ld-ease-set) 160ms both;
+  }
+}
+
+@keyframes ld-bslip-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.98);
+  }
+}
+
+.ld-bslip-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ld-bslip-name {
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--ink);
+}
+
+.ld-bslip-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: var(--ld-small);
+  line-height: 1.35;
+  color: var(--ld-grey-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ld-bslip-add {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 14px;
+  border-radius: var(--ld-control-radius);
+  background: var(--brand-yellow);
+  box-shadow: var(--shadow-key); /* taste-skill-ignore: brand key (DESIGN: kept) */
+  font-weight: 700;
+  font-size: var(--ld-small);
+}
+
+.ld-bslip-add svg {
+  width: 16px;
+  height: 16px;
+}
+
+.ld-bslip-quiet {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--border-strong); /* taste-skill-ignore: data-ui fragment */
+  border-radius: var(--ld-control-radius);
+  background: var(--paper-fill);
+  font-weight: 600;
+  font-size: var(--ld-small);
+  white-space: nowrap;
+}
+
+.ld-bslip-x,
+.ld-bslip-well {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  color: var(--ld-grey-ink);
+}
+
+.ld-bslip-well {
+  background: var(--well-fill);
+  box-shadow: var(--well);
+  color: var(--ink);
+}
+
+.ld-bslip-x svg,
+.ld-bslip-well svg {
+  width: 18px;
+  height: 18px;
+}
+
+.ld-bslip.is-upnext .ld-box {
+  flex: none;
+  margin: 0 4px 0 2px;
+}
+
+/* Butler's mark: the service bell, as a small ink-outlined stamp (the app's `.item-auto`). */
+.ld-bell {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 18px;
+  border: 1px solid var(--ink); /* taste-skill-ignore: data-ui fragment */
+  border-radius: 4px;
+  color: var(--ink);
+}
+
+.ld-bell svg {
+  width: 12px;
+  height: 12px;
+}
+
+.ld-brow-words {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ld-brow-why {
+  font-size: var(--ld-small);
+  line-height: 1.35;
+  color: var(--ld-grey-ink);
+}
+
+.ld-brow-stamps {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ld-bsheet .ld-row:last-child {
+  border-bottom: 0;
+}
+
+.ld-butler-promise {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  max-width: 44ch;
+  margin: 36px 0 0;
+  font-size: var(--ld-small);
+  line-height: 1.5;
+  color: var(--ld-on-ink-muted);
+}
+
+.ld-butler-promise svg {
+  color: #fff;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+}
+
+@media (max-width: 1023px) {
+  .ld-butler {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'copy'
+      'moments'
+      'stage';
+    row-gap: 48px;
+  }
+
+  .ld-moments {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
+
+  .ld-butler-desk {
+    transform: none;
+  }
+}
+
+@media (max-width: 719px) {
+  .ld-butler {
+    padding-left: var(--ld-gutter);
+    padding-right: var(--ld-gutter);
+    row-gap: 36px;
+  }
+
+  .ld-moment-text {
+    font-size: 16px;
+  }
+
+  .ld-bslip {
+    gap: 10px;
+    padding-left: 12px;
+  }
+
+  .ld-bsheet .ld-row-title,
+  .ld-bslip-name {
+    font-size: 16px;
+  }
+}
+
+/* A narrow phone: the slips' round close keys give their room to the words (the picture only). */
+@media (max-width: 420px) {
+  .ld-bslip-x {
+    display: none;
+  }
+
+  .ld-bslip {
+    padding-right: 10px;
+  }
+}
+
+/* The lists part follows the ink field directly: no strip of desk between two fields. */
+.ld .ld-butler + .ld-shared {
+  margin-top: 0;
+}

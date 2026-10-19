@@ -71,7 +71,7 @@ describe('Notifications in Account settings', () => {
     expect(screen.queryByRole('switch')).toBeNull()
     await userEvent.click(key)
     expect(await screen.findByRole('switch', { name: 'List activity' })).toBeChecked()
-    expect(screen.getByRole('switch', { name: 'Autopilot adds things' })).toBeChecked()
+    expect(screen.getByRole('switch', { name: 'Butler adds things' })).toBeChecked()
     expect(screen.getByRole('switch', { name: 'Trip reminders' })).not.toBeChecked()
     expect(fake.requestPermission).toHaveBeenCalledTimes(1)
     expect(subs[0]).toMatchObject({
@@ -95,7 +95,7 @@ describe('Notifications in Account settings', () => {
     installPush({ permission: 'granted', subscription: fakeSubscription('https://p.example/a') })
     renderSection()
     server.use(http.put('/api/me/notifications', () => json({ error: 'nope' }, 400)))
-    const autopilot = await screen.findByRole('switch', { name: 'Autopilot adds things' })
+    const autopilot = await screen.findByRole('switch', { name: 'Butler adds things' })
     await waitFor(() => expect(autopilot).toBeEnabled())
     await userEvent.click(autopilot)
     await waitFor(() => expect(autopilot).toBeChecked())

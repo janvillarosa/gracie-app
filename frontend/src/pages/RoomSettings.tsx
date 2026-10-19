@@ -28,8 +28,8 @@ import { useDocumentTitle } from '@lib/useDocumentTitle'
 
 const nameProblem = (v: string) => (v && !isValidDisplayName(v) ? NAME_RULE : '')
 
-// Low to high: how much of the shopping the House hands to autopilot. Assist's glyph, the service
-// bell (autopilot at your service), is the same mark its items carry on a list.
+// Low to high: how much of the shopping the House hands to Butler. Assist's glyph, the service
+// bell (Butler, at your service), is the same mark its items carry on a list.
 const AUTOPILOT_STEPS: { value: AutopilotMode; label: string; icon: React.ReactNode }[] = [
   { value: 'off', label: 'Off', icon: <Moon weight="bold" /> },
   { value: 'suggest', label: 'Suggest', icon: <Lightbulb weight="bold" /> },
@@ -40,9 +40,9 @@ const AUTOPILOT_STEPS: { value: AutopilotMode; label: string; icon: React.ReactN
 const AUTOPILOT_HELP: Record<AutopilotMode, string> = {
   off: 'Nothing is suggested or added.',
   suggest:
-    'Suggests things your House usually adds, a little before they’re due. Nothing changes until someone taps.',
+    'Butler suggests what your House usually adds, a little before they’re due. Nothing changes until someone taps.',
   assist:
-    'Adds what it would have suggested to your lists before you shop. You can always undo. It never buys or books anything.',
+    'Butler puts what it would have suggested on your lists before you shop. You can always undo. It never buys or books anything.',
 }
 
 /** House settings, laid out like Trip settings: the House's name (typed in place), what it is
@@ -199,10 +199,10 @@ export const RoomSettings: React.FC = () => {
           <DetailGroup label="Lists">
             <div className="pref autopilot-pref">
               <span className="pref-label" aria-hidden>
-                Autopilot
+                Butler
               </span>
               <StepSlider
-                label="Autopilot"
+                label="Butler"
                 value={autopilotMode}
                 steps={AUTOPILOT_STEPS}
                 describedBy="autopilot-help"

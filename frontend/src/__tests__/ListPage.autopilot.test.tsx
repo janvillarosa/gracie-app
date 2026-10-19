@@ -110,7 +110,7 @@ const setup = (mode: 'suggest' | 'assist') => {
 describe('ListPage autopilot', () => {
   it('on assist, never asks for or shows a suggestion: the modes do not mix', async () => {
     const calls = setup('assist')
-    await screen.findByRole('region', { name: 'Added by autopilot' })
+    await screen.findByRole('region', { name: 'Added by Butler' })
     expect(screen.queryByRole('region', { name: 'Suggestion' })).toBeNull()
     expect(calls.suggestions).toBe(0)
   })
@@ -118,32 +118,30 @@ describe('ListPage autopilot', () => {
   it('on suggest, shows the suggestion and no autopilot slip', async () => {
     const calls = setup('suggest')
     expect(await screen.findByRole('region', { name: 'Suggestion' })).toBeInTheDocument()
-    expect(screen.queryByRole('region', { name: 'Added by autopilot' })).toBeNull()
+    expect(screen.queryByRole('region', { name: 'Added by Butler' })).toBeNull()
   })
 
   it('marks autopilot items and says why when the mark is tapped', async () => {
     setup('assist')
-    const mark = await screen.findByRole('button', { name: 'Added by autopilot. Why Whole milk?' })
-    expect(screen.queryByRole('button', { name: 'Added by autopilot. Why Jam?' })).toBeNull()
+    const mark = await screen.findByRole('button', { name: 'Added by Butler. Why Whole milk?' })
+    expect(screen.queryByRole('button', { name: 'Added by Butler. Why Jam?' })).toBeNull()
     await waitFor(() =>
-      expect(screen.getByRole('region', { name: 'Added by autopilot' })).toBeInTheDocument(),
+      expect(screen.getByRole('region', { name: 'Added by Butler' })).toBeInTheDocument(),
     )
     await userEvent.click(mark)
     expect(mark).toHaveAttribute('aria-expanded', 'true')
-    expect(
-      screen.getByText('Added by autopilot. You buy it about every 9 days'),
-    ).toBeInTheDocument()
+    expect(screen.getByText('Added by Butler. You buy it about every 9 days')).toBeInTheDocument()
   })
 
   it('shows "Added 2 for <day>" once, and Undo all takes them off the list', async () => {
     const calls = setup('assist')
-    const slip = await screen.findByRole('region', { name: 'Added by autopilot' })
+    const slip = await screen.findByRole('region', { name: 'Added by Butler' })
     expect(within(slip).getByText(`Added 2 for ${weekday}`)).toBeInTheDocument()
     expect(within(slip).getByText('Whole milk, Eggs')).toBeInTheDocument()
     await userEvent.click(within(slip).getByRole('button', { name: 'Undo all' }))
     await waitFor(() => expect(calls.undone.sort()).toEqual(['a-eggs', 'a-milk']))
     await waitFor(() =>
-      expect(screen.queryByRole('region', { name: 'Added by autopilot' })).toBeNull(),
+      expect(screen.queryByRole('region', { name: 'Added by Butler' })).toBeNull(),
     )
     await waitFor(() => expect(screen.queryByText('Whole milk')).toBeNull())
     expect(localStorage.getItem(`gracie_autopilot_seen_${listId}`)).toBe(runAt)
@@ -151,10 +149,10 @@ describe('ListPage autopilot', () => {
 
   it('closing the slip keeps the items and does not show it again for that run', async () => {
     const calls = setup('assist')
-    const slip = await screen.findByRole('region', { name: 'Added by autopilot' })
+    const slip = await screen.findByRole('region', { name: 'Added by Butler' })
     await userEvent.click(within(slip).getByRole('button', { name: 'Got it' }))
     await waitFor(() =>
-      expect(screen.queryByRole('region', { name: 'Added by autopilot' })).toBeNull(),
+      expect(screen.queryByRole('region', { name: 'Added by Butler' })).toBeNull(),
     )
     expect(screen.getByText('Whole milk')).toBeInTheDocument()
     expect(calls.undone).toEqual([])
@@ -163,7 +161,7 @@ describe('ListPage autopilot', () => {
   it('in suggest mode the autopilot view brings no assist slip and no marks, even if it lists adds', async () => {
     setup('suggest')
     await screen.findByText('Jam')
-    expect(screen.queryByRole('region', { name: 'Added by autopilot' })).toBeNull()
+    expect(screen.queryByRole('region', { name: 'Added by Butler' })).toBeNull()
     expect(screen.queryByText(/You buy it about every/)).toBeNull() // no reasons
   })
 })

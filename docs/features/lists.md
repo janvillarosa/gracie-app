@@ -38,12 +38,12 @@ _Frontend paths are relative to `frontend/src/`._
   "Usually due in 3 days" (`due_in_days`) and Ignore posts `during: 'run'`.
 - **Run done:** once per run, on the last check or on Clear done, an `announce` Sheet with an `InkStamp` ("Run done", dated), "14 items · 22 min", and "4 min quicker than usual" only when ≥ 3 min quicker than the hint's `typical` and the run is at least ¾ the usual size, so a top-up shop is never "quicker" (`runDoneLines`); its key cheers, a different word each run (`CHEERS`, `nextCheer`: "Nice!", "Huzzah!", "Amazing!"..., never the same twice in a row; the last one is kept in `localStorage` `gracie_last_cheer`). The check that finishes a run throws no confetti (the stamp is the celebration; `useShoppingRun().check()` returns whether a run is on). It opens 350ms after the last check. Tracks `list.run_stamped {items, minutes}`.
 
-## Autopilot on a list
+## Butler on a list
 
-Autopilot floats one slip at a time (`SlipStack`): while shopping, **Up next** is in front and the suggestion
+Butler floats one slip at a time (`SlipStack`): while shopping, **Up next** is in front and the suggestion
 slip or the "Added 3" slip wait behind it until the person puts it away with the round ✕. See
 [autopilot.md](autopilot.md#up-next-the-usual-route-through-the-shop).
 
-In assist mode autopilot puts the usual things on the list before the shop: those rows carry the autopilot
-mark and a reason, and a slip says what was added for which run, with Undo all. Swipe-deleting an autopilot
+In assist mode Butler puts the usual things on the list before the shop: those rows carry the Butler
+mark and a reason, and a slip says what was added for which run, with Undo all. Swipe-deleting a Butler
 row that was not bought counts as a miss. See [autopilot.md](autopilot.md).

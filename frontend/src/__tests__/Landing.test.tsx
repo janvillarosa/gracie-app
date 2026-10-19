@@ -98,9 +98,51 @@ describe('Landing page', () => {
     ).toBeInTheDocument()
   })
 
+  it('introduces Butler before the lists, and names what it never does', () => {
+    renderLanding()
+    const butler = screen.getByRole('heading', { level: 2, name: 'Meet Butler.' })
+    const lists = screen.getByRole('heading', { level: 2, name: 'Lists that sort themselves.' })
+    expect(butler.closest('section')).toHaveAttribute('id', 'butler')
+    expect(butler.compareDocumentPosition(lists) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Butler' })).toHaveAttribute('href', '#butler')
+    expect(screen.getByText(/It never buys or books anything for you/)).toBeInTheDocument()
+  })
+
+  it('walks a week with Butler as three moments the visitor can pick', () => {
+    renderLanding()
+    const tabs = within(screen.getByRole('tablist', { name: 'A week with Butler' })).getAllByRole(
+      'tab',
+    )
+    expect(tabs.map((t) => t.querySelector('.ld-moment-title')?.textContent)).toEqual([
+      'Before you run out',
+      'Before the shop',
+      'In the shop',
+    ])
+    expect(tabs[0]).toHaveAttribute('aria-selected', 'true')
+    const panel = screen.getByRole('tabpanel', { name: /Before you run out/ })
+    expect(within(panel).getByText('You add it weekly')).toBeInTheDocument()
+    // The drawn sheet is decoration; the panel says what it shows in words.
+    expect(within(panel).getByText(/Butler suggests oat milk/)).toBeInTheDocument()
+
+    fireEvent.click(tabs[1])
+    expect(tabs[1]).toHaveAttribute('aria-selected', 'true')
+    expect(within(panel).getByText('Added 3 for Saturday')).toBeInTheDocument()
+    expect(within(panel).getByText('Added by Butler. You buy it about every 9 days')).toBeVisible()
+
+    // Arrow keys move between moments, as in the app's tabs.
+    fireEvent.keyDown(tabs[1], { key: 'ArrowDown' })
+    expect(tabs[2]).toHaveAttribute('aria-selected', 'true')
+    expect(tabs[2]).toHaveFocus()
+    expect(within(panel).getByText('Usually next · then Butter')).toBeInTheDocument()
+    fireEvent.keyDown(tabs[2], { key: 'Home' })
+    expect(tabs[0]).toHaveFocus()
+    fireEvent.keyDown(tabs[0], { key: 'End' })
+    expect(tabs[2]).toHaveAttribute('aria-selected', 'true')
+  })
+
   it('splits the page plainly into the House’s lists and trip planning', () => {
     renderLanding()
-    const lists = screen.getByRole('heading', { level: 2, name: 'Lists for the house.' })
+    const lists = screen.getByRole('heading', { level: 2, name: 'Lists that sort themselves.' })
     const trips = screen.getByRole('heading', { level: 2, name: 'Plan the trip together.' })
     expect(lists.compareDocumentPosition(trips) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(lists.closest('section')).toHaveAttribute('id', 'lists')
@@ -173,9 +215,9 @@ describe('Landing page', () => {
 
   it('leads with home and trips together, and introduces the House', () => {
     renderLanding()
-    const lede = screen.getByText(/keeps the weekly shop and the next trip/)
-    expect(lede).toHaveTextContent(/Everyone you live with joins your House/)
-    expect(lede).toHaveTextContent(/scroll the group chat/)
+    const lede = screen.getByText(/one notebook for everyone you live with/)
+    expect(lede).toHaveTextContent(/The weekly shop goes in it, and so does the next trip/)
+    expect(lede).toHaveTextContent(/Butler, who learns your House’s routine/)
     expect(screen.queryByText(/Notion/)).toBeNull()
     expect(screen.queryByText(/aisle/i)).toBeNull()
     // The typing list is decoration for sighted visitors.
@@ -192,7 +234,7 @@ describe('Landing page', () => {
     renderLanding()
     expect(screen.getByRole('heading', { level: 2, name: 'It costs nothing.' })).toBeInTheDocument()
     expect(screen.getByRole('img', { name: /Total 0\.00, nothing due/ })).toBeInTheDocument()
-    expect(screen.getByText(/no ads, there’s no paid plan/)).toBeInTheDocument()
+    expect(screen.getByText(/no ads and no paid plan waiting/)).toBeInTheDocument()
   })
 
   it('holds itinerary changes while there is no signal', () => {
@@ -259,7 +301,12 @@ describe('Landing page', () => {
 describe('kinetic type', () => {
   it('keeps every set heading readable as one sentence', () => {
     renderLanding()
-    for (const name of ['Lists for the house.', 'Plan the trip together.', 'It costs nothing.']) {
+    for (const name of [
+      'Meet Butler.',
+      'Lists that sort themselves.',
+      'Plan the trip together.',
+      'It costs nothing.',
+    ]) {
       const h = screen.getByRole('heading', { level: 2, name })
       // Without an observer (as without JavaScript) a heading is simply set.
       expect(h).toHaveAttribute('data-set')
@@ -271,7 +318,8 @@ describe('kinetic type', () => {
 
   it('colours one word of each heading', () => {
     renderLanding()
-    expect(screen.getByText('house.')).toHaveClass('is-red')
+    expect(screen.getByText('themselves.')).toHaveClass('is-red')
+    expect(screen.getByText('Butler.', { selector: '.ld-w-in' })).toHaveClass('is-mark')
     expect(screen.getByText('together.', { selector: '.ld-w-in' })).toHaveClass('is-blue')
     expect(screen.getByText('nothing.')).toHaveClass('is-mark')
   })
@@ -280,7 +328,9 @@ describe('kinetic type', () => {
     renderLanding()
     expect(document.querySelector('.ld-margin-word')).toHaveAttribute('aria-hidden', 'true')
     expect(document.querySelector('.ld-band')).toHaveAttribute('aria-hidden', 'true')
-    expect(document.querySelector('.ld-band')).toHaveTextContent(/Groceries.*Chores.*Packing/)
+    expect(document.querySelector('.ld-band')).toHaveTextContent(
+      /Groceries.*Chores.*Trips.*Notices.*Suggests.*Adds/,
+    )
   })
 })
 
@@ -539,7 +589,8 @@ describe('build-time copy', () => {
     const { renderLanding: renderStatic } = await import('../landing.server')
     const html = renderStatic()
     expect(html).toContain('Manage your')
-    expect(html).toContain('keeps the weekly shop and the next trip')
+    expect(html).toContain('The weekly shop goes in it, and so does the next trip')
+    expect(html).toContain('Meet')
     expect(html).toContain('Get started free')
     vi.restoreAllMocks()
   })

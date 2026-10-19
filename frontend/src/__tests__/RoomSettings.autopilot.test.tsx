@@ -42,7 +42,7 @@ const setup = (initial: Room, fail = false) => {
   return puts
 }
 
-const slider = () => screen.findByRole('slider', { name: 'Autopilot' })
+const slider = () => screen.findByRole('slider', { name: 'Butler' })
 
 describe('House settings: autopilot', () => {
   it('is a slider from Off to Assist, on Suggest by default', async () => {
@@ -69,7 +69,7 @@ describe('House settings: autopilot', () => {
     await waitFor(() => expect(s).toHaveAttribute('aria-valuetext', 'Assist'))
     expect(
       screen.getByText(
-        'Adds what it would have suggested to your lists before you shop. You can always undo. It never buys or books anything.',
+        'Butler puts what it would have suggested on your lists before you shop. You can always undo. It never buys or books anything.',
       ),
     ).toBeInTheDocument()
   })

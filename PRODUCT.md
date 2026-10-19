@@ -25,8 +25,9 @@ the app. Every member can read and write everything in the House.
 
 ## Product Purpose
 
-Bauhouse is the shared notebook for a household: lists (groceries, chores, packing) and, next,
-trips. It exists so the people who live together can plan and run the shared parts of life in
+Bauhouse is the shared notebook for a household: lists (groceries, chores, packing) and trips, with
+**Butler** built in: it learns from what the House already does and takes the next step (suggests the
+usual things before they're due, adds them before the shop on Assist, names what's up next in the shop). It exists so the people who live together can plan and run the shared parts of life in
 one place, without one person owning the plan. Success is the House using one plan together
 instead of a group chat plus screenshots.
 
@@ -73,6 +74,8 @@ objects: a trip's packing list is a normal Bauhouse List.
 ## Brand Commitments
 
 - User-facing name **Bauhouse**; internal name Gracie. Do not rename internal identifiers.
+- The House's smart helper is **Butler** in the UI (internally `autopilot`). Its mark is the service bell.
+  It never buys, books or messages anyone; everything it adds carries the bell and an Undo.
 - The House mark (`HouseMark` inline SVG, traced from `logo-168.png`) is the in-app logo.
 - Voice: plain, warm, short. Sentence case. Confirmations say what happened ("3 checked off").
 

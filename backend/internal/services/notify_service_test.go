@@ -172,7 +172,7 @@ func TestNotifyAutopilotAddsGoToEveryone(t *testing.T) {
 	if n := r.dispatch(t); n != 2 {
 		t.Fatalf("sent %d: %+v", n, r.send.sent)
 	}
-	if b := r.send.sent[0].Msg.Body; b != "Autopilot added Milk and Eggs" {
+	if b := r.send.sent[0].Msg.Body; b != "Butler added Milk and Eggs" {
 		t.Fatalf("body %q", b)
 	}
 }

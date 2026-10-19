@@ -1,4 +1,5 @@
 import { HouseMark } from '@components/HouseMark'
+import { Butler } from '@components/landing/Butler'
 import { Capabilities } from '@components/landing/Capabilities'
 import { CloseLine, FreeReceipt, LandingFooter } from '@components/landing/Closing'
 import { HeadlineWord } from '@components/landing/HeadlineWord'
@@ -51,12 +52,12 @@ function useDropPrerender() {
 }
 
 const BAND: Array<[string, string, string]> = [
-  ['Groceries', 'Chores', 'Packing'],
-  ['Trips', 'Days', 'Bookings'],
+  ['Groceries', 'Chores', 'Trips'],
+  ['Notices', 'Suggests', 'Adds'],
 ] as Array<[string, string, string]>
 
-/** Two lines of huge type between the hero and the lists, set like a Bauhaus poster: what a
- *  House keeps at home, then on a trip. They run in opposite directions as the page scrolls and
+/** Two lines of huge type between the hero and Butler, set like a Bauhaus poster: what a House
+ *  keeps, then what its butler does with it. They run in opposite directions as the page scrolls and
  *  stop when it stops. Decorative: the sections below say the same. */
 const TypeBand: React.FC = () => {
   const band = useRef<HTMLDivElement>(null)
@@ -80,7 +81,7 @@ const TypeBand: React.FC = () => {
 }
 
 export const Landing: React.FC = () => {
-  useDocumentTitle('Shared lists and trip planning for your household')
+  useDocumentTitle('Shared lists that learn your household, and trips planned together')
   useDropPrerender()
   const root = useRef<HTMLDivElement>(null)
   const lead = useRef<HTMLSpanElement>(null)
@@ -105,6 +106,9 @@ export const Landing: React.FC = () => {
           <span>Bauhouse</span>
         </TransitionLink>
         <nav aria-label="Main" className="ld-nav-links">
+          <a href="#butler" className="ld-nav-link is-wide">
+            Butler
+          </a>
           <a href="#lists" className="ld-nav-link is-wide">
             Lists
           </a>
@@ -135,9 +139,9 @@ export const Landing: React.FC = () => {
               <br className="ld-h1-break" /> <span className="ld-h1-end">together.</span>
             </h1>
             <p className="ld-lede">
-              Bauhouse is where your household keeps the weekly shop and the next trip. Everyone you
-              live with joins your House and works from the same plan, so nobody has to scroll the
-              group chat looking for that one screenshot.
+              Bauhouse is one notebook for everyone you live with. The weekly shop goes in it, and
+              so does the next trip. It comes with Butler, who learns your House’s routine and puts
+              the usual things on the list before anyone has to remember them.
             </p>
             <p className="ld-hero-cta">
               <TransitionLink to="/register" className="ld-key is-large">
@@ -150,6 +154,7 @@ export const Landing: React.FC = () => {
       </section>
 
       <TypeBand />
+      <Butler />
       <SharedPlate />
       <Capabilities />
       <FreeReceipt />

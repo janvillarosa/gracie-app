@@ -51,7 +51,7 @@ export function AutopilotSlip({ names, runAt, now, onUndoAll, onDismiss }: Props
   return (
     <div className={leaving ? 'autopilot-reveal is-leaving' : 'autopilot-reveal'}>
       <div className="autopilot-clip">
-        <section className="autopilot-slip" aria-label="Added by autopilot">
+        <section className="autopilot-slip" aria-label="Added by Butler">
           <span className="autopilot-slip-mark" aria-hidden>
             <CallBell weight="bold" />
           </span>
