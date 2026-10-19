@@ -59,6 +59,7 @@ export async function startMockTrips() {
     username: 'jan',
     room_id: ROOM,
     avatar_key: 'jan',
+    test_account: true,
     created_at: now,
     updated_at: now,
   }
@@ -158,7 +159,43 @@ export async function startMockTrips() {
   // real browser can subscribe with it (pushes need the real server).
   let notifyPrefs = { itemAdds: true, autopilot: true, tripReminders: true }
   const pushSubs = new Map<string, unknown>()
+  // Test mode: a few fake actions. "Simulate housemate adds" is refused, as it is with a House
+  // that has real housemates; Run it twice more to see the rate limit.
+  const testActions = [
+    {
+      id: 'push.test',
+      label: 'Send me a test push',
+      description: 'A notification to every device you turned notifications on for.',
+      touches_house: false,
+    },
+    {
+      id: 'dispatch.run',
+      label: 'Run the dispatcher now',
+      description: 'Sends what is waiting in the outbox without the 90 second wait.',
+      touches_house: false,
+    },
+    {
+      id: 'adds.simulate',
+      label: 'Simulate housemate adds',
+      description: 'Adds three items to Groceries as a housemate would.',
+      touches_house: true,
+    },
+  ]
+  let testRuns = 0
   const handlers = [
+    http.get('/api/test/actions', () => HttpResponse.json({ actions: testActions })),
+    http.post('/api/test/actions/:id', ({ params }) => {
+      const a = testActions.find((x) => x.id === params.id)
+      if (!a) return HttpResponse.json({ error: 'unknown action' }, { status: 404 })
+      if (a.touches_house)
+        return HttpResponse.json(
+          { error: 'Mia isn’t a test account, so this would notify a real housemate.' },
+          { status: 409 },
+        )
+      if (++testRuns % 4 === 0)
+        return HttpResponse.json({ error: 'Slow down: try again in a minute.' }, { status: 429 })
+      return HttpResponse.json({ message: `Sent to ${pushSubs.size} of ${pushSubs.size} devices` })
+    }),
     http.get('/api/push/key', () =>
       HttpResponse.json({
         publicKey:

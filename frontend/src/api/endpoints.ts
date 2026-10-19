@@ -11,6 +11,7 @@ import type {
   ListSuggestion,
   NotificationPrefs,
   PushSubscriptionBody,
+  TestAction,
   RunHint,
   PantryItem,
 } from './types'
@@ -377,5 +378,17 @@ export async function setNotificationPrefs(
     method: 'PUT',
     apiKey,
     body: JSON.stringify(prefs),
+  })
+}
+
+// Test accounts only (404 for anyone else).
+export async function listTestActions(apiKey: string): Promise<{ actions: TestAction[] }> {
+  return apiFetch<{ actions: TestAction[] }>('/test/actions', { apiKey })
+}
+
+export async function runTestAction(apiKey: string, id: string): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(`/test/actions/${encodeURIComponent(id)}`, {
+    method: 'POST',
+    apiKey,
   })
 }
