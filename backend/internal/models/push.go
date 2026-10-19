@@ -22,9 +22,12 @@ const (
 // PushSubscription is one browser's Web Push subscription (collection "push_subscriptions").
 // Endpoint is unique: a device that signs in as someone else moves to that user.
 type PushSubscription struct {
-	SubID    string `bson:"sub_id"`
-	UserID   string `bson:"user_id"`
-	Endpoint string `bson:"endpoint"`
+	SubID  string `bson:"sub_id"`
+	UserID string `bson:"user_id"`
+	// SessionID is the signed-in device session that subscribed (empty for a legacy per-user key).
+	// The device gets notifications only while that session lives.
+	SessionID string `bson:"session_id,omitempty"`
+	Endpoint  string `bson:"endpoint"`
 	// P256dhEnc and AuthEnc are the subscription's encryption keys, AES-GCM encrypted at rest.
 	P256dhEnc string     `bson:"p256dh_enc"`
 	AuthEnc   string     `bson:"auth_enc"`

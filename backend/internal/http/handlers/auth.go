@@ -91,3 +91,18 @@ func (h *AuthHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	}
 	api.WriteJSON(w, http.StatusOK, map[string]any{"api_key": key})
 }
+
+// Logout handles POST /auth/logout: it ends this device's session (and its push devices). Other
+// devices stay signed in.
+func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
+	u, ok := api.UserFrom(r.Context())
+	if !ok {
+		api.WriteJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+		return
+	}
+	if err := h.Auth.Logout(r.Context(), u.UserID, api.SessionFrom(r.Context())); err != nil {
+		api.WriteJSON(w, http.StatusInternalServerError, map[string]string{"error": "could not sign out"})
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}

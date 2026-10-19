@@ -43,7 +43,7 @@ func (h *PushHandler) Subscribe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.svc.Subscribe(r.Context(), u, services.SubscribeInput{
-		Endpoint: req.Endpoint, P256dh: req.Keys.P256dh, Auth: req.Keys.Auth, UserAgent: req.UserAgent,
+		SessionID: api.SessionFrom(r.Context()), Endpoint: req.Endpoint, P256dh: req.Keys.P256dh, Auth: req.Keys.Auth, UserAgent: req.UserAgent,
 	}); err != nil {
 		api.WriteJSON(w, statusFromErr(err), map[string]string{"error": "invalid subscription"})
 		return

@@ -34,6 +34,11 @@ export async function registerAuth(
   })
 }
 
+// Ends this device's session on the server (other devices stay signed in). 204.
+export async function logoutSession(apiKey: string): Promise<void> {
+  await apiFetch<void>('/auth/logout', { method: 'POST', apiKey })
+}
+
 export async function loginAuth(
   username: string,
   password: string,

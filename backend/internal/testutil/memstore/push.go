@@ -28,7 +28,7 @@ func (r *PushRepo) Upsert(_ context.Context, s *models.PushSubscription) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if cur, ok := r.subs[s.Endpoint]; ok {
-		cur.UserID, cur.P256dhEnc, cur.AuthEnc, cur.UserAgent, cur.UpdatedAt = s.UserID, s.P256dhEnc, s.AuthEnc, s.UserAgent, s.UpdatedAt
+		cur.UserID, cur.SessionID, cur.P256dhEnc, cur.AuthEnc, cur.UserAgent, cur.UpdatedAt = s.UserID, s.SessionID, s.P256dhEnc, s.AuthEnc, s.UserAgent, s.UpdatedAt
 		return nil
 	}
 	cp := *s
@@ -57,6 +57,17 @@ func (r *PushRepo) DeleteByUser(_ context.Context, userID string) error {
 	defer r.mu.Unlock()
 	for ep, s := range r.subs {
 		if s.UserID == userID {
+			delete(r.subs, ep)
+		}
+	}
+	return nil
+}
+
+func (r *PushRepo) DeleteBySessions(_ context.Context, sessionIDs []string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for ep, s := range r.subs {
+		if s.SessionID != "" && slices.Contains(sessionIDs, s.SessionID) {
 			delete(r.subs, ep)
 		}
 	}

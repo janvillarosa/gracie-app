@@ -47,11 +47,14 @@ event -> NotifyService.enqueue -> push_jobs (Mongo outbox, coalesced by key)
   A pending run job takes new names (deduplicated, at most 5); a claimed or sent one only moves `last_at`, which
   keeps the run open. No job in the gap starts a new run. Check-offs carry their own phone tag
   (`list:<id>:checks`), so they never replace an unread add.
-- **Signed-in devices only.** A user whose key has expired gets nothing. Login rotates the key and records
-  `api_key_issued_at`; a device last refreshed before it (the app refreshes on every start) belongs to an older
-  login and is skipped, not deleted, so a login racing a dispatch can't drop the new device. Stale rows go when
-  that app reopens (it signs out and unsubscribes) or on a 404/410. One rotating key per user means effectively
-  one signed-in device; true multi-device needs per-device sessions.
+- **Signed-in devices only.** Each device subscribes under its login session (`push_subscriptions.session_id`)
+  and is notified only while that session lives. Signing out ends the session and deletes its devices; a
+  password change or account deletion does the same for every session. A device from before sessions (no
+  session id) follows the legacy key: skipped if its user's key expired, or if it was last refreshed (the
+  app does on every start) before that key was replaced. Stale devices are skipped, not deleted, so a race
+  can't drop a live one. A password change ends the caller's own session too, which removes this device's
+  subscription for a moment; the app re-subscribes at once, because the new key triggers its resync.
+  Signing out with a legacy key replaces that key, so a copy of it stops working.
 - **Trip reminders** use `once` jobs keyed `trip:todo:<id>:<start>` / `trip:booking:<id>:<start>`; a done job is
   kept 7 days (TTL on `expire_at`), which is what makes them send once.
 - **Wording happens at send time** from the stored names and count, so a merged job reads well. Payload is

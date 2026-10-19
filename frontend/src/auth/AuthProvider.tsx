@@ -8,7 +8,7 @@ import React, {
   useState,
 } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getMe } from '@api/endpoints'
+import { getMe, logoutSession } from '@api/endpoints'
 import { wipeTripData } from '@lib/trips/store'
 import { setAnalyticsKey, startAppTracking } from '@lib/analytics'
 import { disablePush, resyncPush } from '@lib/push'
@@ -43,9 +43,10 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
   const signOut = useCallback(
     (reason: SignOutReason = 'user', wrap?: (commit: () => void) => void) => {
       if (signingOut.current) return signingOut.current
+      const key = reason === 'user' ? keyRef.current : null
       // A signed-out device gets no one's notifications. A refused key can't ask the server, so
       // then only the browser's subscription goes.
-      void disablePush(reason === 'user' ? keyRef.current : null)
+      const pushOff = disablePush(key)
       const commit = () => {
         localStorage.removeItem(STORAGE_KEY)
         setApiKeyState(null)
@@ -58,6 +59,15 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
       else commit()
       const p = wipeTripData({ flush: reason === 'user' })
         .catch(() => 0)
+        .then(async (pending) => {
+          // End this device's session last: sending the queued changes still needs the key. Other
+          // devices stay signed in. Offline, the session just runs out on its own.
+          if (key) {
+            await pushOff
+            await logoutSession(key).catch(() => undefined)
+          }
+          return pending
+        })
         .finally(() => {
           signingOut.current = null
         })

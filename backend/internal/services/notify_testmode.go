@@ -23,7 +23,9 @@ func (s *NotifyService) SendTest(ctx context.Context, u *models.User) ([]DeviceR
 		return nil, err
 	}
 	// The same devices a real notification would reach (the caller is signed in, or it could not ask).
-	subs = currentDevices(subs, map[string]*models.User{u.UserID: u})
+	if subs, err = s.currentDevices(ctx, subs, map[string]*models.User{u.UserID: u}, s.now().UTC()); err != nil {
+		return nil, err
+	}
 	msg := push.Message{Title: "Bauhouse", Body: "Test notification: it works.", URL: "/app", Tag: "test:" + u.UserID}
 	return s.deliverEach(ctx, subs, msg, push.Topic(ids.NewID("test"))), nil
 }
