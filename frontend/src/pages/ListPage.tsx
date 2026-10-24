@@ -12,6 +12,7 @@ import {
 } from '@components/ui'
 import { useComposerBox } from '@components/ui/useComposerBox'
 import { useAddBarShortcut } from '@lib/useAddBarShortcut'
+import { useRowKeys } from '@lib/useRowKeys'
 import { errorMessage } from '@lib/errors'
 import { useLocation, useParams } from 'react-router-dom'
 import { useTransitionNavigate } from '@lib/viewTransition'
@@ -1013,6 +1014,7 @@ export const ListPage: React.FC = () => {
   }, [deskOn])
   const composerStyle = useComposerBox(mainPane, deskOn)
   useAddBarShortcut(deskOn, LIST_ADD_INPUT)
+  useRowKeys(mainPane, deskOn)
   // A list with nothing on it opens with the cursor in the composer (on a desk; a phone's
   // keyboard would cover the page).
   const focusedEmpty = useRef(false)
@@ -1096,6 +1098,7 @@ export const ListPage: React.FC = () => {
       onSubmitEdit={submitEdit}
       registerAnchor={registerAnchor}
       reason={reasons.get(it.item_id)}
+      keyNav={desk}
     />
   )
 

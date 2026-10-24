@@ -3963,6 +3963,11 @@ textarea.notes-textarea {
   .list-desk-main > .paper-stack > .paper-list {
     flex: 1 0 auto;
   }
+  .list-desk .item-row:focus-visible {
+    outline: none;
+    border-radius: var(--radius-sm);
+    box-shadow: var(--focus-ring);
+  }
   /* Rows are 44px on a desk; the phone's 52px is for thumbs. */
   .list-desk .items-list .item-row {
     min-height: var(--control-lg);

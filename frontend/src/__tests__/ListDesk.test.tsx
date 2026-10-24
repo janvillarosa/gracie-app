@@ -135,3 +135,69 @@ describe('the list desk (1024px and wider)', () => {
     expect(screen.getByText('Oregano')).toBeInTheDocument()
   })
 })
+
+describe('row keys on the desk', () => {
+  const row = (name: string) => screen.getByText(name).closest('[data-row-id]') as HTMLElement
+
+  it('arrows move between rows and Space checks off', async () => {
+    const { user, calls } = await setupListPage({ wide: true, items: produce })
+    await screen.findByText('Oregano')
+    row('Oregano').focus()
+    await user.keyboard('{ArrowDown}')
+    expect(row('Dill plant')).toHaveFocus()
+    await user.keyboard('{ArrowUp}')
+    expect(row('Oregano')).toHaveFocus()
+    await user.keyboard('{ArrowDown} ')
+    await waitFor(() =>
+      expect(calls.patched).toContainEqual({
+        id: 'it-1',
+        body: expect.objectContaining({ completed: true }),
+      }),
+    )
+  })
+
+  it('keeps one row in the tab order', async () => {
+    await setupListPage({ wide: true, items: produce })
+    await screen.findByText('Oregano')
+    const rows = document.querySelectorAll<HTMLElement>('[data-row-id]')
+    expect([...rows].filter((r) => r.tabIndex === 0)).toHaveLength(1)
+    expect(rows[0].getAttribute('aria-keyshortcuts')).toBe('Space Delete Enter')
+  })
+
+  it('Delete removes the row with an Undo, and focus moves on to the next', async () => {
+    const { user } = await setupListPage({ wide: true, items: produce })
+    await screen.findByText('Dill plant')
+    row('Dill plant').focus()
+    await user.keyboard('{Delete}')
+    expect(await screen.findByRole('button', { name: 'Undo' })).toBeInTheDocument()
+    expect(row('Oat milk')).toHaveFocus()
+    await waitFor(() => expect(screen.queryByText('Dill plant')).toBeNull())
+    expect(row('Oat milk')).toHaveFocus()
+  })
+
+  it('Delete on the last row focuses the one before it', async () => {
+    const { user } = await setupListPage({ wide: true, items: produce })
+    await screen.findByText('Oat milk')
+    row('Oat milk').focus()
+    await user.keyboard('{Backspace}')
+    expect(row('Dill plant')).toHaveFocus()
+  })
+
+  it('Enter edits the name, and keys typed in the editor are text, not shortcuts', async () => {
+    const { user, calls } = await setupListPage({ wide: true, items: produce })
+    await screen.findByText('Oregano')
+    row('Oregano').focus()
+    await user.keyboard('{Enter}')
+    const editor = (await screen.findByDisplayValue('Oregano')) as HTMLInputElement
+    await user.keyboard(' fresh')
+    expect(editor.value).toContain('fresh')
+    expect(calls.patched.filter((p) => p.body.completed !== undefined)).toHaveLength(0)
+    expect(calls.deleted).toHaveLength(0)
+  })
+
+  it('rows are not focusable on a phone', async () => {
+    await setupListPage({ wide: false, items: produce })
+    await screen.findByText('Oregano')
+    expect(document.querySelectorAll('[data-row-id]')).toHaveLength(0)
+  })
+})
