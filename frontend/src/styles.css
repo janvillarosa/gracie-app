@@ -3922,6 +3922,18 @@ textarea.notes-textarea {
   .list-page .desk-frame {
     max-width: 1120px;
   }
+  /* The composer is the list's one action: taller than the trip's, edged in the key's yellow,
+     and its placeholder reads as an invitation, not a hint. */
+  .list-page.desk-page {
+    --composer-h: 64px;
+  }
+  .list-page .desk-composer .add-bar {
+    border: 2px solid var(--brand-yellow-deep);
+  }
+  .list-page .desk-composer .add-bar textarea.add-input::placeholder {
+    color: var(--text);
+    opacity: 1;
+  }
   .list-desk {
     display: grid;
     flex: 1 1 auto;
@@ -4000,12 +4012,43 @@ textarea.notes-textarea {
     }
   }
 
-  /* The side sheet: Butler's slips together, then the notes. */
-  .list-desk-part + .list-desk-part {
-    margin-top: var(--space-6);
+  /* The side column: a sheet for Butler's slips, and a sheet of ruled paper for the notes that
+     takes the height that is left. */
+  .list-desk-side {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
   }
-  .list-desk-part .ui-section-label svg {
-    vertical-align: -2px;
+  .list-desk-sheet {
+    flex: none;
+  }
+  .list-desk-sheet.is-notes {
+    display: flex;
+    flex: 1 0 auto;
+    flex-direction: column;
+    min-height: 360px;
+  }
+  .list-desk-sheet.is-notes > .ant-space {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    width: 100%;
+  }
+  .list-desk-sheet.is-notes > .ant-space > .ant-space-item:first-child {
+    display: flex;
+    flex: 1 1 auto;
+  }
+  .list-desk-sheet.is-notes .notes-textarea {
+    flex: 1 1 auto;
+    height: auto;
+    min-height: 200px;
+  }
+  /* A sheet's title, in the voice of a trip's day heading: ink, Outfit, no label caps. */
+  .list-desk-title {
+    margin: 0 0 var(--space-3);
+    color: var(--ink);
+    font: var(--w-semibold) var(--t-heading) / 1.2 var(--font-headings);
+    letter-spacing: -0.015em;
   }
   /* A slip in a 340px pane keeps its words on the full width; its keys drop to a line below. */
   .list-desk-side .autopilot-slip {
@@ -4025,8 +4068,5 @@ textarea.notes-textarea {
     margin: 0;
     color: var(--muted);
     font-size: var(--t-meta);
-  }
-  .list-desk .notes-textarea {
-    min-height: 240px;
   }
 }

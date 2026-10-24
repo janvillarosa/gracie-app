@@ -4,7 +4,6 @@ import {
   PaperStack,
   Button,
   InkStamp,
-  SectionLabel,
   Sheet,
   SheetActions,
   SlipStack,
@@ -62,7 +61,6 @@ import {
   Check,
   Rows,
   CaretDown,
-  CallBell,
 } from '@phosphor-icons/react'
 import {
   DndContext,
@@ -1409,23 +1407,27 @@ export const ListPage: React.FC = () => {
               </PaperStack>
             </div>
             <aside className="list-desk-side" aria-label="Butler and notes">
-              <Paper className="list-desk-sheet">
-                {butlerOn && (
-                  <section className="list-desk-part">
-                    <SectionLabel>
-                      <CallBell weight="bold" aria-hidden /> Butler
-                    </SectionLabel>
-                    {slipNodes.length > 0 ? (
-                      <SlipStack layout="column">{slipNodes}</SlipStack>
-                    ) : butlerLoading ? null : (
-                      <p className="list-desk-quiet">Nothing due yet.</p>
-                    )}
-                  </section>
-                )}
-                <section className="list-desk-part is-notes">
-                  <SectionLabel>Notes</SectionLabel>
-                  {notesNode}
-                </section>
+              {butlerOn && (
+                <Paper className="list-desk-sheet" as="section" aria-labelledby="list-desk-butler">
+                  <h2 className="list-desk-title" id="list-desk-butler">
+                    Butler
+                  </h2>
+                  {slipNodes.length > 0 ? (
+                    <SlipStack layout="column">{slipNodes}</SlipStack>
+                  ) : butlerLoading ? null : (
+                    <p className="list-desk-quiet">Nothing due yet.</p>
+                  )}
+                </Paper>
+              )}
+              <Paper
+                className="list-desk-sheet is-notes"
+                as="section"
+                aria-labelledby="list-desk-notes"
+              >
+                <h2 className="list-desk-title" id="list-desk-notes">
+                  Notes
+                </h2>
+                {notesNode}
               </Paper>
             </aside>
           </div>
