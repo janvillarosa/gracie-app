@@ -1,0 +1,135 @@
+/* The desk: the app shell and the floating composer that the trip planning desk and the list desk
+   share (1024px and wider). Page-specific columns live in trips.css and styles.css. */
+
+/* One centred frame, so the top bar and the columns share their edges at any width. */
+.desk-frame {
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+/* ---- The composer: on a desk the add bar floats ---------------------------------------------
+   Fixed to the window's bottom, centred on the Days column, 24px in from its sides. The star of
+   the planning desk: bigger than the phone's bar, on elevated paper. */
+.desk-page {
+  --composer-h: 56px;
+}
+.desk-composer {
+  position: fixed;
+  bottom: 24px;
+  left: var(--composer-left, 50%);
+  width: var(--composer-width, min(640px, calc(100vw - 48px)));
+  z-index: 40;
+  transition: opacity var(--dur-fast) ease;
+}
+.desk-composer .add-bar {
+  position: static;
+  box-sizing: border-box;
+  min-height: var(--composer-h);
+  margin: 0;
+  padding: 0 var(--space-2) 0 var(--space-2);
+  display: flex;
+  align-items: center;
+  background: var(--paper-fill);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--paper-edge), var(--lift-bar);
+}
+.desk-composer .add-bar:focus-within {
+  border-color: var(--brand-yellow-deep);
+  box-shadow:
+    var(--paper-edge),
+    var(--lift-bar),
+    0 0 0 3px color-mix(in srgb, var(--brand-yellow) 55%, transparent);
+}
+.desk-composer .add-row,
+.desk-composer .add-field {
+  align-items: center;
+}
+.desk-composer .add-bar .add-input.ant-input,
+.desk-composer .add-bar textarea.add-input {
+  min-height: 44px !important;
+  font-size: var(--t-lead) !important;
+  background: transparent;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+/* The composer's round key sits inside the pill, 8px clear of its edge on every side (38px in a
+   56px pill); its hit area still reaches 46px. */
+.desk-composer .add-btn {
+  --key-size: calc(var(--composer-h) - 2px - 2 * var(--space-2));
+}
+/* A muted "/" at the right of an empty, unfocused field (a keyboard in hand). */
+@media (hover: hover) and (pointer: fine) {
+  .desk-composer .add-field:has(textarea:placeholder-shown:not(:focus))::after {
+    content: '/';
+    position: absolute;
+    right: var(--space-4);
+    top: 50%;
+    transform: translateY(-50%);
+    min-width: 22px;
+    padding: 1px 0;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-xs);
+    color: var(--muted);
+    font-size: var(--t-field);
+    line-height: 18px;
+    text-align: center;
+    pointer-events: none;
+  }
+}
+
+/* ---- The composer, tightened: the key at the right end, the "/" hint inside the field ---------- */
+.desk-composer .add-bar > div:not(.trip-add-status) {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.desk-composer .add-row {
+  display: flex;
+  width: 100%;
+  gap: var(--space-2);
+}
+.desk-composer .add-field {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.desk-composer .add-bar textarea.add-input {
+  padding-right: calc(var(--space-6) + 16px) !important;
+  text-overflow: ellipsis;
+}
+.desk-composer .add-btn {
+  flex: none;
+  margin-left: auto;
+}
+.desk-composer .add-field:has(textarea:placeholder-shown:not(:focus))::after {
+  right: var(--space-3);
+}
+
+
+/* ---- The desk is an app shell: the window does not scroll, each pane does ------------------------
+   Ideas (its list scrolls under a fixed header), Days (one container: the header sheet, the
+   pills and the plan, with sticky day headers) and the map / inspector (fills its height). The
+   wheel scrolls only the pane under the pointer. */
+@media (min-width: 1024px) {
+  html.desk-shell,
+  html.desk-shell body {
+    height: 100%;
+    overflow: hidden;
+  }
+  .desk-page {
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    height: 100dvh;
+    /* The columns run to the window's edge: what scrolls under the floating composer continues
+       off the bottom like paper beyond the desk, instead of being cut 16px short. */
+    padding-bottom: 0;
+    overflow: hidden;
+  }
+  .desk-page > .desk-frame {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    width: 100%;
+    min-height: 0;
+  }
+}

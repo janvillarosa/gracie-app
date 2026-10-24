@@ -2172,11 +2172,7 @@
 }
 
 /* ---- the planning desk (1024px and wider): Ideas | Days | Map ------------------------------- */
-/* One centred frame, so the top bar and the columns share their edges at any width. */
-.trip-desk-frame {
-  max-width: 1440px;
-  margin: 0 auto;
-}
+/* One centred frame (`.desk-frame`, desk.css), so the top bar and the columns share their edges. */
 @media (min-width: 1024px) {
   .trip-shell.is-desk {
     display: grid;
@@ -2709,78 +2705,8 @@
   transform: none;
 }
 
-/* ---- The composer: on a desk the add bar floats ---------------------------------------------
-   Fixed to the window's bottom, centred on the Days column, 24px in from its sides. The star of
-   the planning desk: bigger than the phone's bar, on elevated paper. */
-.trip-desk-frame {
-  --composer-h: 56px;
-}
-.trip-composer {
-  position: fixed;
-  bottom: 24px;
-  left: var(--composer-left, 50%);
-  width: var(--composer-width, min(640px, calc(100vw - 48px)));
-  z-index: 40;
-  transition: opacity var(--dur-fast) ease;
-}
-.trip-composer .add-bar {
-  position: static;
-  box-sizing: border-box;
-  min-height: var(--composer-h);
-  margin: 0;
-  padding: 0 var(--space-2) 0 var(--space-2);
-  display: flex;
-  align-items: center;
-  background: var(--paper-fill);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-pill);
-  box-shadow: var(--paper-edge), var(--lift-bar);
-}
-.trip-composer .add-bar:focus-within {
-  border-color: var(--brand-yellow-deep);
-  box-shadow:
-    var(--paper-edge),
-    var(--lift-bar),
-    0 0 0 3px color-mix(in srgb, var(--brand-yellow) 55%, transparent);
-}
-.trip-composer .add-row,
-.trip-composer .add-field {
-  align-items: center;
-}
-.trip-composer .add-bar .add-input.ant-input,
-.trip-composer .add-bar textarea.add-input {
-  min-height: 44px !important;
-  font-size: var(--t-lead) !important;
-  background: transparent;
-  border: 0 !important;
-  box-shadow: none !important;
-}
 .trip-composer .trip-target-chip {
   min-height: 32px;
-}
-/* The composer's round key sits inside the pill, 8px clear of its edge on every side (38px in a
-   56px pill); its hit area still reaches 46px. */
-.trip-composer .add-btn {
-  --key-size: calc(var(--composer-h) - 2px - 2 * var(--space-2));
-}
-/* A muted "/" at the right of an empty, unfocused field (a keyboard in hand). */
-@media (hover: hover) and (pointer: fine) {
-  .trip-composer .add-field:has(textarea:placeholder-shown:not(:focus))::after {
-    content: '/';
-    position: absolute;
-    right: var(--space-4);
-    top: 50%;
-    transform: translateY(-50%);
-    min-width: 22px;
-    padding: 1px 0;
-    border: 1px solid var(--border-strong);
-    border-radius: var(--radius-xs);
-    color: var(--muted);
-    font-size: var(--t-field);
-    line-height: 18px;
-    text-align: center;
-    pointer-events: none;
-  }
 }
 /* The plan sheet leaves room under its last row for the composer. */
 .trip-days-col .paper-list > .paper-body {
@@ -2868,64 +2794,9 @@
   vertical-align: middle;
 }
 
-/* ---- The composer, tightened: the key at the right end, the "/" hint inside the field ---------- */
-.trip-composer .add-bar > div:not(.trip-add-status) {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-.trip-composer .add-row {
-  display: flex;
-  width: 100%;
-  gap: var(--space-2);
-}
-.trip-composer .add-field {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-.trip-composer .add-bar textarea.add-input {
-  padding-right: calc(var(--space-6) + 16px) !important;
-  text-overflow: ellipsis;
-}
-.trip-composer .add-btn {
-  flex: none;
-  margin-left: auto;
-}
-.trip-composer .add-field:has(textarea:placeholder-shown:not(:focus))::after {
-  right: var(--space-3);
-}
-.trip-composer .trip-add-status {
-  position: absolute;
-  left: var(--space-4);
-  bottom: calc(100% + var(--space-2));
-}
-
-/* ---- The desk is an app shell: the window does not scroll, each pane does ------------------------
-   Ideas (its list scrolls under a fixed header), Days (one container: the header sheet, the
-   pills and the plan, with sticky day headers) and the map / inspector (fills its height). The
-   wheel scrolls only the pane under the pointer. */
+/* ---- The desk is an app shell, trip columns ------------------------------------------------
+   The shell itself (window fixed, pane scrolling) is shared: see desk.css. */
 @media (min-width: 1024px) {
-  html.trip-desk-shell,
-  html.trip-desk-shell body {
-    height: 100%;
-    overflow: hidden;
-  }
-  .trip-page.is-desk-shell {
-    display: flex;
-    flex-direction: column;
-    box-sizing: border-box;
-    height: 100dvh;
-    /* The columns run to the window's edge: what scrolls under the floating composer continues
-       off the bottom like paper beyond the desk, instead of being cut 16px short. */
-    padding-bottom: 0;
-    overflow: hidden;
-  }
-  .trip-page.is-desk-shell > .trip-desk-frame {
-    display: flex;
-    flex: 1 1 auto;
-    flex-direction: column;
-    width: 100%;
-    min-height: 0;
-  }
   .trip-page.is-desk-shell .trip-shell.is-desk {
     flex: 1 1 auto;
     min-height: 0;
@@ -3019,4 +2890,10 @@
 .trip-days-col .trip-row,
 .trip-days-col .trip-stub {
   scroll-margin-block: 52px calc(var(--composer-h) + 40px);
+}
+
+.trip-composer .trip-add-status {
+  position: absolute;
+  left: var(--space-4);
+  bottom: calc(100% + var(--space-2));
 }
