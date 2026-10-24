@@ -1490,6 +1490,11 @@ input.ui-sheet-title.has-error:focus-visible {
   position: relative;
   z-index: 1;
 }
+.slip-stack.is-column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
 .slip-stack-peek {
   position: absolute;
   z-index: 0;
