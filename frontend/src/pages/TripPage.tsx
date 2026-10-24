@@ -1179,7 +1179,11 @@ const TripScreen: React.FC<{
         preparedBy={members.find((m) => m.user_id === userId)?.name}
       />
       <div
-        className={['trip-page', dragging ? 'is-dragging' : '', desktop ? 'is-desk-shell desk-page' : '']
+        className={[
+          'trip-page',
+          dragging ? 'is-dragging' : '',
+          desktop ? 'is-desk-shell desk-page' : '',
+        ]
           .filter(Boolean)
           .join(' ')}
       >
@@ -1208,10 +1212,7 @@ const TripScreen: React.FC<{
               {asideOpen && sideNode}
             </div>
             {addBarNode && (
-              <div
-                className="trip-composer desk-composer"
-                style={composerStyle}
-              >
+              <div className="trip-composer desk-composer" style={composerStyle}>
                 {addBarNode}
               </div>
             )}
