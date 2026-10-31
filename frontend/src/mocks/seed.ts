@@ -309,5 +309,161 @@ export function buildSeedTrips(today: string, phase: Phase, now = Date.now()): T
     bookings: [],
     version: 1,
   }
-  return [lisbonPorto, ghent, draft, past]
+  return [lisbonPorto, halfPlanned(start, now), ghent, draft, past]
+}
+
+/** A trip as people really leave it half-way through planning: empty days between busy ones,
+ *  items with no time, no place or only a length, a place whose name is not loaded yet, bookings
+ *  with no code, no dates or no title, a stay with no check-out, long words and long notes. It
+ *  runs on the same dates as Lisbon & Porto so every phase shows it. Synthetic, like the rest. */
+function halfPlanned(start: string, now: number): Trip {
+  const MAD = 'Europe/Madrid'
+  const day = (n: number) => addDays(start, n)
+  const pin = (name: string, lat: number, lng: number, locality?: string): Place => ({
+    name,
+    locality,
+    lat,
+    lng,
+    tz: MAD,
+    source: 'pin',
+  })
+  const seville = pin('Seville', 37.3891, -5.9845, 'Seville')
+  let order = 0
+  const t = (p: Partial<TripTodo> & { title: string }): TripTodo => ({
+    todo_id: `ttd_${hex(2000 + order)}`,
+    done: false,
+    day: null,
+    order: ++order,
+    category: 'other',
+    tz: MAD,
+    created_by: order % 3 ? MIA : ME,
+    updated_at: new Date(now - order * 3600_000).toISOString(),
+    ...p,
+  })
+  const todos: TripTodo[] = [
+    // Day 0: arrival, half sorted.
+    t({ title: 'Land and find the bus into town', day: day(0), category: 'transport' }),
+    t({
+      title: 'Alcázar',
+      day: day(0),
+      start_time: '17:30',
+      category: 'sight',
+      place: pin('Real Alcázar', 37.3831, -5.9902, 'Seville'),
+    }),
+    t({ title: 'tapas somewhere??', day: day(0), start_time: '21:00', category: 'food' }),
+    // Day 1: a length but no time, a time but no length, two at the same time.
+    t({ title: 'Cathedral + Giralda', day: day(1), duration_min: 120, category: 'sight' }),
+    t({
+      title: 'Flamenco show (Mia has the link somewhere)',
+      day: day(1),
+      start_time: '19:00',
+      category: 'activity',
+      notes:
+        'Two places came up: one near the Alameda, one in Triana. The Triana one does a later show on weekends. Ask the flat host which is less touristy. Bring cash for drinks.',
+    }),
+    t({ title: 'Dinner', day: day(1), start_time: '19:00' }),
+    // Days 2 and 3: nothing yet. Day 4: an early timed slot (its ticket is booked separately).
+    t({
+      title:
+        'Alhambra — Nasrid Palaces timed slot, DO NOT be late, they turn people away at the gate',
+      day: day(4),
+      start_time: '08:30',
+      duration_min: 180,
+      category: 'sight',
+      place: pin('Alhambra', 37.1761, -3.5881, 'Granada'),
+    }),
+    // Then a Google place whose name has not loaded (no title, purged coordinates).
+    t({
+      title: '',
+      day: day(4),
+      start_time: '10:00',
+      place: { source: 'google', place_id: 'ChIJ_synthetic_purged', tz: MAD },
+    }),
+    t({ title: 'Albaicín wander', day: day(4), category: 'activity', done: true, done_by: MIA }),
+    // Day 5: one thing after midnight.
+    t({
+      title: 'Late tapas crawl',
+      day: day(5),
+      start_time: '23:30',
+      duration_min: 120,
+      category: 'food',
+    }),
+    // Days 6 and 7: nothing yet. Day 8: going home.
+    t({ title: 'Check out', day: day(8) }),
+    // Ideas, mostly bare.
+    t({ title: 'Córdoba day trip?', category: 'activity' }),
+    t({
+      title: 'Mezquita',
+      category: 'sight',
+      place: pin('Mezquita-Catedral', 37.8789, -4.7794, 'Córdoba'),
+    }),
+    t({ title: 'buy espadrilles' }),
+    t({ title: 'Ronda', place: pin('Ronda', 36.7423, -5.1666) }),
+    t({ title: 'Setas de Sevilla at sunset', category: 'sight' }),
+  ]
+
+  const b = (n: number, p: Partial<Booking>): Booking => ({
+    booking_id: `tbk_${hex(200 + n)}`,
+    kind: 'other',
+    title: '',
+    created_by: n % 2 ? ME : MIA,
+    updated_by: n % 2 ? ME : MIA,
+    updated_at: new Date(now - n * 86400_000).toISOString(),
+    ...p,
+  })
+  const bookings: Booking[] = [
+    // A flight with times but no code yet.
+    b(1, {
+      kind: 'flight',
+      title: 'Flight to Seville',
+      starts_at: `${day(0)}T11:10`,
+      start_tz: 'Europe/London',
+      ends_at: `${day(0)}T14:40`,
+      end_tz: MAD,
+    }),
+    // A stay with a check-in and no check-out.
+    b(2, {
+      kind: 'stay',
+      title: 'Flat in Santa Cruz',
+      starts_at: `${day(0)}T16:00`,
+      start_tz: MAD,
+      place: seville,
+    }),
+    // A code and nothing else.
+    b(3, { kind: 'train', title: 'Train to Granada', confirmation_code: 'SYN-RENFE-0042' }),
+    // A car with no title at all, only a pick-up place and a drop-off.
+    b(4, {
+      kind: 'car',
+      starts_at: `${day(6)}T09:00`,
+      start_tz: MAD,
+      ends_at: `${day(8)}T09:00`,
+      end_tz: MAD,
+      place: pin('Granada station', 37.1844, -3.6097, 'Granada'),
+      end_place: pin('Málaga airport', 36.6749, -4.4991, 'Málaga'),
+    }),
+    // A ticket with a long title, a long code and a note.
+    b(5, {
+      kind: 'ticket',
+      title: 'Alhambra general admission + Nasrid Palaces + Generalife gardens',
+      confirmation_code: 'SYN-ALH-2026-00098817-B',
+      starts_at: `${day(4)}T08:30`,
+      start_tz: MAD,
+      notes: 'Passports needed at the gate; names must match.',
+    }),
+  ]
+
+  return {
+    trip_id: `trip_${hex(5)}`,
+    title: 'Seville, Granada & maybe Córdoba',
+    icon: 'LANDMARK',
+    destination: seville,
+    notes: 'Synthetic example trip, half planned on purpose.',
+    start_date: day(0),
+    end_date: day(8),
+    tz: MAD,
+    days: { [day(4)]: 'Granada (early start!!)' },
+    todos,
+    bookings,
+    version: 1,
+  }
 }

@@ -209,7 +209,9 @@ _Frontend paths are relative to `frontend/src/`._
 - **Dev mock (no backend needed):** `cd frontend && VITE_MOCK_TRIPS=1 pnpm dev --port 5174 --strictPort --host 127.0.0.1`
   (or just `pnpm dev`). It boots an MSW worker (a fetch
   shim if a service worker can't register) backed by `mocks/tripsServer.ts`, seeded from
-  `mocks/seed.ts` ("Lisbon & Porto", dates relative to today). `?mockPhase=before|during|after`
+  `mocks/seed.ts` ("Lisbon & Porto", dates relative to today, plus "Seville, Granada & maybe Córdoba",
+  a half-planned trip on the same dates for checking incomplete data: empty days, items with no time
+  or place, an unloaded Google place, untitled and undated bookings, a stay with no check-out). `?mockPhase=before|during|after`
   picks the seed's phase and re-seeds from scratch on every load that carries it (every trips
   database, including the mock user's, is deleted first; without the param the tab keeps its last
   phase, default `during`). Dev only; never in a production build.

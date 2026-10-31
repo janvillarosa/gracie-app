@@ -490,6 +490,7 @@ export class MockTripServer {
         travellers: trip.travellers,
         days: trip.days,
         packing_list_id: trip.packing_list_id,
+        icon: trip.icon,
       },
       todos: trip.todos.map((t) => ({ ...t, v: 1, created_by: t.created_by ?? by })),
       bookings: trip.bookings.map((b) => ({ ...b, v: 1, created_by: b.created_by ?? by })),
