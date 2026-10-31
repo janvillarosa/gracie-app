@@ -959,16 +959,16 @@ describe('The add bar', () => {
     open()
     await userEvent.type(await screen.findByRole('combobox', { name: 'Add to today' }), 'Pena')
     await userEvent.click(await screen.findByRole('option', { name: /Pena Palace/ }))
-    // Stored without a name (Google content): a blank title, the place id and coordinates.
+    // What was typed is the title (the person's words, never Google's name, which can come back
+    // in another language); the place keeps only its id and coordinates.
     await waitFor(() => {
       const added = serverTodos().filter((x) => x.place?.place_id === 'demo:pena')
       expect(added.length).toBe(1)
-      expect(added[0].title).toBe('')
+      expect(added[0].title).toBe('Pena')
       expect(added[0].place?.name).toBeUndefined()
       expect(added[0].place?.coords_fetched_at).toBeTruthy()
     })
-    // The row shows the place's name from the session cache.
-    expect(await screen.findByText('Pena Palace', { selector: '.trip-title' })).toBeInTheDocument()
+    expect(await screen.findByText('Pena', { selector: '.trip-title' })).toBeInTheDocument()
   })
 
   it('shows Powered by Google under the suggestions (the demo list says it is a demo)', async () => {

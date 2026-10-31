@@ -108,13 +108,13 @@ export const AddBar: React.FC<Props> = ({
     onExpand?.({ title: parsed.title, start_time: parsed.start_time })
     reset()
   }
-  // A pick stores only the Google place (id, coordinates, fetch time). The title stays blank:
-  // the row shows the place's name while online.
+  // A pick stores only the Google place (id, coordinates, fetch time). The title is what was
+  // typed: the person's words, never Google's name, which can come back in another language.
   const pick = async (s: Suggestion) => {
     const place = await search.pick(s)
     if (!place) return
     navigator.vibrate?.(8)
-    onAdd({ title: '', start_time: parsed.start_time, place })
+    onAdd({ title: parsed.title.trim(), start_time: parsed.start_time, place })
     reset()
   }
   // Shift+Enter opens the full editor; the combobox handles every other key.

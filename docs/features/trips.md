@@ -78,8 +78,7 @@ Spec: `docs/superpowers/specs/2026-10-14-trips-api-persistence-design.md`.
     `place_id` (+ `tz`, `locality`).
   - `pin` / `manual`: `name` and `lat`/`lng` required, `address`/`tz`/`locality` optional; no
     `place_id`, no `coords_fetched_at`.
-  - A todo may have a blank title only when it has a Google place (the title is user content
-    and stays blank by design); any other todo still needs a non-blank title.
+  - A todo may have a blank title only when it has a Google place (the title is user content); any other todo still needs a non-blank title.
   - **tz decision:** clients send `tz`. When a google place has coordinates but no tz, `ApplyOp`
     derives it from lat/lng with tzf (`Ctx.TZ`, wired by `TripService.UseTZ`). tzf therefore
     stays, but loads lazily on the first such place (~34 MB heap, ~150 ms), never at startup.
@@ -146,7 +145,10 @@ _Frontend paths are relative to `frontend/src/`._
   - **Camera (brief 6q):** only explicit actions move it (Fit day, Show all days, "Show" on the
     chip, picking a day, an opened item or a drag preview that is off screen). The first fit is the
     emphasised day (today during the trip, else the first day with places). Scrolling the list only
-    changes `emphasisDay`. When that day's stops are all off screen (or piled up when zoomed out) the
+    changes `emphasisDay`: the day crossing a reading line under the sticky chrome
+    (`pages/trip/useDayInView.ts`). Over the last stretch of the list that line slides down to the
+    bottom edge (`readingLine`), so the last days, which can never scroll up to it, still get their
+    turn. When that day's stops are all off screen (or piled up when zoomed out) the
     controller calls `onOffMap` and `MapCanvas` shows the chip "Wed 28 is off the map · Show"
     (`onShowDay` is Fit day). A programmatic move holds its own token until its own `idle`; the first
     fit waits for the map's first idle (`gmap/controller.ts`).
@@ -159,8 +161,9 @@ _Frontend paths are relative to `frontend/src/`._
   - **Storage rules** (the backend enforces them; the mock mirrors them): a Google place stores only
     `{source:'google', place_id, lat, lng, coords_fetched_at}` (and `tz` when known). **No name, no
     address.** Coordinates may be at most 30 days old; `lat`/`lng` may be missing once purged. A
-    todo title is user content only: picking a place leaves it blank (a blank title is allowed only
-    with a Google place). `osm_ref` and the `photon` source are gone; the `/places/*` proxy too.
+    todo title is user content only: picking a place in the add bar keeps what was typed as the
+    title (never Google's name, which can come back in another language); a blank title is allowed
+    only with a Google place. `osm_ref` and the `photon` source are gone; the `/places/*` proxy too.
   - **Search** (`placesSource.ts`, `usePlaces.ts`): `AutocompleteSuggestion.fetchAutocompleteSuggestions`
     with one session token per search session, biased to the trip's area (rounded to 0.1 degree),
     250 ms debounce, at least 2 characters. A pick calls `fetchFields` on the prediction's place
@@ -176,7 +179,8 @@ _Frontend paths are relative to `frontend/src/`._
     `MapsLink`; a Google place opens by `query_place_id`.
   - **Place fields in the UI:** `InlinePlace` (`components/ui/InlinePlace.tsx`) is the inline place
     field with slips below (the desktop inspector mounts it); `PlacePicker` serves the phone sheet,
-    booking From/To and trip Where; `QuickAdd` is the add bar (its highlighted suggestion previews as
+    booking From/To and trip Where (a set place stays shown with a search under it, so a pick
+    replaces it in one step; ✕ removes it); `QuickAdd` is the add bar (its highlighted suggestion previews as
     a hollow pin after a short dwell and one `location` lookup). All use the shared `Combobox`.
 - **Desktop planning desk (`pages/TripPage.tsx`, brief 6n):** at 1200px and wider the trip is three
   columns, Ideas (300) | Days | Map (~420); at 1024-1199px it is Ideas | Days, and the map opens
