@@ -1,5 +1,6 @@
 // Pure scheduling helpers: day lists, absolute-time sorting, gaps, fullness, countdown.
 import type { Booking, Trip, TripTodo } from '../../api/tripTypes'
+import { bookingName } from './kinds'
 
 const DAY_MS = 86400000
 export const MAX_DAYS = 400
@@ -292,7 +293,8 @@ export function suggestLabel(todos: TripTodo[]): string {
 }
 
 const entryTitle = (e: Entry) => {
-  const t = (e.kind === 'todo' ? e.todo.title : e.booking.title).trim() || 'Untitled'
+  // Titles can be missing altogether (the server leaves empty fields out); a booking goes by its kind.
+  const t = e.kind === 'todo' ? (e.todo.title ?? '').trim() || 'Untitled' : bookingName(e.booking)
   // A warning names both sides in one line: long names are cut, not wrapped into a paragraph.
   return t.length > 24 ? `${t.slice(0, 22).trimEnd()}…` : t
 }

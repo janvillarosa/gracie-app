@@ -127,6 +127,23 @@ describe('buildSchedule', () => {
     expect(buildSchedule(linked).days.find((d) => d.date === '2026-10-23')?.clash).toBeUndefined()
   })
 
+  it('names an untitled entry in an overlap, even when its title is missing altogether', () => {
+    const t = trip({
+      bookings: [
+        {
+          booking_id: 'car',
+          kind: 'car',
+          starts_at: '2026-10-23T09:00',
+          ends_at: '2026-10-23T11:00',
+        } as Booking,
+      ],
+      todos: [todo('Walk', { day: '2026-10-23', start_time: '10:00' })],
+    })
+    expect(buildSchedule(t).days.find((d) => d.date === '2026-10-23')?.clash?.text).toBe(
+      'Walk starts before Car ends (11:00)',
+    )
+  })
+
   it('keeps an overlap warning short when the names are long', () => {
     const t = trip({
       todos: [

@@ -2,6 +2,8 @@
 import type { Booking, BookingKind } from '../../api/tripTypes'
 import { addDays, shortDay, wallToUtc } from './schedule'
 
+export { bookingName, KIND_LABEL } from './kinds'
+
 /** A kind guessed from typed text ("TP1355", "hotel", "train to Porto"), or nothing. */
 export function inferKind(text: string): BookingKind | undefined {
   const t = text.trim()
@@ -31,20 +33,6 @@ export const bookingEndMs = (b: Booking, tripTz?: string): number | null => {
   const { d, t } = splitDt(b.ends_at)
   return wallToUtc(d, t || '00:00', b.end_tz || b.end_place?.tz || b.start_tz || tripTz)
 }
-
-/** What each kind is called where a booking has no title of its own. */
-export const KIND_LABEL: Record<Booking['kind'], string> = {
-  flight: 'Flight',
-  stay: 'Stay',
-  train: 'Train',
-  car: 'Car',
-  ticket: 'Ticket',
-  other: 'Booking',
-}
-
-/** A booking's name: its title, else what kind it is ("Car"), so no row is left without one. */
-export const bookingName = (b: Pick<Booking, 'title' | 'kind'>): string =>
-  b.title?.trim() || KIND_LABEL[b.kind]
 
 /** When a booking is over. A stay with no check-out lasts until the trip's last day ends
  *  (`tripEnd`); anything else with no end is over once it starts. Null with no times at all. */

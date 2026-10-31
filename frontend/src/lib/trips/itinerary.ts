@@ -2,7 +2,8 @@
 // Pure (no I/O, no React) so the print layout stays a thin renderer. Everything here is what the
 // screen already shows; confirmation codes and notes are never read.
 import type { Booking, Place, Trip } from '../../api/tripTypes'
-import { bookingRoute, KIND_LABEL, splitDt } from './bookings'
+import { bookingRoute, splitDt } from './bookings'
+import { KIND_LABEL } from './kinds'
 import type { Entry } from './schedule'
 import { buildSchedule, dateWithYear, diffDays, endClock, fullDay, routeText } from './schedule'
 
