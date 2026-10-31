@@ -104,7 +104,7 @@ describe('overlays and form controls come from components/ui', () => {
 })
 
 describe('trip and ui styles use tokens, not literals', () => {
-  const css = ['trips.css', 'components/ui/ui.css']
+  const css = ['trips.css', 'desk.css', 'components/ui/ui.css']
 
   /** The stylesheet without :root blocks (where tokens are defined) and comments. */
   const withoutRoot = (src: string) => {
@@ -132,7 +132,8 @@ describe('trip and ui styles use tokens, not literals', () => {
   }
 
   it('every colour token the ui styles use is defined on :root', () => {
-    const styles = read(join(SRC, 'styles.css')) + read(join(SRC, 'trips.css'))
+    const styles =
+      read(join(SRC, 'styles.css')) + read(join(SRC, 'trips.css')) + read(join(SRC, 'desk.css'))
     const defined = new Set([...styles.matchAll(/(--[a-z0-9-]+)\s*:/gi)].map((m) => m[1]))
     const used = [
       ...new Set(

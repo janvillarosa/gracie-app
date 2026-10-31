@@ -24,6 +24,7 @@ const outsideTokens = (css: string) =>
 const APP_CSS = [
   'styles.css',
   'trips.css',
+  'desk.css',
   'components/ui/ui.css',
   'components/trips/gmap/gmap.css',
 ]

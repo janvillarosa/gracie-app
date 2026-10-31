@@ -27,6 +27,24 @@ _Frontend paths are relative to `frontend/src/`._
   (`onClearCompleted`) works the same way: rows leave at once, the `/clear` request waits for the
   toast to close, Undo cancels it.
 
+## Desk (1024px and wider)
+
+Brief: `docs/superpowers/specs/2026-10-24-list-desk-brief.md`; plan: `docs/superpowers/plans/2026-10-24-list-desk.md`.
+
+- **Layout:** `ListPage` branches on `useMedia(WIDE)`. Below 1024px the page is the phone layout (tabs, bottom add bar, one
+  floating slip). From 1024px it is two panes in `.desk-frame` (1120px): the list (header sheet and list sheet, scrolling
+  under the floating composer) and a 340px side column (`--side-col`) with a Butler sheet over a Notes sheet. The shell
+  (`html.desk-shell`, `.desk-page`) and the composer (`.desk-composer`, placed by `useComposerBox`) are shared with the trip
+  desk: `desk.css`. The window does not scroll on the desk; the class is removed on unmount and when the window narrows.
+- **Butler** is the same slips as on a phone (Up next, the Butler-added slip, the suggestion) in `SlipStack layout="column"`,
+  all at once. It is hidden when the House's mode has none of `suggestions`, `auto_add` or `up_next` (ask `hasFeature`, never the
+  mode string). With nothing to show: "Nothing due yet." Notes keep the manual Save, and unsaved text survives a resize across
+  1024px (the buffer lives in `ListPage`).
+- **Rows and groups:** 44px rows. Grouped view's category headings are fold buttons (`foldedCats`, not remembered).
+- **Keyboard:** `/` or `n` focuses the composer (`useAddBarShortcut`, shared with trips, never while typing); an empty list
+  focuses it on load. `useRowKeys` gives rows roving focus: ↑/↓, Space, Delete/Backspace (focus moves on), Enter. Each key presses
+  the row's own control, so the pointer and keyboard paths are one. `ItemRow keyNav` tags the rows.
+
 ## Shopping runs (`lib/shoppingRun.ts`)
 
 - `ListPage` fetches `GET .../lists/{id}/run-hint` once (stale after 10 min, never waited for) and feeds

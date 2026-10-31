@@ -24,6 +24,8 @@ type Props = {
   onList?: ListItem[]
   // Reject to signal failure, as with onCreate.
   onBump?: (item: ListItem, typed: Parsed) => Promise<unknown>
+  // The field's DOM id, for the desk's "/" shortcut to find it.
+  inputId?: string
 }
 
 // Three keep the slips inside the room above the bar on a short phone with the keyboard up.
@@ -61,7 +63,14 @@ const SlipBody = React.memo(function SlipBody({ s, listed }: { s: Suggestion; li
 })
 
 // Owns the draft text so keystrokes re-render only this bar, not the whole list page.
-export const AddItemBar: React.FC<Props> = ({ onCreate, pantry, listId, onList, onBump }) => {
+export const AddItemBar: React.FC<Props> = ({
+  onCreate,
+  pantry,
+  listId,
+  onList,
+  onBump,
+  inputId,
+}) => {
   const [value, setValue] = useState('')
   // Bumped on every add; re-keys the plus icon so its turn animation replays.
   const [adds, setAdds] = useState(0)
@@ -187,6 +196,7 @@ export const AddItemBar: React.FC<Props> = ({ onCreate, pantry, listId, onList, 
               )}
               <Input.TextArea
                 ref={ref}
+                id={inputId}
                 className="add-input"
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
