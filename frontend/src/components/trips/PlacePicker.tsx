@@ -20,6 +20,8 @@ type Props = {
   onChange: (p: Place | null) => void
   // Where to bias the search (rounded before it leaves the device) and the zone to fall back on.
   bias?: { lat: number; lng: number } | null
+  // Where the search leans instead of `bias`: the points of the day it is for (a day can span cities).
+  near?: Array<{ lat: number; lng: number }>
   tz?: string
   label: string
   placeholder?: string
@@ -31,6 +33,7 @@ export const PlacePicker: React.FC<Props> = ({
   value,
   onChange,
   bias,
+  near,
   tz,
   label,
   placeholder = 'Search for a place',
@@ -38,7 +41,7 @@ export const PlacePicker: React.FC<Props> = ({
   const [text, setText] = useState('')
   // Names arrive from the session cache after the row first draws.
   useSyncExternalStore(subscribePlaceInfo, placeInfoVersion, placeInfoVersion)
-  const search = usePlaceSuggest(text, bias)
+  const search = usePlaceSuggest(text, near?.length ? near : bias)
   const coords = parseCoords(text)
   const typed = text.trim()
   const fresh = search.forQuery === typed

@@ -13,7 +13,7 @@ import {
   splitDt,
 } from '@lib/trips/bookings'
 import { LIMITS } from '@lib/trips/limits'
-import { hasPin, placeText } from '@lib/trips/places'
+import { hasPin, type LatLng, placeText } from '@lib/trips/places'
 import { addDays, mapsUrl, shortDay, zoneLabel } from '@lib/trips/schedule'
 import {
   Button,
@@ -46,6 +46,8 @@ type Props = {
   initialTitle?: string
   tripTz?: string
   bias: Bias
+  // The points of this item's day, where place searches lean (a day can span cities).
+  near?: LatLng[]
   days: MoveTarget[]
   // A new booking starts here (a datetime-local value).
   defaultStart?: string
@@ -124,6 +126,7 @@ export const BookingSheet: React.FC<Props> = ({
   initialTitle = '',
   tripTz,
   bias,
+  near,
   days,
   defaultStart,
   nowMs,
@@ -484,6 +487,7 @@ export const BookingSheet: React.FC<Props> = ({
                   label="Booking place"
                   value={b.place}
                   bias={bias}
+                  near={near}
                   onChange={(p) => apply({ place: p })}
                   onText={(t) => apply({ place: placeFromTyped(t, bias, tripTz) })}
                 />
@@ -498,6 +502,7 @@ export const BookingSheet: React.FC<Props> = ({
                   label="Booking end place"
                   value={b.end_place}
                   bias={bias}
+                  near={near}
                   onChange={(p) => apply({ end_place: p })}
                   onText={(t) => apply({ end_place: placeFromTyped(t, bias, tripTz) })}
                 />
@@ -516,6 +521,7 @@ export const BookingSheet: React.FC<Props> = ({
                       label="Booking place"
                       value={b.place}
                       bias={bias}
+                      near={near}
                       tz={tripTz}
                       onChange={(p) => {
                         apply({ place: p })
@@ -539,6 +545,7 @@ export const BookingSheet: React.FC<Props> = ({
                       label="Booking end place"
                       value={b.end_place}
                       bias={bias}
+                      near={near}
                       tz={tripTz}
                       onChange={(p) => {
                         apply({ end_place: p })

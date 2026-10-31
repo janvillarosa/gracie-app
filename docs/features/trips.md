@@ -165,8 +165,12 @@ _Frontend paths are relative to `frontend/src/`._
     title (never Google's name, which can come back in another language); a blank title is allowed
     only with a Google place. `osm_ref` and the `photon` source are gone; the `/places/*` proxy too.
   - **Search** (`placesSource.ts`, `usePlaces.ts`): `AutocompleteSuggestion.fetchAutocompleteSuggestions`
-    with one session token per search session, biased to the trip's area (rounded to 0.1 degree),
-    250 ms debounce, at least 2 characters. A pick calls `fetchFields` on the prediction's place
+    with one session token per search session, biased (`locationBias`, never a restriction, so any
+    city is still findable) to where the day being edited is: `placeBias.ts` `dayBias` takes the
+    day's own pinned items (a Lisbon to Porto day leans on both: `biasBox` draws one box round
+    them, 25 km padding, capped at 5 degrees, past which only the last point counts), else the last
+    place of the closest earlier day, else the destination or first stop (also for Ideas). Points
+    are rounded to 0.1 degree. 250 ms debounce, at least 2 characters. A pick calls `fetchFields` on the prediction's place
     (same token), which ends the session. No key: a small labelled demo list stands in.
   - **Display cache** (`places.ts`): name, address and locality for a place_id live in **session
     memory only**, filled while online (de-duplicated, paced about 5 calls a second). `useTrips`

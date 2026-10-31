@@ -1,6 +1,7 @@
 import React, { useRef } from 'react'
 import type { Booking, Trip, TripTodo } from '@api/tripTypes'
 import { LIMITS as TRIP_LIMITS } from '@lib/trips/limits'
+import { dayBias } from '@lib/trips/placeBias'
 import type { Member, useTrips } from '@lib/trips/hooks'
 import type { TripStore } from '@lib/trips/store'
 import type { BookingActions } from '@components/trips/Bookings'
@@ -102,6 +103,7 @@ export function useItemSheet({
         days={moveTargets}
         tripTz={trip.tz}
         bias={bias}
+        near={dayBias(trip, selTodo.day ?? null)}
         byline={bylineFor(selTodo, userId, members)}
         locked={locked}
         onPatch={(p) => rowActions.patch(selTodo.todo_id, p)}
@@ -128,6 +130,7 @@ export function useItemSheet({
         focusTime={focusTime === selBooking.booking_id}
         tripTz={trip.tz}
         bias={bias}
+        near={dayBias(trip, selBooking.starts_at?.slice(0, 10) ?? null)}
         byline={bylineFor(selBooking, userId, members)}
         locked={locked}
         linked={trip.todos
@@ -150,6 +153,7 @@ export function useItemSheet({
         initialTitle={bookingDraft.title}
         tripTz={trip.tz}
         bias={bias}
+        near={dayBias(trip, (bookingDraft.start ?? defaultStart)?.slice(0, 10) ?? null)}
         days={moveTargets}
         defaultStart={bookingDraft.start ?? defaultStart}
         nowMs={nowMs}

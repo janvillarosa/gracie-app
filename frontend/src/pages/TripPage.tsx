@@ -12,6 +12,7 @@ import {
 } from '@dnd-kit/core'
 import { message } from 'antd'
 import { downloadIcs } from '@lib/trips/ics'
+import { dayBias } from '@lib/trips/placeBias'
 import { TripPrint } from '@components/trips/TripPrint'
 import { CaretRight, Check, MapTrifold } from '@phosphor-icons/react'
 import { useAuth } from '@auth/AuthProvider'
@@ -1112,6 +1113,7 @@ const TripScreen: React.FC<{
       label={addLabel}
       placeholder={addPlaceholder}
       bias={bias}
+      near={dayBias(trip, target === 'ideas' ? null : target)}
       targets={targetOptions}
       target={target}
       onTarget={setAddTarget}
