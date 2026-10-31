@@ -82,14 +82,22 @@ type PanelProps = {
   bookings: Booking[]
   nowMs: number
   tripTz?: string
+  // The trip's last day: a stay with no check-out lasts until then.
+  tripEnd?: string | null
   onOpen: (id: string) => void
 }
 
 /** Every booking, in time order: what is under way (Now), what is next (Next), what is coming,
  *  and what is over folded into one line. The kind is the leading icon; there are no groups. */
-export const BookingsPanel: React.FC<PanelProps> = ({ bookings, nowMs, tripTz, onOpen }) => {
+export const BookingsPanel: React.FC<PanelProps> = ({
+  bookings,
+  nowMs,
+  tripTz,
+  tripEnd,
+  onOpen,
+}) => {
   const [showUsed, setShowUsed] = useState(false)
-  const g = groupBookings(bookings, nowMs, tripTz)
+  const g = groupBookings(bookings, nowMs, tripTz, tripEnd)
   const row = (b: Booking, opts: { meta?: string; stamp?: boolean; strong?: boolean }) => {
     // The title is the person's own words, never rewritten; the route is its own line.
     const route = bookingRoute(b)

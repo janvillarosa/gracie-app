@@ -1,7 +1,7 @@
 // "Ready to go?": what is still missing before a trip starts. Pure, so it can be tested without a
 // screen. The stay check lives only here (it is not an inline gap on the days).
 import type { Booking, Trip } from '@api/tripTypes'
-import { addDays, diffDays, shortDay, type DayModel } from './schedule'
+import { addDays, diffDays, shortDay, stayEndDay, type DayModel } from './schedule'
 
 export type CheckLine = {
   key: 'travel' | 'stays' | 'days' | 'packing'
@@ -12,10 +12,18 @@ export type CheckLine = {
   // What fixes it: the inline button's label and what it does.
   fix?: {
     label: string
-    action: 'add-travel' | 'add-stay' | 'show-empty-day' | 'open-list' | 'make-list'
+    action:
+      | 'add-travel'
+      | 'add-stay'
+      | 'open-booking'
+      | 'show-empty-day'
+      | 'open-list'
+      | 'make-list'
   }
   // The first date involved (the first night with no stay, the first empty day).
   date?: string
+  // The booking it is about (a stay with no check-out).
+  bookingId?: string
 }
 
 const TRAVEL = new Set(['flight', 'train'])
@@ -30,14 +38,14 @@ export function nights(trip: Trip): string[] {
 }
 
 /** The nights no stay booking covers. A stay covers every night from its start day up to, not
- *  including, its end day (one night when it has no end). */
+ *  including, its end day; one with no check-out yet runs to the end of the trip. */
 export function uncoveredNights(trip: Trip): string[] {
   const stays = trip.bookings.filter((b) => b.kind === 'stay' && b.starts_at)
   return nights(trip).filter(
     (night) =>
       !stays.some((b) => {
         const start = dateOf(b.starts_at)
-        const end = dateOf(b.ends_at) || addDays(start, 1)
+        const end = stayEndDay(b, trip.end_date) || addDays(start, 1)
         return start <= night && night < end
       }),
   )
@@ -67,19 +75,28 @@ export function readiness(trip: Trip, days: DayModel[], packing: Packing): Check
 
   if (nights(trip).length > 0) {
     const open = uncoveredNights(trip)
+    const noCheckOut = trip.bookings.find((b) => b.kind === 'stay' && b.starts_at && !b.ends_at)
     lines.push(
-      open.length === 0
-        ? { key: 'stays', ok: true, text: 'Stay for every night' }
-        : {
+      open.length === 0 && noCheckOut
+        ? {
             key: 'stays',
             ok: false,
-            text:
-              open.length === 1
-                ? `No stay for ${shortDay(open[0])}`
-                : `No stay for ${shortDay(open[0])} and ${open.length - 1} more`,
-            fix: { label: 'Add a stay', action: 'add-stay' },
-            date: open[0],
-          },
+            text: `${noCheckOut.title || 'A stay'} has no check-out`,
+            fix: { label: 'Add check-out', action: 'open-booking' },
+            bookingId: noCheckOut.booking_id,
+          }
+        : open.length === 0
+          ? { key: 'stays', ok: true, text: 'Stay for every night' }
+          : {
+              key: 'stays',
+              ok: false,
+              text:
+                open.length === 1
+                  ? `No stay for ${shortDay(open[0])}`
+                  : `No stay for ${shortDay(open[0])} and ${open.length - 1} more`,
+              fix: { label: 'Add a stay', action: 'add-stay' },
+              date: open[0],
+            },
     )
   }
 

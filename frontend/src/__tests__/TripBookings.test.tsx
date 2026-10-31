@@ -2,7 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Booking } from '@api/tripTypes'
-import { groupBookings, inferKind, normalizeZone } from '@lib/trips/bookings'
+import { groupBookings, inferKind, normalizeZone, nowMeta } from '@lib/trips/bookings'
 import { tripServer } from '../testServer'
 import {
   MIA,
@@ -138,6 +138,16 @@ describe('the Bookings list', () => {
     await userEvent.click(screen.getByRole('button', { name: '1 used · Show' }))
     const used = (await screen.findByText('London to Lisbon')).closest('li') as HTMLElement
     expect(within(used).getByText('Used')).toBeInTheDocument()
+  })
+
+  it('keeps a stay with no check-out under way until the trip ends', () => {
+    const now = Date.parse(`${rel(1)}T12:00:00Z`)
+    const flat = bk(1, { kind: 'stay', starts_at: `${rel(0)}T15:00` })
+    expect(groupBookings([flat], now, 'UTC', rel(3)).now).toHaveLength(1)
+    expect(
+      groupBookings([flat], Date.parse(`${rel(4)}T12:00:00Z`), 'UTC', rel(3)).used,
+    ).toHaveLength(1)
+    expect(nowMeta(flat)).toBe('Now · no check-out yet')
   })
 
   it('groups with the helper: under way, next, coming, over', () => {

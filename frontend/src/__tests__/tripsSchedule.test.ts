@@ -211,6 +211,10 @@ describe('phases and copy', () => {
     })
     expect(tonightsStay(t, '2026-10-24')?.title).toBe('Hotel')
     expect(tonightsStay(t, '2026-10-25')).toBeUndefined()
+    // No check-out yet: tonight's stay every night until the trip's last day.
+    const open = { ...t, end_date: '2026-10-27', bookings: [{ ...t.bookings[0], ends_at: null }] }
+    expect(tonightsStay(open, '2026-10-26')?.title).toBe('Hotel')
+    expect(tonightsStay(open, '2026-10-27')).toBeUndefined()
     expect(routeText(t)).toBe('Lisbon → Porto')
     expect(routeText(trip({ destination: { name: 'Faro', lat: 1, lng: 1, source: 'pin' } }))).toBe(
       'Faro',

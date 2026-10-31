@@ -210,6 +210,19 @@ describe('Ready to go?', () => {
     expect(uncoveredNights(trip({ bookings: [] }))).toEqual([rel(10), rel(11)])
   })
 
+  it('runs a stay with no check-out to the end of the trip, and asks for its check-out', () => {
+    const open = bk(1, { kind: 'stay', title: 'Flat', starts_at: `${rel(10)}T15:00` })
+    const t = trip({ bookings: [open] })
+    expect(uncoveredNights(t)).toEqual([])
+    const line = readiness(t, buildSchedule(t).days, { listId: 'l' }).find((l) => l.key === 'stays')
+    expect(line).toMatchObject({
+      ok: false,
+      text: 'Flat has no check-out',
+      bookingId: open.booking_id,
+      fix: { label: 'Add check-out', action: 'open-booking' },
+    })
+  })
+
   it('reads travel, stays, empty days and packing as lines with their fix', () => {
     const t = trip({ bookings: [train, stay(10, 11)], todos: [todo('1', 'x', { day: rel(10) })] })
     const lines = readiness(t, buildSchedule(t).days, { listId: 'l', packed: 3, total: 12 })

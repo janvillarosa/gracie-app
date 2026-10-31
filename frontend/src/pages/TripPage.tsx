@@ -753,6 +753,7 @@ const TripScreen: React.FC<{
       bookings={trip.bookings}
       nowMs={nowMs}
       tripTz={trip.tz}
+      tripEnd={trip.end_date}
       onOpen={rowActions.open}
     />
   )
@@ -887,6 +888,8 @@ const TripScreen: React.FC<{
           title: 'Stay',
           start: line.date ? `${line.date}T15:00` : undefined,
         })
+      case 'open-booking':
+        return line.bookingId ? rowActions.open(line.bookingId) : undefined
       case 'show-empty-day':
         return line.date ? goToDay(line.date) : undefined
       case 'open-list':

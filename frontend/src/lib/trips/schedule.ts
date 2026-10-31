@@ -403,14 +403,19 @@ export function daysToNextTrip(trips: Trip[], today: string, within = 7): number
 }
 
 /** Stay bookings that cover tonight (check-in on or before today, check-out after it). */
+/** The day a stay is checked out of: its own end, else the trip's last day (a stay with no
+ *  check-out yet runs to the end of the trip, not one night). '' when neither is known. */
+export function stayEndDay(b: Booking, tripEnd?: string | null): string {
+  return b.ends_at?.slice(0, 10) || tripEnd || ''
+}
+
 export function tonightsStay(trip: Trip, today: string): Booking | undefined {
   return trip.bookings.find(
     (b) =>
       b.kind === 'stay' &&
       b.starts_at &&
-      b.ends_at &&
       b.starts_at.slice(0, 10) <= today &&
-      b.ends_at.slice(0, 10) > today,
+      stayEndDay(b, trip.end_date) > today,
   )
 }
 
