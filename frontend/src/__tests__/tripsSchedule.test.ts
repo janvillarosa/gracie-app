@@ -144,6 +144,23 @@ describe('buildSchedule', () => {
     )
   })
 
+  it('calls an untitled item with a place what its row calls it', () => {
+    const t = trip({
+      todos: [
+        todo('Walk', { day: '2026-10-23', start_time: '10:00', duration_min: 60 }),
+        todo('x', {
+          title: '',
+          day: '2026-10-23',
+          start_time: '10:30',
+          place: { source: 'google', place_id: 'ChIJ_unknown' },
+        }),
+      ],
+    })
+    expect(buildSchedule(t).days.find((d) => d.date === '2026-10-23')?.clash?.text).toBe(
+      'Walk and Saved place overlap at 10:30',
+    )
+  })
+
   it('keeps an overlap warning short when the names are long', () => {
     const t = trip({
       todos: [
