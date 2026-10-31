@@ -83,6 +83,7 @@
   --control-lg: 44px; /* keys, text actions, tracks, the touch target */
   --row-h: 52px; /* a detail or list row */
   --composer-h: 56px; /* the desk's add bar */
+  --side-col: 340px; /* the list desk's side sheet: Butler over Notes */
 
   /* ---- Corners ----------------------------------------------------------------------- */
   --radius-xs: 6px; /* stamps, small tags */
@@ -3907,4 +3908,170 @@ textarea.notes-textarea {
 }
 :root[data-motion='lite'] .autopilot-reveal {
   transition: none;
+}
+
+/* ---- The list desk (1024px and wider): the list, and Butler over Notes beside it ----------------
+   The trip desk's frame and composer (desk.css) with two panes: the list sheet, which scrolls
+   under the floating composer, and one side sheet with Butler above the notes. The window does
+   not scroll; the wheel moves only the pane under the pointer. */
+@media (min-width: 1024px) {
+  .list-page.desk-page {
+    padding: var(--space-4) var(--space-4) 0;
+  }
+  /* A list is short lines: the frame stops short of the trip desk's 1440px so they stay readable. */
+  .list-page .desk-frame {
+    max-width: 1120px;
+  }
+  /* The composer is the list's one action: taller than the trip's, edged in the key's yellow,
+     and its placeholder reads as an invitation, not a hint. */
+  .list-page.desk-page {
+    --composer-h: 64px;
+  }
+  .list-page .desk-composer .add-bar {
+    border: 2px solid var(--brand-yellow-deep);
+  }
+  .list-page .desk-composer .add-bar textarea.add-input::placeholder {
+    color: var(--text);
+    opacity: 1;
+  }
+  .list-desk {
+    display: grid;
+    flex: 1 1 auto;
+    grid-template-columns: minmax(0, 1fr) var(--side-col);
+    grid-template-rows: minmax(0, 1fr);
+    gap: var(--space-5);
+    min-height: 0;
+  }
+  .list-desk-main,
+  .list-desk-side {
+    min-width: 0;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
+  /* The list clears the floating composer at its foot. */
+  .list-desk-main {
+    padding-bottom: calc(var(--composer-h) + 48px);
+  }
+  .list-desk-main > .paper-stack {
+    display: flex;
+    flex-direction: column;
+    min-height: calc(100% - 18px);
+  }
+  .list-desk-main > .paper-stack > .paper-list {
+    flex: 1 0 auto;
+  }
+  .list-desk .item-row:focus-visible {
+    outline: none;
+    border-radius: var(--radius-sm);
+    box-shadow: var(--focus-ring);
+  }
+  /* Rows are 44px on a desk; the phone's 52px is for thumbs. */
+  .list-desk .items-list .item-row {
+    min-height: var(--control-lg);
+  }
+
+  /* A category is a section heading, like a trip's day: its name, its count, and a fold. */
+  .list-desk .category-section {
+    margin-bottom: var(--space-5) !important;
+  }
+  .category-fold {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    width: 100%;
+    min-height: var(--control-md);
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: var(--paper-fill);
+    color: var(--ink);
+    font: var(--w-semibold) var(--t-lead) / 1.2 var(--font-headings);
+    text-align: left;
+    cursor: pointer;
+  }
+  .category-fold-count {
+    color: var(--muted);
+    font: var(--w-regular) var(--t-meta) / 1 var(--font-body);
+    font-variant-numeric: tabular-nums;
+  }
+  .category-fold-caret {
+    margin-left: auto;
+    color: var(--muted);
+  }
+  .category-fold[aria-expanded='false'] .category-fold-caret {
+    transform: rotate(-90deg);
+  }
+  .category-fold:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .category-fold-caret {
+      transition: transform var(--dur-fast) var(--ease-out);
+    }
+  }
+
+  /* The side column: a sheet for Butler's slips, and a sheet of ruled paper for the notes that
+     takes the height that is left. */
+  .list-desk-side {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+  .list-desk-sheet {
+    flex: none;
+  }
+  .list-desk-sheet.is-notes {
+    display: flex;
+    flex: 1 0 auto;
+    flex-direction: column;
+    min-height: 360px;
+  }
+  .list-desk-sheet.is-notes > .ant-space {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    width: 100%;
+  }
+  .list-desk-sheet.is-notes > .ant-space > .ant-space-item:first-child {
+    display: flex;
+    flex: 1 1 auto;
+  }
+  .list-desk-sheet.is-notes .notes-textarea {
+    flex: 1 1 auto;
+    height: auto;
+    min-height: 200px;
+  }
+  /* A sheet's title, in the voice of a trip's day heading: ink, Outfit, no label caps. */
+  .list-desk-title {
+    margin: 0 0 var(--space-3);
+    color: var(--ink);
+    font: var(--w-semibold) var(--t-heading) / 1.2 var(--font-headings);
+    letter-spacing: -0.015em;
+  }
+  /* A slip in a 340px pane keeps its words on the full width; its keys drop to a line below. */
+  .list-desk-side .autopilot-slip {
+    flex-wrap: wrap;
+  }
+  .list-desk-side .autopilot-slip-text {
+    flex-basis: calc(100% - var(--control-sm) - var(--space-3));
+  }
+  .list-desk-side .autopilot-slip-undo {
+    margin-left: auto;
+  }
+  .list-desk-side .autopilot-slip-names {
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+  .list-desk-quiet {
+    margin: 0;
+    color: var(--muted);
+    font-size: var(--t-meta);
+  }
 }

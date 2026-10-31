@@ -25,6 +25,11 @@ describe('AddItemBar', () => {
     await waitFor(() => expect(input).toHaveValue('Milk'))
   })
 
+  it('puts inputId on the field', () => {
+    render(<AddItemBar onCreate={vi.fn()} inputId="list-add-input" />)
+    expect(screen.getByLabelText('Add item input').id).toBe('list-add-input')
+  })
+
   it('ignores blank input', async () => {
     const onCreate = vi.fn()
     render(<AddItemBar onCreate={onCreate} />)

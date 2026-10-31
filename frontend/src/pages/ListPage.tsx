@@ -1,5 +1,18 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { Paper, PaperStack, Button, InkStamp, Sheet, SheetActions, SlipStack } from '@components/ui'
+import {
+  Paper,
+  PaperStack,
+  Button,
+  InkStamp,
+  Sheet,
+  SheetActions,
+  SlipStack,
+  useMedia,
+  WIDE,
+} from '@components/ui'
+import { useComposerBox } from '@components/ui/useComposerBox'
+import { useAddBarShortcut } from '@lib/useAddBarShortcut'
+import { useRowKeys } from '@lib/useRowKeys'
 import { errorMessage } from '@lib/errors'
 import { useLocation, useParams } from 'react-router-dom'
 import { useTransitionNavigate } from '@lib/viewTransition'
@@ -48,6 +61,7 @@ import {
   ArrowCounterClockwise,
   Check,
   Rows,
+  CaretDown,
 } from '@phosphor-icons/react'
 import {
   DndContext,
@@ -87,8 +101,12 @@ import { PillNav } from '@components/PillNav'
 import { HouseLoader } from '@components/HouseLoader'
 import { RowSkeleton } from '@components/RowSkeleton'
 import { ListPrint } from '@components/ListPrint'
+import '../desk.css'
 
 const CLEAR_TOAST_KEY = 'clear-completed'
+
+// The desk's composer field, which "/" and "n" jump to.
+const LIST_ADD_INPUT = 'list-add-input'
 
 // How long the run-done announcement waits, so the last checked row is seen to go first.
 const RUN_DONE_DELAY_MS = 350
@@ -130,6 +148,12 @@ export const ListPage: React.FC = () => {
   // Breakpoints hook must be called before any early returns
   const screens = Grid.useBreakpoint()
   const isMobile = !screens.md
+  // 1024px and wider: the list desk (the list, and Butler over Notes beside it). Below it the
+  // phone layout stands: tabs, the bar at the foot of the sheet, one floating slip.
+  const desk = useMedia(WIDE)
+  // Categories folded shut on the desk (not remembered).
+  const [foldedCats, setFoldedCats] = useState<Set<string>>(() => new Set())
+  const mainPane = useRef<HTMLDivElement>(null)
   // antd message for toasts
   const [msgApi, contextHolder] = message.useMessage()
   const show = (msg: string) => {
@@ -980,6 +1004,27 @@ export const ListPage: React.FC = () => {
   const ready =
     !meQuery.isLoading && !listsQuery.isLoading && !itemsQuery.isLoading && !!roomId && !!listMeta
 
+  // The desk is an app shell: the window does not scroll, each pane does. Only while its page is
+  // on screen (not the loader or the not-found sheet).
+  const deskOn = desk && !!roomId && !!listMeta
+  useEffect(() => {
+    if (!deskOn) return
+    document.documentElement.classList.add('desk-shell')
+    return () => document.documentElement.classList.remove('desk-shell')
+  }, [deskOn])
+  const composerStyle = useComposerBox(mainPane, deskOn)
+  useAddBarShortcut(deskOn, LIST_ADD_INPUT)
+  useRowKeys(mainPane, deskOn)
+  // A list with nothing on it opens with the cursor in the composer (on a desk; a phone's
+  // keyboard would cover the page).
+  const focusedEmpty = useRef(false)
+  const emptyList = itemsQuery.isSuccess && items.length === 0
+  useEffect(() => {
+    if (!deskOn || !emptyList || focusedEmpty.current) return
+    focusedEmpty.current = true
+    document.getElementById(LIST_ADD_INPUT)?.focus()
+  }, [deskOn, emptyList])
+
   // Items load inside the Items tab (it has its own skeleton), so a list already in the
   // cache from the house page renders at once, and its sticker can land mid-transition.
   if (meQuery.isLoading || listsQuery.isLoading || (itemsQuery.isLoading && !listMeta)) {
@@ -1053,60 +1098,357 @@ export const ListPage: React.FC = () => {
       onSubmitEdit={submitEdit}
       registerAnchor={registerAnchor}
       reason={reasons.get(it.item_id)}
+      keyNav={desk}
     />
   )
 
+  const toggleFold = (cat: string) =>
+    setFoldedCats((prev) => {
+      const next = new Set(prev)
+      if (!next.delete(cat)) next.add(cat)
+      return next
+    })
+  const backLink = fromTrip
+    ? { to: `/app/trips/${fromTrip.id}`, label: fromTrip.label }
+    : { to: '/app', label: houseQuery.data?.display_name || 'House' }
+
+  // The pieces of the page. A phone puts them in tabs; the desk lays them out in two panes.
+  const viewToggle = isGroceryList ? (
+    <button
+      type="button"
+      className="view-toggle"
+      aria-pressed={groupByCat}
+      onClick={() => setGroupByCat(!groupByCat)}
+      aria-label="Group by category"
+      title="Group by category"
+    >
+      <Rows size={20} weight={groupByCat ? 'bold' : 'regular'} aria-hidden />
+    </button>
+  ) : null
+  const headerPaper = (
+    <Paper className="paper-meta">
+      <div className="list-header-grid">
+        <div className="list-header-title">
+          <Typography.Title
+            level={2}
+            style={{ margin: 0, lineHeight: 1.2, display: 'flex', alignItems: 'center' }}
+          >
+            {listMeta.icon ? (
+              <ListIconDisc icon={listMeta.icon} className="icon-disc-title" />
+            ) : null}
+            {listMeta.name}
+          </Typography.Title>
+          <Typography.Text className="list-meta">
+            {itemsQuery.isLoading
+              ? ''
+              : incompleteCount > 0
+                ? `${incompleteCount} to get · `
+                : 'All done · '}
+            updated {updatedAgo}
+          </Typography.Text>
+          {listMeta.description && (
+            <Typography.Text className="list-description">{listMeta.description}</Typography.Text>
+          )}
+        </div>
+        <div className="list-actions">
+          {desk && viewToggle}
+          <Dropdown trigger={['click']} menu={{ items: menuItems, onClick: onMenuClick }}>
+            <Button
+              kind="text"
+              iconOnly
+              icon={<DotsThreeVertical />}
+              aria-label="More list actions"
+            />
+          </Dropdown>
+        </div>
+      </div>
+    </Paper>
+  )
+  const runDoneSheet = (
+    <>
+      {runDone && (
+        <Sheet
+          variant="announce"
+          open={runDoneOpen}
+          label={runDone.lines[0]}
+          onClose={() => setRunDoneOpen(false)}
+          actions={
+            <SheetActions>
+              <Button kind="key" onClick={() => setRunDoneOpen(false)}>
+                {runDone.cheer}
+              </Button>
+            </SheetActions>
+          }
+        >
+          <InkStamp note={runDone.date}>{runDone.lines[0]}</InkStamp>
+          <p className="run-done-line">{runDone.lines[1]}</p>
+          {runDone.lines[2] && <p className="run-done-praise">{runDone.lines[2]}</p>}
+        </Sheet>
+      )}
+    </>
+  )
+  const slipNodes = slipIds.map((id) =>
+    id === 'up_next' && upNext.pick ? (
+      <UpNextSlip
+        key={id}
+        next={{ itemId: upNext.pick.itemId, name: upNext.pick.name }}
+        thenName={upNext.pick.thenName}
+        onDone={(itemId) => {
+          upNext.tapped()
+          const it = items.find((x) => x.item_id === itemId)
+          if (it) void onToggleComplete(it)
+        }}
+        onHide={upNext.hide}
+      />
+    ) : id === 'auto_add' && autopilotRun ? (
+      <AutopilotSlip
+        key={id}
+        names={slipItems.map((it) => it.description)}
+        runAt={new Date(autopilotRun.runAt)}
+        now={new Date()}
+        onUndoAll={onUndoAllAutopilot}
+        onDismiss={dismissAutopilotSlip}
+      />
+    ) : (
+      <SuggestionStack
+        key={id}
+        suggestions={suggestions}
+        during={during}
+        phase={spent?.phase}
+        onAdd={onAddSuggestion}
+        onIgnore={onIgnoreSuggestion}
+      />
+    ),
+  )
+  const itemsSpace = (
+    <Space
+      // Remount when the items arrive so a skeleton hands over with a fade
+      key={itemsQuery.isLoading ? 'loading' : 'ready'}
+      className={
+        !itemsQuery.isLoading && itemsWereLoading.current
+          ? 'items-space is-arriving'
+          : 'items-space'
+      }
+      direction="vertical"
+      style={{ width: '100%' }}
+      size="large"
+    >
+      {itemsQuery.isLoading ? (
+        <RowSkeleton variant="item" rows={4} label="Loading items" />
+      ) : items.length === 0 ? (
+        <div className="empty-state">
+          <Plus size={20} style={{ color: 'var(--brand-yellow)' }} />
+          <Typography.Text type="secondary">
+            No items yet. Add your first item below.
+          </Typography.Text>
+        </div>
+      ) : (
+        <>
+          {incompleteItems.length > 0 &&
+            (groupByCat && incompleteGrouped ? (
+              <div className="grouped-sections">
+                {Object.entries(incompleteGrouped).map(([cat, catItems]) => (
+                  <div key={cat} className="category-section" style={{ marginBottom: 24 }}>
+                    {desk ? (
+                      <button
+                        type="button"
+                        className="category-fold"
+                        aria-expanded={!foldedCats.has(cat)}
+                        onClick={() => toggleFold(cat)}
+                      >
+                        <span className="category-fold-name">{cat}</span>
+                        <span className="category-fold-count">{catItems.length}</span>
+                        <CaretDown className="category-fold-caret" aria-hidden />
+                      </button>
+                    ) : (
+                      <div className="category-section-header" style={{ marginBottom: 8 }}>
+                        <Tag
+                          className={`category-tag ${getCategoryClass(cat)}`}
+                          style={{
+                            fontSize: '12px',
+                            padding: '2px 10px',
+                            fontWeight: 600,
+                          }}
+                        >
+                          {cat.toUpperCase()}
+                        </Tag>
+                      </div>
+                    )}
+                    {!(desk && foldedCats.has(cat)) && (
+                      <AntList itemLayout="horizontal" className="items-list">
+                        {catItems.map((it) => renderRow(it, 'plain', false))}
+                      </AntList>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <DndContext
+                sensors={sensors}
+                onDragStart={lockReorder}
+                onDragEnd={onDragEndUnlocked}
+                onDragCancel={unlockReorder}
+              >
+                <SortableContext
+                  items={incompleteItems.map((it) => it.item_id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <AntList itemLayout="horizontal" className="items-list">
+                    {incompleteItems.map((it) => renderRow(it, 'sortable', isGroceryList))}
+                  </AntList>
+                </SortableContext>
+              </DndContext>
+            ))}
+          {includeCompleted && completedItems.length > 0 && (
+            <>
+              <div className="completed-header">
+                <span>Completed ({completedItems.length})</span>
+              </div>
+              <AntList itemLayout="horizontal" className="items-list completed-list">
+                {completedItems.map((it) => renderRow(it, 'completed', isGroceryList))}
+              </AntList>
+            </>
+          )}
+        </>
+      )}
+    </Space>
+  )
+  const completedToggle = (
+    <button
+      type="button"
+      className="completed-toggle"
+      aria-expanded={includeCompleted}
+      aria-busy={itemsQuery.isPlaceholderData || undefined}
+      onClick={() => setIncludeCompleted(!includeCompleted)}
+    >
+      {includeCompleted ? 'Hide checked-off items' : 'Show checked-off items'}
+    </button>
+  )
+  const notesNode = (
+    <Space direction="vertical" style={{ width: '100%' }} size="large">
+      <Input.TextArea
+        className="notes-textarea"
+        value={notesText}
+        onChange={(e) => onNotesChange(e.target.value)}
+        placeholder="Write notes for this list"
+        rows={12}
+      />
+      <div className="notes-actions">
+        {clearedNotes !== null ? (
+          <Button
+            key="undo"
+            kind="text"
+            className="notes-clear is-undo"
+            onClick={onUndoClearNotes}
+            icon={<ArrowCounterClockwise size={18} />}
+          >
+            Undo clear
+          </Button>
+        ) : (
+          <Button
+            key="clear"
+            kind="text"
+            className="notes-clear"
+            onClick={onClearNotes}
+            disabled={!notesText.trim()}
+            icon={<Eraser size={18} />}
+          >
+            Clear all
+          </Button>
+        )}
+        <Button
+          kind="key"
+          className={notesJustSaved ? 'notes-save is-saved' : 'notes-save'}
+          onClick={onSaveNotes}
+          disabled={!notesDirty || notesSaving}
+          icon={
+            notesJustSaved ? (
+              <Check key="saved" size={18} weight="bold" className="notes-saved-check" />
+            ) : (
+              <FloppyDisk size={18} />
+            )
+          }
+        >
+          {notesJustSaved ? 'Saved' : notesSaving ? 'Saving…' : 'Save'}
+        </Button>
+      </div>
+    </Space>
+  )
+  const addBar = (
+    <AddItemBar
+      onCreate={onCreateItem}
+      pantry={pantryQuery.data}
+      listId={listId}
+      onList={settledItems}
+      onBump={onBumpItem}
+      inputId={desk ? LIST_ADD_INPUT : undefined}
+    />
+  )
+
+  if (desk) {
+    // Butler is there when the House's mode has any of its slips; with none to show it says so
+    // (once what it knows has loaded, so the line never flashes).
+    const butlerOn = hasSuggestions || hasAutoAdd || hasUpNext
+    const butlerLoading =
+      (hasSuggestions && suggestionsQuery.isLoading) ||
+      ((hasAutoAdd || hasUpNext) && autopilotQuery.isLoading)
+    return (
+      <div className="list-page desk-page">
+        <div className="desk-frame">
+          <TopNav back={backLink} />
+          {contextHolder}
+          <ListPrint name={listMeta.name} items={items} house={houseQuery.data?.display_name} />
+          <div className="list-desk">
+            <div className="list-desk-main" ref={mainPane}>
+              <PaperStack>
+                {headerPaper}
+                <Paper className="paper-list">
+                  {runDoneSheet}
+                  {itemsSpace}
+                  {completedToggle}
+                </Paper>
+              </PaperStack>
+            </div>
+            <aside className="list-desk-side" aria-label="Butler and notes">
+              {butlerOn && (
+                <Paper className="list-desk-sheet" as="section" aria-labelledby="list-desk-butler">
+                  <h2 className="list-desk-title" id="list-desk-butler">
+                    Butler
+                  </h2>
+                  {slipNodes.length > 0 ? (
+                    <SlipStack layout="column">{slipNodes}</SlipStack>
+                  ) : butlerLoading ? null : (
+                    <p className="list-desk-quiet">Nothing due yet.</p>
+                  )}
+                </Paper>
+              )}
+              <Paper
+                className="list-desk-sheet is-notes"
+                as="section"
+                aria-labelledby="list-desk-notes"
+              >
+                <h2 className="list-desk-title" id="list-desk-notes">
+                  Notes
+                </h2>
+                {notesNode}
+              </Paper>
+            </aside>
+          </div>
+          <div className="desk-composer" style={composerStyle}>
+            {addBar}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="container">
-      <TopNav
-        back={
-          fromTrip
-            ? { to: `/app/trips/${fromTrip.id}`, label: fromTrip.label }
-            : { to: '/app', label: houseQuery.data?.display_name || 'House' }
-        }
-      />
+      <TopNav back={backLink} />
       {contextHolder}
       <ListPrint name={listMeta.name} items={items} house={houseQuery.data?.display_name} />
       <PaperStack>
-        {/* Bottom sheet: title + details + actions */}
-        <Paper className="paper-meta">
-          <div className="list-header-grid">
-            <div className="list-header-title">
-              <Typography.Title
-                level={2}
-                style={{ margin: 0, lineHeight: 1.2, display: 'flex', alignItems: 'center' }}
-              >
-                {listMeta.icon ? (
-                  <ListIconDisc icon={listMeta.icon} className="icon-disc-title" />
-                ) : null}
-                {listMeta.name}
-              </Typography.Title>
-              <Typography.Text className="list-meta">
-                {itemsQuery.isLoading
-                  ? ''
-                  : incompleteCount > 0
-                    ? `${incompleteCount} to get · `
-                    : 'All done · '}
-                updated {updatedAgo}
-              </Typography.Text>
-              {listMeta.description && (
-                <Typography.Text className="list-description">
-                  {listMeta.description}
-                </Typography.Text>
-              )}
-            </div>
-            <div className="list-actions">
-              <Dropdown trigger={['click']} menu={{ items: menuItems, onClick: onMenuClick }}>
-                <Button
-                  kind="text"
-                  iconOnly
-                  icon={<DotsThreeVertical />}
-                  aria-label="More list actions"
-                />
-              </Dropdown>
-            </div>
-          </div>
-        </Paper>
+        {headerPaper}
 
         {/* Top sheet: tabs over list content */}
         <Paper className="paper-list">
@@ -1114,20 +1456,7 @@ export const ListPage: React.FC = () => {
             <PillNav
               value={activeTab}
               onChange={(k) => setActiveTab(k as 'items' | 'notes')}
-              extra={
-                isGroceryList && activeTab === 'items' ? (
-                  <button
-                    type="button"
-                    className="view-toggle"
-                    aria-pressed={groupByCat}
-                    onClick={() => setGroupByCat(!groupByCat)}
-                    aria-label="Group by category"
-                    title="Group by category"
-                  >
-                    <Rows size={20} weight={groupByCat ? 'bold' : 'regular'} aria-hidden />
-                  </button>
-                ) : null
-              }
+              extra={isGroceryList && activeTab === 'items' ? viewToggle : null}
               items={[
                 {
                   key: 'items',
@@ -1139,170 +1468,13 @@ export const ListPage: React.FC = () => {
                   ),
                   children: (
                     <>
-                      {runDone && (
-                        <Sheet
-                          variant="announce"
-                          open={runDoneOpen}
-                          label={runDone.lines[0]}
-                          onClose={() => setRunDoneOpen(false)}
-                          actions={
-                            <SheetActions>
-                              <Button kind="key" onClick={() => setRunDoneOpen(false)}>
-                                {runDone.cheer}
-                              </Button>
-                            </SheetActions>
-                          }
-                        >
-                          <InkStamp note={runDone.date}>{runDone.lines[0]}</InkStamp>
-                          <p className="run-done-line">{runDone.lines[1]}</p>
-                          {runDone.lines[2] && (
-                            <p className="run-done-praise">{runDone.lines[2]}</p>
-                          )}
-                        </Sheet>
-                      )}
-                      <SlipStack>
-                        {slipIds.map((id) =>
-                          id === 'up_next' && upNext.pick ? (
-                            <UpNextSlip
-                              key={id}
-                              next={{ itemId: upNext.pick.itemId, name: upNext.pick.name }}
-                              thenName={upNext.pick.thenName}
-                              onDone={(itemId) => {
-                                upNext.tapped()
-                                const it = items.find((x) => x.item_id === itemId)
-                                if (it) void onToggleComplete(it)
-                              }}
-                              onHide={upNext.hide}
-                            />
-                          ) : id === 'auto_add' && autopilotRun ? (
-                            <AutopilotSlip
-                              key={id}
-                              names={slipItems.map((it) => it.description)}
-                              runAt={new Date(autopilotRun.runAt)}
-                              now={new Date()}
-                              onUndoAll={onUndoAllAutopilot}
-                              onDismiss={dismissAutopilotSlip}
-                            />
-                          ) : (
-                            <SuggestionStack
-                              key={id}
-                              suggestions={suggestions}
-                              during={during}
-                              phase={spent?.phase}
-                              onAdd={onAddSuggestion}
-                              onIgnore={onIgnoreSuggestion}
-                            />
-                          ),
-                        )}
-                      </SlipStack>
-                      <Space
-                        // Remount when the items arrive so a skeleton hands over with a fade
-                        key={itemsQuery.isLoading ? 'loading' : 'ready'}
-                        className={
-                          !itemsQuery.isLoading && itemsWereLoading.current
-                            ? 'items-space is-arriving'
-                            : 'items-space'
-                        }
-                        direction="vertical"
-                        style={{ width: '100%' }}
-                        size="large"
-                      >
-                        {itemsQuery.isLoading ? (
-                          <RowSkeleton variant="item" rows={4} label="Loading items" />
-                        ) : items.length === 0 ? (
-                          <div className="empty-state">
-                            <Plus size={20} style={{ color: 'var(--brand-yellow)' }} />
-                            <Typography.Text type="secondary">
-                              No items yet. Add your first item below.
-                            </Typography.Text>
-                          </div>
-                        ) : (
-                          <>
-                            {incompleteItems.length > 0 &&
-                              (groupByCat && incompleteGrouped ? (
-                                <div className="grouped-sections">
-                                  {Object.entries(incompleteGrouped).map(([cat, catItems]) => (
-                                    <div
-                                      key={cat}
-                                      className="category-section"
-                                      style={{ marginBottom: 24 }}
-                                    >
-                                      <div
-                                        className="category-section-header"
-                                        style={{ marginBottom: 8 }}
-                                      >
-                                        <Tag
-                                          className={`category-tag ${getCategoryClass(cat)}`}
-                                          style={{
-                                            fontSize: '12px',
-                                            padding: '2px 10px',
-                                            fontWeight: 600,
-                                          }}
-                                        >
-                                          {cat.toUpperCase()}
-                                        </Tag>
-                                      </div>
-                                      <AntList itemLayout="horizontal" className="items-list">
-                                        {catItems.map((it) => renderRow(it, 'plain', false))}
-                                      </AntList>
-                                    </div>
-                                  ))}
-                                </div>
-                              ) : (
-                                <DndContext
-                                  sensors={sensors}
-                                  onDragStart={lockReorder}
-                                  onDragEnd={onDragEndUnlocked}
-                                  onDragCancel={unlockReorder}
-                                >
-                                  <SortableContext
-                                    items={incompleteItems.map((it) => it.item_id)}
-                                    strategy={verticalListSortingStrategy}
-                                  >
-                                    <AntList itemLayout="horizontal" className="items-list">
-                                      {incompleteItems.map((it) =>
-                                        renderRow(it, 'sortable', isGroceryList),
-                                      )}
-                                    </AntList>
-                                  </SortableContext>
-                                </DndContext>
-                              ))}
-                            {includeCompleted && completedItems.length > 0 && (
-                              <>
-                                <div className="completed-header">
-                                  <span>Completed ({completedItems.length})</span>
-                                </div>
-                                <AntList
-                                  itemLayout="horizontal"
-                                  className="items-list completed-list"
-                                >
-                                  {completedItems.map((it) =>
-                                    renderRow(it, 'completed', isGroceryList),
-                                  )}
-                                </AntList>
-                              </>
-                            )}
-                          </>
-                        )}
-                      </Space>
-                      <button
-                        type="button"
-                        className="completed-toggle"
-                        aria-expanded={includeCompleted}
-                        aria-busy={itemsQuery.isPlaceholderData || undefined}
-                        onClick={() => setIncludeCompleted(!includeCompleted)}
-                      >
-                        {includeCompleted ? 'Hide checked-off items' : 'Show checked-off items'}
-                      </button>
+                      {runDoneSheet}
+                      <SlipStack>{slipNodes}</SlipStack>
+                      {itemsSpace}
+                      {completedToggle}
                       {/* Outside the Space wrapper so sticky pins to the whole tab pane,
                         keeping the bar on screen while scrolling a long list. */}
-                      <AddItemBar
-                        onCreate={onCreateItem}
-                        pantry={pantryQuery.data}
-                        listId={listId}
-                        onList={settledItems}
-                        onBump={onBumpItem}
-                      />
+                      {addBar}
                     </>
                   ),
                 },
@@ -1316,61 +1488,7 @@ export const ListPage: React.FC = () => {
                       )}
                     </>
                   ),
-                  children: (
-                    <Space direction="vertical" style={{ width: '100%' }} size="large">
-                      <Input.TextArea
-                        className="notes-textarea"
-                        value={notesText}
-                        onChange={(e) => onNotesChange(e.target.value)}
-                        placeholder="Write notes for this list"
-                        rows={12}
-                      />
-                      <div className="notes-actions">
-                        {clearedNotes !== null ? (
-                          <Button
-                            key="undo"
-                            kind="text"
-                            className="notes-clear is-undo"
-                            onClick={onUndoClearNotes}
-                            icon={<ArrowCounterClockwise size={18} />}
-                          >
-                            Undo clear
-                          </Button>
-                        ) : (
-                          <Button
-                            key="clear"
-                            kind="text"
-                            className="notes-clear"
-                            onClick={onClearNotes}
-                            disabled={!notesText.trim()}
-                            icon={<Eraser size={18} />}
-                          >
-                            Clear all
-                          </Button>
-                        )}
-                        <Button
-                          kind="key"
-                          className={notesJustSaved ? 'notes-save is-saved' : 'notes-save'}
-                          onClick={onSaveNotes}
-                          disabled={!notesDirty || notesSaving}
-                          icon={
-                            notesJustSaved ? (
-                              <Check
-                                key="saved"
-                                size={18}
-                                weight="bold"
-                                className="notes-saved-check"
-                              />
-                            ) : (
-                              <FloppyDisk size={18} />
-                            )
-                          }
-                        >
-                          {notesJustSaved ? 'Saved' : notesSaving ? 'Saving…' : 'Save'}
-                        </Button>
-                      </div>
-                    </Space>
-                  ),
+                  children: notesNode,
                 },
               ]}
             />

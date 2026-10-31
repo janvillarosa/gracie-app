@@ -151,6 +151,8 @@ type Props = {
   registerAnchor: (id: string, el: HTMLElement | null) => void
   // Why autopilot added it ("You buy it about every 9 days"); shown when its mark is tapped.
   reason?: string
+  // The list desk's keyboard (`useRowKeys`): the row takes focus and says which keys it answers.
+  keyNav?: boolean
 }
 
 const editValue = (it: ListItem) =>
@@ -170,6 +172,7 @@ export const ItemRow = React.memo<Props>(function ItemRow({
   onSubmitEdit,
   registerAnchor,
   reason,
+  keyNav,
 }) {
   const busy = saving || editing
   const completed = variant === 'completed'
@@ -212,7 +215,13 @@ export const ItemRow = React.memo<Props>(function ItemRow({
   const whyId = `why-${it.item_id}`
 
   const body = (
-    <div ref={rowRef} className={completed ? 'item-row item-row-completed' : 'item-row'}>
+    <div
+      ref={rowRef}
+      className={completed ? 'item-row item-row-completed' : 'item-row'}
+      {...(keyNav
+        ? { tabIndex: -1, 'data-row-id': it.item_id, 'aria-keyshortcuts': 'Space Delete Enter' }
+        : {})}
+    >
       <span ref={(el) => registerAnchor(it.item_id, el)} className="checkbox-anchor">
         <Checkbox
           checked={it.completed}

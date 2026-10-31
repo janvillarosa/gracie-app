@@ -92,13 +92,15 @@ import { reduced, scrollToEl } from './trip/scroll'
 import { listFor, useScreenActions, type Ctx } from './trip/useScreenActions'
 import { useDayFolding } from './trip/useDayFolding'
 import { useDayInView } from './trip/useDayInView'
-import { useAddBarShortcut } from './trip/useAddBarShortcut'
+import { useAddBarShortcut } from '@lib/useAddBarShortcut'
+import { useComposerBox } from '@components/ui/useComposerBox'
 import { useInspectorKeys } from './trip/useInspectorKeys'
 import { panes, useDeskScroll } from './trip/useDeskScroll'
 import { useDeck } from './trip/useDeck'
 import { useItemSheet } from './trip/useItemSheet'
 import { usePackingLine } from './trip/usePackingLine'
 import { useTripDrag } from './trip/useTripDrag'
+import '../desk.css'
 import '../trips.css'
 
 type Extra = 'notes' | null
@@ -166,23 +168,7 @@ const TripScreen: React.FC<{
   const wide = useMedia('(min-width: 1200px)')
   // The desk's composer floats over the Days column: it takes that column's left edge and width.
   const daysCol = useRef<HTMLDivElement>(null)
-  const [composerBox, setComposerBox] = useState<{ left: number; width: number } | null>(null)
-  useEffect(() => {
-    const el = daysCol.current
-    if (!el) return
-    const measure = () => {
-      const r = el.getBoundingClientRect()
-      setComposerBox({ left: r.left + 24, width: Math.max(280, r.width - 48) })
-    }
-    measure()
-    const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure)
-    ro?.observe(el)
-    window.addEventListener('resize', measure)
-    return () => {
-      ro?.disconnect()
-      window.removeEventListener('resize', measure)
-    }
-  }, [desktop])
+  const composerStyle = useComposerBox(daysCol, desktop)
   const [mapOver, setMapOver] = useState(false)
   const tab: TabId = desktop && rawTab === 'ideas' ? 'plan' : rawTab
 
@@ -723,7 +709,7 @@ const TripScreen: React.FC<{
     today,
   })
 
-  useAddBarShortcut(desktop)
+  useAddBarShortcut(desktop, 'trip-add-input')
   // J/K and Alt+Up/Down: the next or previous item in the inspector.
   useInspectorKeys(desktop, selected, (id, position, total) => {
     ctx.current.openItem(id)
@@ -749,8 +735,8 @@ const TripScreen: React.FC<{
   // The desk is an app shell: the window itself does not scroll, each pane does.
   useEffect(() => {
     if (!desktop) return
-    document.documentElement.classList.add('trip-desk-shell')
-    return () => document.documentElement.classList.remove('trip-desk-shell')
+    document.documentElement.classList.add('trip-desk-shell', 'desk-shell')
+    return () => document.documentElement.classList.remove('trip-desk-shell', 'desk-shell')
   }, [desktop])
   useDeskScroll(
     trip.trip_id,
@@ -1195,12 +1181,16 @@ const TripScreen: React.FC<{
         preparedBy={members.find((m) => m.user_id === userId)?.name}
       />
       <div
-        className={['trip-page', dragging ? 'is-dragging' : '', desktop ? 'is-desk-shell' : '']
+        className={[
+          'trip-page',
+          dragging ? 'is-dragging' : '',
+          desktop ? 'is-desk-shell desk-page' : '',
+        ]
           .filter(Boolean)
           .join(' ')}
       >
         {desktop ? (
-          <div className="trip-desk-frame">
+          <div className="trip-desk-frame desk-frame">
             <TopNav back={{ to: '/app/trips', label: roomName }} />
             <div className={asideOpen ? 'trip-shell is-desk has-map' : 'trip-shell is-desk'}>
               {ideasColumn}
@@ -1224,17 +1214,7 @@ const TripScreen: React.FC<{
               {asideOpen && sideNode}
             </div>
             {addBarNode && (
-              <div
-                className="trip-composer"
-                style={
-                  composerBox
-                    ? ({
-                        '--composer-left': `${composerBox.left}px`,
-                        '--composer-width': `${composerBox.width}px`,
-                      } as React.CSSProperties)
-                    : undefined
-                }
-              >
+              <div className="trip-composer desk-composer" style={composerStyle}>
                 {addBarNode}
               </div>
             )}

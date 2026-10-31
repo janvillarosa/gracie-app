@@ -82,7 +82,7 @@ export default defineConfig(({ isSsrBuild }) => ({
       // Ratchet floor set just below the current baseline (statements 45.7%,
       // branches 76.8%, functions 75.0%, lines 45.7%). Vitest reads these as
       // percentages (0-100). Raise them as coverage grows; never lower.
-      thresholds: { lines: 94, branches: 90, functions: 88, statements: 94 },
+      thresholds: { lines: 95, branches: 91, functions: 89, statements: 95 },
     },
   },
 }))
