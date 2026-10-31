@@ -94,9 +94,7 @@ export const TodoSheet: React.FC<Props> = ({
   const placeText = todo.place
     ? sameName
       ? (todo.place.locality ?? placeName)
-      : [placeName, todo.place.locality]
-          .filter((x, i, a) => x && a.indexOf(x) === i)
-          .join(' · ')
+      : [placeName, todo.place.locality].filter((x, i, a) => x && a.indexOf(x) === i).join(' · ')
     : ''
   const whenText = [
     todo.day ? shortDay(todo.day) : 'Ideas',

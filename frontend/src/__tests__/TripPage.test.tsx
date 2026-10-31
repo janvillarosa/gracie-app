@@ -180,7 +180,7 @@ describe('Header day list', () => {
     expect(([...scrollIntoView.mock.contexts].pop() as HTMLElement).id).toBe(`day-${rel(1)}`)
   })
 
-  it('lists the same notes in the add bar\'s day picker', async () => {
+  it("lists the same notes in the add bar's day picker", async () => {
     seed(TRIP)
     open()
     await userEvent.click(await screen.findByRole('button', { name: 'Adding to, Today' }))
