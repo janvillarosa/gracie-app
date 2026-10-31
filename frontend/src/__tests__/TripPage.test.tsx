@@ -171,10 +171,22 @@ describe('Header day list', () => {
     expect(within(list).getAllByRole('button')).toHaveLength(5)
     expect(within(list).getAllByText(/All done/)).toHaveLength(2)
     expect(within(list).getByText('Nothing planned')).toBeInTheDocument()
+    // Days with plans say how many, like a folded day; today says so first.
+    expect(within(list).getByText('Today · 4 plans')).toBeInTheDocument()
+    expect(within(list).getByText('1 plan')).toBeInTheDocument()
     scrollIntoView.mockClear()
     await userEvent.click(within(list).getByRole('button', { name: new RegExp(shortDay(rel(1))) }))
     await waitFor(() => expect(scrollIntoView).toHaveBeenCalled())
     expect(([...scrollIntoView.mock.contexts].pop() as HTMLElement).id).toBe(`day-${rel(1)}`)
+  })
+
+  it('lists the same notes in the add bar\'s day picker', async () => {
+    seed(TRIP)
+    open()
+    await userEvent.click(await screen.findByRole('button', { name: 'Adding to, Today' }))
+    const list = await screen.findByRole('group', { name: 'Days' })
+    expect(within(list).getByText('Today · 4 plans')).toBeInTheDocument()
+    expect(within(list).getByText('Nothing planned')).toBeInTheDocument()
   })
 
   it('shows a done day when it is picked', async () => {

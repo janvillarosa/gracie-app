@@ -11,6 +11,7 @@ import {
   type DragStartEvent,
 } from '@dnd-kit/core'
 import { message } from 'antd'
+import { bookingName } from '@lib/trips/kinds'
 import { downloadIcs } from '@lib/trips/ics'
 import { dayBias } from '@lib/trips/placeBias'
 import { TripPrint } from '@components/trips/TripPrint'
@@ -917,6 +918,9 @@ const TripScreen: React.FC<{
       const todos = d.entries.filter((e) => e.kind === 'todo').length
       const label = d.label || d.suggested
       const flagged = d.date >= today && !!d.clash
+      // As a folded day says it: its plans, else a booking, else nothing.
+      const booked = d.entries.find((e) => e.kind === 'booking')
+      const bookedAt = booked?.kind === 'booking' ? booked.booking.starts_at?.split('T')[1] : ''
       return [
         d.date,
         [
@@ -926,9 +930,11 @@ const TripScreen: React.FC<{
             ? 'Two things overlap'
             : doneDays.has(d.date)
               ? 'All done'
-              : todos === 0
-                ? 'Nothing planned'
-                : '',
+              : todos > 0
+                ? `${todos} ${todos === 1 ? 'plan' : 'plans'}`
+                : booked?.kind === 'booking'
+                  ? `${bookingName(booked.booking)}${bookedAt ? ` at ${bookedAt}` : ''}`
+                  : 'Nothing planned',
         ]
           .filter(Boolean)
           .join(' · '),
@@ -1126,6 +1132,7 @@ const TripScreen: React.FC<{
       bias={bias}
       near={dayBias(trip, target === 'ideas' ? null : target)}
       targets={targetOptions}
+      notes={dayNotes}
       target={target}
       onTarget={setAddTarget}
       onAdd={(item) => add(target === 'ideas' ? null : target, item)}

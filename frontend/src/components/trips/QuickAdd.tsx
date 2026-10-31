@@ -30,6 +30,8 @@ type Props = {
   near?: Array<{ lat: number; lng: number }>
   // Where the new item goes, shown as a chip inside the field: a day, or Ideas.
   targets: Array<{ value: string; label: string }>
+  // What each day holds ("Today", "3 plans", "Nothing planned"), by date, for the day picker.
+  notes?: Record<string, string>
   target: string
   onTarget: (v: string) => void
   inputId: string
@@ -55,6 +57,7 @@ export const AddBar: React.FC<Props> = ({
   bias,
   near,
   targets,
+  notes,
   target,
   onTarget,
   inputId,
@@ -172,6 +175,7 @@ export const AddBar: React.FC<Props> = ({
                         .map((t) => ({ value: t.value as string | null, label: t.label }))}
                       value={target === 'ideas' ? null : target}
                       allowIdeas={targets.some((t) => t.value === 'ideas')}
+                      notes={notes}
                       onPick={(d) => {
                         close()
                         onTarget(d === null ? 'ideas' : d)
