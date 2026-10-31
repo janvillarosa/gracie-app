@@ -38,7 +38,7 @@ export const PlacePicker: React.FC<Props> = ({
   const [text, setText] = useState('')
   // Names arrive from the session cache after the row first draws.
   useSyncExternalStore(subscribePlaceInfo, placeInfoVersion, placeInfoVersion)
-  const search = usePlaceSuggest(value ? '' : text, bias)
+  const search = usePlaceSuggest(text, bias)
   const coords = parseCoords(text)
   const typed = text.trim()
   const fresh = search.forQuery === typed
@@ -80,31 +80,30 @@ export const PlacePicker: React.FC<Props> = ({
     else if (showManual) chooseManual()
   }
 
-  if (value) {
-    const shown = placeText(value)
-    return (
-      <div className="place-chosen">
-        <MapPin aria-hidden />
-        <span className="place-chosen-text">
-          <span className="place-chosen-name">{shown.name}</span>
-          {shown.sub && <span className="place-chosen-sub">{shown.sub}</span>}
-          {!hasPin(value) && value.source === 'manual' && (
-            <span className="place-chosen-sub">Address only, not on the map</span>
-          )}
-        </span>
-        <Button
-          kind="text"
-          iconOnly
-          onClick={() => onChange(null)}
-          icon={<X />}
-          aria-label={`Remove ${label.toLowerCase()}`}
-        />
-      </div>
-    )
-  }
+  const shown = value ? placeText(value) : null
 
   return (
     <div className="place-picker">
+      {/* The place now set stays in view; a search under it replaces it in one pick. */}
+      {value && shown && (
+        <div className="place-chosen">
+          <MapPin aria-hidden />
+          <span className="place-chosen-text">
+            <span className="place-chosen-name">{shown.name}</span>
+            {shown.sub && <span className="place-chosen-sub">{shown.sub}</span>}
+            {!hasPin(value) && value.source === 'manual' && (
+              <span className="place-chosen-sub">Address only, not on the map</span>
+            )}
+          </span>
+          <Button
+            kind="text"
+            iconOnly
+            onClick={() => onChange(null)}
+            icon={<X />}
+            aria-label={`Remove ${label.toLowerCase()}`}
+          />
+        </div>
+      )}
       <Combobox
         options={slips}
         getKey={suggestionKey}
@@ -121,7 +120,7 @@ export const PlacePicker: React.FC<Props> = ({
           <Field
             aria-label={label}
             value={text}
-            placeholder={placeholder}
+            placeholder={value ? 'Search for another place' : placeholder}
             onChange={(e) => setText(e.target.value)}
             {...input}
           />
