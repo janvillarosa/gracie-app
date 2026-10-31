@@ -2,7 +2,14 @@ import React, { useState } from 'react'
 import { Button } from '@components/ui'
 import { CaretDown, CaretRight, Warning } from '@phosphor-icons/react'
 import type { Booking } from '@api/tripTypes'
-import { bookingRoute, bookingSub, groupBookings, nextMeta, nowMeta } from '@lib/trips/bookings'
+import {
+  bookingName,
+  bookingRoute,
+  bookingSub,
+  groupBookings,
+  nextMeta,
+  nowMeta,
+} from '@lib/trips/bookings'
 import { KIND_ICON } from './tripUi'
 
 export type BookingActions = {
@@ -63,7 +70,7 @@ export const BookingLine = React.memo<LineProps>(function BookingLine({
           {clash && <Warning className="trip-time-flag" weight="bold" aria-hidden />}
           {tonight ? 'Tonight' : (b.starts_at?.split('T')[1] ?? '')}
         </span>
-        <span className="trip-stub-title">{b.title}</span>
+        <span className="trip-stub-title">{bookingName(b)}</span>
         {past && <span className="trip-used">Used</span>}
       </button>
       {note && (
@@ -106,7 +113,7 @@ export const BookingsPanel: React.FC<PanelProps> = ({
         <button type="button" className="trip-bcard-main" onClick={() => onOpen(b.booking_id)}>
           <span className="trip-stub-icon">{KIND_ICON[b.kind]}</span>
           <span className="trip-bcard-text">
-            <span className="trip-title">{b.title}</span>
+            <span className="trip-title">{bookingName(b)}</span>
             {route && <span className="trip-sub">{route}</span>}
             <span className={opts.strong ? 'trip-sub is-strong' : 'trip-sub'}>
               {opts.meta ?? bookingSub(b)}

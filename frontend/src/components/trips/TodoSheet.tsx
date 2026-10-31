@@ -1,6 +1,7 @@
 import React from 'react'
 import { Checkbox } from 'antd'
 import type { Booking, TripCategory, TripTodo } from '@api/tripTypes'
+import { bookingName } from '@lib/trips/bookings'
 import { LIMITS } from '@lib/trips/limits'
 import { hasPin, type LatLng, todoTitle } from '@lib/trips/places'
 import { endClock, mapsUrl, shortDay } from '@lib/trips/schedule'
@@ -278,7 +279,7 @@ export const TodoSheet: React.FC<Props> = ({
               disabled={locked}
               options={[
                 { value: '', label: 'None' },
-                ...bookings.map((b) => ({ value: b.booking_id, label: b.title })),
+                ...bookings.map((b) => ({ value: b.booking_id, label: bookingName(b) })),
               ]}
               onChange={(id) => onPatch({ booking_id: id || null })}
             />

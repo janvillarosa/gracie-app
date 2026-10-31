@@ -32,6 +32,30 @@ export const bookingEndMs = (b: Booking, tripTz?: string): number | null => {
   return wallToUtc(d, t || '00:00', b.end_tz || b.end_place?.tz || b.start_tz || tripTz)
 }
 
+/** What each kind is called where a booking has no title of its own. */
+export const KIND_LABEL: Record<Booking['kind'], string> = {
+  flight: 'Flight',
+  stay: 'Stay',
+  train: 'Train',
+  car: 'Car',
+  ticket: 'Ticket',
+  other: 'Booking',
+}
+
+/** A booking's name: its title, else what kind it is ("Car"), so no row is left without one. */
+export const bookingName = (b: Pick<Booking, 'title' | 'kind'>): string =>
+  b.title?.trim() || KIND_LABEL[b.kind]
+
+/** When a booking is over. A stay with no check-out lasts until the trip's last day ends
+ *  (`tripEnd`); anything else with no end is over once it starts. Null with no times at all. */
+export function bookingOverMs(b: Booking, tripTz?: string, tripEnd?: string | null): number | null {
+  const open =
+    b.kind === 'stay' && !b.ends_at && b.starts_at && tripEnd
+      ? wallToUtc(addDays(tripEnd, 1), '00:00', b.start_tz || tripTz)
+      : null
+  return bookingEndMs(b, tripTz) ?? open ?? bookingStartMs(b, tripTz)
+}
+
 export type BookingGroups = {
   // In progress: the stay you are in, a flight or train under way.
   now: Booking[]
@@ -52,12 +76,7 @@ export function groupBookings(
   tripEnd?: string | null,
 ): BookingGroups {
   const start = (b: Booking) => bookingStartMs(b, tripTz) ?? FAR
-  const openStayEnd = (b: Booking) =>
-    b.kind === 'stay' && !b.ends_at && tripEnd
-      ? wallToUtc(addDays(tripEnd, 1), '00:00', b.start_tz || tripTz)
-      : null
-  const end = (b: Booking) =>
-    bookingEndMs(b, tripTz) ?? openStayEnd(b) ?? bookingStartMs(b, tripTz) ?? FAR
+  const end = (b: Booking) => bookingOverMs(b, tripTz, tripEnd) ?? FAR
   const sorted = [...bookings].sort((a, c) => start(a) - start(c))
   const used = sorted.filter((b) => end(b) < nowMs)
   const live = sorted.filter((b) => end(b) >= nowMs)
@@ -91,7 +110,7 @@ export function bookingRoute(b: Booking): string {
 
 /** "Tue 13 · 07:05 → 09:40" (a stay across days: "Tue 13 → Fri 16"). */
 export function bookingSub(b: Booking): string {
-  if (!b.starts_at) return ''
+  if (!b.starts_at) return 'No date yet'
   const { d: sd, t: st } = splitDt(b.starts_at)
   const { d: ed } = splitDt(b.ends_at)
   const et = clock(b.ends_at)

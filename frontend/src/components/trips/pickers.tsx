@@ -2,6 +2,7 @@
 // Each is built from the UI primitives and applies its choice at once (sheets autosave).
 import React, { useEffect, useRef, useState } from 'react'
 import type { Booking, BookingKind, TripCategory } from '@api/tripTypes'
+import { bookingName } from '@lib/trips/bookings'
 import { notesProblem } from '@lib/trips/limits'
 import { shortDay } from '@lib/trips/schedule'
 import { Button, ChipGroup, DetailGroup, Field, NavRow, SectionLabel } from '@components/ui'
@@ -234,9 +235,9 @@ export const BookingPick: React.FC<{
       <NavRow
         key={b.booking_id}
         label={b.kind}
-        value={b.title}
+        value={bookingName(b)}
         current={b.booking_id === value}
-        aria-label={b.title}
+        aria-label={bookingName(b)}
         onClick={() => onPick(b.booking_id)}
       />
     ))}

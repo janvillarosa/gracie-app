@@ -2,7 +2,14 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Booking } from '@api/tripTypes'
-import { groupBookings, inferKind, normalizeZone, nowMeta } from '@lib/trips/bookings'
+import {
+  bookingName,
+  bookingSub,
+  groupBookings,
+  inferKind,
+  normalizeZone,
+  nowMeta,
+} from '@lib/trips/bookings'
 import { tripServer } from '../testServer'
 import {
   MIA,
@@ -138,6 +145,12 @@ describe('the Bookings list', () => {
     await userEvent.click(screen.getByRole('button', { name: '1 used · Show' }))
     const used = (await screen.findByText('London to Lisbon')).closest('li') as HTMLElement
     expect(within(used).getByText('Used')).toBeInTheDocument()
+  })
+
+  it('names a booking by its kind when it has no title, and says when it has no date', () => {
+    expect(bookingName(bk(1, { kind: 'car', title: '' }))).toBe('Car')
+    expect(bookingName(bk(1, { kind: 'car', title: 'Hertz' }))).toBe('Hertz')
+    expect(bookingSub(bk(1, { title: 'Train' }))).toBe('No date yet')
   })
 
   it('keeps a stay with no check-out under way until the trip ends', () => {

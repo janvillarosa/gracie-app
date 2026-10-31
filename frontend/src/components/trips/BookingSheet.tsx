@@ -3,7 +3,8 @@ import { Dropdown } from 'antd'
 import { DotsThree } from '@phosphor-icons/react'
 import type { Booking, BookingKind, Place } from '@api/tripTypes'
 import {
-  bookingEndMs,
+  bookingName,
+  bookingOverMs,
   bookingStartMs,
   bookingRoute,
   bookingSub,
@@ -45,6 +46,8 @@ type Props = {
   // New: what was typed in the add bar. It is the title; a kind is guessed from it.
   initialTitle?: string
   tripTz?: string
+  // The trip's last day: a stay with no check-out lasts until then.
+  tripEnd?: string | null
   bias: Bias
   // The points of this item's day, where place searches lean (a day can span cities).
   near?: LatLng[]
@@ -125,6 +128,7 @@ export const BookingSheet: React.FC<Props> = ({
   booking,
   initialTitle = '',
   tripTz,
+  tripEnd,
   bias,
   near,
   days,
@@ -270,13 +274,13 @@ export const BookingSheet: React.FC<Props> = ({
   // ---- the state line ---------------------------------------------------------------------
   const full = b as Booking
   const s0 = bookingStartMs(full, tripTz)
-  const e0 = bookingEndMs(full, tripTz) ?? s0
+  const e0 = bookingOverMs(full, tripTz, tripEnd)
   const state = isNew
     ? 'New booking'
     : e0 !== null && e0 < nowMs
       ? 'Used'
       : s0 !== null && s0 <= nowMs
-        ? `Now${end.d ? ` · until ${shortDay(end.d)}${end.t ? `, ${end.t}` : ''}` : ''}`
+        ? `Now${end.d ? ` · until ${shortDay(end.d)}${end.t ? `, ${end.t}` : ''}` : full.kind === 'stay' ? ' · no check-out yet' : ''}`
         : s0 !== null && start.d
           ? `Next · ${shortDay(start.d)}${start.t ? ` ${start.t}` : ''}`
           : bookingSub(full)
@@ -345,7 +349,7 @@ export const BookingSheet: React.FC<Props> = ({
         variant={variant}
         open={open}
         onClose={onClose}
-        label={isNew ? 'New booking' : b.title || 'Booking'}
+        label={isNew ? 'New booking' : bookingName(full)}
         menu={menu}
         dirty={dirty}
         discardTitle="Discard this booking?"

@@ -2,7 +2,7 @@
 // Pure (no I/O, no React) so the print layout stays a thin renderer. Everything here is what the
 // screen already shows; confirmation codes and notes are never read.
 import type { Booking, Place, Trip } from '../../api/tripTypes'
-import { bookingRoute, splitDt } from './bookings'
+import { bookingRoute, KIND_LABEL, splitDt } from './bookings'
 import type { Entry } from './schedule'
 import { buildSchedule, dateWithYear, diffDays, endClock, fullDay, routeText } from './schedule'
 
@@ -35,14 +35,7 @@ export type Itinerary = {
   days: ItineraryDay[]
 }
 
-export const KIND_LABEL: Record<Booking['kind'], string> = {
-  flight: 'Flight',
-  stay: 'Stay',
-  train: 'Train',
-  car: 'Car',
-  ticket: 'Ticket',
-  other: 'Booking',
-}
+export { KIND_LABEL }
 
 const NO_DATE = 'Date not set'
 
