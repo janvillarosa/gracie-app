@@ -291,18 +291,35 @@ export function suggestLabel(todos: TripTodo[]): string {
   return best
 }
 
-const entryTitle = (e: Entry) => (e.kind === 'todo' ? e.todo.title : e.booking.title)
+const entryTitle = (e: Entry) => {
+  const t = (e.kind === 'todo' ? e.todo.title : e.booking.title).trim() || 'Untitled'
+  // A warning names both sides in one line: long names are cut, not wrapped into a paragraph.
+  return t.length > 24 ? `${t.slice(0, 22).trimEnd()}…` : t
+}
 const clockOf = (dt?: string | null) => (dt ? (dt.split('T')[1] ?? '') : '')
 
 /** The first pair of timed entries that run into each other (back-to-back is fine). Finished
  *  things do not clash: a todo that is done, a booking that has passed (when `nowMs` is given).
- *  So ticking either of two clashing todos clears the warning, and unticking brings it back. */
+ *  So ticking either of two clashing todos clears the warning, and unticking brings it back.
+ *  A todo and a booking that are one plan (linked, or starting the same minute: the visit and
+ *  its ticket) do not clash either; the todo stands for both. */
 export function findClash(entries: Entry[], nowMs?: number): Clash | undefined {
   const live = (e: Entry) =>
     e.kind === 'todo'
       ? !e.todo.done
       : nowMs === undefined || (e.endMs ?? e.startMs ?? Number.POSITIVE_INFINITY) >= nowMs
-  const timed = entries.filter((e) => e.startMs !== null && live(e)).sort(compareEntries)
+  const todos = entries.filter((e) => e.kind === 'todo')
+  const samePlan = (e: Entry) =>
+    e.kind === 'booking' &&
+    todos.some(
+      (t) =>
+        t.kind === 'todo' &&
+        (t.todo.booking_id === e.booking.booking_id ||
+          (t.startMs !== null && t.startMs === e.startMs)),
+    )
+  const timed = entries
+    .filter((e) => e.startMs !== null && live(e) && !samePlan(e))
+    .sort(compareEntries)
   let end = -Infinity
   let reach: Entry | undefined
   let last: Entry | undefined
