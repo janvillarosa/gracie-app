@@ -239,7 +239,8 @@ export const TodoRow = React.memo<Props>(function TodoRow({
                   {changedBy[0].toUpperCase()}
                 </span>
               )}
-              {!changedBy && !idea && (
+              {/* Desks show who changed it in place of the dot; phones keep only the dot. */}
+              {!idea && (
                 <span
                   className={`trip-catdot trip-catdot-${todo.category}`}
                   role="img"
