@@ -108,6 +108,23 @@ describe('Item sheet fields and places', () => {
     })
   })
 
+  it('says "Saved place" for a place whose name has not loaded, and stamps no "Other"', async () => {
+    // The phone sheet: its Place row is the NavRow with the place's text.
+    setViewport('phone')
+    const t = lisbonTrip()
+    t.todos[4] = {
+      ...t.todos[4],
+      title: 'Morning slot',
+      category: 'other',
+      place: { source: 'google', place_id: 'ChIJ_not_in_cache' },
+    }
+    seed(t)
+    open()
+    const panel = await openRow('Morning slot')
+    expect(within(panel).getByRole('button', { name: /^Place Saved place/ })).toBeInTheDocument()
+    expect(within(panel).queryByText('Other', { selector: '.ui-stamp' })).not.toBeInTheDocument()
+  })
+
   it('shows only the locality when the place is named like the item', async () => {
     const t = lisbonTrip()
     t.todos[4] = {
