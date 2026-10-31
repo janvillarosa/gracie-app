@@ -171,10 +171,22 @@ describe('Header day list', () => {
     expect(within(list).getAllByRole('button')).toHaveLength(5)
     expect(within(list).getAllByText(/All done/)).toHaveLength(2)
     expect(within(list).getByText('Nothing planned')).toBeInTheDocument()
+    // Days with plans say how many, like a folded day; today says so first.
+    expect(within(list).getByText('Today · 4 plans')).toBeInTheDocument()
+    expect(within(list).getByText('1 plan')).toBeInTheDocument()
     scrollIntoView.mockClear()
     await userEvent.click(within(list).getByRole('button', { name: new RegExp(shortDay(rel(1))) }))
     await waitFor(() => expect(scrollIntoView).toHaveBeenCalled())
     expect(([...scrollIntoView.mock.contexts].pop() as HTMLElement).id).toBe(`day-${rel(1)}`)
+  })
+
+  it("lists the same notes in the add bar's day picker", async () => {
+    seed(TRIP)
+    open()
+    await userEvent.click(await screen.findByRole('button', { name: 'Adding to, Today' }))
+    const list = await screen.findByRole('group', { name: 'Days' })
+    expect(within(list).getByText('Today · 4 plans')).toBeInTheDocument()
+    expect(within(list).getByText('Nothing planned')).toBeInTheDocument()
   })
 
   it('shows a done day when it is picked', async () => {
@@ -968,16 +980,16 @@ describe('The add bar', () => {
     open()
     await userEvent.type(await screen.findByRole('combobox', { name: 'Add to today' }), 'Pena')
     await userEvent.click(await screen.findByRole('option', { name: /Pena Palace/ }))
-    // Stored without a name (Google content): a blank title, the place id and coordinates.
+    // What was typed is the title (the person's words, never Google's name, which can come back
+    // in another language); the place keeps only its id and coordinates.
     await waitFor(() => {
       const added = serverTodos().filter((x) => x.place?.place_id === 'demo:pena')
       expect(added.length).toBe(1)
-      expect(added[0].title).toBe('')
+      expect(added[0].title).toBe('Pena')
       expect(added[0].place?.name).toBeUndefined()
       expect(added[0].place?.coords_fetched_at).toBeTruthy()
     })
-    // The row shows the place's name from the session cache.
-    expect(await screen.findByText('Pena Palace', { selector: '.trip-title' })).toBeInTheDocument()
+    expect(await screen.findByText('Pena', { selector: '.trip-title' })).toBeInTheDocument()
   })
 
   it('shows Powered by Google under the suggestions (the demo list says it is a demo)', async () => {
@@ -1079,6 +1091,27 @@ describe('Phone', () => {
     expect(await screen.findByRole('heading', { name: shortDay(rel(2)) })).toBeInTheDocument()
     // No map numbers in the rows while the map is closed.
     expect(document.querySelector('.trip-pinno')).toBeNull()
+  })
+
+  it('says what a folded day holds: its plans, else a booking, else nothing', async () => {
+    const t = lisbonTrip()
+    t.end_date = rel(4)
+    t.todos.push(todo('20', 'Sintra', { day: rel(3), order: 1 }))
+    t.bookings.push({
+      booking_id: `tbk_${'7'.padStart(32, '0')}`,
+      kind: 'car',
+      title: '',
+      starts_at: `${rel(4)}T09:00`,
+      created_by: MIA,
+    })
+    seed(t)
+    open()
+    const folded = async (n: number) =>
+      (await screen.findByRole('button', { name: `Show ${shortDay(rel(n))}` })).textContent
+    expect(await folded(2)).toMatch(/Nothing yet$/)
+    expect(await folded(3)).toMatch(/1 plan$/)
+    // A booking with no title is named by its kind.
+    expect(await folded(4)).toMatch(/Car at 09:00$/)
   })
 
   it('opens the day list in a bottom sheet from the header line', async () => {

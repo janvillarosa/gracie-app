@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import type { Trip } from '@api/tripTypes'
+import { bookingName } from '@lib/trips/bookings'
 import { addDays, shortDay, type Schedule, tripPhase } from '@lib/trips/schedule'
 import type { Stop, Tomorrow } from '@components/trips/NextStop'
 
@@ -68,13 +69,13 @@ export function useDeck({ trip, schedule, phase, today, nowMs, showNextStop, dis
             }
           }
           const b = e.booking
-          const heading = b.place?.name || b.title
+          const heading = b.place?.name || bookingName(b)
           return {
             id: b.booking_id,
             kind: 'booking',
-            title: b.title,
+            title: bookingName(b),
             heading,
-            sub: [clock(b.starts_at), heading !== b.title ? b.title : '', 'Booked']
+            sub: [clock(b.starts_at), heading !== bookingName(b) ? bookingName(b) : '', 'Booked']
               .filter(Boolean)
               .join(' · '),
             time: clock(b.starts_at),

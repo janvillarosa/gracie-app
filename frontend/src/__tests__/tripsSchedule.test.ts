@@ -101,6 +101,81 @@ describe('buildSchedule', () => {
     expect(s.outside.map((e) => e.id)).toEqual(['x', 'y'])
   })
 
+  it('reads a plan and a booking that start together, or are linked, as one thing', () => {
+    const ticket = {
+      booking_id: 'ticket',
+      kind: 'ticket',
+      title: 'Alhambra general admission',
+      starts_at: '2026-10-23T08:30',
+    } as Booking
+    const together = trip({
+      bookings: [ticket],
+      todos: [todo('Alhambra', { day: '2026-10-23', start_time: '08:30', duration_min: 180 })],
+    })
+    expect(buildSchedule(together).days.find((d) => d.date === '2026-10-23')?.clash).toBeUndefined()
+    const linked = trip({
+      bookings: [{ ...ticket, starts_at: '2026-10-23T08:15' }],
+      todos: [
+        todo('Alhambra', {
+          day: '2026-10-23',
+          start_time: '08:30',
+          duration_min: 180,
+          booking_id: 'ticket',
+        }),
+      ],
+    })
+    expect(buildSchedule(linked).days.find((d) => d.date === '2026-10-23')?.clash).toBeUndefined()
+  })
+
+  it('names an untitled entry in an overlap, even when its title is missing altogether', () => {
+    const t = trip({
+      bookings: [
+        {
+          booking_id: 'car',
+          kind: 'car',
+          starts_at: '2026-10-23T09:00',
+          ends_at: '2026-10-23T11:00',
+        } as Booking,
+      ],
+      todos: [todo('Walk', { day: '2026-10-23', start_time: '10:00' })],
+    })
+    expect(buildSchedule(t).days.find((d) => d.date === '2026-10-23')?.clash?.text).toBe(
+      'Walk starts before Car ends (11:00)',
+    )
+  })
+
+  it('calls an untitled item with a place what its row calls it', () => {
+    const t = trip({
+      todos: [
+        todo('Walk', { day: '2026-10-23', start_time: '10:00', duration_min: 60 }),
+        todo('x', {
+          title: '',
+          day: '2026-10-23',
+          start_time: '10:30',
+          place: { source: 'google', place_id: 'ChIJ_unknown' },
+        }),
+      ],
+    })
+    expect(buildSchedule(t).days.find((d) => d.date === '2026-10-23')?.clash?.text).toBe(
+      'Walk and Saved place overlap at 10:30',
+    )
+  })
+
+  it('keeps an overlap warning short when the names are long', () => {
+    const t = trip({
+      todos: [
+        todo('Flamenco show (Mia has the link somewhere)', {
+          day: '2026-10-23',
+          start_time: '19:00',
+        }),
+        todo('Dinner', { day: '2026-10-23', start_time: '19:00' }),
+      ],
+    })
+    expect(buildSchedule(t).days.find((d) => d.date === '2026-10-23')?.clash?.text).toBe(
+      'Dinner and Flamenco show (Mia has… overlap at 19:00',
+    )
+  })
+
   it('says a stop starts before a booking ends', () => {
     const t = trip({
       bookings: [
@@ -211,6 +286,10 @@ describe('phases and copy', () => {
     })
     expect(tonightsStay(t, '2026-10-24')?.title).toBe('Hotel')
     expect(tonightsStay(t, '2026-10-25')).toBeUndefined()
+    // No check-out yet: tonight's stay every night until the trip's last day.
+    const open = { ...t, end_date: '2026-10-27', bookings: [{ ...t.bookings[0], ends_at: null }] }
+    expect(tonightsStay(open, '2026-10-26')?.title).toBe('Hotel')
+    expect(tonightsStay(open, '2026-10-27')).toBeUndefined()
     expect(routeText(t)).toBe('Lisbon → Porto')
     expect(routeText(trip({ destination: { name: 'Faro', lat: 1, lng: 1, source: 'pin' } }))).toBe(
       'Faro',

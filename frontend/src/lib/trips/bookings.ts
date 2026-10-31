@@ -1,6 +1,8 @@
 // Booking helpers: guessing a kind from what was typed, time pieces, and the list's order.
 import type { Booking, BookingKind } from '../../api/tripTypes'
-import { shortDay, wallToUtc } from './schedule'
+import { addDays, shortDay, wallToUtc } from './schedule'
+
+export { bookingName, KIND_LABEL } from './kinds'
 
 /** A kind guessed from typed text ("TP1355", "hotel", "train to Porto"), or nothing. */
 export function inferKind(text: string): BookingKind | undefined {
@@ -32,6 +34,16 @@ export const bookingEndMs = (b: Booking, tripTz?: string): number | null => {
   return wallToUtc(d, t || '00:00', b.end_tz || b.end_place?.tz || b.start_tz || tripTz)
 }
 
+/** When a booking is over. A stay with no check-out lasts until the trip's last day ends
+ *  (`tripEnd`); anything else with no end is over once it starts. Null with no times at all. */
+export function bookingOverMs(b: Booking, tripTz?: string, tripEnd?: string | null): number | null {
+  const open =
+    b.kind === 'stay' && !b.ends_at && b.starts_at && tripEnd
+      ? wallToUtc(addDays(tripEnd, 1), '00:00', b.start_tz || tripTz)
+      : null
+  return bookingEndMs(b, tripTz) ?? open ?? bookingStartMs(b, tripTz)
+}
+
 export type BookingGroups = {
   // In progress: the stay you are in, a flight or train under way.
   now: Booking[]
@@ -43,10 +55,16 @@ export type BookingGroups = {
 
 const FAR = Number.MAX_SAFE_INTEGER
 
-/** Chronological: Now, then Next, then what is coming, then what is over. */
-export function groupBookings(bookings: Booking[], nowMs: number, tripTz?: string): BookingGroups {
+/** Chronological: Now, then Next, then what is coming, then what is over. A stay with no
+ *  check-out is under way until the trip's last day ends (`tripEnd`), not over once it starts. */
+export function groupBookings(
+  bookings: Booking[],
+  nowMs: number,
+  tripTz?: string,
+  tripEnd?: string | null,
+): BookingGroups {
   const start = (b: Booking) => bookingStartMs(b, tripTz) ?? FAR
-  const end = (b: Booking) => bookingEndMs(b, tripTz) ?? bookingStartMs(b, tripTz) ?? FAR
+  const end = (b: Booking) => bookingOverMs(b, tripTz, tripEnd) ?? FAR
   const sorted = [...bookings].sort((a, c) => start(a) - start(c))
   const used = sorted.filter((b) => end(b) < nowMs)
   const live = sorted.filter((b) => end(b) >= nowMs)
@@ -60,7 +78,8 @@ const clock = (dt?: string | null) => splitDt(dt).t
 /** "Now · until Sun 18 11:00" for what is under way. */
 export function nowMeta(b: Booking): string {
   const { d, t } = splitDt(b.ends_at)
-  return d ? `Now · until ${shortDay(d)}${t ? ` ${t}` : ''}` : 'Now'
+  if (d) return `Now · until ${shortDay(d)}${t ? ` ${t}` : ''}`
+  return b.kind === 'stay' ? 'Now · no check-out yet' : 'Now'
 }
 
 /** "Next · Sun 18 09:15" for what starts next. */
@@ -79,7 +98,7 @@ export function bookingRoute(b: Booking): string {
 
 /** "Tue 13 · 07:05 → 09:40" (a stay across days: "Tue 13 → Fri 16"). */
 export function bookingSub(b: Booking): string {
-  if (!b.starts_at) return ''
+  if (!b.starts_at) return 'No date yet'
   const { d: sd, t: st } = splitDt(b.starts_at)
   const { d: ed } = splitDt(b.ends_at)
   const et = clock(b.ends_at)

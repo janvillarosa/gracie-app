@@ -11,6 +11,7 @@ import {
   type DragStartEvent,
 } from '@dnd-kit/core'
 import { message } from 'antd'
+import { bookingName } from '@lib/trips/kinds'
 import { downloadIcs } from '@lib/trips/ics'
 import { dayBias } from '@lib/trips/placeBias'
 import { TripPrint } from '@components/trips/TripPrint'
@@ -358,6 +359,13 @@ const TripScreen: React.FC<{
             closed: !isOpenDay(d),
             // Past days are never flagged.
             clash: d.date >= today ? d.clash : undefined,
+            // Bookings that day the plan leaves to the Bookings tab: an empty or folded day
+            // still says it has one, rather than "Nothing planned yet".
+            offPlan: d.entries.flatMap((e) =>
+              e.kind === 'booking' && e.id !== nextBookingId && e.id !== stay?.booking_id
+                ? [e.booking]
+                : [],
+            ),
           }
         })
         .filter((p) => !p.deckDay || p.day.entries.length > 0 || !!stay),
@@ -753,6 +761,7 @@ const TripScreen: React.FC<{
       bookings={trip.bookings}
       nowMs={nowMs}
       tripTz={trip.tz}
+      tripEnd={trip.end_date}
       onOpen={rowActions.open}
     />
   )
@@ -808,7 +817,7 @@ const TripScreen: React.FC<{
       onFocus={onSpineOver}
       onPointerLeave={() => mapRef.current?.setHot(null)}
     >
-      {planDays.map(({ day, closed, deckDay, clash }) => {
+      {planDays.map(({ day, closed, deckDay, clash, offPlan }) => {
         const isToday = day.date === today && phase === 'during'
         return (
           <DaySection
@@ -830,6 +839,7 @@ const TripScreen: React.FC<{
             celebrating={celebrating.has(day.date)}
             closed={closed}
             clash={clash}
+            offPlan={offPlan}
             colourIndex={schedule.days.findIndex((d) => d.date === day.date)}
           />
         )
@@ -887,6 +897,8 @@ const TripScreen: React.FC<{
           title: 'Stay',
           start: line.date ? `${line.date}T15:00` : undefined,
         })
+      case 'open-booking':
+        return line.bookingId ? rowActions.open(line.bookingId) : undefined
       case 'show-empty-day':
         return line.date ? goToDay(line.date) : undefined
       case 'open-list':
@@ -906,6 +918,9 @@ const TripScreen: React.FC<{
       const todos = d.entries.filter((e) => e.kind === 'todo').length
       const label = d.label || d.suggested
       const flagged = d.date >= today && !!d.clash
+      // As a folded day says it: its plans, else a booking, else nothing.
+      const booked = d.entries.find((e) => e.kind === 'booking')
+      const bookedAt = booked?.kind === 'booking' ? booked.booking.starts_at?.split('T')[1] : ''
       return [
         d.date,
         [
@@ -915,9 +930,11 @@ const TripScreen: React.FC<{
             ? 'Two things overlap'
             : doneDays.has(d.date)
               ? 'All done'
-              : todos === 0
-                ? 'Nothing planned'
-                : '',
+              : todos > 0
+                ? `${todos} ${todos === 1 ? 'plan' : 'plans'}`
+                : booked?.kind === 'booking'
+                  ? `${bookingName(booked.booking)}${bookedAt ? ` at ${bookedAt}` : ''}`
+                  : 'Nothing planned',
         ]
           .filter(Boolean)
           .join(' · '),
@@ -1115,6 +1132,7 @@ const TripScreen: React.FC<{
       bias={bias}
       near={dayBias(trip, target === 'ideas' ? null : target)}
       targets={targetOptions}
+      notes={dayNotes}
       target={target}
       onTarget={setAddTarget}
       onAdd={(item) => add(target === 'ideas' ? null : target, item)}

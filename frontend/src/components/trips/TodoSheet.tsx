@@ -1,8 +1,9 @@
 import React from 'react'
 import { Checkbox } from 'antd'
 import type { Booking, TripCategory, TripTodo } from '@api/tripTypes'
+import { bookingName } from '@lib/trips/bookings'
 import { LIMITS } from '@lib/trips/limits'
-import { hasPin, type LatLng, todoTitle } from '@lib/trips/places'
+import { hasPin, type LatLng, SAVED_PLACE, todoTitle } from '@lib/trips/places'
 import { endClock, mapsUrl, shortDay } from '@lib/trips/schedule'
 import {
   Button,
@@ -88,12 +89,12 @@ export const TodoSheet: React.FC<Props> = ({
   const sameName =
     !!todo.place &&
     (todo.place.name ?? '').trim().toLowerCase() === (todo.title ?? '').trim().toLowerCase()
+  // A place whose name has not loaded is still a place: "Saved place", as the row says.
+  const placeName = todo.place ? todo.place.name || SAVED_PLACE : ''
   const placeText = todo.place
     ? sameName
-      ? (todo.place.locality ?? todo.place.name)
-      : [todo.place.name, todo.place.locality]
-          .filter((x, i, a) => x && a.indexOf(x) === i)
-          .join(' · ')
+      ? (todo.place.locality ?? placeName)
+      : [placeName, todo.place.locality].filter((x, i, a) => x && a.indexOf(x) === i).join(' · ')
     : ''
   const whenText = [
     todo.day ? shortDay(todo.day) : 'Ideas',
@@ -127,7 +128,10 @@ export const TodoSheet: React.FC<Props> = ({
           placeholder={todo.place?.name || 'Name this'}
           context={when}
         >
-          <Stamp category={todo.category}>{categoryLabel(todo.category)}</Stamp>
+          {/* "Other" is no category at all: nothing to stamp. */}
+          {todo.category !== 'other' && (
+            <Stamp category={todo.category}>{categoryLabel(todo.category)}</Stamp>
+          )}
         </SheetIdentity>
       }
       actions={
@@ -278,7 +282,7 @@ export const TodoSheet: React.FC<Props> = ({
               disabled={locked}
               options={[
                 { value: '', label: 'None' },
-                ...bookings.map((b) => ({ value: b.booking_id, label: b.title })),
+                ...bookings.map((b) => ({ value: b.booking_id, label: bookingName(b) })),
               ]}
               onChange={(id) => onPatch({ booking_id: id || null })}
             />

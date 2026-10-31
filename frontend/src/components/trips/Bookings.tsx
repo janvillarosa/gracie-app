@@ -2,7 +2,14 @@ import React, { useState } from 'react'
 import { Button } from '@components/ui'
 import { CaretDown, CaretRight, Warning } from '@phosphor-icons/react'
 import type { Booking } from '@api/tripTypes'
-import { bookingRoute, bookingSub, groupBookings, nextMeta, nowMeta } from '@lib/trips/bookings'
+import {
+  bookingName,
+  bookingRoute,
+  bookingSub,
+  groupBookings,
+  nextMeta,
+  nowMeta,
+} from '@lib/trips/bookings'
 import { KIND_ICON } from './tripUi'
 
 export type BookingActions = {
@@ -63,7 +70,7 @@ export const BookingLine = React.memo<LineProps>(function BookingLine({
           {clash && <Warning className="trip-time-flag" weight="bold" aria-hidden />}
           {tonight ? 'Tonight' : (b.starts_at?.split('T')[1] ?? '')}
         </span>
-        <span className="trip-stub-title">{b.title}</span>
+        <span className="trip-stub-title">{bookingName(b)}</span>
         {past && <span className="trip-used">Used</span>}
       </button>
       {note && (
@@ -82,14 +89,22 @@ type PanelProps = {
   bookings: Booking[]
   nowMs: number
   tripTz?: string
+  // The trip's last day: a stay with no check-out lasts until then.
+  tripEnd?: string | null
   onOpen: (id: string) => void
 }
 
 /** Every booking, in time order: what is under way (Now), what is next (Next), what is coming,
  *  and what is over folded into one line. The kind is the leading icon; there are no groups. */
-export const BookingsPanel: React.FC<PanelProps> = ({ bookings, nowMs, tripTz, onOpen }) => {
+export const BookingsPanel: React.FC<PanelProps> = ({
+  bookings,
+  nowMs,
+  tripTz,
+  tripEnd,
+  onOpen,
+}) => {
   const [showUsed, setShowUsed] = useState(false)
-  const g = groupBookings(bookings, nowMs, tripTz)
+  const g = groupBookings(bookings, nowMs, tripTz, tripEnd)
   const row = (b: Booking, opts: { meta?: string; stamp?: boolean; strong?: boolean }) => {
     // The title is the person's own words, never rewritten; the route is its own line.
     const route = bookingRoute(b)
@@ -98,7 +113,7 @@ export const BookingsPanel: React.FC<PanelProps> = ({ bookings, nowMs, tripTz, o
         <button type="button" className="trip-bcard-main" onClick={() => onOpen(b.booking_id)}>
           <span className="trip-stub-icon">{KIND_ICON[b.kind]}</span>
           <span className="trip-bcard-text">
-            <span className="trip-title">{b.title}</span>
+            <span className="trip-title">{bookingName(b)}</span>
             {route && <span className="trip-sub">{route}</span>}
             <span className={opts.strong ? 'trip-sub is-strong' : 'trip-sub'}>
               {opts.meta ?? bookingSub(b)}

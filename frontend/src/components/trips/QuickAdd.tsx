@@ -30,6 +30,8 @@ type Props = {
   near?: Array<{ lat: number; lng: number }>
   // Where the new item goes, shown as a chip inside the field: a day, or Ideas.
   targets: Array<{ value: string; label: string }>
+  // What each day holds ("Today", "3 plans", "Nothing planned"), by date, for the day picker.
+  notes?: Record<string, string>
   target: string
   onTarget: (v: string) => void
   inputId: string
@@ -55,6 +57,7 @@ export const AddBar: React.FC<Props> = ({
   bias,
   near,
   targets,
+  notes,
   target,
   onTarget,
   inputId,
@@ -111,13 +114,13 @@ export const AddBar: React.FC<Props> = ({
     onExpand?.({ title: parsed.title, start_time: parsed.start_time })
     reset()
   }
-  // A pick stores only the Google place (id, coordinates, fetch time). The title stays blank:
-  // the row shows the place's name while online.
+  // A pick stores only the Google place (id, coordinates, fetch time). The title is what was
+  // typed: the person's words, never Google's name, which can come back in another language.
   const pick = async (s: Suggestion) => {
     const place = await search.pick(s)
     if (!place) return
     navigator.vibrate?.(8)
-    onAdd({ title: '', start_time: parsed.start_time, place })
+    onAdd({ title: parsed.title.trim(), start_time: parsed.start_time, place })
     reset()
   }
   // Shift+Enter opens the full editor; the combobox handles every other key.
@@ -172,6 +175,7 @@ export const AddBar: React.FC<Props> = ({
                         .map((t) => ({ value: t.value as string | null, label: t.label }))}
                       value={target === 'ideas' ? null : target}
                       allowIdeas={targets.some((t) => t.value === 'ideas')}
+                      notes={notes}
                       onPick={(d) => {
                         close()
                         onTarget(d === null ? 'ideas' : d)

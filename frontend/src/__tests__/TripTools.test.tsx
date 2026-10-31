@@ -108,6 +108,23 @@ describe('Item sheet fields and places', () => {
     })
   })
 
+  it('says "Saved place" for a place whose name has not loaded, and stamps no "Other"', async () => {
+    // The phone sheet: its Place row is the NavRow with the place's text.
+    setViewport('phone')
+    const t = lisbonTrip()
+    t.todos[4] = {
+      ...t.todos[4],
+      title: 'Morning slot',
+      category: 'other',
+      place: { source: 'google', place_id: 'ChIJ_not_in_cache' },
+    }
+    seed(t)
+    open()
+    const panel = await openRow('Morning slot')
+    expect(within(panel).getByRole('button', { name: /^Place Saved place/ })).toBeInTheDocument()
+    expect(within(panel).queryByText('Other', { selector: '.ui-stamp' })).not.toBeInTheDocument()
+  })
+
   it('shows only the locality when the place is named like the item', async () => {
     const t = lisbonTrip()
     t.todos[4] = {
@@ -197,6 +214,24 @@ describe('Item sheet fields and places', () => {
     await userEvent.click(within(panel).getByRole('button', { name: /^Place Pena Palace/ }))
     await userEvent.click(await screen.findByRole('button', { name: 'Remove place' }))
     await waitFor(() => expect(todo('Pack the daypack')?.place ?? null).toBeNull())
+  })
+
+  it('changes a set place by searching under it, without removing it first', async () => {
+    // The place picker sheet is the phone's editor; a desk searches in place.
+    setViewport('phone')
+    seed(TRIP)
+    open()
+    const panel = await openRow('Pack the daypack')
+    await userEvent.click(within(panel).getByRole('button', { name: /^Place Add a place/ }))
+    await userEvent.type(await screen.findByRole('combobox', { name: 'Place' }), 'Pena')
+    await userEvent.click(await screen.findByRole('option', { name: /Pena Palace/ }))
+    await waitFor(() => expect(todo('Pack the daypack')?.place?.place_id).toBe('demo:pena'))
+    await userEvent.click(within(panel).getByRole('button', { name: /^Place Pena Palace/ }))
+    // The current place stays shown, with a search under it.
+    expect(await screen.findByRole('button', { name: 'Remove place' })).toBeInTheDocument()
+    await userEvent.type(await screen.findByRole('combobox', { name: 'Place' }), 'Torre')
+    await userEvent.click(await screen.findByRole('option', { name: /Torre de Belém/ }))
+    await waitFor(() => expect(todo('Pack the daypack')?.place?.place_id).toBe('demo:belem'))
   })
 
   it('drops a pin from typed coordinates', async () => {

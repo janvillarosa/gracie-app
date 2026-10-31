@@ -1019,6 +1019,11 @@
 .trip-day-closed-text strong {
   color: var(--ink);
 }
+.trip-day-closed-meta {
+  flex: none;
+  color: var(--muted);
+  font-size: var(--t-meta);
+}
 .trip-nextup {
   margin: 0 0 8px;
   padding: 10px 14px;
@@ -2295,6 +2300,19 @@
 }
 .trip-trail > .trip-whodot {
   margin-top: calc(var(--row-first-line) - 9px);
+}
+/* Phones are for living the trip: rows carry the plan, not who changed it (that is in the item's
+   sheet). Desks, where the House plans together, show the initial in place of the category dot. */
+.trip-trail > .trip-whodot {
+  display: none;
+}
+@media (min-width: 1024px) {
+  .trip-trail > .trip-whodot {
+    display: grid;
+  }
+  .trip-trail > .trip-whodot + .trip-catdot {
+    display: none;
+  }
 }
 .trip-row-line > .trip-check {
   margin-top: calc(var(--row-first-line) - 11.5px);

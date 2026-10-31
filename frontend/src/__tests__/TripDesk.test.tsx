@@ -128,6 +128,40 @@ describe('the planning desk layout', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
   })
 
+  it('names a booking on an otherwise empty day instead of "Nothing planned yet" alone', async () => {
+    setViewport('desktop')
+    const t = makeTrip(6, {
+      title: 'Quiet days',
+      start_date: rel(20),
+      end_date: rel(22),
+      bookings: [
+        bk(1, { kind: 'ticket', title: 'Museum', starts_at: `${rel(20)}T10:00` }),
+        bk(2, { kind: 'car', title: '', starts_at: `${rel(21)}T09:00` }),
+      ],
+    })
+    seed(t)
+    open(t.trip_id)
+    // The next booking (the museum) is a row on its day; the car is named on its empty day.
+    expect(await screen.findByText('Nothing planned yet · Car at 09:00')).toBeInTheDocument()
+  })
+
+  it('still says a day is empty when there is a stay tonight (the stay is a row only today)', async () => {
+    setViewport('desktop')
+    const t = makeTrip(6, {
+      title: 'Quiet days',
+      start_date: rel(-1),
+      end_date: rel(2),
+      bookings: [bk(1, { kind: 'stay', title: 'Flat', starts_at: `${rel(-1)}T15:00` })],
+    })
+    seed(t)
+    open(t.trip_id)
+    await screen.findByText('Flat')
+    // Yesterday, tomorrow and the last day: three empty slots; today has the Tonight row.
+    await waitFor(() =>
+      expect(document.querySelectorAll('.trip-days-col .trip-empty-row')).toHaveLength(3),
+    )
+  })
+
   it('shows every date of a trip with nothing planned, each as a slot', async () => {
     setViewport('desktop')
     const t = makeTrip(6, { title: 'Quiet days', start_date: rel(20), end_date: rel(22) })
@@ -208,6 +242,19 @@ describe('Ready to go?', () => {
     expect(uncoveredNights(t)).toEqual([rel(11)])
     expect(uncoveredNights(trip({ bookings: [stay(10, 12)] }))).toEqual([])
     expect(uncoveredNights(trip({ bookings: [] }))).toEqual([rel(10), rel(11)])
+  })
+
+  it('runs a stay with no check-out to the end of the trip, and asks for its check-out', () => {
+    const open = bk(1, { kind: 'stay', title: 'Flat', starts_at: `${rel(10)}T15:00` })
+    const t = trip({ bookings: [open] })
+    expect(uncoveredNights(t)).toEqual([])
+    const line = readiness(t, buildSchedule(t).days, { listId: 'l' }).find((l) => l.key === 'stays')
+    expect(line).toMatchObject({
+      ok: false,
+      text: 'Flat has no check-out',
+      bookingId: open.booking_id,
+      fix: { label: 'Add check-out', action: 'open-booking' },
+    })
   })
 
   it('reads travel, stays, empty days and packing as lines with their fix', () => {

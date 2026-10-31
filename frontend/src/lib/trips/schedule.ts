@@ -1,5 +1,7 @@
 // Pure scheduling helpers: day lists, absolute-time sorting, gaps, fullness, countdown.
 import type { Booking, Trip, TripTodo } from '../../api/tripTypes'
+import { bookingName } from './kinds'
+import { todoTitle } from './places'
 
 const DAY_MS = 86400000
 export const MAX_DAYS = 400
@@ -291,18 +293,37 @@ export function suggestLabel(todos: TripTodo[]): string {
   return best
 }
 
-const entryTitle = (e: Entry) => (e.kind === 'todo' ? e.todo.title : e.booking.title)
+const entryTitle = (e: Entry) => {
+  // Titles can be missing altogether (the server leaves empty fields out): each goes by what its
+  // row shows ("Saved place" for a place with no title, a booking's kind).
+  const t = e.kind === 'todo' ? todoTitle(e.todo).trim() || 'Untitled' : bookingName(e.booking)
+  // A warning names both sides in one line: long names are cut, not wrapped into a paragraph.
+  return t.length > 24 ? `${t.slice(0, 22).trimEnd()}…` : t
+}
 const clockOf = (dt?: string | null) => (dt ? (dt.split('T')[1] ?? '') : '')
 
 /** The first pair of timed entries that run into each other (back-to-back is fine). Finished
  *  things do not clash: a todo that is done, a booking that has passed (when `nowMs` is given).
- *  So ticking either of two clashing todos clears the warning, and unticking brings it back. */
+ *  So ticking either of two clashing todos clears the warning, and unticking brings it back.
+ *  A todo and a booking that are one plan (linked, or starting the same minute: the visit and
+ *  its ticket) do not clash either; the todo stands for both. */
 export function findClash(entries: Entry[], nowMs?: number): Clash | undefined {
   const live = (e: Entry) =>
     e.kind === 'todo'
       ? !e.todo.done
       : nowMs === undefined || (e.endMs ?? e.startMs ?? Number.POSITIVE_INFINITY) >= nowMs
-  const timed = entries.filter((e) => e.startMs !== null && live(e)).sort(compareEntries)
+  const todos = entries.filter((e) => e.kind === 'todo')
+  const samePlan = (e: Entry) =>
+    e.kind === 'booking' &&
+    todos.some(
+      (t) =>
+        t.kind === 'todo' &&
+        (t.todo.booking_id === e.booking.booking_id ||
+          (t.startMs !== null && t.startMs === e.startMs)),
+    )
+  const timed = entries
+    .filter((e) => e.startMs !== null && live(e) && !samePlan(e))
+    .sort(compareEntries)
   let end = -Infinity
   let reach: Entry | undefined
   let last: Entry | undefined
@@ -403,14 +424,19 @@ export function daysToNextTrip(trips: Trip[], today: string, within = 7): number
 }
 
 /** Stay bookings that cover tonight (check-in on or before today, check-out after it). */
+/** The day a stay is checked out of: its own end, else the trip's last day (a stay with no
+ *  check-out yet runs to the end of the trip, not one night). '' when neither is known. */
+export function stayEndDay(b: Booking, tripEnd?: string | null): string {
+  return b.ends_at?.slice(0, 10) || tripEnd || ''
+}
+
 export function tonightsStay(trip: Trip, today: string): Booking | undefined {
   return trip.bookings.find(
     (b) =>
       b.kind === 'stay' &&
       b.starts_at &&
-      b.ends_at &&
       b.starts_at.slice(0, 10) <= today &&
-      b.ends_at.slice(0, 10) > today,
+      stayEndDay(b, trip.end_date) > today,
   )
 }
 

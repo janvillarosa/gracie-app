@@ -129,6 +129,7 @@ export function useItemSheet({
         days={moveTargets}
         focusTime={focusTime === selBooking.booking_id}
         tripTz={trip.tz}
+        tripEnd={trip.end_date}
         bias={bias}
         near={dayBias(trip, selBooking.starts_at?.slice(0, 10) ?? null)}
         byline={bylineFor(selBooking, userId, members)}
