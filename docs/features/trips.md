@@ -206,6 +206,19 @@ _Frontend paths are relative to `frontend/src/`._
   into view). Tested in `__tests__/TripScroll.test.tsx`. With an item open, J/K and Alt+↑/↓ open the
   next or previous item in its pane (`pages/trip/useInspectorKeys.ts`; focus ends in the inspector,
   J/K are ignored while typing); tested in `__tests__/TripInspector.test.tsx`.
+- **Incomplete data (every surface must read finished with gaps in it):**
+  - A stay with no check-out runs to the trip's last day (`stayEndDay` in `lib/trips/schedule.ts`,
+    `bookingOverMs` in `lib/trips/bookings.ts`): it is tonight's stay, "Now · no check-out yet" in
+    Bookings, and Ready to go says "<stay> has no check-out" with "Add check-out" (`open-booking`).
+  - A booking with no title goes by its kind (`bookingName`, `lib/trips/kinds.ts`); one with no date
+    says "No date yet". An item whose Google place has not loaded says "Saved place" in its sheet
+    too. The default category (`other`) shows no stamp.
+  - A folded day (phones) says what it holds: "3 plans", a booking ("Car at 09:00"), or "Nothing
+    yet"; both day pickers (header and add bar) show the same notes. An empty day with a booking the
+    plan leaves to Bookings says "Nothing planned yet · Car at 09:00".
+  - Overlaps: a todo and a booking that are linked or start the same minute are one plan, never a
+    clash; names in a warning are cut at 24 characters.
+  - Phone rows end in the category dot only; who changed a row shows only on desks (CSS, `trips.css`).
 - **Dev mock (no backend needed):** `cd frontend && VITE_MOCK_TRIPS=1 pnpm dev --port 5174 --strictPort --host 127.0.0.1`
   (or just `pnpm dev`). It boots an MSW worker (a fetch
   shim if a service worker can't register) backed by `mocks/tripsServer.ts`, seeded from
