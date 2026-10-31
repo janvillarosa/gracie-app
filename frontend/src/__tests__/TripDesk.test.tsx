@@ -145,6 +145,23 @@ describe('the planning desk layout', () => {
     expect(await screen.findByText('Nothing planned yet · Car at 09:00')).toBeInTheDocument()
   })
 
+  it('still says a day is empty when there is a stay tonight (the stay is a row only today)', async () => {
+    setViewport('desktop')
+    const t = makeTrip(6, {
+      title: 'Quiet days',
+      start_date: rel(-1),
+      end_date: rel(2),
+      bookings: [bk(1, { kind: 'stay', title: 'Flat', starts_at: `${rel(-1)}T15:00` })],
+    })
+    seed(t)
+    open(t.trip_id)
+    await screen.findByText('Flat')
+    // Yesterday, tomorrow and the last day: three empty slots; today has the Tonight row.
+    await waitFor(() =>
+      expect(document.querySelectorAll('.trip-days-col .trip-empty-row')).toHaveLength(3),
+    )
+  })
+
   it('shows every date of a trip with nothing planned, each as a slot', async () => {
     setViewport('desktop')
     const t = makeTrip(6, { title: 'Quiet days', start_date: rel(20), end_date: rel(22) })

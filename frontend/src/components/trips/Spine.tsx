@@ -441,7 +441,8 @@ export const DaySection = React.memo<DayProps>(function DaySection({
           {clash.text}
         </Note>
       )}
-      {day.entries.length === 0 && !stay ? (
+      {/* Tonight's stay is a row only on today: any other empty day still says so. */}
+      {day.entries.length === 0 && !(isToday && stay) ? (
         <p className="trip-empty-row">Nothing planned yet{bookedText ? ` · ${bookedText}` : ''}</p>
       ) : (
         <EntryRows
