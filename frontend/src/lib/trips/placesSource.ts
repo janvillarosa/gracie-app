@@ -55,13 +55,40 @@ export const PICK_FIELDS = [
   'addressComponents',
 ] as const
 
-/** A box of about 50 km around a point, for biasing a search to a trip's area. */
-export function biasBox(point: LatLng, km = 50): Bounds {
+/** The widest a multi-point bias may be (degrees); a day spread further leans on its last point. */
+export const MAX_BIAS_SPAN = 5
+
+/** A box for biasing a search to where a trip (or one day) is. One point: about 50 km around it.
+ *  Several points (a day across two cities): the box around all of them plus 25 km, unless they
+ *  are further apart than MAX_BIAS_SPAN, then just the last one. */
+export function biasBox(points: LatLng | LatLng[], km = 50): Bounds {
   // Rounded to 0.1 degree (about 10 km) before it leaves the device.
-  const c = { lat: Math.round(point.lat * 10) / 10, lng: Math.round(point.lng * 10) / 10 }
-  const dLat = km / 111
-  const dLng = km / (111 * Math.max(0.2, Math.cos((c.lat * Math.PI) / 180)))
-  return { west: c.lng - dLng, south: c.lat - dLat, east: c.lng + dLng, north: c.lat + dLat }
+  const round = (p: LatLng): LatLng => ({
+    lat: Math.round(p.lat * 10) / 10,
+    lng: Math.round(p.lng * 10) / 10,
+  })
+  const list = (Array.isArray(points) ? points : [points]).map(round)
+  const last = list[list.length - 1]
+  const box = (b: Bounds, pad: number): Bounds => {
+    const dLat = pad / 111
+    const dLng = pad / (111 * Math.max(0.2, Math.cos((((b.north + b.south) / 2) * Math.PI) / 180)))
+    return {
+      west: b.west - dLng,
+      south: b.south - dLat,
+      east: b.east + dLng,
+      north: b.north + dLat,
+    }
+  }
+  const around = (p: LatLng) => box({ west: p.lng, south: p.lat, east: p.lng, north: p.lat }, km)
+  if (list.length < 2) return around(last)
+  const b: Bounds = {
+    west: Math.min(...list.map((p) => p.lng)),
+    south: Math.min(...list.map((p) => p.lat)),
+    east: Math.max(...list.map((p) => p.lng)),
+    north: Math.max(...list.map((p) => p.lat)),
+  }
+  if (b.north - b.south > MAX_BIAS_SPAN || b.east - b.west > MAX_BIAS_SPAN) return around(last)
+  return box(b, 25)
 }
 
 // ---- Google ----------------------------------------------------------------------------------
