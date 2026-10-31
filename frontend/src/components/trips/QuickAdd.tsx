@@ -26,6 +26,8 @@ type Props = {
   placeholder: string
   onAdd: (item: QuickAddItem) => void
   bias?: { lat: number; lng: number } | null
+  // Where the search leans instead of `bias`: the points of the day the item goes to.
+  near?: Array<{ lat: number; lng: number }>
   // Where the new item goes, shown as a chip inside the field: a day, or Ideas.
   targets: Array<{ value: string; label: string }>
   target: string
@@ -51,6 +53,7 @@ export const AddBar: React.FC<Props> = ({
   placeholder,
   onAdd,
   bias,
+  near,
   targets,
   target,
   onTarget,
@@ -78,7 +81,7 @@ export const AddBar: React.FC<Props> = ({
     return () => ro.disconnect()
   })
   const parsed = parseQuickAdd(value)
-  const search = usePlaceSuggest(mode === 'booking' ? '' : parsed.title, bias)
+  const search = usePlaceSuggest(mode === 'booking' ? '' : parsed.title, near?.length ? near : bias)
   const fresh = search.forQuery === parsed.title.trim()
   // A degraded search offers no slips (just the status line below).
   const slips = fresh && !search.degraded ? search.suggestions.slice(0, MAX_SLIPS) : []

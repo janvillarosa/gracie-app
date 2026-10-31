@@ -2,7 +2,7 @@ import React from 'react'
 import { Checkbox } from 'antd'
 import type { Booking, TripCategory, TripTodo } from '@api/tripTypes'
 import { LIMITS } from '@lib/trips/limits'
-import { hasPin, todoTitle } from '@lib/trips/places'
+import { hasPin, type LatLng, todoTitle } from '@lib/trips/places'
 import { endClock, mapsUrl, shortDay } from '@lib/trips/schedule'
 import {
   Button,
@@ -37,6 +37,8 @@ type Props = {
   days: MoveTarget[]
   tripTz?: string
   bias: Bias
+  // The points of this item's day, where place searches lean (a day can span cities).
+  near?: LatLng[]
   byline: string
   locked: boolean
   // Just created from the add bar or the map: the title is ready to type over.
@@ -60,6 +62,7 @@ export const TodoSheet: React.FC<Props> = ({
   days,
   tripTz,
   bias,
+  near,
   byline,
   locked,
   fresh,
@@ -205,6 +208,7 @@ export const TodoSheet: React.FC<Props> = ({
                 label="Place"
                 value={todo.place}
                 bias={bias}
+                near={near}
                 onChange={(p) => onPatch({ place: p })}
                 onText={(t) => onPatch({ place: placeFromTyped(t, bias, tripTz) })}
               />
@@ -222,6 +226,7 @@ export const TodoSheet: React.FC<Props> = ({
                     label="Place"
                     value={todo.place}
                     bias={bias}
+                    near={near}
                     tz={tripTz}
                     onChange={(p) => {
                       onPatch({ place: p })

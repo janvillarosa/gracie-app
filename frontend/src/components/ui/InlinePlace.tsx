@@ -41,6 +41,8 @@ type Props = {
   placeholder?: string
   // Bias the search to the trip's area.
   bias?: LatLng | null
+  // Where the search leans instead of `bias`: the points of the day it is for.
+  near?: LatLng[]
   // Enter on typed text that is not a suggestion (optional: "use as an address").
   onText?: (text: string) => void
   className?: string
@@ -55,6 +57,7 @@ export const InlinePlace: React.FC<Props> = ({
   label,
   placeholder = 'Search for a place',
   bias,
+  near,
   onText,
   className,
 }) => {
@@ -65,7 +68,7 @@ export const InlinePlace: React.FC<Props> = ({
   useSyncExternalStore(subscribePlaceInfo, placeInfoVersion, placeInfoVersion)
   // With no place set the field is the search; with one, it searches only while being changed.
   const searching = editing || !value
-  const search = usePlaceSuggest(searching ? text : '', bias)
+  const search = usePlaceSuggest(searching ? text : '', near?.length ? near : bias)
   const fresh = search.forQuery === text.trim()
   const slips = fresh && !search.degraded ? search.suggestions.slice(0, 5) : []
   const ran = fresh && text.trim().length >= MIN_QUERY

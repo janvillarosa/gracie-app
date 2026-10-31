@@ -52,7 +52,7 @@ export function parseCoords(text: string): LatLng | null {
 
 /** Debounced place suggestions (250 ms, at least 2 characters). One session token covers a whole
  *  search: the keystrokes' requests and the pick. A pick, or clearing the field, ends it. */
-export function usePlaceSuggest(query: string, bias?: LatLng | null): Suggest {
+export function usePlaceSuggest(query: string, bias?: LatLng | LatLng[] | null): Suggest {
   const [state, setState] = useState<
     Pick<Suggest, 'suggestions' | 'loading' | 'degraded' | 'forQuery'>
   >({
@@ -64,8 +64,9 @@ export function usePlaceSuggest(query: string, bias?: LatLng | null): Suggest {
   const session = useRef<Session | null>(null)
   const seq = useRef(0)
   const q = query.trim()
-  const lat = bias?.lat
-  const lng = bias?.lng
+  // The points as a string, so a new array with the same points does not restart the search.
+  const points = bias ? (Array.isArray(bias) ? bias : [bias]) : []
+  const biasKey = points.map((p) => `${p.lat},${p.lng}`).join('|')
   const source = getPlacesSource()
 
   useEffect(() => {
@@ -80,7 +81,7 @@ export function usePlaceSuggest(query: string, bias?: LatLng | null): Suggest {
       if (!session.current) session.current = newSession()
       try {
         const suggestions = await source.suggest(q, {
-          bias: lat !== undefined && lng !== undefined ? biasBox({ lat, lng }) : null,
+          bias: biasKey ? biasBox(points) : null,
           session: session.current,
         })
         if (my === seq.current)
@@ -91,7 +92,8 @@ export function usePlaceSuggest(query: string, bias?: LatLng | null): Suggest {
       }
     }, DEBOUNCE_MS)
     return () => clearTimeout(timer)
-  }, [q, lat, lng, source])
+    // biome-ignore lint/correctness/useExhaustiveDependencies: biasKey stands for `points`
+  }, [q, biasKey, source])
 
   const pick = useCallback(
     async (s: Suggestion): Promise<Place | null> => {
