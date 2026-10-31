@@ -128,6 +128,23 @@ describe('the planning desk layout', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
   })
 
+  it('names a booking on an otherwise empty day instead of "Nothing planned yet" alone', async () => {
+    setViewport('desktop')
+    const t = makeTrip(6, {
+      title: 'Quiet days',
+      start_date: rel(20),
+      end_date: rel(22),
+      bookings: [
+        bk(1, { kind: 'ticket', title: 'Museum', starts_at: `${rel(20)}T10:00` }),
+        bk(2, { kind: 'car', title: '', starts_at: `${rel(21)}T09:00` }),
+      ],
+    })
+    seed(t)
+    open(t.trip_id)
+    // The next booking (the museum) is a row on its day; the car is named on its empty day.
+    expect(await screen.findByText('Nothing planned yet · Car at 09:00')).toBeInTheDocument()
+  })
+
   it('shows every date of a trip with nothing planned, each as a slot', async () => {
     setViewport('desktop')
     const t = makeTrip(6, { title: 'Quiet days', start_date: rel(20), end_date: rel(22) })

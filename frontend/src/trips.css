@@ -1019,6 +1019,11 @@
 .trip-day-closed-text strong {
   color: var(--ink);
 }
+.trip-day-closed-meta {
+  flex: none;
+  color: var(--muted);
+  font-size: var(--t-meta);
+}
 .trip-nextup {
   margin: 0 0 8px;
   padding: 10px 14px;

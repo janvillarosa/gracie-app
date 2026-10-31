@@ -358,6 +358,13 @@ const TripScreen: React.FC<{
             closed: !isOpenDay(d),
             // Past days are never flagged.
             clash: d.date >= today ? d.clash : undefined,
+            // Bookings that day the plan leaves to the Bookings tab: an empty or folded day
+            // still says it has one, rather than "Nothing planned yet".
+            offPlan: d.entries.flatMap((e) =>
+              e.kind === 'booking' && e.id !== nextBookingId && e.id !== stay?.booking_id
+                ? [e.booking]
+                : [],
+            ),
           }
         })
         .filter((p) => !p.deckDay || p.day.entries.length > 0 || !!stay),
@@ -809,7 +816,7 @@ const TripScreen: React.FC<{
       onFocus={onSpineOver}
       onPointerLeave={() => mapRef.current?.setHot(null)}
     >
-      {planDays.map(({ day, closed, deckDay, clash }) => {
+      {planDays.map(({ day, closed, deckDay, clash, offPlan }) => {
         const isToday = day.date === today && phase === 'during'
         return (
           <DaySection
@@ -831,6 +838,7 @@ const TripScreen: React.FC<{
             celebrating={celebrating.has(day.date)}
             closed={closed}
             clash={clash}
+            offPlan={offPlan}
             colourIndex={schedule.days.findIndex((d) => d.date === day.date)}
           />
         )

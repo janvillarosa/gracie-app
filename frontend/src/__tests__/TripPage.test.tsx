@@ -1081,6 +1081,27 @@ describe('Phone', () => {
     expect(document.querySelector('.trip-pinno')).toBeNull()
   })
 
+  it('says what a folded day holds: its plans, else a booking, else nothing', async () => {
+    const t = lisbonTrip()
+    t.end_date = rel(4)
+    t.todos.push(todo('20', 'Sintra', { day: rel(3), order: 1 }))
+    t.bookings.push({
+      booking_id: `tbk_${'7'.padStart(32, '0')}`,
+      kind: 'car',
+      title: '',
+      starts_at: `${rel(4)}T09:00`,
+      created_by: MIA,
+    })
+    seed(t)
+    open()
+    const folded = async (n: number) =>
+      (await screen.findByRole('button', { name: `Show ${shortDay(rel(n))}` })).textContent
+    expect(await folded(2)).toMatch(/Nothing yet$/)
+    expect(await folded(3)).toMatch(/1 plan$/)
+    // A booking with no title is named by its kind.
+    expect(await folded(4)).toMatch(/Car at 09:00$/)
+  })
+
   it('opens the day list in a bottom sheet from the header line', async () => {
     seed(TRIP)
     open()

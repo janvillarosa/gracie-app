@@ -3,6 +3,7 @@ import type { DropHint } from '@lib/trips/dragDrop'
 import { useDroppable } from '@dnd-kit/core'
 import { CaretDown, CaretRight } from '@phosphor-icons/react'
 import type { Booking, TripTodo } from '@api/tripTypes'
+import { bookingName } from '@lib/trips/bookings'
 import { shortDay, type Clash, type DayModel, type Entry } from '@lib/trips/schedule'
 import type { ConflictNote } from '@lib/trips/store'
 import { memberName, type Member } from '@lib/trips/hooks'
@@ -319,6 +320,8 @@ type DayProps = {
   // "Day done" shows for a moment after the last item is ticked, then the day leaves the plan.
   celebrating: boolean
   // Collapsed to one line (phone: only today and the day you picked are open).
+  // That day's bookings the plan leaves to the Bookings tab (all but the next one).
+  offPlan?: Booking[]
   closed: boolean
   // Today and later days only: the pair that runs into each other.
   clash?: Clash
@@ -345,6 +348,7 @@ export const DaySection = React.memo<DayProps>(function DaySection({
   celebrating,
   closed,
   clash,
+  offPlan,
   colourIndex = 0,
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: `day:${day.date}` })
@@ -361,6 +365,14 @@ export const DaySection = React.memo<DayProps>(function DaySection({
   ]
     .filter(Boolean)
     .join(' ')
+
+  // What a day holds when its rows are not showing: its plans, else a booking, else nothing.
+  const plans = day.entries.filter((e) => e.kind === 'todo').length
+  const booked =
+    day.entries.find((e): e is Extract<Entry, { kind: 'booking' }> => e.kind === 'booking')
+      ?.booking ?? offPlan?.[0]
+  const bookedAt = booked?.starts_at?.split('T')[1]
+  const bookedText = booked ? `${bookingName(booked)}${bookedAt ? ` at ${bookedAt}` : ''}` : ''
 
   if (closed) {
     return (
@@ -381,6 +393,9 @@ export const DaySection = React.memo<DayProps>(function DaySection({
           <span className="trip-day-closed-text">
             <strong>{shortDay(day.date)}</strong>
             {label ? ` · ${label}` : ''}
+          </span>
+          <span className="trip-day-closed-meta">
+            {plans ? `${plans} ${plans === 1 ? 'plan' : 'plans'}` : bookedText || 'Nothing yet'}
           </span>
           <CaretRight aria-hidden />
         </button>
@@ -427,7 +442,7 @@ export const DaySection = React.memo<DayProps>(function DaySection({
         </Note>
       )}
       {day.entries.length === 0 && !stay ? (
-        <p className="trip-empty-row">Nothing planned yet</p>
+        <p className="trip-empty-row">Nothing planned yet{bookedText ? ` · ${bookedText}` : ''}</p>
       ) : (
         <EntryRows
           entries={day.entries}
