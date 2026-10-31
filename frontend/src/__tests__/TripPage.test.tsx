@@ -513,8 +513,14 @@ describe('Days', () => {
         year: 'numeric',
         timeZone: 'UTC',
       }).format(new Date(`${d}T00:00:00Z`))
-    await userEvent.click(within(sheet).getByRole('button', { name: label(rel(3)) }))
-    await userEvent.click(within(sheet).getByRole('button', { name: label(rel(5)) }))
+    // The calendar opens on this month: near its end, the dates are on the next page.
+    const pick = async (d: string) => {
+      if (!within(sheet).queryByRole('button', { name: label(d) }))
+        await userEvent.click(within(sheet).getByRole('button', { name: 'Next month' }))
+      await userEvent.click(within(sheet).getByRole('button', { name: label(d) }))
+    }
+    await pick(rel(3))
+    await pick(rel(5))
     // Each pick saves at once, so the server briefly holds a one-day range; under full-suite
     // load the second sync can take longer than waitFor's 1s default.
     await waitFor(
