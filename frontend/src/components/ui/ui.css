@@ -1490,6 +1490,11 @@ input.ui-sheet-title.has-error:focus-visible {
   position: relative;
   z-index: 1;
 }
+.slip-stack.is-column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
 .slip-stack-peek {
   position: absolute;
   z-index: 0;
@@ -1541,7 +1546,9 @@ input.ui-sheet-title.has-error:focus-visible {
   html,
   body,
   html.trip-desk-shell,
-  html.trip-desk-shell body {
+  html.trip-desk-shell body,
+  html.desk-shell,
+  html.desk-shell body {
     height: auto;
     overflow: visible;
     /* The desk's tone and grain would print as a grey wash. */

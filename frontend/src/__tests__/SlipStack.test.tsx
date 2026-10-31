@@ -35,4 +35,16 @@ describe('SlipStack', () => {
     const { container } = render(<SlipStack>{[]}</SlipStack>)
     expect(container).toBeEmptyDOMElement()
   })
+
+  it('column layout shows every slip and no peeks', () => {
+    const { container } = render(<SlipStack layout="column">{slips(3)}</SlipStack>)
+    for (const n of [1, 2, 3]) expect(screen.getByText(`slip ${n}`)).toBeInTheDocument()
+    expect(container.querySelectorAll('.slip-stack-peek')).toHaveLength(0)
+    expect(container.querySelector('.slip-stack.is-column')).not.toBeNull()
+  })
+
+  it('renders nothing when there are no slips, in either layout', () => {
+    const { container } = render(<SlipStack layout="column">{[]}</SlipStack>)
+    expect(container).toBeEmptyDOMElement()
+  })
 })

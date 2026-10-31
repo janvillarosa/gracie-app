@@ -513,11 +513,14 @@ describe('Days', () => {
         year: 'numeric',
         timeZone: 'UTC',
       }).format(new Date(`${d}T00:00:00Z`))
-    // The calendar opens on this month: near its end, the dates are on the next page.
+    // The calendar opens on this month, so within a few days of a month's end a pick can be in
+    // the next one: page forward until its day is on screen.
     const pick = async (d: string) => {
-      if (!within(sheet).queryByRole('button', { name: label(d) }))
+      const name = label(d)
+      for (let i = 0; i < 2 && !within(sheet).queryByRole('button', { name }); i++) {
         await userEvent.click(within(sheet).getByRole('button', { name: 'Next month' }))
-      await userEvent.click(within(sheet).getByRole('button', { name: label(d) }))
+      }
+      await userEvent.click(within(sheet).getByRole('button', { name }))
     }
     await pick(rel(3))
     await pick(rel(5))
